@@ -253,5 +253,62 @@ class WireGuardInterfaceTest(BasicInterfaceTest.TestCase):
         # Ensure the service is no longer running after WireGuard interface is deleted
         self.assertFalse(is_systemd_service_running(domain_resolver))
 
+    def test_wireguard_vrf_fwmark(self):
+        # T8509 Check fwmark ip rule created for WireGuard interface with VRF
+        interface = 'wg0'
+        port = '12345'
+        privkey = '6ISOkASm6VhHOOSz/5iIxw+Q9adq9zA17iMM4X40dlc='
+        pubkey = 'n1CUsmR0M2LUUsyicBd6blZICwUqqWWHbu4ifZ2/9gk='
+        mark = '101'
+        vrf_table = '200'
+        vrf = 'testvrf'
+
+        base_interface_path = base_path + [interface]
+        self.cli_set(base_interface_path + ['address', '172.16.0.1/24'])
+        self.cli_set(base_interface_path + ['private-key', privkey])
+        self.cli_set(base_interface_path + ['port', port])
+
+        peer_base_path = base_interface_path + ['peer', 'VyOS']
+        self.cli_set(peer_base_path + ['port', port])
+        self.cli_set(peer_base_path + ['public-key', pubkey])
+        self.cli_set(peer_base_path + ['allowed-ips', '169.254.0.0/16'])
+        self.cli_set(peer_base_path + ['address', '192.0.2.1'])
+
+        self.cli_set(base_interface_path + ['fwmark', mark])
+        self.cli_set(base_interface_path + ['vrf', vrf])
+        self.cli_set(['vrf', 'name', vrf, 'table', vrf_table])
+
+        self.cli_commit()
+
+        hex_fwmark = hex(int(mark))
+
+        # Verify ip rule at priority 1998 routes fwmark-tagged packets into the VRF
+        tmp = cmd(f'ip rule show priority 1998')
+        self.assertIn(f'fwmark {hex_fwmark} lookup {vrf}', tmp)
+
+        # Remove VRF from the interface — ip rule must be cleaned up
+        self.cli_delete(base_interface_path + ['vrf'])
+        self.cli_commit()
+
+        tmp = cmd(f'ip rule show priority 1998')
+        self.assertNotIn(f'fwmark {hex_fwmark}', tmp)
+
+        # Re-add VRF — ip rule must be re-created
+        self.cli_set(base_interface_path + ['vrf', vrf])
+        self.cli_commit()
+
+        tmp = cmd(f'ip rule show priority 1998')
+        self.assertIn(f'fwmark {hex_fwmark} lookup {vrf}', tmp)
+
+        # Delete the interface entirely — ip rule must be removed
+        self.cli_delete(base_interface_path)
+        self.cli_commit()
+
+        tmp = cmd(f'ip rule show priority 1998')
+        self.assertNotIn(f'fwmark {hex_fwmark}', tmp)
+
+        self.cli_delete(['vrf', 'name', vrf])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
