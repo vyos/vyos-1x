@@ -69,11 +69,16 @@
   margin-top: 4px;
 }
 
-.copiedNotifier > span {
+.copiedNotifier > span,
+.copyFailedNotifier > span {
   font-size: 14px !important;
   color: #fff !important;
   text-align: center;
   margin-bottom: 0;
+}
+
+.copyFailedNotifier {
+  background-color: #b3261e;
 }
 
 .highlight {

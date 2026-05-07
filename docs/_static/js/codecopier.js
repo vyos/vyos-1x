@@ -20,6 +20,24 @@ function formDiv(id) {
 `
 }
 
+// Extract the snippet text from a code-block container while excluding the
+// injected .copyDiv button. On viewports below the breakpoint the visible
+// "Copy" label otherwise leaks into the clipboard via innerText.
+function extractSnippetText(container) {
+  if (!container) {
+    return ''
+  }
+  const preElement = container.querySelector('pre')
+  if (preElement) {
+    return preElement.innerText
+  }
+  // Fallback for any structure without a <pre>: clone the container,
+  // remove every .copyDiv, then read innerText off the clone.
+  const clone = container.cloneNode(true)
+  clone.querySelectorAll('.copyDiv').forEach((node) => node.remove())
+  return clone.innerText
+}
+
 $(document).ready(async function () {
   const codeSnippets = $(
     '.rst-content div[class^=highlight] div[class^=highlight], .rst-content pre.literal-block div[class^=highlight], .rst-content pre.literal-block div[class^=highlight]'
@@ -34,27 +52,58 @@ $(document).ready(async function () {
   copyButton.click(async ({
     currentTarget
   }) => {
-    // we obtain text and copy it
     const id = currentTarget.dataset.identifier
+    const divWithNeededId = $(`div[data-identifier='${id}']`)
 
-    try {
-      await navigator.clipboard.writeText(currentTarget.offsetParent.innerText)
-    } catch (error) {
-      console.log('Copying text failed, please try again', {
-        error
-      })
+    // Per-click request token. Rapid re-clicks queue multiple writeText
+    // promises; without this guard, an older promise resolving later
+    // can overwrite the newer click's UI (or have its timeout fire on
+    // the new state). Each click increments the token, captures the
+    // local copy, and bails out of any UI/timeout work if the captured
+    // token no longer matches the current one.
+    const requestId = (divWithNeededId.data('copyRequestId') || 0) + 1
+    divWithNeededId.data('copyRequestId', requestId)
+
+    // Read from the .copyDiv's parentElement (the inner .highlight div it was
+    // injected into via insertAdjacentHTML('beforeend', ...)) rather than
+    // currentTarget.offsetParent — offsetParent depends on CSS positioning
+    // and would walk past .highlight if its `position: relative` is ever
+    // dropped, picking up the wrong snippet.
+    const textToCopy = extractSnippetText(currentTarget.parentElement)
+
+    // Clear any state class left over from a previous click so a rapid
+    // success-after-failure (or vice versa) doesn't end up with both
+    // classes applied at once.
+    divWithNeededId.removeClass('copiedNotifier copyFailedNotifier')
+
+    // Cancel a pending revert timeout from a previous click so the new
+    // click's 2-second window starts clean instead of being ended early.
+    const previousTimeout = divWithNeededId.data('revertTimeout')
+    if (previousTimeout) {
+      clearTimeout(previousTimeout)
     }
 
-    // we edit the copyDiv connected to copied text
-    const divWithNeededId = $(`div[data-identifier='${id}']`)
-    divWithNeededId.addClass('copiedNotifier')
-    divWithNeededId.html('<span>Copied!</span>')
+    try {
+      await navigator.clipboard.writeText(textToCopy)
+      if (divWithNeededId.data('copyRequestId') !== requestId) return
+      // Only flip the button into the success state when the write actually
+      // resolves — earlier versions showed "Copied!" even on failure.
+      divWithNeededId.addClass('copiedNotifier')
+      divWithNeededId.html('<span>Copied!</span>')
+    } catch (error) {
+      if (divWithNeededId.data('copyRequestId') !== requestId) return
+      console.error('Copying text failed, please try again', error)
+      divWithNeededId.addClass('copyFailedNotifier')
+      divWithNeededId.html('<span>Failed</span>')
+    }
 
-    setTimeout(() => {
+    const revertTimeout = setTimeout(() => {
+      if (divWithNeededId.data('copyRequestId') !== requestId) return
       divWithNeededId.html(innersOfCopyDiv)
-      divWithNeededId.removeClass('copiedNotifier')
-
+      divWithNeededId.removeClass('copiedNotifier copyFailedNotifier')
+      divWithNeededId.removeData('revertTimeout')
     }, 2000)
+    divWithNeededId.data('revertTimeout', revertTimeout)
   })
 
   // we edit the button that is added by readthedocs portal
@@ -64,4 +113,3 @@ $(document).ready(async function () {
   navbar.append(readTheDocsButton)
 
 });
-
