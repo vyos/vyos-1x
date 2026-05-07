@@ -137,7 +137,7 @@ The first heading in every RST file uses `#` overline+underline. Field lists (e.
 - American English.
 - Indent with 2 spaces.
 - Blank lines around headings.
-- Inline code: use double backticks (`\`\`command\`\``).
+- Inline code: use double backticks per RST convention (the [Inline markup](https://docutils.sourceforge.io/docs/user/rst/quickref.html#inline-markup) section of the docutils quick reference).
 
 ### IP addresses (linter-enforced)
 
