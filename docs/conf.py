@@ -26,11 +26,16 @@ project = u'VyOS'
 copyright = u'2026, VyOS maintainers and contributors'
 author = u'VyOS maintainers and contributors'
 
-# The short X.Y version
-version = u'1.5'
+# The short X.Y version (rolling — next major; bumped at branch cut)
+version = u'rolling'
 
-# The full version, including alpha/beta/rc tags
-release = u'1.5.x (circinus)'
+# The full version, including alpha/beta/rc tags. The `current` branch
+# is the rolling tip and serves at /en/rolling/ on RTD; the literal
+# below is exposed in the page footer ("v: rolling (current)") and is
+# interpolated into _templates/llms.txt.j2 ("This documentation covers
+# {{ release }}."). Pin this to a value that names what the rolling
+# docs actually serve, not a stale LTS codename.
+release = u'rolling (current)'
 
 # -- General configuration ---------------------------------------------------
 
