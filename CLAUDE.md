@@ -191,7 +191,7 @@ A PR that both adds and removes TODOs is not contradictory; intent matters.
 
 Both files are regenerated on every `html` and `readthedocs` builder run.
 The `dirhtml` builder is intentionally skipped — production publishes
-only via `html`/`readthedocs`, and we don't render llms.txt for builds
+only via `html`/`readthedocs`, and we don't render `llms.txt` for builds
 we don't ship. Local `make dirhtml` is a developer convenience and
 won't emit `llms.txt`.
 
@@ -209,11 +209,13 @@ Files are shipped at the docs root for each version
 
 When adding new top-level sections to the docs, add a corresponding bullet in
 `docs/_templates/llms.txt.j2`. Branch-specific differences (e.g. sagitta has
-no `vpp/` or `contributing/index`) live in that branch's copy of the template.
+no `vpp/index.md` or `contributing/index.md`) live in that branch's copy of the template.
 
 ## Read the Docs Layout
 
-RTD slugs as of 2026-05-04 (verified via API):
+RTD slugs as of 2026-05-04 (verified via API). Re-verify via the RTD
+Versions API (project `vyos`) and update the date stamp before editing this
+table.
 
 | Slug | Verbose | Branch | Role |
 |---|---|---|---|
@@ -224,8 +226,9 @@ RTD slugs as of 2026-05-04 (verified via API):
 
 URL-level redirect aliases (resolve to the canonicals above):
 `/en/latest/* → /en/rolling/`, `/en/lts/* → /en/1.5/`,
-`/en/stable/* → /en/lts/`, `/en/circinus*`, `/en/sagitta*`,
-`/en/equuleus*`, `/en/crux*` → numeric slugs.
+`/en/stable/* → /en/lts/`, `/en/circinus/* → /en/1.5/`,
+`/en/sagitta/* → /en/1.4/`, `/en/equuleus/* → /en/1.3/`,
+`/en/crux/* → /en/1.2/`.
 
 `html_baseurl` per branch must point at the canonical (numeric or `rolling`),
 not the alias, so `<link rel="canonical">` and the sitemap match what RTD
