@@ -240,3 +240,21 @@ serves and crawlers skip the redirect hop.
 - **Sphinx build** — runs on Read the Docs for every PR; preview URL appears as a check.
 - **CLA check** — contributors must sign the VyOS CLA before merge.
 - **Conflict check** — fails the PR if it doesn't merge cleanly into base.
+
+### Bot review workflow
+
+Two bots run at separate stages — do not mix them:
+
+| Bot | When to trigger | How |
+|-----|-----------------|-----|
+| **Copilot** | **Draft PRs only** | Comment `@copilot review` |
+| **CodeRabbit** | **Ready-for-review PRs only** | Comment `@coderabbitai review` (auto-reviews are disabled on this repo) |
+
+Workflow:
+1. Open PR as draft (`gh pr create --draft`).
+2. Iterate; when complete, comment `@copilot review`.
+3. Address Copilot threads, re-request after each fix round until Copilot is silent.
+4. Flip to ready (`gh pr ready <num>`), then comment `@coderabbitai review`.
+5. Address CodeRabbit threads the same way.
+
+Never trigger `@copilot review` on a ready-for-review PR.
