@@ -297,6 +297,36 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.verify_service_running()
 
+    def test_dhcp_vendor_option_ubiquiti(self):
+        shared_net_name = 'SMOKE-1'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+        range_1_start = inc_ip(subnet, 40)
+        range_1_stop = inc_ip(subnet, 50)
+        unifi_controller = '10.0.0.10'
+
+        self.setup_single_pool_range(range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name)
+
+        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'option', 'vendor-option', 'ubiquiti', 'unifi-controller', unifi_controller])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'option-data'],
+            {'name': 'vendor-encapsulated-options'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'option-data'],
+            {'name': 'ubnt', 'space': 'vendor-encapsulated-options-space', 'data': unifi_controller},
+        )
+        self.verify_service_running()
+
     def test_dhcp_single_pool_options(self):
         shared_net_name = 'SMOKE-0815'
 
