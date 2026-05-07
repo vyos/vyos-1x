@@ -168,8 +168,10 @@ def verify(config_dict):
                         raise ConfigError(f'A prefix {mandatory_error}')
 
                     mask_len = int(rule_config['prefix'].split('/')[1])
-                    ge = int(rule_config['ge']) if 'ge' in rule_config else None
-                    le = int(rule_config['le']) if 'le' in rule_config else None
+                    ge = dict_search('ge', rule_config)
+                    le = dict_search('le', rule_config)
+                    ge = int(ge) if ge is not None else None
+                    le = int(le) if le is not None else None
 
                     if ge is not None and ge < mask_len:
                         raise ConfigError(
