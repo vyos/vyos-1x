@@ -254,10 +254,12 @@ def _prefer_webp(app):
 
 
 def _write_llms_txt(app, exception):
-    # Skip dirhtml: the curated template encodes `.html` URLs (e.g.
-    # `quick-start.html`), which don't exist under `dirhtml` output
-    # (`quick-start/index.html`). Production publishes via the html /
-    # readthedocs builders, so dirhtml output would just be misleading.
+    # Skip dirhtml: production publishes via the `html` / `readthedocs`
+    # builders only. The `.md` links in the curated template do
+    # actually resolve under `dirhtml` (`_copy_md_sources` puts `.md`
+    # files at their source-relative paths regardless of builder), but
+    # we still don't render llms.txt for builds we don't ship — local
+    # `make dirhtml` is a developer convenience, not a publish target.
     if exception is not None or app.builder.name not in (
             'html', 'readthedocs'):
         return

@@ -108,10 +108,10 @@ Each configuration page should contain:
 ## LLM-Facing Files (`llms.txt`, `llms-full.txt`)
 
 Both files are regenerated on every `html` and `readthedocs` builder run.
-The `dirhtml` builder is intentionally skipped (the curated template
-encodes `.html` URLs which don't match `dirhtml` output paths). Local
-`make dirhtml` won't emit `llms.txt` — production publishes via the
-`html`/`readthedocs` builders, where the file lands.
+The `dirhtml` builder is intentionally skipped — production publishes
+only via `html`/`readthedocs`, and we don't render llms.txt for builds
+we don't ship. Local `make dirhtml` is a developer convenience and
+won't emit `llms.txt`.
 
 Files are shipped at the docs root for each version
 (`https://docs.vyos.io/en/<version>/llms.txt`, `.../llms-full.txt`).
