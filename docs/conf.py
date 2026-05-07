@@ -268,15 +268,23 @@ def _write_llms_txt(app, exception):
         raise RuntimeError(
             'html_baseurl must be set to render llms.txt')
     from pathlib import Path
-    from jinja2 import Environment, StrictUndefined
-    tpl_path = Path(app.srcdir) / '_templates' / 'llms.txt.j2'
+    from jinja2 import Environment, FileSystemLoader, StrictUndefined
+    tpl_dir = Path(app.srcdir) / '_templates'
     out_path = Path(app.outdir) / 'llms.txt'
     baseurl = app.config.html_baseurl.rstrip('/') + '/'
-    # StrictUndefined: missing template variables raise rather than
-    # silently render as empty strings, so a typo in llms.txt.j2 fails
-    # the build instead of shipping a half-blank llms.txt.
-    env = Environment(undefined=StrictUndefined, keep_trailing_newline=True)
-    template = env.from_string(tpl_path.read_text(encoding='utf-8'))
+    # FileSystemLoader + get_template (rather than from_string) makes
+    # Jinja tracebacks reference the real template filename and line
+    # number — useful when StrictUndefined trips on a typo in
+    # llms.txt.j2. StrictUndefined: missing template variables raise
+    # rather than silently render as empty strings, so a typo in
+    # llms.txt.j2 fails the build instead of shipping a half-blank
+    # llms.txt.
+    env = Environment(
+        loader=FileSystemLoader(str(tpl_dir)),
+        undefined=StrictUndefined,
+        keep_trailing_newline=True,
+    )
+    template = env.get_template('llms.txt.j2')
     rendered = template.render(
         baseurl=baseurl,
         release=app.config.release,
