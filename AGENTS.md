@@ -61,14 +61,15 @@ One long-lived branch per VyOS release line. Branch names are constellations sor
 | `equuleus` | 1.3.x (legacy) |
 | `crux` | 1.2.x (legacy) |
 
-PRs target `current`. After merge, request backports via Mergify comments on the PR:
+PRs target `current`. After merge, request backports via a **post-merge comment** on the PR:
 
 ```
 @Mergifyio backport circinus
 @Mergifyio backport sagitta
 ```
 
-Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR template has a `## Backport` section to declare intent.
+Mergify only reads commands from **PR comments** — mentions in the PR body are ignored.
+Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR template has a `## Backport` section to declare intent, but that does not trigger the backport; the comment does.
 
 ## Architecture
 
