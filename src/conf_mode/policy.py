@@ -167,6 +167,23 @@ def verify(config_dict):
                     if 'prefix' not in rule_config:
                         raise ConfigError(f'A prefix {mandatory_error}')
 
+                    mask_len = int(rule_config['prefix'].split('/')[1])
+                    ge = int(rule_config['ge']) if 'ge' in rule_config else None
+                    le = int(rule_config['le']) if 'le' in rule_config else None
+
+                    if ge is not None and ge < mask_len:
+                        raise ConfigError(
+                            f'{policy_hr} {instance} rule {rule}: "ge" ({ge}) must be >= '
+                            f'prefix length ({mask_len})')
+                    if le is not None and le < mask_len:
+                        raise ConfigError(
+                            f'{policy_hr} {instance} rule {rule}: "le" ({le}) must be >= '
+                            f'prefix length ({mask_len})')
+                    if ge is not None and le is not None and ge > le:
+                        raise ConfigError(
+                            f'{policy_hr} {instance} rule {rule}: "ge" ({ge}) must be <= '
+                            f'"le" ({le})')
+
                     if rule_config in entries:
                         raise ConfigError(
                             f'Rule "{rule}" contains a duplicate prefix definition!')
