@@ -36,6 +36,8 @@ import logging
 import os
 import shutil
 import signal
+import socket
+import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -358,6 +360,22 @@ class PassthroughManager:
             await self._block_v6_saddr(self._last_v6)
             await self._flush_conntrack_v6(self._last_v6)
             await self._remove_inbound_route_v6(self._last_v6)
+            # Fire a burst of deprecation RAs for the OLD prefix in the
+            # background (PIO valid=0, preferred=0 — RFC 4862 §5.5.3).
+            # Without this, Windows keeps using the stale carrier v6 SLAAC
+            # address until the previously-advertised preferred lifetime
+            # expires (≥30 min with our default ra-param) — and when v6
+            # disappears entirely the new dnsmasq has no enable-ra so no
+            # RA is sent at all and the address effectively never goes
+            # away on its own.  Symptom: SIM-swap to a v4-only carrier
+            # and the Windows host still shows the previous v6 until a
+            # forced /release6.
+            if self._last_v6 and self._last_v6_prefix:
+                asyncio.create_task(
+                    self._send_deprecation_ra_v6(
+                        self._last_v6, self._last_v6_prefix,
+                    )
+                )
         if v6_gone:
             # When v6 disappears entirely the per-instance whitelist must
             # also be torn down — the `if carrier_v6:` install branch
@@ -1090,6 +1108,105 @@ class PassthroughManager:
         explicit Reconfigure messaging."""
         logger.debug("passthrough: v6 Reconfigure handled via dnsmasq SIGHUP",
                      extra=self._log_extra)
+
+    async def _send_deprecation_ra_v6(
+        self, old_v6: str, old_prefix_len: int,
+        count: int = 5, interval: float = 1.0,
+    ) -> None:
+        """Emit a burst of ICMPv6 Router Advertisements carrying a Prefix
+        Information Option for ``old_v6/old_prefix_len`` with both valid
+        and preferred lifetimes set to zero.
+
+        This is the RFC 4862 §5.5.3 / §6.2.5 mechanism that signals
+        SLAAC hosts to immediately deprecate (preferred=0) and remove
+        (valid=0) the old carrier prefix.  Windows in particular will
+        otherwise keep using a stale carrier IPv6 address until the
+        previously-advertised preferred lifetime expires (≥30 min with
+        our default ra-param, longer in some Windows builds) — and when
+        v6 disappears on a SIM swap to a v4-only carrier the new dnsmasq
+        has no `enable-ra` line at all, so without this helper no RA is
+        ever sent and the host never deprecates.
+
+        Sent as a small burst (default 5 × 1 s) so a single dropped /
+        coalesced RA cannot leave the host stuck on the old address.
+        Router Lifetime is set to 0 so we also cancel ourselves as the
+        v6 default router for the duration of the burst — when the new
+        carrier has v6, the new dnsmasq's RA stream re-establishes the
+        default route promptly and the new prefix takes over.
+        """
+        if old_prefix_len <= 0 or old_prefix_len > 128:
+            return
+        lan = self.cfg.interface
+        if not lan:
+            return
+        try:
+            ifindex = socket.if_nametoindex(lan)
+        except OSError as exc:
+            logger.warning(
+                "passthrough: deprecation RA: if_nametoindex(%s) failed: %s",
+                lan, exc, extra=self._log_extra,
+            )
+            return
+        try:
+            prefix_net = ipaddress.IPv6Network(
+                f"{old_v6}/{old_prefix_len}", strict=False,
+            )
+        except ValueError:
+            return
+        prefix_bytes = prefix_net.network_address.packed
+
+        # PIO (RFC 4861 §4.6.2): type=3, len=4 (32 bytes), prefix_length,
+        # flags=0 (L=0 off-link, A=0 not autonomous — full withdrawal),
+        # valid lifetime=0, preferred lifetime=0, reserved2=0, prefix.
+        pio = struct.pack(
+            '!BBBBIII16s',
+            3, 4, old_prefix_len, 0x00,
+            0, 0, 0, prefix_bytes,
+        )
+        # RA header (RFC 4861 §4.2): type=134, code=0, checksum=0
+        # (kernel fills for IPPROTO_ICMPV6 raw sockets), cur_hop_limit=64,
+        # M=0 O=0, router_lifetime=0, reachable_time=0, retrans_timer=0.
+        ra = struct.pack('!BBHBBHII', 134, 0, 0, 64, 0, 0, 0, 0) + pio
+
+        def _send_one() -> bool:
+            try:
+                with socket.socket(
+                    socket.AF_INET6, socket.SOCK_RAW, socket.IPPROTO_ICMPV6,
+                ) as s:
+                    s.setsockopt(
+                        socket.IPPROTO_IPV6,
+                        socket.IPV6_MULTICAST_HOPS, 255,
+                    )
+                    s.setsockopt(
+                        socket.IPPROTO_IPV6,
+                        socket.IPV6_MULTICAST_IF,
+                        struct.pack('I', ifindex),
+                    )
+                    s.sendto(ra, (f'ff02::1%{lan}', 0))
+                return True
+            except OSError as exc:
+                logger.warning(
+                    "passthrough: deprecation RA send failed on %s: %s",
+                    lan, exc, extra=self._log_extra,
+                )
+                return False
+
+        loop = asyncio.get_running_loop()
+        sent = 0
+        for i in range(count):
+            if await loop.run_in_executor(None, _send_one):
+                sent += 1
+            else:
+                break
+            if i < count - 1:
+                await asyncio.sleep(interval)
+        if sent:
+            logger.info(
+                "passthrough: sent %d deprecation RA(s) for old prefix "
+                "%s/%d on %s (valid=0 preferred=0)",
+                sent, old_v6, old_prefix_len, lan,
+                extra=self._log_extra,
+            )
 
     def _read_active_v4_leases(self) -> list[tuple[str, str]]:
         """Parse dnsmasq leases file: returns [(mac, ip), ...]"""
