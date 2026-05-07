@@ -1,4 +1,4 @@
-<!-- All PR should follow this template to allow a clean and transparent review -->
+<!-- All PRs should follow this template to allow a clean and transparent review -->
 <!-- Text placed between these delimiters is considered a comment and is not rendered -->
 
 ## Change Summary
