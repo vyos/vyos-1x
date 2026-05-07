@@ -88,7 +88,7 @@ Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR t
 For pages that have been migrated from RST to MyST:
 
 - `docs/<page>.md` — canonical MD source (primary).
-- `docs/rst-<page>.rst` — preserved RST sibling kept around as an override option, prefixed `rst-` so it doesn't collide with the MD. Excluded from the build by `exclude_patterns` in `conf.py`.
+- `rst-<basename>.rst` — preserved RST sibling living next to `<page>.md` (e.g. for `docs/automation/cloud-init.md`, the override sits at `docs/automation/rst-cloud-init.rst`). The `rst-` prefix attaches to the basename in the same directory, not to the path stem. Excluded from the build by `exclude_patterns` in `conf.py`.
 - `docs/_rst_overrides.txt` — list of page stems that should render from `rst-<page>.rst` instead of `<page>.md`. Empty by default; pages listed here have their RST temporarily activated for the build.
 - `scripts/swap_sources.py` — CLI for `--swap` (apply overrides), `--restore`, `--dry-run`, `--status`. Build-time state lands in `docs/_build/_rst_override_state.json` and `docs/_build/_md_exclude.txt` (gitignored).
 
@@ -97,7 +97,7 @@ For pages that have NOT been migrated:
 - `docs/<page>.rst` — original RST, no `rst-` prefix, no MD sibling.
 
 **Editing rules:**
-- Migrated page (has `<page>.md`): edit the `.md`. Don't touch `rst-<page>.rst` unless you're maintaining a parallel RST version that someone has flagged in `_rst_overrides.txt`.
+- Migrated page (has `<page>.md`): edit the `.md`. Don't touch the `rst-`-prefixed sibling unless you're maintaining a parallel RST version that someone has flagged in `_rst_overrides.txt`.
 - Non-migrated page (RST-only): edit the `.rst`.
 - New page: write it as `.md` from the start. The `md-` prefix that earlier MyST migration commits used is gone — never add it.
 
@@ -105,7 +105,7 @@ Running `make html` runs the swap automatically (it's a no-op when the override 
 
 ### Command directives
 
-`.. cfgcmd::`, `.. opcmd::`, and `.. cmdinclude::` are the VyOS-specific Sphinx directives in RST. They are tracked for command coverage — do **not** convert them to plain `.. code-block::`. In MyST the same directives are written as fenced blocks: ` ```{cfgcmd} set system ... ` (enabled by `myst_fence_as_directive`). The MyST include directive is named `cmdincludemd` (not `cmdinclude`) so that template parsing follows MyST rules in MD pages and RST rules in RST pages — pick `cmdinclude` in `.rst`, `cmdincludemd` in `.md`.
+`.. cfgcmd::`, `.. opcmd::`, and `.. cmdinclude::` are the VyOS-specific Sphinx directives in RST. They are tracked for command coverage — do **not** convert them to plain `.. code-block::`. In MyST the same directives are written as fenced blocks: ```` ```{cfgcmd} set system ... ```` (enabled by `myst_fence_as_directive`). The MyST include directive is named `cmdincludemd` (not `cmdinclude`) so that template parsing follows MyST rules in MD pages and RST rules in RST pages — pick `cmdinclude` in `.rst`, `cmdincludemd` in `.md`.
 
 ## Source conventions
 
@@ -128,7 +128,7 @@ The first heading in every RST file uses `#` overline+underline. Field lists (e.
 - American English.
 - Indent with 2 spaces.
 - Blank lines around headings.
-- Inline code: `` ``command`` ``.
+- Inline code: use double backticks (`\`\`command\`\``).
 
 ### IP addresses (linter-enforced)
 
@@ -165,7 +165,7 @@ Markers must always come in pairs. Indentation may match the surrounding directi
 ### Configuration page structure
 
 1. **Theory** — what it is, when to use it, relevant RFCs.
-2. **Configuration** — all CLI options as `.. cfgcmd::` (RST) or ` ```{cfgcmd} ` (MD).
+2. **Configuration** — all CLI options as `.. cfgcmd::` (RST) or ```` ```{cfgcmd} ```` (MD).
 3. **Examples** — practical configurations with topology diagrams.
 4. **Known issues** — problems and workarounds.
 5. **Debugging** — log collection, `show` commands, state indicators.
