@@ -217,9 +217,18 @@ class PassthroughManager:
         self._mgmt_v4_added: bool = False
         self._mgmt_v6_added: bool = False
 
-        # Last-known carrier IPs (for change detection + iptables cleanup)
+        # Last-known carrier IPs (for change detection + iptables cleanup).
+        # Deliberately preserved across `teardown()` so that a SIM swap —
+        # which fires teardown() during the bearer-disconnect debounce and
+        # then apply() when the new SIM connects — is correctly detected
+        # as an IP change on the next apply().  Otherwise apply() sees
+        # _last_v4 == None, decides nothing changed, and skips the entire
+        # handoff sequence (DHCPFORCERENEW, conntrack flush, iptables
+        # block, leases-file wipe).  That manifests as the symptom
+        # "Windows /release && /renew never succeeds with the new IP".
         self._last_v4: Optional[str] = None
         self._last_v6: Optional[str] = None
+        self._last_v6_prefix: int = 0
 
         # iptables saddr-block state (set during a swap)
         self._v4_block_active: bool = False
@@ -311,21 +320,51 @@ class PassthroughManager:
             return
 
         # Detect IP change ─ trigger the handoff sequence if needed.
-        v4_changed = (self._last_v4 is not None
-                      and carrier_v4 is not None
-                      and self._last_v4 != carrier_v4)
-        v6_changed = (self._last_v6 is not None
-                      and carrier_v6 is not None
-                      and self._last_v6 != carrier_v6)
+        #
+        # We treat "address went away" (e.g. SIM swap to a v4-only carrier
+        # so v6 disappears, or vice-versa) the same as "address rolled to
+        # a new value".  Without the *_gone branches, the cleanup helpers
+        # are skipped when the new bearer no longer has that family, and
+        # the downstream device retains its old SLAAC/DHCP state until
+        # the carrier-advertised lifetime expires (~7 days on cellular).
+        v4_gone = self._last_v4 is not None and carrier_v4 is None
+        v6_gone = self._last_v6 is not None and carrier_v6 is None
+        v4_changed = v4_gone or (
+            self._last_v4 is not None
+            and carrier_v4 is not None
+            and self._last_v4 != carrier_v4
+        )
+        v6_changed = v6_gone or (
+            self._last_v6 is not None
+            and carrier_v6 is not None
+            and self._last_v6 != carrier_v6
+        )
 
         if v4_changed:
             await self._block_v4_saddr(self._last_v4)
             await self._flush_conntrack_v4(self._last_v4)
             await self._remove_inbound_route_v4(self._last_v4)
+            # Wipe the dnsmasq leases file so a stale MAC→old-IP entry
+            # can never be re-offered after restart/SIGHUP.  Without
+            # this, Windows /release && /renew can race with dnsmasq's
+            # in-memory lease state and end up with no successful ACK.
+            # Gated on lease_count > 0 — only wipe when there's actually
+            # something stale on disk so a benign re-apply (no real IP
+            # change ever happened, e.g. cold start with stashed state)
+            # never touches the file.
+            if self._read_active_v4_leases():
+                await self._wipe_leases_file()
         if v6_changed:
             await self._block_v6_saddr(self._last_v6)
             await self._flush_conntrack_v6(self._last_v6)
             await self._remove_inbound_route_v6(self._last_v6)
+        if v6_gone:
+            # When v6 disappears entirely the per-instance whitelist must
+            # also be torn down — the `if carrier_v6:` install branch
+            # below is skipped so the old prefix would otherwise persist.
+            await self._remove_src_whitelist_v6()
+        if v4_gone:
+            await self._remove_src_whitelist_v4()
 
         # Force the LAN interface admin-up before anything else: dnsmasq
         # with --bind-interfaces refuses to start on a DOWN netdev, and
@@ -402,6 +441,7 @@ class PassthroughManager:
 
         self._last_v4 = carrier_v4
         self._last_v6 = carrier_v6
+        self._last_v6_prefix = int(carrier_v6_prefix) if carrier_v6 else 0
 
         logger.info("passthrough: applied carrier IPs (v4=%s v6=%s/%s) → %s",
                     carrier_v4, carrier_v6, carrier_v6_prefix, self.cfg.interface,
@@ -422,8 +462,11 @@ class PassthroughManager:
         await self._remove_src_whitelist_v6()
         await self._remove_mss_clamp()
         await self._restore_passthrough_sysctls()
-        self._last_v4 = None
-        self._last_v6 = None
+        # NOTE: _last_v4 / _last_v6 / _last_v6_prefix are NOT cleared here.
+        # teardown() runs during the bearer-disconnect debounce on a SIM
+        # swap; the next apply() needs the previous IPs to detect the
+        # change and run the full handoff sequence.  See the comment on
+        # the fields in __init__ for the failure mode this prevents.
         logger.info("passthrough: torn down on %s",
                     self.cfg.interface or '<unset>', extra=self._log_extra)
 
@@ -971,6 +1014,25 @@ class PassthroughManager:
             return
         await _run('conntrack', '-D', '-f', 'ipv6', '-s', old_v6)
         await _run('conntrack', '-D', '-f', 'ipv6', '-d', old_v6)
+
+    async def _wipe_leases_file(self) -> None:
+        """Delete the per-instance dnsmasq leases file.
+
+        Called from the v4-changed handoff path so a stale MAC→old-IP
+        entry from the previous carrier cannot be re-loaded by dnsmasq
+        on its next start (or referenced via SIGHUP) and offered back to
+        the same MAC after a Windows /release && /renew cycle.  dnsmasq
+        rebuilds the file from new DHCPACKs as clients re-lease.
+        """
+        try:
+            self._leases_path().unlink()
+            logger.info("passthrough: wiped stale leases file %s",
+                        self._leases_path(), extra=self._log_extra)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            logger.warning("passthrough: failed to wipe leases file %s: %s",
+                           self._leases_path(), exc, extra=self._log_extra)
 
     # ── DHCPFORCERENEW / Reconfigure ────────────────────────────────────
     async def _force_renew_v4(self) -> None:

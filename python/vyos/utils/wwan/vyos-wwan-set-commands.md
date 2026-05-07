@@ -504,6 +504,10 @@ set interfaces wwan wwan0 ip-passthrough management-address-ipv6 'fd00:6c61:6e30
 #   Mix v4 and v6 freely — they are split automatically into DHCPv4 option 6
 #   and DHCPv6 option 23 / RA RDNSS. Use this for NextDNS, OpenDNS, internal
 #   resolvers, or carrier-mandated DNS for compliance.
+#   IPv6 addresses must be fully formed (RFC 5952 form, with `::` shorthand
+#   permitted, e.g. '2606:4700:4700::1111' is the fully formed form of
+#   '2606:4700:4700:0000:0000:0000:0000:1111'). One address per `set` command —
+#   comma- or space-separated lists in a single value are not accepted.
 set interfaces wwan wwan0 ip-passthrough dns-server '1.1.1.1'
 set interfaces wwan wwan0 ip-passthrough dns-server '9.9.9.9'
 set interfaces wwan wwan0 ip-passthrough dns-server '2606:4700:4700::1111'
