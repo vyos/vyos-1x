@@ -63,7 +63,7 @@ One long-lived branch per VyOS release line. Branch names are constellations sor
 
 PRs target `current`. After merge, request backports via a **post-merge comment** on the PR:
 
-```
+```text
 @Mergifyio backport circinus
 @Mergifyio backport sagitta
 ```
