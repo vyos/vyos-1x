@@ -83,8 +83,6 @@ Smoketests (`smoketest/`) run inside the QEMU harness invoked by
 - `vyos/vyos-documentation` carries `docs/_include/vyos-1x` as a submodule
   **pinned to `sagitta`** — do not bump the doc submodule branch without a
   coordinated change.
-- `VyOS-Networks/vyos-1x` is the private mirror twin (canonical here). The
-  `pr-mirror-repo-sync.yml` reusable workflow is active for this repository.
 - HTTP API runtime dependencies come from `vyos/vyos-http-api-tools`; the
   FastAPI implementation lives in `src/services/`.
 
@@ -102,12 +100,6 @@ Smoketests (`smoketest/`) run inside the QEMU harness invoked by
   lint. `ruff.toml` and `nose2.cfg` are at repository root.
 - No `mergify.yml` - `vyos-1x` is one of the few mirror-pipeline consumers
   without it.
-
-## Mirror relationship
-
-- Mirror twin: `VyOS-Networks/vyos-1x`. The canonical side is here:
-  `vyos/vyos-1x`. PRs merged on a release-train branch are mirrored downstream
-  by `pr-mirror-repo-sync.yml`.
 
 ## Notes for future contributors
 
