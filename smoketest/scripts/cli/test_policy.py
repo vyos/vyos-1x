@@ -709,6 +709,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         for rule in test_range:
             tmp = f'ip prefix-list {prefix_list} seq {rule} permit {prefix} le {rule}'
             self.assertIn(tmp, config)
+
     def test_prefix_list_ge_le_validation(self):
         # FRR requires mask_length <= ge <= le for prefix-list rules
         base = base_path + ['prefix-list', 'getest', 'rule', '10']

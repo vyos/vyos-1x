@@ -174,15 +174,18 @@ def verify(config_dict):
                     if ge is not None and ge < mask_len:
                         raise ConfigError(
                             f'{policy_hr} {instance} rule {rule}: "ge" ({ge}) must be >= '
-                            f'prefix length ({mask_len})')
+                            f'prefix length ({mask_len})'
+                        )
                     if le is not None and le < mask_len:
                         raise ConfigError(
                             f'{policy_hr} {instance} rule {rule}: "le" ({le}) must be >= '
-                            f'prefix length ({mask_len})')
+                            f'prefix length ({mask_len})'
+                        )
                     if ge is not None and le is not None and ge > le:
                         raise ConfigError(
                             f'{policy_hr} {instance} rule {rule}: "ge" ({ge}) must be <= '
-                            f'"le" ({le})')
+                            f'"le" ({le})'
+                        )
 
                     if rule_config in entries:
                         raise ConfigError(
