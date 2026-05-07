@@ -10,7 +10,6 @@ BUILDDIR      = _build
 
 AUTOHOST      = 0.0.0.0
 AUTOPORT      = 8000
-AUTOOPTS      = --watch .
 
 SWAP          = python3 ../scripts/swap_sources.py
 
