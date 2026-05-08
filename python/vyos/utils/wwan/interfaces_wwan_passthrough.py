@@ -1156,11 +1156,16 @@ class PassthroughManager:
         prefix_bytes = prefix_net.network_address.packed
 
         # PIO (RFC 4861 §4.6.2): type=3, len=4 (32 bytes), prefix_length,
-        # flags=0 (L=0 off-link, A=0 not autonomous — full withdrawal),
+        # flags = L|A = 0xC0 (on-link + autonomous).  CRITICAL: A=1 is
+        # required — RFC 4862 §5.5.3(a) says hosts MUST silently ignore
+        # any PIO with A=0, so a "withdrawal" PIO with flags=0 has no
+        # effect on existing SLAAC addresses on the host.  Setting A=1
+        # with valid=0 preferred=0 is the correct §5.5.3 deprecation
+        # signal — Windows / macOS / Linux honor it within ~1 RTT.
         # valid lifetime=0, preferred lifetime=0, reserved2=0, prefix.
         pio = struct.pack(
             '!BBBBIII16s',
-            3, 4, old_prefix_len, 0x00,
+            3, 4, old_prefix_len, 0xC0,
             0, 0, 0, prefix_bytes,
         )
         # RA header (RFC 4861 §4.2): type=134, code=0, checksum=0
