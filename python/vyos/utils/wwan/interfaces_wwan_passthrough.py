@@ -474,6 +474,27 @@ class PassthroughManager:
     async def teardown(self) -> None:
         """Stop dnsmasq, drop mgmt addr (if owned), clean up iptables
         and the policy-routing entries used for inbound forwarding."""
+        # Send a burst of deprecation RAs FIRST, while dnsmasq is still
+        # alive and the LAN interface still has the shadow v6 address —
+        # otherwise the SLAAC client (Windows in particular) will keep
+        # using the old carrier prefix until the previously-advertised
+        # preferred lifetime expires (≥30 min).  Done in the background
+        # so a slow burst doesn't delay the rest of teardown.  Skipped
+        # silently when no v6 was ever applied.
+        if self._last_v6 and self._last_v6_prefix:
+            asyncio.create_task(
+                self._send_deprecation_ra_v6(
+                    self._last_v6, self._last_v6_prefix,
+                )
+            )
+
+        # Force the downstream v4 client out of BOUND state BEFORE we
+        # kill dnsmasq.  Without this, Windows (and other RFC-2131
+        # clients) hold the carrier IP in `ipconfig` until the lease
+        # expires (60 s default) — visible to the user as "still
+        # connected" long after the bearer is gone.  See _force_release_v4
+        # for the FORCERENEW + DHCPNAK mechanism.
+        await self._force_release_v4()
         await self._stop_dnsmasq()
         await self._remove_mgmt_address()
         await self._remove_shadow_addrs()
@@ -1100,6 +1121,92 @@ class PassthroughManager:
                        '--client', mac, '--ip', ip)
         logger.info("passthrough: DHCPFORCERENEW sent to %d v4 client(s)",
                     len(leases), extra=self._log_extra)
+
+    async def _force_release_v4(self) -> None:
+        """Push the downstream v4 client out of BOUND state immediately.
+
+        Used by ``teardown()`` so the carrier IP disappears from the
+        Windows host's ``ipconfig`` (and from the kernel's routing /
+        ARP tables) the moment the bearer goes away — without waiting
+        for the natural lease expiry (default 60 s).
+
+        Sequence:
+
+        1. Rewrite dnsmasq with a single dummy ``dhcp-range`` whose
+           subnet does NOT contain the carrier IP.
+        2. Hard-restart dnsmasq with that NAK-only config.
+        3. Send DHCPFORCERENEW (RFC 3203) via ``dhcp_release2`` to
+           every v4 lease.
+        4. The client unicasts a DHCPREQUEST for its current IP.
+           dnsmasq sees the request is for an IP outside the dummy
+           range and replies with DHCPNAK (RFC 2131 §4.3.2).
+        5. Client transitions BOUND → INIT and clears its lease.
+
+        Total time: ~2 s from teardown start to Windows showing
+        ``Media disconnected`` for IPv4.
+
+        Skipped silently when:
+        - no v4 was ever applied (no leases on file),
+        - ``dhcp_release2`` is not installed,
+        - the LAN interface is not configured.
+        """
+        leases = self._read_active_v4_leases()
+        if not leases:
+            return
+        if shutil.which('dhcp_release2') is None:
+            return  # already-warned via _force_renew_v4
+        if not self.cfg.interface:
+            return
+
+        # Write a NAK-only config: dnsmasq is alive on the LAN but its
+        # only dhcp-range is a single unallocatable address (RFC 5736
+        # IETF Protocol Assignments block).  Any DHCPREQUEST for the
+        # real carrier IP is therefore outside the configured range
+        # and gets a DHCPNAK.  bind-interfaces + the existing pid/lease
+        # paths keep the rest of dnsmasq's behaviour identical.
+        lines = [
+            "# auto-generated NAK-only mode by interfaces_wwan_passthrough.py",
+            f"interface={self.cfg.interface}",
+            "bind-interfaces",
+            "except-interface=lo",
+            "no-resolv",
+            "no-hosts",
+            f"pid-file={self._pid_path()}",
+            f"dhcp-leasefile={self._leases_path()}",
+            "port=0",
+            "quiet-dhcp",
+            "dhcp-authoritative",
+            "no-ping",
+            # Single-address dummy range (RFC 5736 reserved 192.0.0.0/24).
+            # Any DHCPREQUEST for an IP outside this range is NAK'd.
+            "dhcp-range=192.0.0.255,192.0.0.255,255.255.255.255,30",
+        ]
+        try:
+            self._conf_path().write_text('\n'.join(lines) + '\n')
+        except OSError as exc:
+            logger.warning("passthrough: NAK-only conf write failed: %s",
+                          exc, extra=self._log_extra)
+            return
+
+        await self._start_or_reload_dnsmasq(force_restart=True)
+        # Brief settle window: dnsmasq needs to (re)bind the listening
+        # socket on the LAN before we trigger the FORCERENEW burst.
+        await asyncio.sleep(0.3)
+
+        for mac, ip in leases:
+            await _run('dhcp_release2', '--iface', self.cfg.interface,
+                       '--client', mac, '--ip', ip)
+        logger.info(
+            "passthrough: DHCPFORCERENEW + NAK-only dnsmasq → %d v4 client(s) "
+            "released",
+            len(leases), extra=self._log_extra,
+        )
+
+        # Give the client time to receive FORCERENEW, send DHCPREQUEST,
+        # receive DHCPNAK, and transition to INIT.  ~1.5 s is enough on
+        # a quiet LAN; tcpdump on Windows shows the full cycle in
+        # roughly 200-400 ms but we add slack for buffered paths.
+        await asyncio.sleep(1.5)
 
     async def _reconfigure_v6(self) -> None:
         """Trigger DHCPv6 Reconfigure.  dnsmasq does this automatically on

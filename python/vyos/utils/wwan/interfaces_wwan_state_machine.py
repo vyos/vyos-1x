@@ -760,6 +760,19 @@ class ModemStateMachine:
                     logger.info("Modem disappeared during SIM switch (expected hardware reset)",
                                extra={'interface_number': self.interface_number,
                                       'modem_path': path})
+                    # Tear down passthrough so dnsmasq stops re-advertising
+                    # the old carrier v6 prefix to the LAN.  Without this,
+                    # the previous bearer's RA stream keeps refreshing the
+                    # SLAAC address on the downstream host the entire time
+                    # the modem is gone (and through any subsequent v4-only
+                    # bearer if the deprecation path never re-runs).
+                    try:
+                        if self._passthrough.cfg.is_active():
+                            await self._passthrough.teardown()
+                    except Exception as pt_err:
+                        logger.warning("IP passthrough teardown failed during SIM switch: %s",
+                                      pt_err,
+                                      extra={'interface_number': self.interface_number})
                     # Invalidate the proxy — it points to a stale D-Bus path
                     self.proxy = None
                     self.modem_path = None
@@ -780,6 +793,21 @@ class ModemStateMachine:
                                       ModemState.USAGE_MONITORING.value,
                                       ModemState.DISCONNECTING.value]:
                     self._record_bearer_down('modem_removed')
+
+                # Tear down passthrough immediately on modem removal so
+                # dnsmasq stops emitting RAs that refresh the old carrier
+                # v6 prefix on the downstream host.  The bearer-disconnect
+                # timer below would normally do this, but it gets cancelled
+                # at the end of this handler when the modem is gone — so
+                # without an explicit teardown here the LAN host keeps
+                # SLAAC'ing the dead carrier prefix for hours.
+                try:
+                    if self._passthrough.cfg.is_active():
+                        await self._passthrough.teardown()
+                except Exception as pt_err:
+                    logger.warning("IP passthrough teardown failed on modem removal: %s",
+                                  pt_err,
+                                  extra={'interface_number': self.interface_number})
 
                 # Clean up current modem references
                 self.proxy = None
