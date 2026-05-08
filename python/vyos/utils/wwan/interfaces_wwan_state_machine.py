@@ -266,15 +266,18 @@ class ModemStateMachine:
         self.last_failed_apn = ''             # The APN name that was last tried when failure occurred
         self.configured_apn_rejected = False  # True when the user's explicitly configured APN was rejected
 
-        # ── IPv6 Prefix Delegation (PD) state ──────────────────────────────
-        self._pd_config = {}               # Desired PD state from config (parsed pd dict)
-        self._pd_applied = {}              # Currently applied: {iface: {'prefix': str, 'addr': str}}
-        self._pd_pending = set()           # Interface names not yet present (awaiting netlink)
-        self._pd_netlink_task = None       # asyncio task: netlink RTM_NEWLINK/DELLINK watch
-        self._pd_reconciliation_task = None  # asyncio task: periodic safety-net re-check
-        self._pd_reconciliation_interval = 10  # Seconds between re-checks (configurable)
-        self._pd_carrier_prefix = None     # Carrier-assigned prefix as IPv6Network
-        self._pd_carrier_prefix_len = None  # Carrier prefix length (int), e.g. 56
+        # ── IPv6 bridging (carrier /64 → single downstream LAN) state ──
+        # Not DHCPv6 PD: we just copy the carrier-supplied prefix verbatim
+        # to one downstream LAN interface.  For real DHCPv6 PD, use the
+        # standard VyOS 'dhcpv6-options pd' tree (dhcp6c-driven).
+        self._bridging_config = {'enabled': False, 'interface': ''}
+        self._bridging_applied = {}        # {iface: {'prefix','addr','prefix_len'}}
+        self._bridging_pending = set()     # iface names not yet present
+        self._bridging_netlink_task = None
+        self._bridging_reconciliation_task = None
+        self._bridging_reconciliation_interval = 10
+        self._bridging_carrier_prefix = None      # IPv6Network
+        self._bridging_carrier_prefix_len = None  # int
 
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
@@ -2008,14 +2011,17 @@ class ModemStateMachine:
         self._bearer_proxy = None
         self._bearer_interface = None
 
-        # IPv6 Prefix Delegation configuration
-        self._pd_config = self.parsed_config.raw_config.get('pd', {})
-        self._pd_reconciliation_interval = int(
-            self.parsed_config.raw_config.get('pd_reconciliation_interval', 10)
+        # IPv6 bridging configuration
+        self._bridging_config = self.parsed_config.raw_config.get(
+            'ipv6_bridging', {'enabled': False, 'interface': ''}
         )
-        if self._pd_config:
-            logger.info("PD configuration loaded: %d instance(s), reconciliation interval %ds",
-                       len(self._pd_config), self._pd_reconciliation_interval,
+        self._bridging_reconciliation_interval = int(
+            self._bridging_config.get('reconciliation_interval', 10)
+        )
+        if self._bridging_config.get('enabled') and self._bridging_config.get('interface'):
+            logger.info("IPv6 bridging enabled → %s, reconciliation interval %ds",
+                       self._bridging_config['interface'],
+                       self._bridging_reconciliation_interval,
                        extra={'interface_number': self.interface_number})
 
     async def _configure_modem_initial(self):
@@ -7694,7 +7700,6 @@ class ModemStateMachine:
             )
 
             # Registration flap detection status
-            import time
             flap_window = getattr(self, 'registration_flap_window', 360)
             flap_count = getattr(self, 'registration_flap_count', 5)
             now = time.monotonic()
@@ -9029,9 +9034,10 @@ class ModemStateMachine:
         interface_name = f"wwan{self.interface_number}"
         await self._remove_ipv6_egress_filter(interface_name)
 
-        # Stop PD background tasks and remove delegated prefixes from LAN interfaces
-        self._pd_stop_background_tasks()
-        await self._pd_remove_all()
+        # Stop bridging background tasks and remove the carrier prefix from
+        # the downstream LAN interface
+        self._bridging_stop_background_tasks()
+        await self._bridging_remove_all()
 
         # Clear tracked IPs so first post-reconnect apply doesn't see a
         # phantom "change" from the old session
@@ -9298,7 +9304,6 @@ class ModemStateMachine:
             # ── Registration flap detection ──────────────────────────────
             # Record this confirmed registration loss and check if the network
             # has been bouncing repeatedly within the configured window.
-            import time
             now = time.monotonic()
             flap_count = getattr(self, 'registration_flap_count', 5)
             flap_window = getattr(self, 'registration_flap_window', 360)
@@ -10011,235 +10016,191 @@ class ModemStateMachine:
         logger.debug("Killed stale IPv6 sockets bound to %s", old_ipv6,
                      extra={'interface_number': self.interface_number})
 
-    # ── IPv6 Prefix Delegation (PD) ────────────────────────────────────
+    # ── IPv6 bridging (carrier prefix → single downstream LAN) ─────────
     #
-    # The carrier assigns a prefix via the bearer's Ip6Config.  The FSM
-    # applies a /128 on wwan and delegates sub-prefixes to LAN interfaces
-    # using SLA-ID / SLA-LEN math (RFC 6603).  No DHCPv6 client is used.
+    # The carrier assigns an IPv6 prefix (typically /64) via the bearer's
+    # Ip6Config.  This feature copies that prefix verbatim to a single
+    # downstream LAN interface so SLAAC clients on that LAN get globally-
+    # routable addresses.  This is NOT DHCPv6 PD — it is a one-prefix copy
+    # with no sub-delegation.  For real DHCPv6 PD, use the standard VyOS
+    # 'dhcpv6-options pd' tree (handled by dhcp6c via Interface.update()).
     #
-    # Two background tasks keep delegated addresses in sync:
+    # Two background tasks keep the address in sync with the LAN interface:
     #   1. Netlink watch  — instant RTM_NEWLINK/DELLINK notification
     #   2. Reconciliation — periodic safety-net re-check
 
-    def _pd_compute_delegated_address(self, carrier_net, carrier_prefix_len,
-                                       sla_id, sla_len, address_id):
-        """Compute the full IPv6 address for a delegated LAN interface.
+    def _bridging_target_interface(self):
+        """Return the configured downstream LAN interface name, or None."""
+        if not self._bridging_config or not self._bridging_config.get('enabled'):
+            return None
+        iface = self._bridging_config.get('interface') or ''
+        return iface or None
 
-        Returns (address_str, prefix_len) or (None, None) on error.
+    def _bridging_build_desired_state(self, carrier_net, carrier_prefix_len):
+        """Compute the desired bridged address for the downstream interface.
 
-        carrier_net        : ipaddress.IPv6Network — the carrier-assigned prefix
-        carrier_prefix_len : int — e.g. 56
-        sla_id             : int — which sub-prefix (0-65535)
-        sla_len            : int — bits dedicated to the SLA-ID
-        address_id         : int — host identifier within the delegated prefix
+        Returns: {iface_name: {'addr': str, 'prefix_len': int}} or {}.
+
+        The downstream interface gets the first usable host address inside
+        the carrier-supplied prefix (network_address + 1) at the carrier's
+        prefix length.  This makes the carrier prefix on-link on the LAN
+        so SLAAC clients can form globally-routable addresses.
         """
-        delegated_prefix_len = carrier_prefix_len + sla_len
-
-        if delegated_prefix_len > 128:
-            logger.error("PD delegated prefix /%d exceeds /128 (carrier /%d + sla-len %d)",
-                        delegated_prefix_len, carrier_prefix_len, sla_len,
+        iface = self._bridging_target_interface()
+        if not iface:
+            return {}
+        if carrier_prefix_len >= 128:
+            logger.info("IPv6 bridging skipped: carrier /%d is address-only",
+                       carrier_prefix_len,
+                       extra={'interface_number': self.interface_number})
+            return {}
+        try:
+            host_int = int(carrier_net.network_address) | 1
+            addr = str(ipaddress.IPv6Address(host_int))
+        except Exception as e:
+            logger.error("IPv6 bridging address compute failed: %s", e,
                         extra={'interface_number': self.interface_number})
-            return None, None
+            return {}
+        return {iface: {'addr': addr, 'prefix_len': carrier_prefix_len}}
 
-        if sla_len > 0 and sla_id >= (1 << sla_len):
-            logger.error("PD sla-id %d does not fit in sla-len %d (%d max)",
-                        sla_id, sla_len, (1 << sla_len) - 1,
-                        extra={'interface_number': self.interface_number})
-            return None, None
-
-        if sla_len == 0 and sla_id != 0:
-            logger.error("PD sla-len 0 requires sla-id 0, got %d",
-                        sla_id,
-                        extra={'interface_number': self.interface_number})
-            return None, None
-
-        carrier_int = int(carrier_net.network_address)
-        # Place sla_id in the bits immediately following the carrier prefix
-        if sla_len > 0:
-            delegated_network_int = carrier_int | (sla_id << (128 - delegated_prefix_len))
-        else:
-            delegated_network_int = carrier_int
-
-        # Place the host identifier (address_id) in the lower bits
-        full_addr_int = delegated_network_int | address_id
-        full_addr = ipaddress.IPv6Address(full_addr_int)
-
-        return str(full_addr), delegated_prefix_len
-
-    def _pd_build_desired_state(self, carrier_net, carrier_prefix_len):
-        """Parse self._pd_config and build a dict of desired PD assignments.
-
-        Returns: {iface_name: {'addr': str, 'prefix_len': int, 'pd_instance': str}}
-        """
-        desired = {}
-        for pd_instance, pd_data in self._pd_config.items():
-            interfaces = pd_data.get('interface', {})
-            for iface_name, iface_cfg in interfaces.items():
-                sla_id = int(iface_cfg.get('sla_id', 0))
-                # Default sla_len: 64 - carrier_prefix_len (produces /64 subnets)
-                default_sla_len = max(0, 64 - carrier_prefix_len)
-                sla_len_raw = iface_cfg.get('sla_len')
-                if sla_len_raw is not None:
-                    sla_len = int(sla_len_raw)
-                else:
-                    sla_len = default_sla_len
-
-                address_raw = iface_cfg.get('address', '1')
-                address_id = int(address_raw)
-
-                addr, prefix_len = self._pd_compute_delegated_address(
-                    carrier_net, carrier_prefix_len, sla_id, sla_len, address_id
-                )
-                if addr is not None:
-                    desired[iface_name] = {
-                        'addr': addr,
-                        'prefix_len': prefix_len,
-                        'pd_instance': pd_instance,
-                    }
-                    logger.debug("PD desired: %s/%d on %s (instance %s, sla-id %d, sla-len %d)",
-                                addr, prefix_len, iface_name, pd_instance, sla_id, sla_len,
-                                extra={'interface_number': self.interface_number})
-        return desired
-
-    def _pd_interface_exists(self, iface_name):
+    def _bridging_interface_exists(self, iface_name):
         """Check if a network interface exists."""
         return os.path.isdir(f"/sys/class/net/{iface_name}")
 
-    async def _pd_apply_to_interface(self, iface_name, addr, prefix_len):
-        """Add a delegated IPv6 address to a LAN interface."""
+    async def _bridging_apply_to_interface(self, iface_name, addr, prefix_len):
+        """Add the bridged carrier prefix to a downstream LAN interface."""
         cidr = f"{addr}/{prefix_len}"
-        rc, _, stderr = await self._run_ipcmd('ip', '-6', 'addr', 'add', cidr, 'dev', iface_name)
+        rc, _, stderr = await self._run_ipcmd(
+            'ip', '-6', 'addr', 'add', cidr, 'dev', iface_name
+        )
         if rc == 0 or 'exists' in stderr:
-            logger.info("PD applied %s on %s", cidr, iface_name,
+            logger.info("IPv6 bridging applied %s on %s", cidr, iface_name,
                        extra={'interface_number': self.interface_number})
             return True
-        else:
-            logger.warning("PD failed to apply %s on %s: %s", cidr, iface_name, stderr.strip(),
-                          extra={'interface_number': self.interface_number})
-            return False
+        logger.warning("IPv6 bridging failed to apply %s on %s: %s",
+                      cidr, iface_name, stderr.strip(),
+                      extra={'interface_number': self.interface_number})
+        return False
 
-    async def _pd_remove_from_interface(self, iface_name, addr, prefix_len):
-        """Remove a delegated IPv6 address from a LAN interface."""
+    async def _bridging_remove_from_interface(self, iface_name, addr, prefix_len):
+        """Remove the bridged carrier prefix from a downstream LAN interface."""
         cidr = f"{addr}/{prefix_len}"
-        if not self._pd_interface_exists(iface_name):
-            logger.debug("PD skip remove %s from %s (interface gone)", cidr, iface_name,
+        if not self._bridging_interface_exists(iface_name):
+            logger.debug("IPv6 bridging skip remove %s from %s (interface gone)",
+                        cidr, iface_name,
                         extra={'interface_number': self.interface_number})
             return
-        rc, _, stderr = await self._run_ipcmd('ip', '-6', 'addr', 'del', cidr, 'dev', iface_name)
+        rc, _, stderr = await self._run_ipcmd(
+            'ip', '-6', 'addr', 'del', cidr, 'dev', iface_name
+        )
         if rc == 0 or 'Cannot assign' in stderr:
-            logger.info("PD removed %s from %s", cidr, iface_name,
+            logger.info("IPv6 bridging removed %s from %s", cidr, iface_name,
                        extra={'interface_number': self.interface_number})
         else:
-            logger.debug("PD remove %s from %s: %s", cidr, iface_name, stderr.strip(),
+            logger.debug("IPv6 bridging remove %s from %s: %s",
+                        cidr, iface_name, stderr.strip(),
                         extra={'interface_number': self.interface_number})
 
-    async def _pd_apply_all(self, carrier_net, carrier_prefix_len):
-        """Compute desired PD state and apply to every present LAN interface.
+    async def _bridging_apply_all(self, carrier_net, carrier_prefix_len):
+        """Apply the carrier prefix to the configured downstream interface.
 
-        Interfaces that don't exist yet are added to _pd_pending.
-        Starts netlink watch and reconciliation timer if any PD is configured.
+        If the interface does not exist yet, it is added to _bridging_pending.
+        Starts netlink watch and reconciliation timer if bridging is configured.
         """
-        if not self._pd_config:
+        if not self._bridging_target_interface():
             return
 
-        if carrier_prefix_len >= 128:
-            logger.info("PD skipped: carrier prefix /%d is address-only, no space to delegate",
-                       carrier_prefix_len,
-                       extra={'interface_number': self.interface_number})
-            return
+        self._bridging_carrier_prefix = carrier_net
+        self._bridging_carrier_prefix_len = carrier_prefix_len
 
-        self._pd_carrier_prefix = carrier_net
-        self._pd_carrier_prefix_len = carrier_prefix_len
-
-        desired = self._pd_build_desired_state(carrier_net, carrier_prefix_len)
-        self._pd_pending = set()
-        self._pd_applied = {}
+        desired = self._bridging_build_desired_state(carrier_net, carrier_prefix_len)
+        self._bridging_pending = set()
+        self._bridging_applied = {}
 
         for iface_name, info in desired.items():
-            if self._pd_interface_exists(iface_name):
-                ok = await self._pd_apply_to_interface(
+            if self._bridging_interface_exists(iface_name):
+                ok = await self._bridging_apply_to_interface(
                     iface_name, info['addr'], info['prefix_len']
                 )
                 if ok:
-                    self._pd_applied[iface_name] = {
+                    self._bridging_applied[iface_name] = {
                         'prefix': f"{info['addr']}/{info['prefix_len']}",
                         'addr': info['addr'],
                         'prefix_len': info['prefix_len'],
                     }
             else:
-                self._pd_pending.add(iface_name)
-                logger.info("PD pending: %s not present yet (will apply when it appears)",
+                self._bridging_pending.add(iface_name)
+                logger.info("IPv6 bridging pending: %s not present yet",
                            iface_name,
                            extra={'interface_number': self.interface_number})
 
-        # Start background tasks for late-appearing interfaces
         if desired:
-            self._pd_start_background_tasks()
+            self._bridging_start_background_tasks()
 
-        logger.info("PD apply complete: %d applied, %d pending",
-                   len(self._pd_applied), len(self._pd_pending),
+        logger.info("IPv6 bridging apply complete: %d applied, %d pending",
+                   len(self._bridging_applied), len(self._bridging_pending),
                    extra={'interface_number': self.interface_number})
 
-    async def _pd_remove_all(self):
-        """Remove all delegated prefixes from LAN interfaces and clear PD state."""
-        for iface_name, info in list(self._pd_applied.items()):
-            await self._pd_remove_from_interface(
+    async def _bridging_remove_all(self):
+        """Remove the bridged prefix from the downstream interface and reset state."""
+        for iface_name, info in list(self._bridging_applied.items()):
+            await self._bridging_remove_from_interface(
                 iface_name, info['addr'], info['prefix_len']
             )
-        self._pd_applied.clear()
-        self._pd_pending.clear()
-        self._pd_carrier_prefix = None
-        self._pd_carrier_prefix_len = None
-        logger.info("PD: all delegated prefixes removed",
+        self._bridging_applied.clear()
+        self._bridging_pending.clear()
+        self._bridging_carrier_prefix = None
+        self._bridging_carrier_prefix_len = None
+        logger.info("IPv6 bridging: removed bridged prefix",
                    extra={'interface_number': self.interface_number})
 
-    def _pd_start_background_tasks(self):
+    def _bridging_start_background_tasks(self):
         """Start netlink watch and reconciliation timer tasks."""
-        # Netlink watch — instant notification for interface create/destroy
-        if not self._pd_netlink_task or self._pd_netlink_task.done():
-            self._pd_netlink_task = self._safe_create_task(
-                self._pd_netlink_watch(), name='pd-netlink-watch'
+        if not self._bridging_netlink_task or self._bridging_netlink_task.done():
+            self._bridging_netlink_task = self._safe_create_task(
+                self._bridging_netlink_watch(), name='bridging-netlink-watch'
+            )
+        if not self._bridging_reconciliation_task or \
+                self._bridging_reconciliation_task.done():
+            self._bridging_reconciliation_task = self._safe_create_task(
+                self._bridging_reconciliation_loop(), name='bridging-reconciliation'
             )
 
-        # Reconciliation timer — safety-net periodic re-check
-        if not self._pd_reconciliation_task or self._pd_reconciliation_task.done():
-            self._pd_reconciliation_task = self._safe_create_task(
-                self._pd_reconciliation_loop(), name='pd-reconciliation'
-            )
+    def _bridging_stop_background_tasks(self):
+        """Cancel bridging background tasks."""
+        if self._bridging_netlink_task and not self._bridging_netlink_task.done():
+            self._bridging_netlink_task.cancel()
+            self._bridging_netlink_task = None
+        if self._bridging_reconciliation_task and \
+                not self._bridging_reconciliation_task.done():
+            self._bridging_reconciliation_task.cancel()
+            self._bridging_reconciliation_task = None
 
-    def _pd_stop_background_tasks(self):
-        """Cancel PD background tasks."""
-        if self._pd_netlink_task and not self._pd_netlink_task.done():
-            self._pd_netlink_task.cancel()
-            self._pd_netlink_task = None
-
-        if self._pd_reconciliation_task and not self._pd_reconciliation_task.done():
-            self._pd_reconciliation_task.cancel()
-            self._pd_reconciliation_task = None
-
-    async def _pd_reconciliation_loop(self):
-        """Periodically re-check pending interfaces and reconcile applied state."""
+    async def _bridging_reconciliation_loop(self):
+        """Periodically re-check the downstream interface and reconcile state."""
         try:
             while True:
-                await asyncio.sleep(self._pd_reconciliation_interval)
+                await asyncio.sleep(self._bridging_reconciliation_interval)
 
-                if not self._pd_carrier_prefix or not self._pd_config:
+                if not self._bridging_carrier_prefix or \
+                        not self._bridging_target_interface():
                     continue
 
-                desired = self._pd_build_desired_state(
-                    self._pd_carrier_prefix, self._pd_carrier_prefix_len
+                desired = self._bridging_build_desired_state(
+                    self._bridging_carrier_prefix,
+                    self._bridging_carrier_prefix_len,
                 )
 
-                # Apply to any newly-appeared pending interfaces
                 newly_applied = []
-                for iface_name in list(self._pd_pending):
-                    if iface_name in desired and self._pd_interface_exists(iface_name):
+                for iface_name in list(self._bridging_pending):
+                    if iface_name in desired and \
+                            self._bridging_interface_exists(iface_name):
                         info = desired[iface_name]
-                        ok = await self._pd_apply_to_interface(
+                        ok = await self._bridging_apply_to_interface(
                             iface_name, info['addr'], info['prefix_len']
                         )
                         if ok:
-                            self._pd_applied[iface_name] = {
+                            self._bridging_applied[iface_name] = {
                                 'prefix': f"{info['addr']}/{info['prefix_len']}",
                                 'addr': info['addr'],
                                 'prefix_len': info['prefix_len'],
@@ -10247,30 +10208,31 @@ class ModemStateMachine:
                             newly_applied.append(iface_name)
 
                 for iface_name in newly_applied:
-                    self._pd_pending.discard(iface_name)
+                    self._bridging_pending.discard(iface_name)
 
-                # Detect interfaces that were destroyed and move back to pending
-                for iface_name in list(self._pd_applied):
-                    if not self._pd_interface_exists(iface_name):
-                        del self._pd_applied[iface_name]
+                for iface_name in list(self._bridging_applied):
+                    if not self._bridging_interface_exists(iface_name):
+                        del self._bridging_applied[iface_name]
                         if iface_name in desired:
-                            self._pd_pending.add(iface_name)
-                            logger.info("PD reconciliation: %s disappeared, moved to pending",
-                                       iface_name,
-                                       extra={'interface_number': self.interface_number})
+                            self._bridging_pending.add(iface_name)
+                            logger.info(
+                                "IPv6 bridging reconciliation: %s disappeared, "
+                                "moved to pending", iface_name,
+                                extra={'interface_number': self.interface_number})
 
                 if newly_applied:
-                    logger.info("PD reconciliation: applied to %s", ', '.join(newly_applied),
+                    logger.info("IPv6 bridging reconciliation: applied to %s",
+                               ', '.join(newly_applied),
                                extra={'interface_number': self.interface_number})
 
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error("PD reconciliation loop error: %s", e,
+            logger.error("IPv6 bridging reconciliation loop error: %s", e,
                         extra={'interface_number': self.interface_number})
 
-    async def _pd_netlink_watch(self):
-        """Watch for RTM_NEWLINK/RTM_DELLINK events and apply/remove PD accordingly."""
+    async def _bridging_netlink_watch(self):
+        """Watch RTM_NEWLINK/DELLINK and apply/remove the bridged prefix."""
         NETLINK_ROUTE = 0
         RTMGRP_LINK = 1
         RTM_NEWLINK = 16
@@ -10288,7 +10250,6 @@ class ModemStateMachine:
             loop = asyncio.get_event_loop()
 
             while True:
-                # Wait for socket to be readable
                 future = loop.create_future()
 
                 def _on_readable():
@@ -10306,7 +10267,6 @@ class ModemStateMachine:
                 except BlockingIOError:
                     continue
 
-                # Parse netlink messages from the buffer
                 offset = 0
                 while offset < len(data):
                     if offset + NLMSG_HDRLEN > len(data):
@@ -10318,7 +10278,6 @@ class ModemStateMachine:
                         break
 
                     if nlmsg_type in (RTM_NEWLINK, RTM_DELLINK):
-                        # Parse ifinfomsg to skip it, then walk rtattrs for IFLA_IFNAME
                         attr_offset = offset + NLMSG_HDRLEN + IFINFOMSG_LEN
                         iface_name = None
 
@@ -10330,67 +10289,72 @@ class ModemStateMachine:
                                 name_start = attr_offset + 4
                                 name_end = attr_offset + rta_len
                                 raw = data[name_start:name_end]
-                                iface_name = raw.rstrip(b'\x00').decode('ascii', errors='replace')
+                                iface_name = raw.rstrip(b'\x00').decode(
+                                    'ascii', errors='replace')
                                 break
-                            # Align to 4-byte boundary
                             attr_offset += (rta_len + 3) & ~3
 
                         if iface_name:
-                            await self._pd_handle_netlink_event(
+                            await self._bridging_handle_netlink_event(
                                 nlmsg_type, iface_name
                             )
 
-                    # Advance to next message (4-byte aligned)
                     offset += (nlmsg_len + 3) & ~3
 
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error("PD netlink watch error: %s", e,
+            logger.error("IPv6 bridging netlink watch error: %s", e,
                         extra={'interface_number': self.interface_number})
         finally:
             if sock is not None:
                 sock.close()
 
-    async def _pd_handle_netlink_event(self, msg_type, iface_name):
-        """Handle a single RTM_NEWLINK or RTM_DELLINK event for PD."""
+    async def _bridging_handle_netlink_event(self, msg_type, iface_name):
+        """Handle a single RTM_NEWLINK or RTM_DELLINK event for bridging."""
         RTM_NEWLINK = 16
         RTM_DELLINK = 17
 
-        if msg_type == RTM_NEWLINK and iface_name in self._pd_pending:
-            # Interface appeared — apply its delegated prefix
-            if not self._pd_carrier_prefix or not self._pd_config:
+        if msg_type == RTM_NEWLINK and iface_name in self._bridging_pending:
+            if not self._bridging_carrier_prefix or \
+                    not self._bridging_target_interface():
                 return
-            desired = self._pd_build_desired_state(
-                self._pd_carrier_prefix, self._pd_carrier_prefix_len
+            desired = self._bridging_build_desired_state(
+                self._bridging_carrier_prefix,
+                self._bridging_carrier_prefix_len,
             )
             if iface_name in desired:
                 info = desired[iface_name]
-                ok = await self._pd_apply_to_interface(
+                ok = await self._bridging_apply_to_interface(
                     iface_name, info['addr'], info['prefix_len']
                 )
                 if ok:
-                    self._pd_applied[iface_name] = {
+                    self._bridging_applied[iface_name] = {
                         'prefix': f"{info['addr']}/{info['prefix_len']}",
                         'addr': info['addr'],
                         'prefix_len': info['prefix_len'],
                     }
-                    self._pd_pending.discard(iface_name)
-                    logger.info("PD netlink: applied to newly-appeared %s", iface_name,
-                               extra={'interface_number': self.interface_number})
+                    self._bridging_pending.discard(iface_name)
+                    logger.info(
+                        "IPv6 bridging netlink: applied to newly-appeared %s",
+                        iface_name,
+                        extra={'interface_number': self.interface_number})
 
-        elif msg_type == RTM_DELLINK and iface_name in self._pd_applied:
-            # Interface destroyed — move back to pending
-            del self._pd_applied[iface_name]
-            if not self._pd_carrier_prefix or not self._pd_config:
+        elif msg_type == RTM_DELLINK and iface_name in self._bridging_applied:
+            del self._bridging_applied[iface_name]
+            if not self._bridging_carrier_prefix or \
+                    not self._bridging_target_interface():
                 return
-            desired = self._pd_build_desired_state(
-                self._pd_carrier_prefix, self._pd_carrier_prefix_len
+            desired = self._bridging_build_desired_state(
+                self._bridging_carrier_prefix,
+                self._bridging_carrier_prefix_len,
             )
             if iface_name in desired:
-                self._pd_pending.add(iface_name)
-                logger.info("PD netlink: %s destroyed, moved to pending", iface_name,
-                           extra={'interface_number': self.interface_number})
+                self._bridging_pending.add(iface_name)
+                logger.info(
+                    "IPv6 bridging netlink: %s destroyed, moved to pending",
+                    iface_name,
+                    extra={'interface_number': self.interface_number})
 
     async def _apply_bearer_ip_configuration(self):
         """Apply bearer IP configuration to the interface (VyOS responsibility)"""
@@ -10583,7 +10547,7 @@ class ModemStateMachine:
             # Apply IPv6 configuration
             if bearer_ips.get('ipv6'):
                 ipv6_addr = bearer_ips['ipv6']
-                ipv6_prefix = bearer_ips.get('ipv6_prefix', '64')  # Carrier prefix length (used for PD / egress filter)
+                ipv6_prefix = bearer_ips.get('ipv6_prefix', '64')  # Carrier prefix length (used for bridging / egress filter)
                 ipv6_gateway = bearer_ips.get('ipv6_gateway')
                 ipv6_dns = bearer_ips.get('ipv6_dns', [])
                 ipv6_mtu = bearer_ips.get('ipv6_mtu')
@@ -10595,7 +10559,8 @@ class ModemStateMachine:
                                   'mtu': ipv6_mtu})
 
                 # Add IPv6 address with /128 — point-to-point link to carrier;
-                # the full carrier prefix is reserved for PD to LAN interfaces.
+                # the full carrier prefix may be bridged to a downstream LAN
+                # interface via 'ipv6-bridging' (see _bridging_apply_all).
                 result = await asyncio.create_subprocess_exec(
                     'ip', '-6', 'addr', 'add', f"{ipv6_addr}/128", 'dev', interface_name,
                     stdout=asyncio.subprocess.PIPE,
@@ -10678,17 +10643,18 @@ class ModemStateMachine:
                 self._current_bearer_ipv6 = new_ipv6
                 self._current_bearer_ipv6_prefix = ipv6_prefix_len
 
-            # ── IPv6 Prefix Delegation: delegate carrier prefix to LAN interfaces ──
-            if bearer_ips.get('ipv6') and self._pd_config:
+            # ── IPv6 bridging: copy carrier-supplied prefix to one downstream LAN ──
+            if bearer_ips.get('ipv6') and self._bridging_config.get('enabled') \
+                    and self._bridging_config.get('interface'):
                 ipv6_addr = bearer_ips['ipv6']
                 carrier_plen = int(bearer_ips.get('ipv6_prefix', '64'))
                 try:
                     carrier_net = ipaddress.IPv6Network(
                         f"{ipv6_addr}/{carrier_plen}", strict=False
                     )
-                    await self._pd_apply_all(carrier_net, carrier_plen)
-                except Exception as pd_err:
-                    logger.error("PD apply failed: %s", pd_err,
+                    await self._bridging_apply_all(carrier_net, carrier_plen)
+                except Exception as brg_err:
+                    logger.error("IPv6 bridging apply failed: %s", brg_err,
                                 extra={'interface_number': self.interface_number})
 
             # Register all carrier DNS servers with VyOS hostsd (same mechanism as DHCP interfaces)

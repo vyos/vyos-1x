@@ -70,33 +70,43 @@ def parse_config(config_path):
         return {}
 
 
-def _parse_pd_config(raw_cfg):
-    """Parse the 'pd' key from raw config into the nested dict the FSM expects.
+def _parse_ipv6_bridging_config(raw_cfg):
+    """Parse the 'ipv6_bridging' key from raw config into the FSM dict.
 
-    Accepts either:
-      - A dict (already parsed, e.g. from JSON restore)
-      - A JSON string from the flat my_config.conf, e.g.:
-          pd={"0": {"interface": {"eth0": {"address": "1", "sla_id": "0"}}}}
-      - Empty/missing → returns {} (PD disabled)
+    Accepts:
+      - A dict (already parsed): {'enabled': bool, 'interface': str,
+        'reconciliation_interval': int}
+      - A JSON string from flat my_config.conf, e.g.:
+          ipv6_bridging={"enabled": true, "interface": "eth0"}
+      - Empty/missing → returns disabled stub
     """
-    pd_raw = raw_cfg.get('pd', {})
-    if isinstance(pd_raw, dict):
-        return pd_raw
-    if isinstance(pd_raw, str):
-        pd_raw = pd_raw.strip()
-        if not pd_raw or pd_raw == '{}':
-            return {}
+    default = {'enabled': False, 'interface': '', 'reconciliation_interval': 10}
+    # Top-level flat-file override for the reconciliation interval.
+    flat_recon = raw_cfg.get('bridging_reconciliation_interval')
+    raw = raw_cfg.get('ipv6_bridging', {})
+    if isinstance(raw, dict):
+        out = dict(default)
+        out.update(raw)
+        out['enabled'] = bool(out.get('interface')) and bool(out.get('enabled', True))
+        if flat_recon is not None:
+            out['reconciliation_interval'] = int(flat_recon)
+        else:
+            out['reconciliation_interval'] = int(out.get('reconciliation_interval', 10))
+        return out
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s or s == '{}':
+            return default
         try:
             import json as _json
-            parsed = _json.loads(pd_raw)
+            parsed = _json.loads(s)
             if isinstance(parsed, dict):
-                return parsed
-            logger.warning("pd config is not a JSON object, ignoring: %s", type(parsed).__name__)
-            return {}
+                return _parse_ipv6_bridging_config({'ipv6_bridging': parsed})
+            logger.warning("ipv6_bridging is not a JSON object, ignoring: %s",
+                           type(parsed).__name__)
         except Exception as e:
-            logger.error("Failed to parse pd JSON from config: %s", e)
-            return {}
-    return {}
+            logger.error("Failed to parse ipv6_bridging JSON: %s", e)
+    return default
 
 
 # ─── build_config() ─────────────────────────────────────────────────────────
@@ -268,9 +278,8 @@ def build_config(raw_cfg):
         'interface_management': interface_management,
         'failed_retry': failed_retry,
 
-        # IPv6 Prefix Delegation
-        'pd': _parse_pd_config(raw_cfg),
-        'pd_reconciliation_interval': int(raw_cfg.get('pd_reconciliation_interval', 10)),
+        # IPv6 bridging (carrier /64 → one downstream LAN interface)
+        'ipv6_bridging': _parse_ipv6_bridging_config(raw_cfg),
     }
 
     return config

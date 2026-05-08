@@ -93,6 +93,9 @@ def get_config(config=None):
         'ip_passthrough_interface': conf.exists(
             iface_base + ['ip-passthrough', 'interface']
         ),
+        'ipv6_bridging_interface': conf.exists(
+            iface_base + ['ipv6-bridging', 'interface']
+        ),
     }
 
     # ── IP passthrough conflict guard ────────────────────────────────────
@@ -329,23 +332,14 @@ def build_fsm_config(wwan):
     sf = sim_cfg.get('sim_failover', {})
     fb = sim_cfg.get('sim_failback', {})
 
-    # ── PD ───────────────────────────────────────────────────────────────
-    pd_cfg = wwan.get('pd', {})
-    pd_list = []
-    for pd_id in sorted(pd_cfg.keys(), key=int):
-        pd_entry = pd_cfg[pd_id]
-        iface_cfgs = pd_entry.get('interface', {})
-        interfaces = {}
-        for iface_name, iface_data in iface_cfgs.items():
-            interfaces[iface_name] = {
-                'address': _leaf_int(iface_data, 'address', 0),
-                'sla_id': _leaf_int(iface_data, 'sla_id', 0),
-                'sla_len': iface_data.get('sla_len'),  # None = auto
-            }
-        pd_list.append({
-            'id': int(pd_id),
-            'interfaces': interfaces,
-        })
+    # ── IPv6 bridging (carrier /64 to one downstream LAN) ────────────────
+    brg = wwan.get('ipv6_bridging', {}) or {}
+    brg_iface = brg.get('interface') if isinstance(brg, dict) else None
+    ipv6_bridging = {
+        'enabled': bool(brg_iface) and wwan['_user_set']['ipv6_bridging_interface'],
+        'interface': brg_iface or '',
+        'reconciliation_interval': _leaf_int(brg, 'reconciliation_interval', 10),
+    }
 
     # ── Timeouts ─────────────────────────────────────────────────────────
     to = wwan.get('timeouts', {})
@@ -509,13 +503,11 @@ def build_fsm_config(wwan):
         'interface_management': interface_management,
         'failed_retry': failed_retry,
 
-        # IPv6 Prefix Delegation
-        'pd': pd_list,
-        'pd_reconciliation_interval': _leaf_int(
-            wwan, 'pd_reconciliation_interval', 10
-        ),
+        # IPv6 bridging (carrier /64 -> one downstream LAN; mutually exclusive
+        # with ip-passthrough — see verify())
+        'ipv6_bridging': ipv6_bridging,
 
-        # IP Passthrough (mutually exclusive with PD — see verify())
+        # IP Passthrough (mutually exclusive with ipv6-bridging — see verify())
         'ip_passthrough': ip_passthrough,
     }
 
@@ -545,11 +537,12 @@ def verify(wwan):
                 "ip-passthrough sub-options require 'ip-passthrough "
                 "interface <eth>' to be set first."
             )
-        # Mutually exclusive with PD — both consume the bearer's IPv6.
-        if wwan.get('pd'):
+        # Mutually exclusive with ipv6-bridging — both consume the bearer's
+        # IPv6 prefix.
+        if user_set.get('ipv6_bridging_interface'):
             raise ConfigError(
-                "ip-passthrough is mutually exclusive with pd — both "
-                "consume the bearer's IPv6 prefix.  Remove one or the "
+                "ip-passthrough is mutually exclusive with ipv6-bridging — "
+                "both consume the bearer's IPv6 prefix.  Remove one or the "
                 "other."
             )
         # Conflict guard: bind-interfaces dnsmasq cannot coexist with

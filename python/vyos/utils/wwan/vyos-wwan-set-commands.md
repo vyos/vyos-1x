@@ -11,8 +11,11 @@ set interfaces wwan <wwanN> ...
 This definition replaces the upstream VyOS WWAN tree.  The legacy per-interface
 `apn`, `authentication`, `connect-on-demand`, `address`, and `dhcp-options`
 nodes are removed — those functions are handled per-SIM by the enhanced service.
-`pd` is a direct child of the wwan interface for IPv6 Prefix Delegation
-(FSM-native, no dhcp6c).  VyOS infrastructure features (`description`,
+`ipv6-bridging` is a direct child of the wwan interface that copies the
+carrier-supplied IPv6 prefix (typically /64) verbatim to a single downstream
+LAN interface (no DHCPv6 client involved — not real PD).  Standard VyOS
+`dhcpv6-options pd …` nodes are also available for real DHCPv6 PD via
+dhcp6c.  VyOS infrastructure features (`description`,
 `disable`, `vrf`, `ip`, `ipv6`, `mirror`, `redirect`, `mtu`) are retained.
 
 ---
@@ -40,13 +43,23 @@ interfaces
         │     ├── disable-forwarding                      # valueless
         │     └── source-validation <strict|loose|disable>
         │
-        ├── pd <instance>                                # IPv6 prefix delegation (FSM-native, no dhcp6c)
-        │     └── interface <name>                        # delegate to this LAN interface
-        │           ├── address <id>                      # interface address within delegated prefix
-        │           ├── sla-id <0-65535>                  # site-level aggregation ID
-        │           └── sla-len <0-64>                    # bits for SLA subdivision (default: 64 − carrier prefix; 0 = whole prefix)
+        ├── ipv6-bridging                                # carrier /64 → single downstream LAN (NOT DHCPv6 PD)
+        │     ├── interface <name>                        # downstream LAN interface that gets the carrier prefix
+        │     └── reconciliation-interval <5-300>          # safety-net timer (default: 10 s)
         │
-        ├── pd-reconciliation-interval <seconds>          # safety-net timer for late-appearing LAN interfaces (default: 10)
+        ├── dhcpv6-options                                # standard VyOS DHCPv6 client (handled by dhcp6c)
+        │     ├── duid <hex-string>                       # client DUID override
+        │     ├── parameters-only                         # acquire config parameters only, no address
+        │     ├── no-request-domain-name                  # do not request domain-name option
+        │     ├── no-request-dns                          # do not request DNS servers
+        │     ├── pd <instance>                           # prefix delegation instance (>= 0)
+        │     │     ├── length <32-64>                    # requested prefix length (default: 64)
+        │     │     └── interface <name>                  # delegate to this LAN interface
+        │     │           ├── address <id>                # interface address within delegated prefix (default: EUI-64)
+        │     │           └── sla-id <0-65535>            # site-level aggregation ID
+        │     ├── rapid-commit                            # wait for immediate reply (skip advertise)
+        │     ├── temporary                               # IPv6 temporary address
+        │     └── no-release                              # do not send release on client exit
         │
         ├── ip-passthrough                                # DOCSIS-modem-style: hand carrier IP to one downstream device
         │     ├── interface <name>                        # designated LAN port (required)
@@ -185,8 +198,9 @@ automatically using a 4-priority APN discovery chain:
 | **Mirror** | not set | No ingress/egress mirroring |
 | **IPv4 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
 | **IPv6 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
-| **IPv6 PD** | not configured | No prefix delegation; configure `pd` to have the FSM subdivide the carrier prefix and delegate to LAN interfaces |
-| **PD reconciliation** | `10 s` | Safety-net timer re-checks pending LAN interfaces; netlink watch provides instant detection |
+| **IPv6 bridging** | not configured | No prefix is bridged; configure `ipv6-bridging interface <lan>` to copy the carrier /64 onto a downstream LAN interface (NOT DHCPv6 PD). |
+| **DHCPv6 PD** | not configured | Standard VyOS `dhcpv6-options pd …` is available; dhcp6c runs only when configured. |
+| **Bridging reconciliation** | `10 s` | Safety-net timer re-checks the downstream LAN interface; netlink watch provides instant detection |
 | **Active SIM slot** | `1` | Slot 1 is used |
 | **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (enabled by default), 4) automatic (let the network assign) |
 | **Authentication** | per-SIM only, default `none` | No PPP auth; auth-type/username/password configured per SIM slot |
@@ -300,69 +314,64 @@ set interfaces wwan wwan0 ipv6 adjust-mss '1380'
 set interfaces wwan wwan0 ipv6 source-validation 'strict'
 ```
 
-### IPv6 Prefix Delegation
+### IPv6 Bridging (carrier /64 → one downstream LAN)
 
-> **If unconfigured:** No prefix delegation.  The FSM applies the bearer's
-> IPv6 address directly; `pd` tells the FSM to subdivide the carrier prefix
-> and delegate sub-prefixes to LAN interfaces.  No DHCPv6 client (dhcp6c) is
-> involved — the FSM performs PD math natively using the bearer's `Ip6Config`
-> prefix.
+> **If unconfigured:** No prefix is bridged.  The FSM applies the bearer's
+> IPv6 address as `/128` directly on `wwanN` and stops there.
 >
-> **How it works:** The carrier assigns a prefix (e.g. /56) via the bearer.
-> The FSM reads the actual prefix length from the bearer's `Ip6Config` —
-> there is no `length` knob because the carrier decides the prefix size,
-> not the user.  The FSM applies a /128 on wwan0 (point-to-point) and
-> delegates address space to LAN interfaces using the SLA-ID and SLA-LEN.
-> The delegated prefix length is `carrier_prefix_len + sla-len`.  By
-> default `sla-len` is `64 − carrier_prefix_len`, which produces /64
-> subnets.  Set `sla-len 0` to delegate the entire carrier prefix to a
-> single interface.
+> **What this is (and isn't):** This feature copies the carrier-supplied
+> IPv6 prefix verbatim to a single downstream LAN interface so SLAAC
+> clients on that LAN can form globally-routable addresses.  It is **not**
+> DHCPv6 PD — there is no sub-delegation, no `dhcp6c`, and no `length` knob.
+> The carrier hands you a /64 (most common on LTE/5G), and that exact /64
+> becomes the on-link prefix on your designated LAN port.  For real
+> DHCPv6 PD (carrier-issued sub-prefix), use the standard VyOS
+> `dhcpv6-options pd …` tree below — that runs `dhcp6c` and accepts a
+> requested `length`.
 >
-> If the carrier prefix is /64 (and default sla-len), only one LAN
-> interface can be delegated.  If the carrier prefix is /128, no
-> delegation is possible (address-only mode).
+> **How it works:** The FSM reads the bearer's `Ip6Config` to learn the
+> carrier prefix and prefix length.  It then assigns the first usable
+> host address inside that prefix (network + 1) at the carrier's prefix
+> length onto the configured downstream interface.  SLAAC clients on the
+> LAN auto-configure addresses inside the same prefix.
 >
-> **SLA-LEN examples (carrier /56):**
->
-> | `sla-len` | Delegated prefix | Subnets | Use case |
-> |---|---|---|---|
-> | `8` (default) | /64 | 256 | One /64 per LAN — standard SLAAC |
-> | `4` | /60 | 16 | Each LAN gets 16 /64s |
-> | `0` | /56 | 1 | Entire prefix to one interface |
->
-> **Late-appearing LAN interfaces:**  A delegated LAN interface (e.g. `br0`)
-> may not exist when the bearer connects and PD is first applied.  The FSM
-> handles this with two mechanisms:
+> **Late-appearing LAN interfaces:**  The downstream LAN interface (e.g.
+> `eth0`) may not exist when the bearer connects.  The FSM handles this
+> with two mechanisms:
 >
 > 1. **Netlink watch** — an asyncio task listens for `RTM_NEWLINK` events.
->    When a pending interface appears, its delegated prefix is applied
->    instantly.  Always active when any `pd` instance is configured.
-> 2. **Periodic reconciliation** — a safety-net timer (`pd-reconciliation-interval`,
->    default 10 s) re-checks the pending set on each tick.  Catches edge
->    cases the netlink watch might miss (e.g. interface destroyed and
->    re-created between events).
+>    When the pending interface appears, the bridged prefix is applied
+>    instantly.  Always active when `ipv6-bridging interface` is set.
+> 2. **Periodic reconciliation** — a safety-net timer
+>    (`reconciliation-interval`, default 10 s) re-checks on each tick.
+>    Catches edge cases the netlink watch might miss (e.g. interface
+>    destroyed and re-created between events).
 >
-> Interfaces that are destroyed (`RTM_DELLINK`) have their delegated prefix
-> moved back to the pending set and are re-applied when the interface
-> reappears.  Bearer disconnect removes all delegated prefixes; bearer
-> reconnect re-applies them (or pends them if the LAN interface is gone).
+> If the interface is destroyed (`RTM_DELLINK`) it is moved back to the
+> pending set and re-applied when it reappears.  Bearer disconnect removes
+> the bridged prefix; bearer reconnect re-applies it.
 
 ```
-# Split carrier prefix into /64s (default sla-len, most common)
-set interfaces wwan wwan0 pd 0 interface eth0 address '1'
-set interfaces wwan wwan0 pd 0 interface eth0 sla-id '0'
-
-# Second LAN gets the next /64
-set interfaces wwan wwan0 pd 0 interface eth1 address '1'
-set interfaces wwan wwan0 pd 0 interface eth1 sla-id '1'
-
-# Delegate the whole carrier prefix to br0 — no subdivision
-set interfaces wwan wwan0 pd 0 interface br0 address '1'
-set interfaces wwan wwan0 pd 0 interface br0 sla-id '0'
-set interfaces wwan wwan0 pd 0 interface br0 sla-len '0'
+# Bridge the carrier-supplied /64 to eth0
+set interfaces wwan wwan0 ipv6-bridging interface 'eth0'
 
 # Reconciliation interval — safety-net for late-appearing interfaces (default 10 s)
-set interfaces wwan wwan0 pd-reconciliation-interval 10
+set interfaces wwan wwan0 ipv6-bridging reconciliation-interval 10
+```
+
+### DHCPv6 (standard VyOS — real PD via dhcp6c)
+
+> Standard VyOS `dhcpv6-options` are available on the wwan interface and
+> are handled by the upstream `Interface.update()` flow (i.e. `dhcp6c`
+> runs per interface).  Use this when the carrier supports DHCPv6 PD and
+> you want a sub-prefix larger than the bearer's /64.
+
+```
+# Request a /60 prefix delegation from the carrier
+set interfaces wwan wwan0 address 'dhcpv6'
+set interfaces wwan wwan0 dhcpv6-options pd 0 length '60'
+set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 address '1'
+set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
 ```
 
 ### IP Passthrough (DOCSIS-Modem-Style)
@@ -476,10 +485,10 @@ set interfaces wwan wwan0 pd-reconciliation-interval 10
 >
 > **Restrictions:**
 >  - The designated interface must not be in a bridge or bond.
->  - PD (`set interfaces wwan wwan0 pd ...`) is mutually exclusive with
->    passthrough — both consume the bearer's IPv6.  Use passthrough's
->    built-in IA_PD (above) to delegate the carrier prefix to the
->    downstream router instead.
+>  - `ipv6-bridging` (`set interfaces wwan wwan0 ipv6-bridging …`) is
+>    mutually exclusive with passthrough — both consume the bearer's IPv6.
+>    Use passthrough's built-in IA_PD (above) to delegate the carrier
+>    prefix to the downstream router instead.
 >  - The interface should be wired (not Wi-Fi) — DHCPFORCERENEW behaviour
 >    on wireless drivers is unreliable.
 
@@ -948,10 +957,9 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `ipv6 adjust-mss` | *(VyOS conf_mode)* | not set |
 | `ipv6 disable-forwarding` | *(VyOS conf_mode)* | not set (forwarding on) |
 | `ipv6 source-validation` | *(VyOS conf_mode)* | `disable` |
-| `pd N interface X address` | *(FSM native PD)* | EUI-64 |
-| `pd N interface X sla-id` | *(FSM native PD)* | not set |
-| `pd N interface X sla-len` | *(FSM native PD)* | `64 − carrier prefix len` (→ /64s) |
-| `pd-reconciliation-interval` | `pd_reconciliation_interval` | `10` |
+| `ipv6-bridging interface` | `ipv6_bridging.interface` | not set |
+| `ipv6-bridging reconciliation-interval` | `ipv6_bridging.reconciliation_interval` | `10` |
+| `dhcpv6-options pd …` | *(standard VyOS, dhcp6c)* | not configured |
 | **WWAN Service** | | |
 | `sim primary-slot` | `primary_sim_slot` | `1` |
 | `sim sim-failback disable` | `sim_failback_enabled` | `enabled` |

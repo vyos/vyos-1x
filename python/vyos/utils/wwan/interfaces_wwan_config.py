@@ -137,9 +137,14 @@ class InterfaceConfig(ServiceInterface):
             "escalation_threshold": 3,                 # Consecutive failures before disable/enable cycle (0 = disabled)
         },
 
-        # IPv6 Prefix Delegation — FSM-native (no dhcp6c)
-        "pd": {},                              # Empty = disabled; populated by conf_mode
-        "pd_reconciliation_interval": 10,      # Seconds between PD safety-net re-checks
+        # IPv6 bridging — hand the carrier-supplied /64 to one downstream LAN
+        # interface (NOT DHCPv6 PD).  For real PD, use the standard VyOS
+        # 'dhcpv6-options pd' tree (handled by dhcp6c via Interface.update()).
+        "ipv6_bridging": {
+            "enabled": False,
+            "interface": "",
+            "reconciliation_interval": 10,    # Seconds between safety-net re-checks
+        },
 
         # IP Passthrough (DOCSIS-modem-style) — hand carrier IP to one
         # downstream device via dnsmasq on a designated LAN interface.
@@ -967,14 +972,14 @@ class InterfaceConfig(ServiceInterface):
         if 'data_limit_warning' in sim_slot:
             thresholds = sim_slot['data_limit_warning']
             if not isinstance(thresholds, list):
-                logger.warning(f"Invalid SIM data_limit_warning type",
+                logger.warning("Invalid SIM data_limit_warning type",
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'sim_slots',
                                      'sim_slot': slot_num})
                 raise ValueError(f"SIM{slot_num} data_limit_warning must be a list of percentages")
             for t in thresholds:
                 if not isinstance(t, (int, float)) or t < 1 or t > 100:
-                    logger.warning(f"Invalid SIM data_limit_warning value",
+                    logger.warning("Invalid SIM data_limit_warning value",
                                   extra={'interface_number': self.interface_number,
                                          'validation_field': 'sim_slots',
                                          'sim_slot': slot_num})
@@ -984,7 +989,7 @@ class InterfaceConfig(ServiceInterface):
         if 'data_limit_action' in sim_slot:
             valid_data_actions = ['none', 'disable', 'sim-failover', 'sim-failover-sticky']
             if sim_slot['data_limit_action'] not in valid_data_actions:
-                logger.warning(f"Invalid SIM data_limit_action",
+                logger.warning("Invalid SIM data_limit_action",
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'sim_slots',
                                      'sim_slot': slot_num})
@@ -994,7 +999,7 @@ class InterfaceConfig(ServiceInterface):
         if 'data_limit_billing_date' in sim_slot:
             date = sim_slot['data_limit_billing_date']
             if not isinstance(date, int) or date < 1 or date > 28:
-                logger.warning(f"Invalid SIM data_limit_billing_date",
+                logger.warning("Invalid SIM data_limit_billing_date",
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'sim_slots',
                                      'sim_slot': slot_num})
@@ -1004,7 +1009,7 @@ class InterfaceConfig(ServiceInterface):
         if 'data_limit_size' in sim_slot:
             size = sim_slot['data_limit_size']
             if not isinstance(size, (int, float)) or size < 0:
-                logger.warning(f"Invalid SIM data_limit_size",
+                logger.warning("Invalid SIM data_limit_size",
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'sim_slots',
                                      'sim_slot': slot_num})
