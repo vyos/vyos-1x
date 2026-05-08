@@ -279,6 +279,15 @@ class ModemStateMachine:
         self._bridging_carrier_prefix = None      # IPv6Network
         self._bridging_carrier_prefix_len = None  # int
 
+        # IP Passthrough manager (DOCSIS-modem-style single-host handoff).
+        # Instantiated ONCE here at FSM construction so its internal state
+        # (_last_v4 / _last_v6 / _last_v6_prefix) survives config reloads —
+        # otherwise a SIM-swap-driven config refresh would wipe _last_v6
+        # and the v6-gone deprecation-RA burst would never fire when the
+        # new bearer has no IPv6, leaving Windows clients on the old SLAAC
+        # address until its previously-advertised preferred lifetime expires.
+        self._passthrough = PassthroughManager(self.interface_number)
+
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
         self.parsed_config = None  # Will store WWANConfiguration object
@@ -1995,8 +2004,11 @@ class ModemStateMachine:
         self._current_bearer_ipv6_prefix = None  # e.g. '64' — length of the carrier prefix
         self._ipv6_egress_filter_active = False  # True when ip6tables whitelist chain is installed
 
-        # IP Passthrough manager (DOCSIS-modem-style single-host handoff)
-        self._passthrough = PassthroughManager(self.interface_number)
+        # IP Passthrough manager: instantiated once in __init__ so its
+        # _last_v4 / _last_v6 / _last_v6_prefix survive config reloads
+        # (see comment at construction site).  Do NOT re-create it here.
+        if not hasattr(self, '_passthrough') or self._passthrough is None:
+            self._passthrough = PassthroughManager(self.interface_number)
 
         # Connection mode: always-on | connect-on-demand | dial-on-demand
         self.connection_mode = self.parsed_config.raw_config.get('connection_mode', 'always-on')
