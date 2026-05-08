@@ -91,7 +91,7 @@ downloads.
 
 .. note:: The ``.qcow2`` image provided for Proxmox deployment can also be
    used to deploy VyOS on KVM environments. This image includes cloud-init
-   support. See :ref:`cloud-init` for more information.
+   support.
 
 .. figure:: /_static/images/vyosnew-downloads.*
 
