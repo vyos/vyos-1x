@@ -153,8 +153,13 @@ def kea_parse_options(config):
         config, 'vendor_option', 'ubiquiti', 'unifi_controller'
     )
     if unifi_controller:
+        options.append({'name': 'vendor-encapsulated-options'})
         options.append(
-            {'name': 'unifi-controller', 'data': unifi_controller, 'space': 'ubnt'}
+            {
+                'name': 'ubnt',
+                'data': unifi_controller,
+                'space': 'vendor-encapsulated-options-space',
+            }
         )
 
     return options
