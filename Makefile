@@ -124,10 +124,6 @@ ifndef J2LINT
 endif
 	$(J2LINT) data/
 
-.PHONY: sonar
-sonar:
-	sonar-scanner -X -Dsonar.login=${SONAR_TOKEN}
-
 deb:
 	dpkg-buildpackage -uc -us -tc -b
 
