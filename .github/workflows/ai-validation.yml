@@ -25,17 +25,28 @@ jobs:
   # expanding the attack surface to any future shell change in this job.
   # The validate job below performs the secrets-availability check and
   # skips with a notice if any are missing.
-  # Untrusted prepare runs on GitHub-hosted ubuntu-latest, NOT the
-  # self-hosted web pool. Even though this job doesn't execute fork code
-  # (it only does git diff / git show / file reads — never pip install,
-  # npm install, build, or tests), GitHub-hosted runners are ephemeral
-  # and isolated, so a future maintainer who adds a build step to prepare
-  # cannot accidentally turn it into an attack vector against internal
-  # network services or persist state across runs on the self-hosted
-  # host. The trusted validate job below stays on self-hosted web; the
-  # split-job artifact bridges the trust boundary.
+  # Untrusted prepare runs on the same self-hosted Debian 12 pool as
+  # validate. GitHub-hosted ubuntu-latest is not available in this
+  # environment. The trust boundary on prepare is enforced WITHOUT host
+  # isolation:
+  #   - No fork code is executed: prepare only does
+  #       git fetch / git diff / git show / file reads.
+  #     There is no `pip install` from the fork, no `npm install`, no
+  #     build/test step. Adding one in the future would require an
+  #     explicit code change in this file that a reviewer must approve.
+  #   - No secrets are referenced in prepare (see comment block at the
+  #     top of this job). Even a presence-check would put the value in
+  #     the runner environment, so it is intentionally absent here.
+  #   - persist-credentials: false on the merge-ref checkout means the
+  #     default GITHUB_TOKEN is not available to fork-controlled file
+  #     content.
+  #   - atos-actions/clean-self-hosted-runner step (`if: always()`) at
+  #     the end of the job wipes the workspace regardless of how prepare
+  #     exits.
+  # The split-job artifact still bridges the trust boundary to validate;
+  # validate is the only place where secrets are referenced.
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, web]
     permissions:
       contents: read
     steps:
