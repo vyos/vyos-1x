@@ -1,104 +1,65 @@
-Starting with VyOS 1.2 (`crux`) our documentation is hosted on ReadTheDocs at https://docs.vyos.io
+# VyOS Documentation
 
-Our old wiki with documentation from the VyOS 1.1.x and early 1.2.0 era can still be accessed via the
-[Wayback Machine](https://web.archive.org/web/20200225171529/https://wiki.vyos.net/wiki/Main_Page)
+Source for the VyOS user documentation hosted on Read the Docs at
+https://docs.vyos.io.
 
-# Build
+[![Documentation Status](https://readthedocs.org/projects/vyos/badge/?version=rolling)](https://docs.vyos.io/en/rolling/?badge=rolling)
 
-[![Documentation Status](https://readthedocs.org/projects/vyos/badge/?version=latest)](https://docs.vyos.io/en/latest/?badge=latest)
+The earlier wiki for VyOS 1.1.x and pre-1.2.0 docs is preserved on the
+[Wayback Machine](https://web.archive.org/web/20200225171529/https://wiki.vyos.net/wiki/Main_Page).
 
-# Versions
+## Branches
 
-Our documentation repository follows the same branching scheme as the VyOS source itself.
-We maintain one documentation branch per VyOS release.
-The default branch that contains the most recent VyOS documentation is called `rolling`
-(renamed from `current` on 2026-05-10) and matches the latest VyOS rolling release.
+The documentation repository tracks the same branch convention as the VyOS
+source itself — one long-lived branch per release line, named after a
+constellation:
 
-All new documentation enhancements go to the `rolling` branch. If those changes
-are beneficial for previous VyOS documentation versions they will be
-cherry-picked to the appropriate branch(es).
+| Branch | VyOS version | Role |
+|--------|--------------|------|
+| `rolling` | 1.5+ rolling | Default branch — all new contributions target this. |
+| `circinus` | 1.5.x | LTS docs. |
+| `sagitta` | 1.4.x | Previous LTS docs. |
+| `equuleus` | 1.3.x | Legacy. |
+| `crux` | 1.2.x | Legacy. |
 
-VyOS branches are named after constellations sorted by area from smallest to largest.
-There are 88 of them, here's the
-[complete list](https://en.wikipedia.org/wiki/IAU_designated_constellations_by_area).
+New work lands on `rolling` first; backports to `circinus` and `sagitta` are
+requested per-PR via Mergify. See [AGENTS.md](AGENTS.md) for the full
+contributor guide.
 
-The branches we have had so far:
+## Build
 
-* 1.5.x: `circinus` (Compasses)
-* 1.4.x: `sagitta` (Arrow)
-* 1.3.x: `equuleus` (Little Horse)
-* 1.2.x: `crux` (Southern Cross)
-
-### Sphinx
-Debian requires some extra steps for
-installing `sphinx`, `sphinx-autobuild`, `sphinx-notfound-page`, `sphinx-panels`,
-`sphinx-rtd-theme`, `lxml`, and `myst-parser` packages:
-
-First ensure that Python 2 & Python 3 are installed and Python 3 is the default:
-```bash
-python --version
-```
-
-Alternatively, to make Python the default, revise the following line to
-point at the relevant 3.x version of the binary on your system:
+The recommended build path is the bundled Docker image — it pins Sphinx and
+the MyST/RTD plugin set to the same versions Read the Docs uses, so local
+builds match production.
 
 ```bash
-sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 0
+docker build -t vyos/vyos-documentation docker
+
+# One-shot HTML build
+docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs \
+  -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
+  vyos/vyos-documentation make html
+
+# Live-reload server on port 8000
+docker run --rm -it -p 8000:8000 -v "$(pwd)":/vyos -w /vyos/docs \
+  -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
+  vyos/vyos-documentation make livehtml
 ```
 
-Then install the sphinx group of packages:
-```bash
-sudo apt-get install python3-sphinx
-```
-
-Although almost everything uses Python 3, in order to install this specific
-package, make sure that pip points at the Python 2 version of the package manager:
-
-```bash
-python --version
-```
-
-Then run:
-
-```bash
-sudo pip install sphinx-autobuild sphinx-notfound-page sphinx-panels sphinx-rtd-theme lxml myst-parser
-```
-
-Do the following to build the HTML and start a web server:
-* Run `make livehtml` inside the `docs` folder
-
-Then, to view the live output:
-* Browse to http://localhost:8000
-Note: The changes you save to the sources are represented in the live HTML output
-automatically (and almost instantly) without the need to rebuild or refresh manually.
-
-## Docker
-
-Using our [Dockerfile](docker/Dockerfile) you can create your own Docker container
-that is used to build a VyOS documentation.
-
-## Setup
-
-You can either build the container on your own or directly fetch it prebuilt
-from Dockerhub. If you want to build it for yourself, use the following command.
+For a Python-only build (no Docker), use a virtualenv with the pinned
+versions in `requirements.txt`:
 
 ```bash
-$ docker build -t vyos/vyos-documentation docker
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cd docs && make html
 ```
 
-### Building documentation
+Output lands in `docs/_build/html/`.
 
-If the `vyos/vyos-documentation` container could not be found locally it will be
-automatically fetched from Dockerhub.
+## Contributing
 
-```bash
-$ git clone https://github.com/vyos/vyos-documentation.git
-
-$ cd vyos-documentation
-
-$ docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) vyos/vyos-documentation make html
-
-# For sphinx autobuild
-$ docker run --rm -it -p 8000:8000 -v "$(pwd)":/vyos -w /vyos/docs -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) vyos/vyos-documentation make livehtml
-```
-
+See [AGENTS.md](AGENTS.md) for the full contributor guide — source format
+conventions (MyST Markdown for migrated pages, RST for the rest), CLI
+directive syntax, IP-address rules, the linter, and the bot review workflow.

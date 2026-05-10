@@ -13,6 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import pathlib
 import shutil
 import sys
 sys.path.append(os.path.abspath("./_ext"))
@@ -98,15 +99,8 @@ gettext_uuid = False
 # This pattern also affects html_static_path and html_extra_path .
 exclude_patterns = [
     u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x',
-    'rst-*.rst', '**/rst-*.rst',
+    '_rst_legacy',
 ]
-
-import pathlib
-_build = pathlib.Path(__file__).parent / '_build'
-if (_build / '_rst_override_state.json').exists() and (_build / '_md_exclude.txt').exists():
-    exclude_patterns.extend(
-        s for s in (line.strip() for line in (_build / '_md_exclude.txt').read_text().splitlines()) if s
-    )
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
