@@ -43,11 +43,28 @@ jobs:
           tr '\0' '\n' < changed-md.z  > changed-md.txt
           tr '\0' '\n' < changed-rst.z > changed-rst.txt
           git diff "$BASE...HEAD" -- 'docs/**/*.md' > diff-md.patch
+          # Bundle .md files via git's blob store (NOT the filesystem).
+          # The fork's merge ref can contain symlinks (mode 120000) committed
+          # to docs/**/*.md that resolve to absolute paths on this self-hosted
+          # runner. `cp` would dereference and copy the target's content
+          # (/etc/passwd, runner secrets, ssh keys) into the artifact,
+          # exfiltrating runner state to the validate job's claude-code-action
+          # input. `git show HEAD:<path>` returns the blob directly from the
+          # object database; for a symlink-mode entry it returns the textual
+          # target path, never the target's content.
           mkdir _changed_md
-          # `--` after `-t _changed_md/` ends cp's option parsing, so a
-          # filename starting with `-` (which git won't emit from a tree, but
-          # defense in depth) cannot be misinterpreted as a cp option.
-          xargs -0 -a changed-md.z -r cp --parents -t _changed_md/ --
+          while IFS= read -r -d '' path; do
+            mode=$(git ls-tree HEAD -- "$path" | awk '{print $1}')
+            case "$mode" in
+              100644|100755) ;;
+              *)
+                echo "::warning::Skipping non-regular file in PR diff: $path (mode=$mode)"
+                continue
+                ;;
+            esac
+            mkdir -p "_changed_md/$(dirname -- "$path")"
+            git show "HEAD:$path" > "_changed_md/$path"
+          done < changed-md.z
 
       - name: Upload PR input artifact
         uses: actions/upload-artifact@v4
