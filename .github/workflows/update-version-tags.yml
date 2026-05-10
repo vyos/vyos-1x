@@ -14,7 +14,10 @@ permissions:
   contents: write
 
 concurrency:
-  group: version-tag-${{ github.ref_name }}
+  # Include github.sha so a stale "Re-run jobs" replay (which carries the
+  # original SHA) cannot cancel an in-progress run for the current branch
+  # HEAD. Same-SHA re-runs still deduplicate.
+  group: version-tag-${{ github.ref_name }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -35,11 +38,29 @@ jobs:
             sagitta)  TAG=1.4 ;;
             *) echo "Unexpected branch: $BRANCH" >&2; exit 1 ;;
           esac
+
+          # Skip stale re-runs: GitHub's "Re-run jobs" replays the original
+          # event SHA, which would move the version tag backward to a stale
+          # commit. Compare event SHA against the current branch HEAD.
+          HEAD_SHA="$(gh api "repos/$REPO/branches/$BRANCH" --jq '.commit.sha')"
+          if [ "$HEAD_SHA" != "$SHA" ]; then
+            echo "Skipping stale run: event SHA=$SHA, current $BRANCH HEAD=$HEAD_SHA"
+            exit 0
+          fi
+
           echo "Pointing tag '$TAG' at $SHA (branch $BRANCH)"
-          if gh api "repos/$REPO/git/ref/tags/$TAG" >/dev/null 2>&1; then
-            gh api -X PATCH "repos/$REPO/git/refs/tags/$TAG" \
-              -f sha="$SHA" -F force=true
-          else
-            gh api -X POST "repos/$REPO/git/refs" \
-              -f ref="refs/tags/$TAG" -f sha="$SHA"
+
+          # PATCH the tag if it exists; create on 404; fail loud on any other
+          # gh-api error (auth, rate-limit, 5xx) instead of silently falling
+          # through to POST.
+          patch_err=""
+          if ! patch_err="$(gh api -X PATCH "repos/$REPO/git/refs/tags/$TAG" \
+            -f sha="$SHA" -F force=true 2>&1)"; then
+            if grep -q "HTTP 404" <<<"$patch_err"; then
+              gh api -X POST "repos/$REPO/git/refs" \
+                -f ref="refs/tags/$TAG" -f sha="$SHA"
+            else
+              echo "$patch_err" >&2
+              exit 1
+            fi
           fi
