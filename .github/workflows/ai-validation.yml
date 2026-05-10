@@ -76,14 +76,20 @@ jobs:
               echo "::warning::Skipping unsafe path with traversal/absolute prefix: $path"
               continue
             fi
-            # Skip non-regular tree entries (symlinks, submodules) per the
-            # commit immediately preceding this one.
+            # Refuse to bundle non-regular tree entries (symlinks mode 120000,
+            # submodules 160000, etc). Skipping silently would let a PR that
+            # converts a regular docs/**/*.md into a symlink bypass both Pass 1
+            # (no file copied into _changed_md/) and Pass 2 (LLM Read/Glob/Grep
+            # tools see no content) — reducing validation coverage on exactly
+            # the PRs that warrant the closest look. Maintainers must explicitly
+            # decide to land a non-regular doc entry; failing the job here makes
+            # that decision visible.
             mode=$(git ls-tree HEAD -- "$path" | awk '{print $1}')
             case "$mode" in
               100644|100755) ;;
               *)
-                echo "::warning::Skipping non-regular file in PR diff: $path (mode=$mode)"
-                continue
+                echo "::error::Refusing to bundle non-regular tree entry: $path (mode=$mode). docs/**/*.md must be regular files; convert it back or have a maintainer waive this check."
+                exit 1
                 ;;
             esac
             mkdir -p "_changed_md/$(dirname -- "$path")"
