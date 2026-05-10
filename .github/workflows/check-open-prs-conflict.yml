@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - current
+      - rolling
       - sagitta
       - circinus
   workflow_dispatch:
