@@ -5,7 +5,7 @@ on:
   # 06:00 UTC on Monday
     - cron:  '0 6 * * 1'
 jobs:
-  update_current:
+  update_rolling:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,12 +31,12 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.PR_ACTION_DOCUMENTATION_SUBMODULE_UPDATE }}
-          commit-message: "Github: update current branch"
-          title: "Github: update current branch"
+          commit-message: "Github: update rolling branch"
+          title: "Github: update rolling branch"
           body: |
             Autoupdate vyos-1x submodule
             update releasenotes
-          branch: update-dependencies-current
+          branch: update-dependencies-rolling
           delete-branch: true
 
   update_sagitta:

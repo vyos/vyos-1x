@@ -150,7 +150,7 @@ jobs:
 
             IMPORTANT: This PR targets the **${{ steps.branch.outputs.target }}** branch.
             The vyos-1x checkout matches this branch. Features may differ between branches
-            (e.g., a command exists in `current` but not in `sagitta`). Only flag issues
+            (e.g., a command exists in `rolling` but not in `sagitta`). Only flag issues
             relevant to this specific branch.
 
             ## Pass 1 Findings
