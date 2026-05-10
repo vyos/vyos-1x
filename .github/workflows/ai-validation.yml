@@ -62,10 +62,11 @@ jobs:
           set -euo pipefail
           git fetch --depth=1 origin "${{ github.event.pull_request.base.ref }}"
           BASE="origin/${{ github.event.pull_request.base.ref }}"
-          # --diff-filter=ACMRT excludes Deleted entries so the cp loop below
-          # doesn't try to copy files that no longer exist in the merge ref.
-          # Deletions still appear in diff-md.patch (full diff) but not in
-          # changed-md.txt (which drives the file-copy step).
+          # --diff-filter=ACMRT excludes Deleted entries so the bundling
+          # loop below (`git show HEAD:<path>`) doesn't try to extract
+          # blobs for files that no longer exist in the merge ref.
+          # Deletions still appear in diff-md.patch (full diff) but not
+          # in changed-md.txt (which drives the bundling step).
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.md'  > changed-md.z
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.rst' > changed-rst.z
           tr '\0' '\n' < changed-md.z  > changed-md.txt
@@ -267,10 +268,13 @@ jobs:
             exit 1
           fi
 
-      # actions/setup-python prebuilt manifest does not ship Python 3.12 for
-      # Debian 12 (only Ubuntu). astral-sh/setup-uv installs uv (cross-platform)
-      # which then provisions Python 3.12 from Astral's standalone builds —
-      # works on Debian. activate-environment:true creates a .venv at
+      # astral-sh/setup-uv is used instead of actions/setup-python: uv
+      # provisions Python interpreters from Astral's standalone builds in a
+      # few seconds (no apt cache, no compile), and the same recipe works
+      # unchanged if this workflow ever moves back to a self-hosted Debian
+      # runner — actions/setup-python relies on a prebuilt manifest that
+      # only covers Ubuntu for some interpreter versions.
+      # activate-environment:true creates a .venv at
       # ${{ github.workspace }}/.venv and prepends its bin/ to PATH so the
       # `vyos-doc-review` CLI script is callable in subsequent steps.
       - name: Setup uv + Python 3.12
