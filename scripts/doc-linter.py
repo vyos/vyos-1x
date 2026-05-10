@@ -31,15 +31,31 @@ SUPPORTED_EXTS = ('.md', '.rst', '.txt')
 
 # MyST / Markdown fenced code block: leading whitespace + 3+ backticks or 3+ colons.
 # Same character and length-or-greater closes.
-MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})')
+MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})(.*)$')
+
+SUPPRESSION_MARKER_RE = {
+    'rst': {
+        'stop': re.compile(r'^\s*\.\.\s+stop_vyoslinter\s*$'),
+        'start': re.compile(r'^\s*\.\.\s+start_vyoslinter\s*$'),
+    },
+    'md': {
+        'stop': re.compile(r'^\s*%\s+stop_vyoslinter\s*$'),
+        'start': re.compile(r'^\s*%\s+start_vyoslinter\s*$'),
+    },
+}
 
 
-def is_suppression_marker(line, kind):
-    """Detect `.. stop_vyoslinter` (RST/txt) or `% stop_vyoslinter` (MyST)."""
-    token = f"{kind}_vyoslinter"
-    if token not in line:
+def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock, md_fence_is_eval_rst):
+    """Detect valid stop/start markers in the parser context where they apply."""
+    if SUPPRESSION_MARKER_RE['md'][kind].match(line):
+        return not in_md_fence
+    if not SUPPRESSION_MARKER_RE['rst'][kind].match(line):
         return False
-    return f".. {token}" in line or f"% {token}" in line
+    if in_rst_codeblock:
+        return False
+    if in_md_fence:
+        return md_fence_is_eval_rst
+    return True
 
 
 def lint_mac(cnt, line):
@@ -94,6 +110,7 @@ def lint_linelen(cnt, line):
 def handle_file_action(filepath):
     errors = []
     in_md_fence = False
+    md_fence_is_eval_rst = False
     md_fence_char = None
     md_fence_min_len = 0
     in_rst_codeblock = False
@@ -103,15 +120,7 @@ def handle_file_action(filepath):
 
     with open(filepath) as fp:
         for cnt, line in enumerate(fp, start=1):
-            if is_suppression_marker(line, 'stop'):
-                start_vyoslinter = False
-            if is_suppression_marker(line, 'start'):
-                start_vyoslinter = True
-
-            if not start_vyoslinter:
-                continue
-
-            # MD/MyST fenced code block tracking (``` or :::)
+            # MD/MyST fenced code block tracking (``` or :::).
             fence_match = MD_FENCE_RE.match(line)
             if fence_match:
                 fence = fence_match.group(2)
@@ -121,8 +130,10 @@ def handle_file_action(filepath):
                     in_md_fence = True
                     md_fence_char = fence_char
                     md_fence_min_len = fence_len
+                    md_fence_is_eval_rst = fence_match.group(3).strip().startswith('{eval-rst}')
                 elif fence_char == md_fence_char and fence_len >= md_fence_min_len:
                     in_md_fence = False
+                    md_fence_is_eval_rst = False
 
             # RST `.. code-block::` tracking (existing semantics for .rst/.txt).
             if in_rst_codeblock:
@@ -136,6 +147,18 @@ def handle_file_action(filepath):
                         rst_codeblock_indent += 1
                     else:
                         break
+
+            if is_suppression_marker(
+                line, 'stop', in_md_fence, in_rst_codeblock, md_fence_is_eval_rst
+            ):
+                start_vyoslinter = False
+            if is_suppression_marker(
+                line, 'start', in_md_fence, in_rst_codeblock, md_fence_is_eval_rst
+            ):
+                start_vyoslinter = True
+
+            if not start_vyoslinter:
+                continue
 
             test_line_length = not (in_md_fence or in_rst_codeblock)
 
