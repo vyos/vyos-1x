@@ -172,8 +172,13 @@ jobs:
       # addition to the workflow ::notice:: annotation (which only appears
       # on the run page). This way a maintainer reviewing the PR sees the
       # skip in the same place as other automated review feedback.
+      # Gate on opened/reopened only — without this guard every push (a
+      # `synchronize` event) would post a fresh duplicate skip notice,
+      # flooding the PR conversation on rapid push sequences while the
+      # secrets stay missing. Open/reopen is the right moment to inform
+      # the PR author once; further pushes don't add new information.
       - name: Notify on PR (when skipping)
-        if: steps.secrets-check.outputs.skip == 'true'
+        if: steps.secrets-check.outputs.skip == 'true' && (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
