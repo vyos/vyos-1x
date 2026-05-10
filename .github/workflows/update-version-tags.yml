@@ -14,7 +14,10 @@ permissions:
   contents: write
 
 concurrency:
-  group: version-tag-${{ github.ref_name }}
+  # Include github.sha so a stale "Re-run jobs" replay (which carries the
+  # original SHA) cannot cancel an in-progress run for the current branch
+  # HEAD. Same-SHA re-runs still deduplicate.
+  group: version-tag-${{ github.ref_name }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
