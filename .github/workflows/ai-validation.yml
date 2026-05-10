@@ -209,6 +209,11 @@ jobs:
           private-key: ${{ secrets.VYOS_APP_PRIVATE_KEY }}
           owner: VyOS-Networks
           repositories: vyos-1x,vyos-docs-opus-reviewer
+          # Token is used only for read-only operations: sparse-checkout
+          # of branches.json from the reviewer repo, full checkout of
+          # vyos-1x, and download of the reference-DB release asset. No
+          # write back to either repo. Scope the App token accordingly.
+          permission-contents: read
 
       - name: Sparse-checkout branches.json from reviewer
         if: steps.secrets-check.outputs.skip != 'true'
