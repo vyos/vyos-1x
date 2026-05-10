@@ -3,7 +3,7 @@ name: PR Mirror and Repo Sync
 on:
   pull_request_target:
     types: [closed]
-    branches: [current]
+    branches: [current, rolling]
   workflow_dispatch:
     inputs:
       sync_branch:
@@ -13,6 +13,7 @@ on:
         type: choice
         options:
           - current
+          - rolling
 
 permissions:
   pull-requests: write
