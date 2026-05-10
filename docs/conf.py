@@ -70,10 +70,7 @@ autosectionlabel_prefix_document = True
 
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = ['.rst', '.md']
+source_suffix = ['.md']
 
 myst_enable_extensions = ["colon_fence", "deflist", "fieldlist", "substitution"]
 myst_fence_as_directive = ["cfgcmd", "opcmd", "cmdincludemd"]
