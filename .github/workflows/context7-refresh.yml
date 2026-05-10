@@ -74,5 +74,5 @@ jobs:
             "https://context7.com/api/v1/refresh" \
             -H "Authorization: Bearer $CONTEXT7_API_KEY" \
             -H "Content-Type: application/json" \
-            -d "$(jq -nc --arg lib "/${{ github.repository }}" --arg br "$VARIANT" \
+            -d "$(jq -nc --arg lib "${{ github.repository }}" --arg br "$VARIANT" \
                   '{libraryName: $lib, branch: $br}')"
