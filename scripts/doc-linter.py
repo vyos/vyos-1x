@@ -45,17 +45,25 @@ SUPPRESSION_MARKER_RE = {
 }
 
 
-def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock, md_fence_is_eval_rst):
-    """Detect valid stop/start markers in the parser context where they apply."""
+def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock,
+                          md_fence_is_eval_rst, file_ext):
+    """Detect valid stop/start markers in the parser context where they apply.
+
+    `% ...` is only valid in MyST Markdown (`.md`) at top level (outside any fence).
+    `.. ...` is valid in `.rst`/`.txt` at top level (outside RST code-block) and
+    in `.md` only when inside an `{eval-rst}` fence.
+    """
     if SUPPRESSION_MARKER_RE['md'][kind].match(line):
-        return not in_md_fence
+        return file_ext == '.md' and not in_md_fence
     if not SUPPRESSION_MARKER_RE['rst'][kind].match(line):
         return False
     if in_rst_codeblock:
         return False
+    if file_ext in ('.rst', '.txt'):
+        return True
     if in_md_fence:
         return md_fence_is_eval_rst
-    return True
+    return False
 
 
 def lint_mac(cnt, line):
@@ -109,10 +117,13 @@ def lint_linelen(cnt, line):
 
 def handle_file_action(filepath):
     errors = []
-    in_md_fence = False
+    file_ext = os.path.splitext(filepath)[1].lower()
+    # Stack of open MD/MyST fences: (char, min_len). Supports nesting like
+    # `:::{note}` containing `::::{code-block}`, where the inner opener does
+    # not close the outer note (CommonMark closing rule: matching closer must
+    # have no info string after the fence chars).
+    md_fence_stack = []
     md_fence_is_eval_rst = False
-    md_fence_char = None
-    md_fence_min_len = 0
     in_rst_codeblock = False
     rst_codeblock_indent = 0
     start_vyoslinter = True
@@ -126,20 +137,35 @@ def handle_file_action(filepath):
                 fence = fence_match.group(2)
                 fence_char = fence[0]
                 fence_len = len(fence)
-                if not in_md_fence:
-                    in_md_fence = True
-                    md_fence_char = fence_char
-                    md_fence_min_len = fence_len
-                    md_fence_is_eval_rst = fence_match.group(3).strip().startswith('{eval-rst}')
-                elif fence_char == md_fence_char and fence_len >= md_fence_min_len:
-                    in_md_fence = False
-                    md_fence_is_eval_rst = False
+                info = fence_match.group(3).strip()
+                # A closer matches the top of the stack (same char, len >=
+                # opener) and has no info string. Anything else opens a new
+                # (possibly nested) fence.
+                is_closer = (
+                    md_fence_stack
+                    and not info
+                    and fence_char == md_fence_stack[-1][0]
+                    and fence_len >= md_fence_stack[-1][1]
+                )
+                if is_closer:
+                    md_fence_stack.pop()
+                    if not md_fence_stack:
+                        md_fence_is_eval_rst = False
+                else:
+                    if not md_fence_stack:
+                        md_fence_is_eval_rst = info.startswith('{eval-rst}')
+                    md_fence_stack.append((fence_char, fence_len))
+
+            in_md_fence = bool(md_fence_stack)
 
             # RST `.. code-block::` tracking (existing semantics for .rst/.txt).
+            # Each `.. code-block::` directive resets the tracked indent so a
+            # later dedent past that column exits the block — even when the
+            # directive itself appears inside an already-open outer block.
             if in_rst_codeblock:
                 if len(line) > rst_codeblock_indent and not line[rst_codeblock_indent].isspace():
                     in_rst_codeblock = False
-            if not in_rst_codeblock and ".. code-block::" in line:
+            if ".. code-block::" in line:
                 in_rst_codeblock = True
                 rst_codeblock_indent = 0
                 for ch in line:
@@ -149,11 +175,13 @@ def handle_file_action(filepath):
                         break
 
             if is_suppression_marker(
-                line, 'stop', in_md_fence, in_rst_codeblock, md_fence_is_eval_rst
+                line, 'stop', in_md_fence, in_rst_codeblock,
+                md_fence_is_eval_rst, file_ext,
             ):
                 start_vyoslinter = False
             if is_suppression_marker(
-                line, 'start', in_md_fence, in_rst_codeblock, md_fence_is_eval_rst
+                line, 'start', in_md_fence, in_rst_codeblock,
+                md_fence_is_eval_rst, file_ext,
             ):
                 start_vyoslinter = True
 
