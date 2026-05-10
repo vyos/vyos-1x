@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: version-tag-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   retag:
     runs-on: ubuntu-latest
