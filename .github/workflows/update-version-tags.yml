@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Move version tag to pushed SHA
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
@@ -33,7 +33,7 @@ jobs:
             *) echo "Unexpected branch: $BRANCH" >&2; exit 1 ;;
           esac
           echo "Pointing tag '$TAG' at $SHA (branch $BRANCH)"
-          if gh api "repos/$REPO/git/refs/tags/$TAG" >/dev/null 2>&1; then
+          if gh api "repos/$REPO/git/ref/tags/$TAG" >/dev/null 2>&1; then
             gh api -X PATCH "repos/$REPO/git/refs/tags/$TAG" \
               -f sha="$SHA" -F force=true
           else
