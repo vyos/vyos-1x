@@ -49,6 +49,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      # Surface whether the PR touched any docs/**/*.md so validate's review
+      # steps can skip on infrastructure-only PRs (workflow/config/README
+      # changes). actions/upload-artifact silently omits empty directories
+      # — when no .md files change, _changed_md/ isn't uploaded, and
+      # validate's working-directory: _changed_md would otherwise fail
+      # before any in-step short-circuit can run.
+      has_md_changes: ${{ steps.changes.outputs.has_md_changes }}
     steps:
       - name: Checkout PR merge ref (NO credentials)
         uses: actions/checkout@v6
@@ -58,6 +66,7 @@ jobs:
           fetch-depth: 2
 
       - name: Compute changed files and bundle .md content
+        id: changes
         run: |
           set -euo pipefail
           git fetch --depth=1 origin "${{ github.event.pull_request.base.ref }}"
@@ -121,6 +130,12 @@ jobs:
             mkdir -p "_changed_md/$(dirname -- "$path")"
             git show "HEAD:$path" > "_changed_md/$path"
           done < changed-md.z
+
+          if [ -s changed-md.txt ]; then
+            echo "has_md_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_md_changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload PR input artifact
         uses: actions/upload-artifact@v4
@@ -312,7 +327,7 @@ jobs:
       # Pass 1 would emit zero findings — a silent failure mode the
       # §3.6 fail-closed gate cannot catch when the DB is present.
       - name: Pass 1 — deterministic checks
-        if: steps.secrets-check.outputs.skip != 'true' && steps.download-db.outcome == 'success'
+        if: steps.secrets-check.outputs.skip != 'true' && steps.download-db.outcome == 'success' && needs.prepare.outputs.has_md_changes == 'true'
         working-directory: _changed_md
         run: |
           vyos-doc-review pass1 \
@@ -321,7 +336,7 @@ jobs:
             --output ../pass1-findings.json
 
       - name: Pass 2 — Claude review
-        if: steps.secrets-check.outputs.skip != 'true'
+        if: steps.secrets-check.outputs.skip != 'true' && needs.prepare.outputs.has_md_changes == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
