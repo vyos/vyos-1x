@@ -65,8 +65,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.PR_ACTION_DOCUMENTATION_SUBMODULE_UPDATE }}
-          commit-message: "Github: update sagitta branch"
-          title: "Github: update sagitta branch"
+          commit-message: "GitHub: update sagitta branch"
+          title: "GitHub: update sagitta branch"
           body: |
             Autoupdate vyos-1x submodule
             update releasenotes
@@ -100,8 +100,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.PR_ACTION_DOCUMENTATION_SUBMODULE_UPDATE }}
-          commit-message: "Github: update equuleus branch"
-          title: "Github: update equuleus branch"
+          commit-message: "GitHub: update equuleus branch"
+          title: "GitHub: update equuleus branch"
           body: |
             Autoupdate vyos-1x submodule
             update releasenotes
