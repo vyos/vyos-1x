@@ -151,6 +151,11 @@ jobs:
 
   validate:
     needs: [prepare]
+    # Skip the entire job on infrastructure-only PRs. Otherwise the
+    # expensive setup chain (artifact download, GitHub App token, reviewer
+    # checkout/install, reference-DB download/extract, uv setup) runs even
+    # though Pass 1 + Pass 2 are guaranteed to no-op.
+    if: needs.prepare.outputs.has_md_changes == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -329,7 +334,7 @@ jobs:
       # Pass 1 would emit zero findings — a silent failure mode the
       # §3.6 fail-closed gate cannot catch when the DB is present.
       - name: Pass 1 — deterministic checks
-        if: steps.secrets-check.outputs.skip != 'true' && steps.download-db.outcome == 'success' && needs.prepare.outputs.has_md_changes == 'true'
+        if: steps.secrets-check.outputs.skip != 'true' && steps.download-db.outcome == 'success'
         working-directory: _changed_md
         run: |
           vyos-doc-review pass1 \
@@ -338,7 +343,7 @@ jobs:
             --output ../pass1-findings.json
 
       - name: Pass 2 — Claude review
-        if: steps.secrets-check.outputs.skip != 'true' && needs.prepare.outputs.has_md_changes == 'true'
+        if: steps.secrets-check.outputs.skip != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
