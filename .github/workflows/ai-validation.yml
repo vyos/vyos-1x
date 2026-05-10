@@ -76,6 +76,14 @@ jobs:
             diff-md.patch
             _changed_md/
 
+      # Self-hosted-runner workspace cleanup. Composite action; the upstream
+      # already wraps its own logic in `if: ${{ always() && ... }}`, but the
+      # outer step also needs `if: always()` so it runs even after a prior
+      # step fails.
+      - name: Clean self-hosted runner workspace
+        if: always()
+        uses: atos-actions/clean-self-hosted-runner@c6ce136031329a4435508e02b3f97fd85353f744 # v1.4.34
+
   validate:
     needs: [prepare]
     runs-on: [self-hosted, web]
@@ -292,3 +300,11 @@ jobs:
 
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
+
+      # Self-hosted-runner workspace cleanup. Composite action; the upstream
+      # already wraps its own logic in `if: ${{ always() && ... }}`, but the
+      # outer step also needs `if: always()` so it runs even after a prior
+      # step fails.
+      - name: Clean self-hosted runner workspace
+        if: always()
+        uses: atos-actions/clean-self-hosted-runner@c6ce136031329a4435508e02b3f97fd85353f744 # v1.4.34
