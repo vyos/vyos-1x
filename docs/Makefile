@@ -30,7 +30,7 @@ livehtml:
 	sphinx-autobuild --host $(AUTOHOST) --port $(AUTOPORT) \
 		--ignore '$(BUILDDIR)/**' \
 		--ignore '**/_build/**' \
-		--ignore '**/md-*' \
+		--ignore '**/_rst_legacy/**' \
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 defaultvalue: export VYOS_DEFAULT=True
