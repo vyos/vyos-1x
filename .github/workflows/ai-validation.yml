@@ -5,7 +5,11 @@ on:
     types: [opened, synchronize, reopened]
 
 concurrency:
-  group: ai-validation-${{ github.event.pull_request.number }}
+  # Fallback to github.ref so non-PR events (workflow_dispatch, schedule)
+  # can't collapse to "ai-validation-" and cancel each other. Today the
+  # workflow only fires on pull_request_target so the fallback is purely
+  # defensive — but cheap.
+  group: ai-validation-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -122,12 +126,22 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
+      # Pass secrets via env: rather than inlining ${{ secrets.X }} into the
+      # shell script. GitHub Actions template-expands ${{ ... }} BEFORE bash
+      # parses the script, so a secret containing a single quote, backtick,
+      # or $ could break the [ -z ... ] test syntactically or be evaluated.
+      # The env: mapping hands the value to bash as an already-quoted env
+      # variable that "$VAR" expansion handles safely.
       - name: Check secrets availability
         id: secrets-check
+        env:
+          VYOS_APP_ID: ${{ secrets.VYOS_APP_ID }}
+          VYOS_APP_PRIVATE_KEY: ${{ secrets.VYOS_APP_PRIVATE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ -z "${{ secrets.VYOS_APP_ID }}" ] \
-             || [ -z "${{ secrets.VYOS_APP_PRIVATE_KEY }}" ] \
-             || [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+          if [ -z "$VYOS_APP_ID" ] \
+             || [ -z "$VYOS_APP_PRIVATE_KEY" ] \
+             || [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "::notice::Skipping AI validation — required secrets not available"
           else
@@ -277,7 +291,9 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          model: claude-opus-4-7
+          # claude-code-action@v1 removed the top-level `model` input; CLI
+          # flags including --model now travel via `claude_args` (see the
+          # claude_args: block at the bottom of this step).
           track_progress: true
           prompt: |
             You are a VyOS documentation reviewer.
@@ -354,6 +370,7 @@ jobs:
             - Severity: ERROR (factually wrong), WARNING (misleading/incomplete), INFO
 
           claude_args: |
+            --model claude-opus-4-7
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
 
       # Self-hosted-runner workspace cleanup. Composite action; the upstream
