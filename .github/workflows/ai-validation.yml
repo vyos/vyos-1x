@@ -133,7 +133,12 @@ jobs:
             git show "HEAD:$path" > "_changed_md/$path"
           done < changed-md.z
 
-          if [ -s changed-md.txt ]; then
+          # Use diff-md.patch (unfiltered git diff) rather than changed-md.txt
+          # (--diff-filter=ACMRT) so deletion-only PRs still trigger validate.
+          # Pass 1 reviews the diff, not just the post-image files in
+          # _changed_md/, so deletes are legitimate review targets even though
+          # they produce no entries in _changed_md/.
+          if [ -s diff-md.patch ]; then
             echo "has_md_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_md_changes=false" >> "$GITHUB_OUTPUT"
@@ -207,6 +212,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pr-input
+
+      - name: Ensure _changed_md exists (handles deletion-only PRs)
+        if: steps.secrets-check.outputs.skip != 'true'
+        # actions/upload-artifact silently omits empty directories. On a
+        # deletion-only PR, prepare's _changed_md/ holds no files and never
+        # makes it across the artifact boundary — Pass 1's
+        # working-directory: _changed_md would then fail. Recreate the
+        # directory unconditionally; Pass 1 still operates on the diff
+        # via --pr-diff ../diff-md.patch, which is the source of truth.
+        run: mkdir -p _changed_md
 
       - name: Generate GitHub App token
         if: steps.secrets-check.outputs.skip != 'true'
