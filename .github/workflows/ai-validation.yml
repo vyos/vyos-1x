@@ -25,8 +25,17 @@ jobs:
   # expanding the attack surface to any future shell change in this job.
   # The validate job below performs the secrets-availability check and
   # skips with a notice if any are missing.
+  # Untrusted prepare runs on GitHub-hosted ubuntu-latest, NOT the
+  # self-hosted web pool. Even though this job doesn't execute fork code
+  # (it only does git diff / git show / file reads — never pip install,
+  # npm install, build, or tests), GitHub-hosted runners are ephemeral
+  # and isolated, so a future maintainer who adds a build step to prepare
+  # cannot accidentally turn it into an attack vector against internal
+  # network services or persist state across runs on the self-hosted
+  # host. The trusted validate job below stays on self-hosted web; the
+  # split-job artifact bridges the trust boundary.
   prepare:
-    runs-on: [self-hosted, web]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -147,6 +156,19 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # Surface the skip to PR authors as a normal review comment in
+      # addition to the workflow ::notice:: annotation (which only appears
+      # on the run page). This way a maintainer reviewing the PR sees the
+      # skip in the same place as other automated review feedback.
+      - name: Notify on PR (when skipping)
+        if: steps.secrets-check.outputs.skip == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "AI Validation skipped — required secrets are not configured on this repo (\`ANTHROPIC_API_KEY\`, \`VYOS_APP_ID\`, \`VYOS_APP_PRIVATE_KEY\`). Maintainers: see the workflow run for details."
 
       - name: Download PR input
         if: steps.secrets-check.outputs.skip != 'true'
