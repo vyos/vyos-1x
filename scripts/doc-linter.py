@@ -27,6 +27,44 @@ MAC = r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})'
 
 NUMBER = r"([\s']\d+[\s'])"
 
+SUPPORTED_EXTS = ('.md', '.rst', '.txt')
+
+# MyST / Markdown fenced code block: leading whitespace + 3+ backticks or 3+ colons.
+# Same character and length-or-greater closes.
+MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})(.*)$')
+
+SUPPRESSION_MARKER_RE = {
+    'rst': {
+        'stop': re.compile(r'^\s*\.\.\s+stop_vyoslinter\s*$'),
+        'start': re.compile(r'^\s*\.\.\s+start_vyoslinter\s*$'),
+    },
+    'md': {
+        'stop': re.compile(r'^\s*%\s+stop_vyoslinter\s*$'),
+        'start': re.compile(r'^\s*%\s+start_vyoslinter\s*$'),
+    },
+}
+
+
+def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock,
+                          md_fence_is_eval_rst, file_ext):
+    """Detect valid stop/start markers in the parser context where they apply.
+
+    `% ...` is only valid in MyST Markdown (`.md`) at top level (outside any fence).
+    `.. ...` is valid in `.rst`/`.txt` at top level (outside RST code-block) and
+    in `.md` only when inside an `{eval-rst}` fence.
+    """
+    if SUPPRESSION_MARKER_RE['md'][kind].match(line):
+        return file_ext == '.md' and not in_md_fence
+    if not SUPPRESSION_MARKER_RE['rst'][kind].match(line):
+        return False
+    if in_rst_codeblock:
+        return False
+    if file_ext in ('.rst', '.txt'):
+        return True
+    if in_md_fence:
+        return md_fence_is_eval_rst
+    return False
+
 
 def lint_mac(cnt, line):
     mac = re.search(MAC, line, re.I)
@@ -79,65 +117,91 @@ def lint_linelen(cnt, line):
 
 def handle_file_action(filepath):
     errors = []
-    try:
-        with open(filepath) as fp:
-            line = fp.readline()
-            cnt = 1
-            test_line_lenght = True
-            start_vyoslinter = True
-            indentation = 0
-            while line:
-                # search for ignore linter comments in lines
-                if ".. stop_vyoslinter" in line:
-                    start_vyoslinter = False
-                if ".. start_vyoslinter" in line:
-                    start_vyoslinter = True
-                if start_vyoslinter:
-                    # ignore every '.. code-block::' for line lenght
-                    # rst code-block have its own style in html the format in rst
-                    # and the build page must be the same
-                    if test_line_lenght is False:
-                        if len(line) > indentation:
-                            #print(f"'{line}'")
-                            #print(indentation)
-                            if line[indentation].isspace() is False:
-                                test_line_lenght = True
+    file_ext = os.path.splitext(filepath)[1].lower()
+    # Stack of open MD/MyST fences: (char, min_len). Supports nesting like
+    # `:::{note}` containing `::::{code-block}`, where the inner opener does
+    # not close the outer note (CommonMark closing rule: matching closer must
+    # have no info string after the fence chars).
+    md_fence_stack = []
+    md_fence_is_eval_rst = False
+    in_rst_codeblock = False
+    rst_codeblock_indent = 0
+    start_vyoslinter = True
+    cnt = 0
 
-                    if ".. code-block::" in line:
-                        test_line_lenght = False
-                        indentation = 0
-                        for i in line:
-                            if i.isspace():
-                                indentation = indentation + 1
-                            else:
-                                break
-                    
-                    err_mac = lint_mac(cnt, line.strip())
-                    # disable mac detection for the moment, too many false positives
-                    err_mac = None
-                    err_ip4 = lint_ipv4(cnt, line.strip())
-                    err_ip6 = lint_ipv6(cnt, line.strip())
-                    if test_line_lenght:
-                        err_len = lint_linelen(cnt, line)
+    with open(filepath) as fp:
+        for cnt, line in enumerate(fp, start=1):
+            # MD/MyST fenced code block tracking (``` or :::).
+            fence_match = MD_FENCE_RE.match(line)
+            if fence_match:
+                fence = fence_match.group(2)
+                fence_char = fence[0]
+                fence_len = len(fence)
+                info = fence_match.group(3).strip()
+                # A closer matches the top of the stack (same char, len >=
+                # opener) and has no info string. Anything else opens a new
+                # (possibly nested) fence.
+                is_closer = (
+                    md_fence_stack
+                    and not info
+                    and fence_char == md_fence_stack[-1][0]
+                    and fence_len >= md_fence_stack[-1][1]
+                )
+                if is_closer:
+                    md_fence_stack.pop()
+                    if not md_fence_stack:
+                        md_fence_is_eval_rst = False
+                else:
+                    if not md_fence_stack:
+                        md_fence_is_eval_rst = info.startswith('{eval-rst}')
+                    md_fence_stack.append((fence_char, fence_len))
+
+            in_md_fence = bool(md_fence_stack)
+
+            # RST `.. code-block::` tracking (existing semantics for .rst/.txt).
+            # Each `.. code-block::` directive resets the tracked indent so a
+            # later dedent past that column exits the block — even when the
+            # directive itself appears inside an already-open outer block.
+            if in_rst_codeblock:
+                if len(line) > rst_codeblock_indent and not line[rst_codeblock_indent].isspace():
+                    in_rst_codeblock = False
+            if ".. code-block::" in line:
+                in_rst_codeblock = True
+                rst_codeblock_indent = 0
+                for ch in line:
+                    if ch.isspace():
+                        rst_codeblock_indent += 1
                     else:
-                        err_len = None
-                    if err_mac:
-                        errors.append(err_mac)
-                    if err_ip4:
-                        errors.append(err_ip4)
-                    if err_ip6:
-                        errors.append(err_ip6)
-                    if err_len:
-                        errors.append(err_len)
-                
-                line = fp.readline()
-                cnt += 1
-            
-            # ensure linter was not stop on top and forgot to tun on again
-            if start_vyoslinter == False:
-                errors.append((f"Don't forgett to turn linter back on", cnt, 'error'))
-    finally:
-        fp.close()
+                        break
+
+            if is_suppression_marker(
+                line, 'stop', in_md_fence, in_rst_codeblock,
+                md_fence_is_eval_rst, file_ext,
+            ):
+                start_vyoslinter = False
+            if is_suppression_marker(
+                line, 'start', in_md_fence, in_rst_codeblock,
+                md_fence_is_eval_rst, file_ext,
+            ):
+                start_vyoslinter = True
+
+            if not start_vyoslinter:
+                continue
+
+            test_line_length = not (in_md_fence or in_rst_codeblock)
+
+            err_mac = lint_mac(cnt, line.strip())
+            # disable mac detection for the moment, too many false positives
+            err_mac = None
+            err_ip4 = lint_ipv4(cnt, line.strip())
+            err_ip6 = lint_ipv6(cnt, line.strip())
+            err_len = lint_linelen(cnt, line) if test_line_length else None
+            for e in (err_mac, err_ip4, err_ip6, err_len):
+                if e:
+                    errors.append(e)
+
+        if not start_vyoslinter:
+            errors.append(("Don't forget to turn linter back on", cnt, 'error'))
 
     if len(errors) > 0:
         '''
@@ -156,14 +220,14 @@ def main():
     try:
         files = ast.literal_eval(sys.argv[1])
         for file in files:
-                if file[-4:] in [".rst", ".txt"] and "_build" not in file:
+                if file.endswith(SUPPORTED_EXTS) and "_build" not in file:
                     if handle_file_action(file) is False:
                         bool_error = False
     except Exception as e:
         for root, dirs, files in os.walk("docs"):
             path = root.split(os.sep)
             for file in files:
-                if file[-4:] in [".rst", ".txt"] and "_build" not in path:
+                if file.endswith(SUPPORTED_EXTS) and "_build" not in path:
                     fpath = '/'.join(path)
                     filepath = f"{fpath}/{file}"
                     if handle_file_action(filepath) is False:
