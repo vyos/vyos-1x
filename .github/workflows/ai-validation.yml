@@ -323,11 +323,17 @@ jobs:
         uses: robinraju/release-downloader@28fc21f50d76778e7023361aa1f863e717d3d56f # v1.13
         with:
           repository: VyOS-Networks/vyos-docs-opus-reviewer
-          # Pin the DB to the same release tag as REVIEWER_REF so a future
-          # reviewer-v1.x.x release with a schema change cannot be silently
-          # picked up while the pinned reviewer code still expects the old
-          # schema. Reproducibility > recency for this artifact.
-          tag: ${{ env.REVIEWER_REF }}
+          # latest: true is correct here. Reference DBs live in their own
+          # `ref-db-<timestamp>` release stream produced by the matrixed
+          # rebuild-reference workflow — NOT attached to the `reviewer-v1.x.x`
+          # release that REVIEWER_REF pins. A `tag: ${{ env.REVIEWER_REF }}`
+          # form would 404 (the reviewer-v1.x.x tag has no GH release with
+          # DB assets). The reference DB schema is intentionally backwards
+          # compatible across reviewer Python releases; the freshest DB is
+          # the right choice. If the DB schema ever changes incompatibly,
+          # bump REVIEWER_REF in the consuming workflow and the new code
+          # will refuse to load an older-format DB at the fail-closed gate.
+          latest: true
           fileName: reference-db-${{ steps.branch.outputs.vyos1x }}.tar.gz
           out-file-path: .reference-db
           token: ${{ steps.app.outputs.token }}
