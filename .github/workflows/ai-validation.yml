@@ -208,16 +208,23 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Python
+      # actions/setup-python prebuilt manifest does not ship Python 3.12 for
+      # Debian 12 (only Ubuntu). astral-sh/setup-uv installs uv (cross-platform)
+      # which then provisions Python 3.12 from Astral's standalone builds —
+      # works on Debian. activate-environment:true creates a .venv at
+      # ${{ github.workspace }}/.venv and prepends its bin/ to PATH so the
+      # `vyos-doc-review` CLI script is callable in subsequent steps.
+      - name: Setup uv + Python 3.12
         if: steps.secrets-check.outputs.skip != 'true'
-        uses: actions/setup-python@v6
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           python-version: '3.12'
+          activate-environment: true
 
       - name: Install reviewer (pinned to REVIEWER_REF)
         if: steps.secrets-check.outputs.skip != 'true'
         run: |
-          pip install "git+https://x-access-token:${{ steps.app.outputs.token }}@github.com/VyOS-Networks/vyos-docs-opus-reviewer.git@${{ env.REVIEWER_REF }}"
+          uv pip install "git+https://x-access-token:${{ steps.app.outputs.token }}@github.com/VyOS-Networks/vyos-docs-opus-reviewer.git@${{ env.REVIEWER_REF }}"
 
       # Run from inside _changed_md/ so the diff's relative paths
       # (`docs/...`) resolve to actual files in the artifact tree.
