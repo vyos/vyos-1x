@@ -34,11 +34,15 @@ The linter rejects public IP addresses that are not reserved for documentation.
 
 **These require `stop/start_vyoslinter` suppression:**
 
+% stop_vyoslinter
+
 | Example | Why suppression is needed |
 |---------|--------------------------|
-| Google Public DNS | Real public IP, not documentation-reserved |
+| `8.8.8.8` (Google DNS) | Real public IP, not documentation-reserved |
 | `64:ff9b::/96` (NAT64) | Well-known prefix, not in doc ranges |
 | Real provider IPs in examples | Authenticity matters for the example |
+
+% start_vyoslinter
 
 ### Line Length Rules
 
