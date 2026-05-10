@@ -1,0 +1,70 @@
+name: Context7 refresh
+
+# Listens for completion of "Update version tags" via workflow_run, then
+# refreshes the corresponding Context7 variant. The upstream workflow is
+# matched by name — DO NOT rename `Update version tags` without updating
+# the `workflows:` field below.
+#
+# OPERATOR NOTE: do NOT use GitHub's "Re-run jobs" on `Update version tags`.
+# Re-runs replay the original SHA, which would move the version tag
+# BACKWARD and trigger this workflow to refresh Context7 against stale
+# content. To force a Context7 refresh, use the workflow_dispatch input
+# below — it calls Context7 directly without touching any tag.
+
+on:
+  workflow_run:
+    workflows: ["Update version tags"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Context7 variant to refresh"
+        type: choice
+        options: [rolling, "1.5", "1.4"]
+        default: rolling
+
+permissions: {}
+
+concurrency:
+  group: >-
+    context7-refresh-${{
+      inputs.version
+      || (github.event.workflow_run.head_branch == 'circinus' && '1.5')
+      || (github.event.workflow_run.head_branch == 'sagitta' && '1.4')
+      || github.event.workflow_run.head_branch
+    }}
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       contains(fromJSON('["rolling","circinus","sagitta"]'), github.event.workflow_run.head_branch))
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Refresh Context7 library
+        env:
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          DISPATCH_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VARIANT="$DISPATCH_VERSION"
+          else
+            case "$HEAD_BRANCH" in
+              rolling)  VARIANT=rolling ;;
+              circinus) VARIANT=1.5 ;;
+              sagitta)  VARIANT=1.4 ;;
+              *) echo "Unexpected head_branch: $HEAD_BRANCH" >&2; exit 1 ;;
+            esac
+          fi
+          echo "Refreshing Context7 variant: $VARIANT"
+          curl -fsSL --retry 2 --retry-delay 10 -X POST \
+            "https://context7.com/api/v1/refresh" \
+            -H "Authorization: Bearer $CONTEXT7_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -nc --arg lib "/${{ github.repository }}" --arg br "$VARIANT" \
+                  '{libraryName: $lib, branch: $br}')"

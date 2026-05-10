@@ -1,5 +1,8 @@
 name: Update version tags
 
+# context7-refresh.yml triggers via workflow_run on this workflow's name.
+# DO NOT rename the `name:` field above without updating context7-refresh.yml.
+
 on:
   push:
     branches:
