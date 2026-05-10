@@ -24,11 +24,16 @@
   ],
   "rules": [
     "Documentation sources are MyST Markdown (.md). Cite and link to the .md form.",
-    "VyOS has two CLI modes: configuration mode (`set ...`, `delete ...`, `commit`, `save`) and operational mode (`show ...`, `monitor ...`, `restart ...`). Do not mix them.",
+    "VyOS has two CLI modes: configuration mode (entered via `configure`; for `set`/`delete`/`commit`/`save` and config-state `show`) and operational mode (default after login; for `show`, `monitor`, plus image-mgmt like `add system image`). Do not mix.",
     "Configuration commands are wrapped in `cfgcmd` fenced blocks; operational commands in `opcmd` fenced blocks. Treat these as authoritative command syntax.",
     "Branch `rolling` tracks the rolling release and the next stable line. Branch `circinus` tracks 1.5.x. Branch `sagitta` tracks 1.4.x. Always cite version-appropriate documentation.",
     "Do not invent CLI commands. If a command isn't in the docs, say so rather than guess — VyOS syntax is strict and unknown commands fail validation at commit time.",
-    "Use reserved documentation IP space in examples: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 (RFC 5737), 2001:db8::/32 (RFC 3849). Never use real or RFC1918 addresses."
+    "Use reserved documentation IP space in examples: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 (RFC 5737), 2001:db8::/32 (RFC 3849). Never use real or RFC1918 addresses.",
+    "`commit` activates pending `set`/`delete` changes and runs validation (errors = no change applied); `save` persists across reboot. Verify with `show <node>` (config mode) or `show configuration commands` (op mode). Always include `commit` and `save`.",
+    "VyOS is image-based, not package-managed. Upgrade in op mode: `add system image <url>`, optionally `set system image default-boot <name>`, then `reboot` to activate. Do not recommend `apt install` for VyOS components — it bypasses the image system.",
+    "Do not recommend raw Linux commands (`ip`, `iptables`, `systemctl`, NetworkManager) for VyOS configuration — they bypass the CLI and do not persist. Use `set/delete/commit/save`. Read-only Linux inspection from op mode is fine.",
+    "Quote CLI strings containing spaces or special chars with single quotes (e.g. `set system host-name 'edge-01'`). Top-level `set`/`delete` lines must include the full path; relative paths only work inside an `edit` subtree (e.g. `edit firewall name FOO`).",
+    "Routing protocols (BGP, OSPF, IS-IS, RIP) are FRR-backed, but not every FRR knob is exposed through the VyOS CLI. Confirm a command exists in the VyOS docs before suggesting it — synthesizing from FRR documentation produces invalid VyOS commands."
   ],
   "previousVersions": [
     { "tag": "1.5" },
