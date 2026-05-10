@@ -1,9 +1,13 @@
 name: Context7 refresh
 
 # Listens for completion of "Update version tags" via workflow_run, then
-# refreshes the corresponding Context7 variant. The upstream workflow is
-# matched by name — DO NOT rename `Update version tags` without updating
-# the `workflows:` field below.
+# refreshes the Context7 variant for the branch that fed it. The upstream
+# workflow is matched by name — DO NOT rename `Update version tags` without
+# updating the `workflows:` field below.
+#
+# Context7 API addresses variants by their underlying Git branch name
+# (rolling/circinus/sagitta), not by their display name (rolling/1.5/1.4).
+# For the default variant (rolling) the `branch` field is OMITTED.
 #
 # OPERATOR NOTE: do NOT use GitHub's "Re-run jobs" on `Update version tags`.
 # Re-runs replay the original SHA, which would move the version tag
@@ -17,22 +21,16 @@ on:
     types: [completed]
   workflow_dispatch:
     inputs:
-      version:
-        description: "Context7 variant to refresh"
+      branch:
+        description: "Source branch whose Context7 variant to refresh"
         type: choice
-        options: [rolling, "1.5", "1.4"]
+        options: [rolling, circinus, sagitta]
         default: rolling
 
 permissions: {}
 
 concurrency:
-  group: >-
-    context7-refresh-${{
-      inputs.version
-      || (github.event.workflow_run.head_branch == 'circinus' && '1.5')
-      || (github.event.workflow_run.head_branch == 'sagitta' && '1.4')
-      || github.event.workflow_run.head_branch
-    }}
+  group: context7-refresh-${{ inputs.branch || github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
@@ -48,7 +46,7 @@ jobs:
         env:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          DISPATCH_VERSION: ${{ inputs.version }}
+          DISPATCH_BRANCH: ${{ inputs.branch }}
         run: |
           set -euo pipefail
           if [[ -z "${CONTEXT7_API_KEY:-}" ]]; then
@@ -56,16 +54,24 @@ jobs:
             exit 1
           fi
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            VARIANT="$DISPATCH_VERSION"
+            BRANCH="$DISPATCH_BRANCH"
           else
-            case "$HEAD_BRANCH" in
-              rolling)  VARIANT=rolling ;;
-              circinus) VARIANT=1.5 ;;
-              sagitta)  VARIANT=1.4 ;;
-              *) echo "Unexpected head_branch: $HEAD_BRANCH" >&2; exit 1 ;;
-            esac
+            BRANCH="$HEAD_BRANCH"
           fi
-          echo "Refreshing Context7 variant: $VARIANT"
+          case "$BRANCH" in
+            rolling|circinus|sagitta) ;;
+            *) echo "Unexpected branch: $BRANCH" >&2; exit 1 ;;
+          esac
+          echo "Refreshing Context7 variant for branch: $BRANCH"
+          # Default variant (rolling) refreshes when `branch` is omitted;
+          # non-default variants address by their Git branch name.
+          if [[ "$BRANCH" == "rolling" ]]; then
+            PAYLOAD="$(jq -nc --arg lib "/${{ github.repository }}" \
+              '{libraryName: $lib}')"
+          else
+            PAYLOAD="$(jq -nc --arg lib "/${{ github.repository }}" --arg br "$BRANCH" \
+              '{libraryName: $lib, branch: $br}')"
+          fi
           curl -fsSL \
             --connect-timeout 10 \
             --max-time 60 \
@@ -74,5 +80,4 @@ jobs:
             "https://context7.com/api/v1/refresh" \
             -H "Authorization: Bearer $CONTEXT7_API_KEY" \
             -H "Content-Type: application/json" \
-            -d "$(jq -nc --arg lib "${{ github.repository }}" --arg br "$VARIANT" \
-                  '{libraryName: $lib, branch: $br}')"
+            -d "$PAYLOAD"
