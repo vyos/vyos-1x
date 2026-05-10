@@ -69,8 +69,10 @@ jobs:
         id: changes
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "${{ github.event.pull_request.base.ref }}"
-          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          # Fetch the base branch explicitly by refname to avoid ambiguity with
+          # same-named tags (e.g., a `rolling` tag), then diff against FETCH_HEAD.
+          git fetch --no-tags --depth=1 origin "refs/heads/${{ github.event.pull_request.base.ref }}"
+          BASE="FETCH_HEAD"
           # --diff-filter=ACMRT excludes Deleted entries so the bundling
           # loop below (`git show HEAD:<path>`) doesn't try to extract
           # blobs for files that no longer exist in the merge ref.
