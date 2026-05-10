@@ -66,7 +66,11 @@ jobs:
             esac
           fi
           echo "Refreshing Context7 variant: $VARIANT"
-          curl -fsSL --retry 2 --retry-delay 10 -X POST \
+          curl -fsSL \
+            --connect-timeout 10 \
+            --max-time 60 \
+            --retry 2 --retry-delay 10 \
+            -X POST \
             "https://context7.com/api/v1/refresh" \
             -H "Authorization: Bearer $CONTEXT7_API_KEY" \
             -H "Content-Type: application/json" \
