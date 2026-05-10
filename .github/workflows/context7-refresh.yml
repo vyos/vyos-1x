@@ -35,10 +35,11 @@ permissions: {}
 concurrency:
   group: >-
     context7-refresh-${{
-      inputs.variant
+      (contains(fromJSON('["rolling","1.5","1.4"]'), inputs.variant) && inputs.variant)
       || (github.event.workflow_run.head_branch == 'circinus' && '1.5')
       || (github.event.workflow_run.head_branch == 'sagitta' && '1.4')
-      || github.event.workflow_run.head_branch
+      || (github.event.workflow_run.head_branch == 'rolling' && 'rolling')
+      || 'invalid'
     }}
   cancel-in-progress: true
 
