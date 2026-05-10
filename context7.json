@@ -1,4 +1,36 @@
 {
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "VyOS Networking Platform",
+  "description": "VyOS, Enterprise-Grade Open Source Networking Platform for Bare Metal, Cloud, and Edge",
   "url": "https://context7.com/vyos/vyos-documentation",
-  "public_key": "pk_CL1d8D3hhCrefEKCC4K8L"
+  "public_key": "pk_CL1d8D3hhCrefEKCC4K8L",
+  "folders": ["docs"],
+  "excludeFolders": [
+    "docs/_build",
+    "docs/_static",
+    "docs/_templates",
+    "docs/_ext",
+    "scripts",
+    "tests",
+    ".github",
+    "node_modules"
+  ],
+  "excludeFiles": [
+    "CHANGELOG.md",
+    "LICENSE",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md"
+  ],
+  "rules": [
+    "Documentation sources are MyST Markdown (.md). Cite and link to the .md form.",
+    "VyOS has two CLI modes: configuration mode (`set ...`, `delete ...`, `commit`, `save`) and operational mode (`show ...`, `monitor ...`, `restart ...`). Do not mix them.",
+    "Configuration commands are wrapped in `cfgcmd` fenced blocks; operational commands in `opcmd` fenced blocks. Treat these as authoritative command syntax.",
+    "Branch `current` tracks the rolling release and the next stable line (1.5+). Branch `circinus` tracks 1.5.x. Branch `sagitta` tracks 1.4.x. Always cite version-appropriate documentation.",
+    "Do not invent CLI commands. If a command isn't in the docs, say so rather than guess — VyOS syntax is strict and unknown commands fail validation at commit time.",
+    "Use reserved documentation IP space in examples: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 (RFC 5737), 2001:db8::/32 (RFC 3849). Never use real or RFC1918 addresses."
+  ],
+  "previousVersions": [
+    { "branch": "circinus" },
+    { "branch": "sagitta" }
+  ]
 }
