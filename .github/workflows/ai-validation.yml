@@ -25,10 +25,13 @@ jobs:
   # expanding the attack surface to any future shell change in this job.
   # The validate job below performs the secrets-availability check and
   # skips with a notice if any are missing.
-  # Untrusted prepare runs on the same self-hosted Debian 12 pool as
-  # validate. GitHub-hosted ubuntu-latest is not available in this
-  # environment. The trust boundary on prepare is enforced WITHOUT host
-  # isolation:
+  # Untrusted prepare runs on GitHub-hosted ubuntu-latest. The `vyos` org
+  # does not have self-hosted runners labeled `web` (those live in the
+  # VyOS-Networks org and only serve repos there); `vyos/vyos-documentation`
+  # therefore uses GitHub-hosted runners for the AI Validation workflow.
+  # The split-job artifact still bridges the trust boundary to validate;
+  # validate is the only place where secrets are referenced. Defense in
+  # depth on prepare:
   #   - No fork code is executed: prepare only does
   #       git fetch / git diff / git show / file reads.
   #     There is no `pip install` from the fork, no `npm install`, no
@@ -40,13 +43,10 @@ jobs:
   #   - persist-credentials: false on the merge-ref checkout means the
   #     default GITHUB_TOKEN is not available to fork-controlled file
   #     content.
-  #   - atos-actions/clean-self-hosted-runner step (`if: always()`) at
-  #     the end of the job wipes the workspace regardless of how prepare
-  #     exits.
-  # The split-job artifact still bridges the trust boundary to validate;
-  # validate is the only place where secrets are referenced.
+  #   - GitHub-hosted runners are ephemeral — every run starts on a fresh
+  #     VM, so cross-run state leakage is not possible.
   prepare:
-    runs-on: [self-hosted, web]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -73,17 +73,18 @@ jobs:
           git diff "$BASE...HEAD" -- 'docs/**/*.md' > diff-md.patch
           # Bundle .md files via git's blob store (NOT the filesystem).
           # The fork's merge ref can contain symlinks (mode 120000) committed
-          # to docs/**/*.md that resolve to absolute paths on this self-hosted
-          # runner. `cp` would dereference and copy the target's content
-          # (/etc/passwd, runner secrets, ssh keys) into the artifact,
-          # exfiltrating runner state to the validate job's claude-code-action
-          # input. `git show HEAD:<path>` returns the blob directly from the
-          # object database; for a symlink-mode entry it returns the textual
-          # target path, never the target's content.
+          # to docs/**/*.md that resolve to absolute paths on the runner.
+          # `cp` would dereference and copy the target's content (/etc/passwd,
+          # any cached state, ssh keys etc) into the artifact, exfiltrating
+          # runner state to the validate job's claude-code-action input.
+          # `git show HEAD:<path>` returns the blob directly from the object
+          # database; for a symlink-mode entry it returns the textual target
+          # path, never the target's content. The runner being ephemeral
+          # (GitHub-hosted) limits the blast radius further, but the blob-
+          # extraction approach is the actual mitigation and is portable.
           # Idempotent: a previous run cancelled by concurrency.cancel-in-progress
-          # may have left _changed_md/ behind on the self-hosted runner if the
-          # job was killed before the post-job cleanup ran. rm -rf + mkdir -p
-          # guarantees a clean target regardless of prior state.
+          # may have left _changed_md/ behind. rm -rf + mkdir -p guarantees a
+          # clean target regardless of prior state.
           rm -rf _changed_md && mkdir -p _changed_md
           while IFS= read -r -d '' path; do
             # Path-traversal hardening: even though git's tree machinery
@@ -130,17 +131,9 @@ jobs:
             diff-md.patch
             _changed_md/
 
-      # Self-hosted-runner workspace cleanup. Composite action; the upstream
-      # already wraps its own logic in `if: ${{ always() && ... }}`, but the
-      # outer step also needs `if: always()` so it runs even after a prior
-      # step fails.
-      - name: Clean self-hosted runner workspace
-        if: always()
-        uses: atos-actions/clean-self-hosted-runner@c6ce136031329a4435508e02b3f97fd85353f744 # v1.4.34
-
   validate:
     needs: [prepare]
-    runs-on: [self-hosted, web]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
@@ -289,12 +282,11 @@ jobs:
 
       # Check out the reviewer source instead of installing via
       # `uv pip install git+https://x-access-token:<TOK>@...` — the URL form
-      # puts the App token in process argv (visible through
-      # /proc/<pid>/cmdline on the self-hosted runner while uv or git is
-      # running). actions/checkout writes the token as a transient http
-      # extraheader instead, and persist-credentials:false ensures it does
-      # not linger in reviewer-src/.git/config where the Pass 2 LLM step
-      # could read it.
+      # puts the App token in process argv (visible through /proc/<pid>/cmdline
+      # to any other process on the runner while uv or git is running).
+      # actions/checkout writes the token as a transient http extraheader
+      # instead, and persist-credentials:false ensures it does not linger in
+      # reviewer-src/.git/config where the Pass 2 LLM step could read it.
       - name: Checkout reviewer package source (pinned to REVIEWER_REF)
         if: steps.secrets-check.outputs.skip != 'true'
         uses: actions/checkout@v6
@@ -410,11 +402,3 @@ jobs:
           claude_args: |
             --model claude-opus-4-7
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
-
-      # Self-hosted-runner workspace cleanup. Composite action; the upstream
-      # already wraps its own logic in `if: ${{ always() && ... }}`, but the
-      # outer step also needs `if: always()` so it runs even after a prior
-      # step fails.
-      - name: Clean self-hosted runner workspace
-        if: always()
-        uses: atos-actions/clean-self-hosted-runner@c6ce136031329a4435508e02b3f97fd85353f744 # v1.4.34
