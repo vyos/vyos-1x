@@ -110,8 +110,14 @@ jobs:
                || "$path" == "../"* \
                || "$path" == *"/.." \
                || "$path" == ".." ]]; then
-              echo "::warning::Skipping unsafe path with traversal/absolute prefix: $path"
-              continue
+              # Fail-fast (don't `continue`) so an unsafe path can't silently
+              # bypass Pass 1 (no file copied into _changed_md/) and Pass 2
+              # (LLM tools see no content) — same reasoning as the non-regular
+              # tree-entry check below: maintainers must explicitly decide to
+              # land such a path. Visible failure > silent skip on inputs that
+              # warrant the closest look.
+              echo "::error::Refusing to bundle: path has traversal/absolute prefix: $path"
+              exit 1
             fi
             # Refuse to bundle non-regular tree entries (symlinks mode 120000,
             # submodules 160000, etc). Skipping silently would let a PR that
