@@ -51,7 +51,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout PR merge ref (NO credentials)
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: refs/pull/${{ github.event.number }}/merge
           persist-credentials: false
@@ -69,6 +69,21 @@ jobs:
           # in changed-md.txt (which drives the bundling step).
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.md'  > changed-md.z
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.rst' > changed-rst.z
+          # Reject paths containing control chars (newlines, CR, NUL inside the
+          # name, escape sequences etc) before generating the newline-delimited
+          # *.txt manifests. Without this guard, `tr '\0' '\n'` on a path like
+          # `docs/foo\nbar.md` would split it into two logical lines —
+          # downstream consumers reading line-by-line would miss validation
+          # coverage on the real file (or worse, attempt to act on a synthetic
+          # path). Filesystems and porcelain git typically reject these but a
+          # fork PR can still commit such a tree entry; fail fast.
+          for z in changed-md.z changed-rst.z; do
+            if LC_ALL=C tr -d '\0\n\r' < "$z" \
+                | LC_ALL=C grep -Pq '[\x00-\x1F\x7F]'; then
+              echo "::error::Refusing to bundle: path in $z contains a control character. Reject the offending file name in the PR."
+              exit 1
+            fi
+          done
           tr '\0' '\n' < changed-md.z  > changed-md.txt
           tr '\0' '\n' < changed-rst.z > changed-rst.txt
           git diff "$BASE...HEAD" -- 'docs/**/*.md' > diff-md.patch
@@ -123,7 +138,7 @@ jobs:
           done < changed-md.z
 
       - name: Upload PR input artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pr-input
           path: |
@@ -138,7 +153,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      id-token: write
     steps:
       # Pass secrets via env: rather than inlining ${{ secrets.X }} into the
       # shell script. GitHub Actions template-expands ${{ ... }} BEFORE bash
@@ -182,7 +196,7 @@ jobs:
 
       - name: Download PR input
         if: steps.secrets-check.outputs.skip != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: pr-input
 
@@ -198,7 +212,7 @@ jobs:
 
       - name: Sparse-checkout branches.json from reviewer
         if: steps.secrets-check.outputs.skip != 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: VyOS-Networks/vyos-docs-opus-reviewer
           ref: ${{ env.REVIEWER_REF }}
@@ -229,7 +243,7 @@ jobs:
 
       - name: Checkout vyos-1x at mapped branch
         if: steps.secrets-check.outputs.skip != 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: vyos-networks/vyos-1x
           ref: ${{ steps.branch.outputs.vyos1x }}
@@ -248,7 +262,11 @@ jobs:
         uses: robinraju/release-downloader@28fc21f50d76778e7023361aa1f863e717d3d56f # v1.13
         with:
           repository: VyOS-Networks/vyos-docs-opus-reviewer
-          latest: true
+          # Pin the DB to the same release tag as REVIEWER_REF so a future
+          # reviewer-v1.x.x release with a schema change can't be silently
+          # picked up while the pinned reviewer code still expects the
+          # old schema. Reproducibility > recency for this artifact.
+          tag: ${{ env.REVIEWER_REF }}
           fileName: reference-db-${{ steps.branch.outputs.vyos1x }}.tar.gz
           out-file-path: .reference-db
           token: ${{ steps.app.outputs.token }}
@@ -293,7 +311,7 @@ jobs:
       # reviewer-src/.git/config where the Pass 2 LLM step could read it.
       - name: Checkout reviewer package source (pinned to REVIEWER_REF)
         if: steps.secrets-check.outputs.skip != 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: VyOS-Networks/vyos-docs-opus-reviewer
           ref: ${{ env.REVIEWER_REF }}
@@ -322,7 +340,7 @@ jobs:
 
       - name: Pass 2 — Claude review
         if: steps.secrets-check.outputs.skip != 'true'
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@476e359e6203e73dad705c8b322e333fabbd7416 # v1.0.119
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # claude-code-action@v1 removed the top-level `model` input; CLI
