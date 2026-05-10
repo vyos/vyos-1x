@@ -54,6 +54,22 @@ jobs:
           # target path, never the target's content.
           mkdir _changed_md
           while IFS= read -r -d '' path; do
+            # Path-traversal hardening: even though git's tree machinery
+            # rejects `..` segments and absolute paths in committed entries
+            # at the porcelain level, treat fork-controlled diff input as
+            # untrusted and validate explicitly. A path like
+            # `docs/../../outside.md` would otherwise let `git show`
+            # write outside _changed_md/.
+            if [[ "$path" == /* \
+               || "$path" == *"/../"* \
+               || "$path" == "../"* \
+               || "$path" == *"/.." \
+               || "$path" == ".." ]]; then
+              echo "::warning::Skipping unsafe path with traversal/absolute prefix: $path"
+              continue
+            fi
+            # Skip non-regular tree entries (symlinks, submodules) per the
+            # commit immediately preceding this one.
             mode=$(git ls-tree HEAD -- "$path" | awk '{print $1}')
             case "$mode" in
               100644|100755) ;;
