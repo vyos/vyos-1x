@@ -44,13 +44,13 @@ One long-lived branch per VyOS release line. Branch names are constellations sor
 
 | Branch | VyOS version |
 |--------|--------------|
-| `current` | rolling / 1.5+ (default branch — all new docs target this) |
+| `rolling` | rolling / 1.5+ (default branch — all new docs target this) |
 | `circinus` | 1.5.x |
 | `sagitta` | 1.4.x |
 | `equuleus` | 1.3.x (legacy) |
 | `crux` | 1.2.x (legacy) |
 
-PRs target `current`. After merge, request backports via a **post-merge comment** on the PR:
+PRs target `rolling`. After merge, request backports via a **post-merge comment** on the PR:
 
 ```text
 @Mergifyio backport circinus
@@ -191,7 +191,7 @@ table.
 
 | Slug | Verbose | Branch | Role |
 |---|---|---|---|
-| `rolling` | current | `current` | canonical for rolling/next major |
+| `rolling` | rolling | `rolling` | canonical for rolling/next major |
 | `1.5` | circinus | `circinus` | canonical for current LTS |
 | `1.4` | sagitta | `sagitta` | canonical for previous LTS |
 | `1.3`, `1.2` | equuleus, crux | older | canonical for older releases |
