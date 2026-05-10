@@ -11,10 +11,10 @@ Our old wiki with documentation from the VyOS 1.1.x and early 1.2.0 era can stil
 
 Our documentation repository follows the same branching scheme as the VyOS source itself.
 We maintain one documentation branch per VyOS release.
-The default branch that contains the most recent VyOS documentation is called `current`
-and matches the latest VyOS rolling release.
+The default branch that contains the most recent VyOS documentation is called `rolling`
+(renamed from `current` on 2026-05-10) and matches the latest VyOS rolling release.
 
-All new documentation enhancements go to the `current` branch. If those changes
+All new documentation enhancements go to the `rolling` branch. If those changes
 are beneficial for previous VyOS documentation versions they will be
 cherry-picked to the appropriate branch(es).
 

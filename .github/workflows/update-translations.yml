@@ -57,6 +57,6 @@ jobs:
           title: "Github: update translations"
           body: |
             Generate, upload new and download translation files 
-          branch: update-translations-current
+          branch: update-translations-rolling
           delete-branch: true
     

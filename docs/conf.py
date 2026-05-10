@@ -29,12 +29,14 @@ author = u'VyOS maintainers and contributors'
 # The short X.Y version (rolling — next major; bumped at branch cut)
 version = u'rolling'
 
-# The full version, including alpha/beta/rc tags. The `current` branch
+# The full version, including alpha/beta/rc tags. The `rolling` branch
 # is the rolling tip and serves at /en/rolling/ on RTD; the literal
 # below is exposed in the page footer ("v: rolling (current)") and is
 # interpolated into _templates/llms.txt.j2 ("This documentation covers
 # {{ release }}."). Pin this to a value that names what the rolling
-# docs actually serve, not a stale LTS codename.
+# docs actually serve, not a stale LTS codename. The "(current)" suffix
+# is release-channel terminology for the current rolling release; it is
+# unrelated to the former branch name.
 release = u'rolling (current)'
 
 # -- General configuration ---------------------------------------------------
@@ -136,9 +138,9 @@ html_baseurl = 'https://docs.vyos.io/en/rolling/'
 
 _rtd_version_type = os.environ.get('READTHEDOCS_VERSION_TYPE', '')
 _github_version = (
-    os.environ.get('READTHEDOCS_GIT_COMMIT_HASH', 'current')
+    os.environ.get('READTHEDOCS_GIT_COMMIT_HASH', 'rolling')
     if _rtd_version_type == 'external'
-    else os.environ.get('READTHEDOCS_GIT_IDENTIFIER', 'current')
+    else os.environ.get('READTHEDOCS_GIT_IDENTIFIER', 'rolling')
 )
 
 html_context = {

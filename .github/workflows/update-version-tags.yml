@@ -3,7 +3,6 @@ name: Update version tags
 on:
   push:
     branches:
-      - current
       - rolling
       - circinus
       - sagitta
@@ -28,7 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$BRANCH" in
-            current|rolling) TAG=rolling ;;
+            rolling)  TAG=rolling ;;
             circinus) TAG=1.5 ;;
             sagitta)  TAG=1.4 ;;
             *) echo "Unexpected branch: $BRANCH" >&2; exit 1 ;;
