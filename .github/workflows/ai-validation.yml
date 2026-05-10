@@ -56,7 +56,11 @@ jobs:
           # input. `git show HEAD:<path>` returns the blob directly from the
           # object database; for a symlink-mode entry it returns the textual
           # target path, never the target's content.
-          mkdir _changed_md
+          # Idempotent: a previous run cancelled by concurrency.cancel-in-progress
+          # may have left _changed_md/ behind on the self-hosted runner if the
+          # job was killed before the post-job cleanup ran. rm -rf + mkdir -p
+          # guarantees a clean target regardless of prior state.
+          rm -rf _changed_md && mkdir -p _changed_md
           while IFS= read -r -d '' path; do
             # Path-traversal hardening: even though git's tree machinery
             # rejects `..` segments and absolute paths in committed entries
@@ -225,10 +229,28 @@ jobs:
           python-version: '3.12'
           activate-environment: true
 
-      - name: Install reviewer (pinned to REVIEWER_REF)
+      # Check out the reviewer source instead of installing via
+      # `uv pip install git+https://x-access-token:<TOK>@...` — the URL form
+      # puts the App token in process argv (visible through
+      # /proc/<pid>/cmdline on the self-hosted runner while uv or git is
+      # running). actions/checkout writes the token as a transient http
+      # extraheader instead, and persist-credentials:false ensures it does
+      # not linger in reviewer-src/.git/config where the Pass 2 LLM step
+      # could read it.
+      - name: Checkout reviewer package source (pinned to REVIEWER_REF)
+        if: steps.secrets-check.outputs.skip != 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: VyOS-Networks/vyos-docs-opus-reviewer
+          ref: ${{ env.REVIEWER_REF }}
+          token: ${{ steps.app.outputs.token }}
+          persist-credentials: false
+          path: reviewer-src
+
+      - name: Install reviewer (from local checkout)
         if: steps.secrets-check.outputs.skip != 'true'
         run: |
-          uv pip install "git+https://x-access-token:${{ steps.app.outputs.token }}@github.com/VyOS-Networks/vyos-docs-opus-reviewer.git@${{ env.REVIEWER_REF }}"
+          uv pip install ./reviewer-src
 
       # Run from inside _changed_md/ so the diff's relative paths
       # (`docs/...`) resolve to actual files in the artifact tree.
