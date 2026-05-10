@@ -51,6 +51,10 @@ jobs:
           DISPATCH_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          if [[ -z "${CONTEXT7_API_KEY:-}" ]]; then
+            echo "ERROR: CONTEXT7_API_KEY is unset or empty" >&2
+            exit 1
+          fi
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             VARIANT="$DISPATCH_VERSION"
           else
