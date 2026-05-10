@@ -82,6 +82,12 @@ a server whose only clients are reached via unicasts, such as via DHCP relay
 agents.
 ```
 
+```{cfgcmd} set service dhcp-server log-level \<fatal | error | warn | info | debug\>
+
+Set the logging verbosity of the Kea DHCP server. The default level is
+`info`.
+```
+
 #### Individual Client Subnet
 
 ```{cfgcmd} set service dhcp-server shared-network-name \<name\> authoritative
@@ -948,6 +954,12 @@ section.
 
    Clients receiving advertise messages from multiple servers choose the server
    with the highest preference value. The range for this value is ``0...255``.
+```
+
+```{cfgcmd} set service dhcpv6-server log-level \<fatal | error | warn | info | debug\>
+
+Set the logging verbosity of the Kea DHCPv6 server. The default level is
+`info`.
 ```
 
 
