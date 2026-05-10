@@ -72,6 +72,12 @@ jobs:
               *) echo "Unexpected head_branch: $HEAD_BRANCH" >&2; exit 1 ;;
             esac
           fi
+          # Defense-in-depth: type:choice UI constraint is bypassable when
+          # workflow_dispatch is invoked via API (`gh workflow run -f variant=…`).
+          case "$VARIANT" in
+            rolling|1.5|1.4) ;;
+            *) echo "Invalid variant: '${VARIANT}'. Expected one of: rolling, 1.5, 1.4." >&2; exit 1 ;;
+          esac
           echo "Refreshing Context7 variant: $VARIANT"
           # rolling = default variant (no field). 1.5/1.4 = tag-backed.
           if [[ "$VARIANT" == "rolling" ]]; then
