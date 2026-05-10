@@ -2,9 +2,33 @@ name: Lint Doc
 on:
   pull_request:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
-  lint-doc:
-    uses: vyos/.github/.github/workflows/lint-doc.yml@current
-    secrets: inherit
-    
-    
+  doc-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Bullfrog Secure Runner
+        continue-on-error: true
+        uses: bullfrogsec/bullfrog@v0.8.4
+        with:
+          egress-policy: audit
+
+      - name: Get File Changes
+        id: file_changes
+        uses: trilom/file-changes-action@v1.2.4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: run doc linter
+        env:
+          FILES_MODIFIED: ${{ steps.file_changes.outputs.files_modified }}
+        run: python scripts/doc-linter.py "$FILES_MODIFIED"
