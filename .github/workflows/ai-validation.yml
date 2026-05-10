@@ -49,6 +49,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      # Surface whether the PR touched any docs/**/*.md so validate's review
+      # steps can skip on infrastructure-only PRs (workflow/config/README
+      # changes). actions/upload-artifact silently omits empty directories
+      # — when no .md files change, _changed_md/ isn't uploaded, and
+      # validate's working-directory: _changed_md would otherwise fail
+      # before any in-step short-circuit can run.
+      has_md_changes: ${{ steps.changes.outputs.has_md_changes }}
     steps:
       - name: Checkout PR merge ref (NO credentials)
         uses: actions/checkout@v6
@@ -58,10 +66,13 @@ jobs:
           fetch-depth: 2
 
       - name: Compute changed files and bundle .md content
+        id: changes
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "${{ github.event.pull_request.base.ref }}"
-          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          # Fetch the base branch explicitly by refname to avoid ambiguity with
+          # same-named tags (e.g., a `rolling` tag), then diff against FETCH_HEAD.
+          git fetch --no-tags --depth=1 origin "refs/heads/${{ github.event.pull_request.base.ref }}"
+          BASE="FETCH_HEAD"
           # --diff-filter=ACMRT excludes Deleted entries so the bundling
           # loop below (`git show HEAD:<path>`) doesn't try to extract
           # blobs for files that no longer exist in the merge ref.
@@ -122,6 +133,17 @@ jobs:
             git show "HEAD:$path" > "_changed_md/$path"
           done < changed-md.z
 
+          # Use diff-md.patch (unfiltered git diff) rather than changed-md.txt
+          # (--diff-filter=ACMRT) so deletion-only PRs still trigger validate.
+          # Pass 1 reviews the diff, not just the post-image files in
+          # _changed_md/, so deletes are legitimate review targets even though
+          # they produce no entries in _changed_md/.
+          if [ -s diff-md.patch ]; then
+            echo "has_md_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_md_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload PR input artifact
         uses: actions/upload-artifact@v4
         with:
@@ -134,6 +156,11 @@ jobs:
 
   validate:
     needs: [prepare]
+    # Skip the entire job on infrastructure-only PRs. Otherwise the
+    # expensive setup chain (artifact download, GitHub App token, reviewer
+    # checkout/install, reference-DB download/extract, uv setup) runs even
+    # though Pass 1 + Pass 2 are guaranteed to no-op.
+    if: needs.prepare.outputs.has_md_changes == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -185,6 +212,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: pr-input
+
+      - name: Ensure _changed_md exists (handles deletion-only PRs)
+        if: steps.secrets-check.outputs.skip != 'true'
+        # actions/upload-artifact silently omits empty directories. On a
+        # deletion-only PR, prepare's _changed_md/ holds no files and never
+        # makes it across the artifact boundary — Pass 1's
+        # working-directory: _changed_md would then fail. Recreate the
+        # directory unconditionally; Pass 1 still operates on the diff
+        # via --pr-diff ../diff-md.patch, which is the source of truth.
+        run: mkdir -p _changed_md
 
       - name: Generate GitHub App token
         if: steps.secrets-check.outputs.skip != 'true'
