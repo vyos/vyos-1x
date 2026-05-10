@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-VyOS user documentation, built with Sphinx and hosted on Read the Docs at https://docs.vyos.io. Sources are MyST Markdown (`.md`) for migrated pages and RST (`.rst`) for the rest. Both formats are first-class to Sphinx; MD is the canonical source for any page that has been migrated, and RST is the canonical source for pages that haven't.
+VyOS user documentation, built with Sphinx and hosted on Read the Docs at https://docs.vyos.io. Sources are MyST Markdown (`.md`) for migrated pages and RST (`.rst`) for pages that haven't been migrated yet. Both formats are first-class to Sphinx.
 
-A small swap mechanism exists for the rare case where a maintainer needs to render the legacy RST version of a page that already has an MD primary — see `RST override mechanism` below. The override list is empty by default.
+Pre-migration RST shadows of migrated pages are archived under `docs/_rst_legacy/` for reference only — they are excluded from the build and not consulted by Sphinx.
 
 ## Build
 
@@ -28,17 +28,6 @@ cd docs && make html
 ```
 
 Output: `docs/_build/html/`.
-
-## Tests
-
-`tests/test_swap_sources.py` imports `swap_sources` from `scripts/`, which is
-not on `PYTHONPATH` by default. Run from the `tests/` directory:
-
-```bash
-cd tests
-PYTHONPATH=../scripts python -m pytest                    # all tests
-PYTHONPATH=../scripts python -m pytest test_swap_sources.py  # single file
-```
 
 ## Lint
 
@@ -84,34 +73,16 @@ Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR t
   - `testcoverage.py` — standalone helper that reads VyOS XML command definitions and exposes coverage stats; not a Sphinx extension.
   - `releasenotes.py` — standalone release-notes/changelog generator script; not a Sphinx extension.
 
-### RST override mechanism
+### Source files
 
-For pages that have been migrated from RST to MyST:
-
-- `docs/<subdir>/<page>.md` — canonical MD source (primary).
-- `docs/<subdir>/rst-<page>.rst` — preserved RST sibling kept around as an override
-  option. The `rst-` prefix applies only to the **filename**, not the directory, so
-  `configuration/firewall/zone` maps to `docs/configuration/firewall/rst-zone.rst`
-  (not `docs/rst-configuration/firewall/zone.rst`). Excluded from the build by
-  `exclude_patterns` in `conf.py`.
-- `docs/_rst_overrides.txt` — one stem per line, relative to `docs/` (e.g.
-  `configuration/firewall/zone`). Pages listed here render from
-  `rst-<page>.rst` instead of `<page>.md`. Empty by default.
-- `scripts/swap_sources.py` — CLI for `--swap` (apply overrides), `--restore`,
-  `--dry-run`, `--status`. Build-time state lands in
-  `docs/_build/_rst_override_state.json` and `docs/_build/_md_exclude.txt`
-  (gitignored).
-
-For pages that have NOT been migrated:
-
-- `docs/<page>.rst` — original RST, no `rst-` prefix, no MD sibling.
+- `docs/<subdir>/<page>.md` — canonical MD source for migrated pages.
+- `docs/<page>.rst` — canonical RST source for pages that have not been migrated yet (no `rst-` prefix, no MD sibling).
+- `docs/_rst_legacy/<subdir>/rst-<page>.rst` — archived pre-migration RST shadows. Excluded from the Sphinx build and from the Context7 index. Reference only.
 
 **Editing rules:**
-- Migrated page (has `<page>.md`): edit the `.md`. Don't touch the `rst-`-prefixed sibling unless you're maintaining a parallel RST version that someone has flagged in `_rst_overrides.txt`.
+- Migrated page (has `<page>.md`): edit the `.md`. Do not touch the archived shadow under `_rst_legacy/`.
 - Non-migrated page (RST-only): edit the `.rst`.
 - New page: write it as `.md` from the start. The `md-` prefix that earlier MyST migration commits used is gone — never add it.
-
-Running `make html` runs the swap automatically (it's a no-op when the override list is empty, which is the default state).
 
 ### Command directives
 

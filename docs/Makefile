@@ -11,35 +11,23 @@ BUILDDIR      = _build
 AUTOHOST      = 0.0.0.0
 AUTOPORT      = 8000
 
-SWAP          = python3 ../scripts/swap_sources.py
-
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile swap restore html dirhtml pdf livehtml defaultvalue
+.PHONY: help Makefile html dirhtml pdf livehtml defaultvalue
 
-swap:
-	$(SWAP) --swap
+html:
+	$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-restore:
-	$(SWAP) --restore
+dirhtml:
+	$(SPHINXBUILD) -M dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-html: swap
-	@trap '$(SWAP) --restore' EXIT; \
-		$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+pdf:
+	$(SPHINXBUILD) -M latexpdf "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-dirhtml: swap
-	@trap '$(SWAP) --restore' EXIT; \
-		$(SPHINXBUILD) -M dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
-pdf: swap
-	@trap '$(SWAP) --restore' EXIT; \
-		$(SPHINXBUILD) -M latexpdf "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
-livehtml: swap
-	@trap '$(SWAP) --restore' EXIT; \
-		sphinx-autobuild --host $(AUTOHOST) --port $(AUTOPORT) \
+livehtml:
+	sphinx-autobuild --host $(AUTOHOST) --port $(AUTOPORT) \
 		--ignore '$(BUILDDIR)/**' \
 		--ignore '**/_build/**' \
 		--ignore '**/md-*' \
