@@ -80,6 +80,30 @@ jobs:
           # in changed-md.txt (which drives the bundling step).
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.md'  > changed-md.z
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.rst' > changed-rst.z
+          # Reject paths containing line-disrupting control bytes (LF, CR,
+          # other 0x01-0x1F + 0x7F) before generating the newline-delimited
+          # *.txt manifests. NUL itself can't appear in a git pathname
+          # (it's the on-disk tree-entry terminator), so it stays out of
+          # the rejection class and remains the legitimate record delimiter
+          # for `git diff -z` — `grep -z` honors that contract.
+          #
+          # POSIX filesystems generally allow LF/CR in filenames and git
+          # stores them fine; the hazard is purely in our line-delimited
+          # downstream tooling. Without this guard, `tr '\0' '\n'` on a
+          # path like `docs/foo\nbar.md` would split it into two logical
+          # lines — downstream consumers reading line-by-line would miss
+          # validation coverage on the real file (or worse, act on a
+          # synthetic path). Fail fast at this seam.
+          #
+          # An earlier `tr -d '\0\n\r' | grep [\x00-\x1F\x7F]` form
+          # stripped the very bytes it was meant to reject before the
+          # grep ran — defeating the guard.
+          for z in changed-md.z changed-rst.z; do
+            if LC_ALL=C grep -zPq '[\x01-\x1F\x7F]' "$z"; then
+              echo "::error::Refusing to bundle: path in $z contains a control character. Reject the offending file name in the PR."
+              exit 1
+            fi
+          done
           tr '\0' '\n' < changed-md.z  > changed-md.txt
           tr '\0' '\n' < changed-rst.z > changed-rst.txt
           git diff "$BASE...HEAD" -- 'docs/**/*.md' > diff-md.patch
@@ -170,7 +194,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # pull-requests: write is required for inline review comments via
+      # mcp__github_inline_comment__create_inline_comment (Pass 2).
+      # issues: write is required for `gh pr comment` (the skip-notice
+      # step and Pass 2's top-level summary comment) — `gh pr comment`
+      # posts via POST /repos/{owner}/{repo}/issues/{number}/comments,
+      # which the issues scope governs. Granting both keeps every
+      # comment path working on repos where the default GITHUB_TOKEN
+      # permissions split issue and PR scopes.
       pull-requests: write
+      issues: write
     steps:
       # Pass secrets via env: rather than inlining ${{ secrets.X }} into the
       # shell script. GitHub Actions template-expands ${{ ... }} BEFORE bash
@@ -309,7 +342,14 @@ jobs:
         if: steps.secrets-check.outputs.skip != 'true'
         run: |
           set -euo pipefail
-          if [ -s changed-md.txt ] && [ ! -d .reference-db/extracted ]; then
+          # Gate on diff-md.patch (unfiltered) rather than changed-md.txt
+          # (--diff-filter=ACMRT). The job-level `if: has_md_changes` already
+          # ensures we only reach here when there are MD-related changes —
+          # including deletion-only PRs (where changed-md.txt is empty by
+          # design but diff-md.patch isn't). Using changed-md.txt here would
+          # silently skip the fail-closed check on those PRs, masking a
+          # missing reference DB from the reviewer.
+          if [ -s diff-md.patch ] && [ ! -d .reference-db/extracted ]; then
             echo "::error::Reference DB missing for vyos-1x branch '${{ steps.branch.outputs.vyos1x }}'. Pass 1 cannot run. Re-trigger rebuild-reference.yml in the reviewer repo and re-run."
             exit 1
           fi
