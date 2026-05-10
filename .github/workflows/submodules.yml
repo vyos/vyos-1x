@@ -31,8 +31,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.PR_ACTION_DOCUMENTATION_SUBMODULE_UPDATE }}
-          commit-message: "Github: update rolling branch"
-          title: "Github: update rolling branch"
+          commit-message: "GitHub: update rolling branch"
+          title: "GitHub: update rolling branch"
           body: |
             Autoupdate vyos-1x submodule
             update releasenotes
