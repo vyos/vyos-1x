@@ -77,9 +77,15 @@ jobs:
           # coverage on the real file (or worse, attempt to act on a synthetic
           # path). Filesystems and porcelain git typically reject these but a
           # fork PR can still commit such a tree entry; fail fast.
+          # grep -z treats NUL as the record delimiter (NUL is a legitimate
+          # separator here, not a forbidden char). The pattern excludes
+          # 0x00 and rejects every other control byte 0x01-0x1F + 0x7F,
+          # so LF (0x0A) and CR (0x0D) inside a path are caught.
+          # An earlier `tr -d '\0\n\r' | grep [\x00-\x1F\x7F]` form would
+          # strip the very chars it was meant to reject before the grep
+          # ran — defeating the guard.
           for z in changed-md.z changed-rst.z; do
-            if LC_ALL=C tr -d '\0\n\r' < "$z" \
-                | LC_ALL=C grep -Pq '[\x00-\x1F\x7F]'; then
+            if LC_ALL=C grep -zPq '[\x01-\x1F\x7F]' "$z"; then
               echo "::error::Refusing to bundle: path in $z contains a control character. Reject the offending file name in the PR."
               exit 1
             fi
