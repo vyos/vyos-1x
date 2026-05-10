@@ -1,0 +1,42 @@
+name: Update version tags
+
+on:
+  push:
+    branches:
+      - current
+      - circinus
+      - sagitta
+
+permissions:
+  contents: write
+
+concurrency:
+  group: version-tag-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  retag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move version tag to pushed SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "$BRANCH" in
+            current)  TAG=rolling ;;
+            circinus) TAG=1.5 ;;
+            sagitta)  TAG=1.4 ;;
+            *) echo "Unexpected branch: $BRANCH" >&2; exit 1 ;;
+          esac
+          echo "Pointing tag '$TAG' at $SHA (branch $BRANCH)"
+          if gh api "repos/$REPO/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$REPO/git/refs/tags/$TAG" \
+              -f sha="$SHA" -F force=true
+          else
+            gh api -X POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/$TAG" -f sha="$SHA"
+          fi

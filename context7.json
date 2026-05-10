@@ -30,7 +30,7 @@
     "Use reserved documentation IP space in examples: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 (RFC 5737), 2001:db8::/32 (RFC 3849). Never use real or RFC1918 addresses."
   ],
   "previousVersions": [
-    { "branch": "circinus" },
-    { "branch": "sagitta" }
+    { "tag": "1.5" },
+    { "tag": "1.4" }
   ]
 }
