@@ -53,8 +53,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.PR_ACTION_DOCUMENTATION_SUBMODULE_UPDATE }}
-          commit-message: "Github: update translations"
-          title: "Github: update translations"
+          commit-message: "GitHub: update translations"
+          title: "GitHub: update translations"
           body: |
             Generate, upload new and download translation files 
           branch: update-translations-rolling
