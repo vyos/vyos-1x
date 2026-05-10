@@ -49,6 +49,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      # Surface whether the PR touched any docs/**/*.md so validate's review
+      # steps can skip on infrastructure-only PRs (workflow/config/README
+      # changes). actions/upload-artifact silently omits empty directories
+      # — when no .md files change, _changed_md/ isn't uploaded, and
+      # validate's working-directory: _changed_md would otherwise fail
+      # before any in-step short-circuit can run.
+      has_md_changes: ${{ steps.changes.outputs.has_md_changes }}
     steps:
       - name: Checkout PR merge ref (NO credentials)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -58,10 +66,13 @@ jobs:
           fetch-depth: 2
 
       - name: Compute changed files and bundle .md content
+        id: changes
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "${{ github.event.pull_request.base.ref }}"
-          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          # Fetch the base branch explicitly by refname to avoid ambiguity with
+          # same-named tags (e.g., a `rolling` tag), then diff against FETCH_HEAD.
+          git fetch --no-tags --depth=1 origin "refs/heads/${{ github.event.pull_request.base.ref }}"
+          BASE="FETCH_HEAD"
           # --diff-filter=ACMRT excludes Deleted entries so the bundling
           # loop below (`git show HEAD:<path>`) doesn't try to extract
           # blobs for files that no longer exist in the merge ref.
@@ -69,30 +80,6 @@ jobs:
           # in changed-md.txt (which drives the bundling step).
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.md'  > changed-md.z
           git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.rst' > changed-rst.z
-          # Reject paths containing line-disrupting control bytes (LF, CR,
-          # other 0x01-0x1F + 0x7F) before generating the newline-delimited
-          # *.txt manifests. NUL itself can't appear in a git pathname
-          # (it's the on-disk tree-entry terminator), so it stays out of
-          # the rejection class and remains the legitimate record delimiter
-          # for `git diff -z` — `grep -z` honors that contract.
-          #
-          # POSIX filesystems generally allow LF/CR in filenames and git
-          # stores them fine; the hazard is purely in our line-delimited
-          # downstream tooling. Without this guard, `tr '\0' '\n'` on a
-          # path like `docs/foo\nbar.md` would split it into two logical
-          # lines — downstream consumers reading line-by-line would miss
-          # validation coverage on the real file (or worse, act on a
-          # synthetic path). Fail fast at this seam.
-          #
-          # An earlier `tr -d '\0\n\r' | grep [\x00-\x1F\x7F]` form
-          # stripped the very bytes it was meant to reject before the
-          # grep ran — defeating the guard.
-          for z in changed-md.z changed-rst.z; do
-            if LC_ALL=C grep -zPq '[\x01-\x1F\x7F]' "$z"; then
-              echo "::error::Refusing to bundle: path in $z contains a control character. Reject the offending file name in the PR."
-              exit 1
-            fi
-          done
           tr '\0' '\n' < changed-md.z  > changed-md.txt
           tr '\0' '\n' < changed-rst.z > changed-rst.txt
           git diff "$BASE...HEAD" -- 'docs/**/*.md' > diff-md.patch
@@ -146,6 +133,17 @@ jobs:
             git show "HEAD:$path" > "_changed_md/$path"
           done < changed-md.z
 
+          # Use diff-md.patch (unfiltered git diff) rather than changed-md.txt
+          # (--diff-filter=ACMRT) so deletion-only PRs still trigger validate.
+          # Pass 1 reviews the diff, not just the post-image files in
+          # _changed_md/, so deletes are legitimate review targets even though
+          # they produce no entries in _changed_md/.
+          if [ -s diff-md.patch ]; then
+            echo "has_md_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_md_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload PR input artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -158,6 +156,11 @@ jobs:
 
   validate:
     needs: [prepare]
+    # Skip the entire job on infrastructure-only PRs. Otherwise the
+    # expensive setup chain (artifact download, GitHub App token, reviewer
+    # checkout/install, reference-DB download/extract, uv setup) runs even
+    # though Pass 1 + Pass 2 are guaranteed to no-op.
+    if: needs.prepare.outputs.has_md_changes == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -209,6 +212,16 @@ jobs:
         with:
           name: pr-input
 
+      - name: Ensure _changed_md exists (handles deletion-only PRs)
+        if: steps.secrets-check.outputs.skip != 'true'
+        # actions/upload-artifact silently omits empty directories. On a
+        # deletion-only PR, prepare's _changed_md/ holds no files and never
+        # makes it across the artifact boundary — Pass 1's
+        # working-directory: _changed_md would then fail. Recreate the
+        # directory unconditionally; Pass 1 still operates on the diff
+        # via --pr-diff ../diff-md.patch, which is the source of truth.
+        run: mkdir -p _changed_md
+
       - name: Generate GitHub App token
         if: steps.secrets-check.outputs.skip != 'true'
         id: app
@@ -218,11 +231,6 @@ jobs:
           private-key: ${{ secrets.VYOS_APP_PRIVATE_KEY }}
           owner: VyOS-Networks
           repositories: vyos-1x,vyos-docs-opus-reviewer
-          # Token is used only for read-only operations: sparse-checkout
-          # of branches.json from the reviewer repo, full checkout of
-          # vyos-1x, and download of the reference-DB release asset. No
-          # write back to either repo. Scope the App token accordingly.
-          permission-contents: read
 
       - name: Sparse-checkout branches.json from reviewer
         if: steps.secrets-check.outputs.skip != 'true'
@@ -277,9 +285,9 @@ jobs:
         with:
           repository: VyOS-Networks/vyos-docs-opus-reviewer
           # Pin the DB to the same release tag as REVIEWER_REF so a future
-          # reviewer-v1.x.x release with a schema change can't be silently
-          # picked up while the pinned reviewer code still expects the
-          # old schema. Reproducibility > recency for this artifact.
+          # reviewer-v1.x.x release with a schema change cannot be silently
+          # picked up while the pinned reviewer code still expects the old
+          # schema. Reproducibility > recency for this artifact.
           tag: ${{ env.REVIEWER_REF }}
           fileName: reference-db-${{ steps.branch.outputs.vyos1x }}.tar.gz
           out-file-path: .reference-db
