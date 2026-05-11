@@ -7,7 +7,8 @@ alternative path.
 
 ## Common link parameters
 
-Traffic Engineering parameters are used for both IS-IS and OSPF (not supported yet).
+Traffic Engineering parameters are used for both IS-IS and OSPF (not supported
+yet).
 
 ```{cfgcmd} set protocols traffic-engineering admin-group \<admin-group-name\> bit-position \<bit-position-value\>
 

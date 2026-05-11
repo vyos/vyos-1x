@@ -1460,8 +1460,9 @@ set protocols ospfv3 redistribute connected
 show ipv6 ospfv3 redistribute
 ```
 
-Cost calculation wireguard interfaces is unreliable as ospfv3 uses the link speed to calculate the link cost.
-You might therefore want to set the link cost to a fixed value on WireGuard tunnels.
+Cost calculation wireguard interfaces is unreliable as ospfv3 uses the link
+speed to calculate the link cost. You might therefore want to set the link
+cost to a fixed value on WireGuard tunnels.
 
 Example configuration for WireGuard interfaces:
 

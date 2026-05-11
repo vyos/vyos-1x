@@ -164,8 +164,8 @@ The file `/tmp/foo` contains the migrated configuration.
 ### Configuration Error on System Boot
 
 Running the latest rolling releases sometimes exposes bugs due to edge cases
-missed in design. File these bugs via [Phabricator](https://vyos.dev/), but you can help narrow
-down the issue by following these steps:
+missed in design. File these bugs via [Phabricator](https://vyos.dev/), but
+you can help narrow down the issue by following these steps:
 
 1. Log in to your VyOS system.
 2. Enter configuration mode: `configure`
@@ -200,5 +200,9 @@ To debug priority issues or see script execution order, use the
 `/opt/vyatta/sbin/priority.pl` script, which lists the execution order of
 scripts.
 
+% stop_vyoslinter
+
 [bootchart.conf]: https://github.com/vyos/vyos-build/blob/current/data/live-build-config/includes.chroot/etc/systemd/bootchart.conf
 [vyatta-cfg]: https://github.com/vyos/vyatta-cfg
+
+% start_vyoslinter
