@@ -2,6 +2,15 @@ name: Update version tags
 
 # context7-refresh.yml triggers via workflow_run on this workflow's name.
 # DO NOT rename the `name:` field above without updating context7-refresh.yml.
+#
+# The `paths` filter gates BOTH this tag-move AND the downstream Context7
+# refresh: Context7 only ingests `docs/**` (per context7.json `folders`), so
+# infra-only pushes (workflows, scripts, Docker, CODEOWNERS, README, etc.)
+# don't need a version-tag move and don't need a Context7 refresh. The tag's
+# only consumer is Context7, so skipping the move on infra-only pushes is
+# semantically correct — the tag still represents the latest docs state.
+# `context7.json` is included because changes to its `rules`, `folders`, or
+# `excludeFolders` affect what Context7 returns even when no .md files moved.
 
 on:
   push:
@@ -9,6 +18,9 @@ on:
       - rolling
       - circinus
       - sagitta
+    paths:
+      - 'docs/**'
+      - 'context7.json'
 
 permissions:
   contents: write
