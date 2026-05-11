@@ -216,6 +216,34 @@ jobs:
       # by run 25658256103 on PR #1977.
       id-token: write
     steps:
+      # Check out the PR's merge ref into the workspace root. Required by
+      # anthropics/claude-code-action@v1: the action runs
+      # `git fetch origin <head-ref>` and reads files like
+      # `docs/<changed>.md` directly from the working dir during its
+      # setup. Without this checkout it fails with `fatal: not a git
+      # repository` + `could not open <file>`.
+      #
+      # Trust boundary preserved:
+      #   - persist-credentials: false → no token in fork-content
+      #     .git/config (so fork-controlled file contents that the
+      #     LLM tool calls might read can't exfiltrate a token)
+      #   - No shell step in validate executes fork code (no
+      #     `pip install` / `npm install` / `make` against the
+      #     workspace; Pass 1 runs the trusted reviewer CLI from
+      #     reviewer-src/; Pass 2's allowlisted tools are Read /
+      #     Glob / Grep / mcp__github_inline_comment + Bash
+      #     restricted to `gh pr comment|diff|view`).
+      #   - Subsequent steps create their own subdirs (_changed_md/
+      #     via artifact download, .vyos-1x/, reviewer-src/, reviewer/,
+      #     .reference-db/) which coexist with the docs/scripts/.github
+      #     content checked out here.
+      - name: Checkout PR merge ref into workspace (NO credentials)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: refs/pull/${{ github.event.number }}/merge
+          persist-credentials: false
+          fetch-depth: 2
+
       # Pass secrets via env: rather than inlining ${{ secrets.X }} into the
       # shell script. GitHub Actions template-expands ${{ ... }} BEFORE bash
       # parses the script, so a secret containing a single quote, backtick,
