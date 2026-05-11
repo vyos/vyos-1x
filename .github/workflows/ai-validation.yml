@@ -57,6 +57,14 @@ jobs:
       # validate's working-directory: _changed_md would otherwise fail
       # before any in-step short-circuit can run.
       has_md_changes: ${{ steps.changes.outputs.has_md_changes }}
+      # The exact SHA of the merge commit that prepare bundled. validate
+      # below checks out THIS sha (rather than re-resolving
+      # `refs/pull/<n>/merge`, which GitHub may update between prepare
+      # and validate on rapid pushes — concurrency.cancel-in-progress
+      # narrows the window but does not make the ref immutable). Pass 1
+      # (artifact) and Pass 2 (validate workspace) now operate on the
+      # same revision.
+      merge_sha: ${{ steps.changes.outputs.merge_sha }}
     steps:
       - name: Checkout PR merge ref (NO credentials)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -174,6 +182,11 @@ jobs:
             echo "has_md_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
+          # Pin the merge SHA that prepare bundled, so validate below can
+          # check out the exact same revision and avoid drift if GitHub
+          # advances refs/pull/<n>/merge between jobs.
+          echo "merge_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Upload PR input artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -273,25 +286,28 @@ jobs:
         if: steps.secrets-check.outputs.skip != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: refs/pull/${{ github.event.number }}/merge
+          # Pin to the exact merge SHA prepare bundled so validate's
+          # workspace tree matches Pass 1's artifact even on a PR that
+          # has had additional pushes between prepare and validate.
+          ref: ${{ needs.prepare.outputs.merge_sha }}
           persist-credentials: false
           fetch-depth: 2
 
       # claude-code-action subsequently runs `git fetch origin <head-ref>`
       # internally during its setup. `<head-ref>` is the branch name in
-      # the PR'"'"'s HEAD repo — for fork PRs that branch does NOT exist on
+      # the PR's HEAD repo — for fork PRs that branch does NOT exist on
       # the base repo (which is what `origin` points at after the merge-
       # ref checkout above), so the fetch fails with
       #   fatal: couldn't find remote ref refs/heads/<head-ref>
       #
-      # Re-point origin to the HEAD repo'"'"'s URL so the action'"'"'s fetch
+      # Re-point origin to the HEAD repo's URL so the action's fetch
       # resolves. The workspace tree is unchanged — it remains the merge
       # tree from above. For public forks (the only kind that target
       # vyos/vyos-documentation, since the repo is public) the
       # unauthenticated fetch from the fork succeeds without any credential
       # (persist-credentials:false stripped the extraheader at the end of
       # the previous step).
-      - name: Re-point origin to fork URL for claude-code-action'"'"'s git fetch
+      - name: Re-point origin to fork URL for claude-code-action's git fetch
         if: steps.secrets-check.outputs.skip != 'true'
         env:
           FORK: ${{ github.event.pull_request.head.repo.full_name }}
