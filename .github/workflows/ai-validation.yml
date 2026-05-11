@@ -216,34 +216,6 @@ jobs:
       # by run 25658256103 on PR #1977.
       id-token: write
     steps:
-      # Check out the PR's merge ref into the workspace root. Required by
-      # anthropics/claude-code-action@v1: the action runs
-      # `git fetch origin <head-ref>` and reads files like
-      # `docs/<changed>.md` directly from the working dir during its
-      # setup. Without this checkout it fails with `fatal: not a git
-      # repository` + `could not open <file>`.
-      #
-      # Trust boundary preserved:
-      #   - persist-credentials: false → no token in fork-content
-      #     .git/config (so fork-controlled file contents that the
-      #     LLM tool calls might read can't exfiltrate a token)
-      #   - No shell step in validate executes fork code (no
-      #     `pip install` / `npm install` / `make` against the
-      #     workspace; Pass 1 runs the trusted reviewer CLI from
-      #     reviewer-src/; Pass 2's allowlisted tools are Read /
-      #     Glob / Grep / mcp__github_inline_comment + Bash
-      #     restricted to `gh pr comment|diff|view`).
-      #   - Subsequent steps create their own subdirs (_changed_md/
-      #     via artifact download, .vyos-1x/, reviewer-src/, reviewer/,
-      #     .reference-db/) which coexist with the docs/scripts/.github
-      #     content checked out here.
-      - name: Checkout PR merge ref into workspace (NO credentials)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: refs/pull/${{ github.event.number }}/merge
-          persist-credentials: false
-          fetch-depth: 2
-
       # Pass secrets via env: rather than inlining ${{ secrets.X }} into the
       # shell script. GitHub Actions template-expands ${{ ... }} BEFORE bash
       # parses the script, so a secret containing a single quote, backtick,
@@ -283,6 +255,61 @@ jobs:
           gh pr comment "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
             --body "AI Validation skipped — required secrets are not configured on this repo (\`ANTHROPIC_API_KEY\`, \`VYOS_APP_ID\`, \`VYOS_APP_PRIVATE_KEY\`). Maintainers: see the workflow run for details."
+
+      # Check out the PR HEAD into the workspace root. Required by
+      # anthropics/claude-code-action@v1: it runs
+      # `git fetch origin <head-ref>` and reads files like
+      # `docs/<changed>.md` directly from the working dir during its
+      # setup. We check out the PR HEAD repo (which is the fork for
+      # fork PRs) so that the head-ref name resolves locally: doing a
+      # merge-ref checkout from `vyos/vyos-documentation` would leave
+      # origin pointed at the base repo, where `<head-ref>` (e.g.
+      # `contributor/branch`) does not exist and the action's fetch
+      # fails.
+      #
+      # The token is still used to download the tree (this is not an
+      # unauthenticated fetch); `persist-credentials: false` prevents
+      # it from being written into the resulting .git/config — so any
+      # fork-controlled file content that the Pass 2 LLM tools may
+      # read cannot exfiltrate the token.
+      #
+      # Trust boundary preserved:
+      #   - persist-credentials: false (no token in .git/config)
+      #   - No shell step in validate executes fork code (no
+      #     `pip install` / `npm install` / `make` against the
+      #     workspace; Pass 1 runs the trusted reviewer CLI from
+      #     reviewer-src/; Pass 2's allowlisted tools are Read /
+      #     Glob / Grep / mcp__github_inline_comment + Bash
+      #     restricted to `gh pr comment|diff|view`).
+      #   - The "Wipe reserved workspace paths" step below strips any
+      #     fork-controlled placeholders at workflow-reserved paths
+      #     (.reference-db, .vyos-1x, reviewer, reviewer-src,
+      #     _changed_md, pass1-findings.json, diff-md.patch, changed-*
+      #     .txt) before the trusted producer steps re-create them.
+      - name: Checkout PR HEAD (no persisted credentials)
+        if: steps.secrets-check.outputs.skip != 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 2
+
+      # Defense-in-depth: actions/checkout above brings the PR'"'"'s tree
+      # into the workspace root, which means a malicious fork could
+      # pre-create files/dirs at the same paths that workflow-producer
+      # steps below populate (artifact download, vyos-1x checkout,
+      # reference-DB extract, reviewer install, Pass 1 output). Wiping
+      # the reserved paths guarantees subsequent producer steps start
+      # from a clean slate and the fail-closed gate that checks for
+      # `.reference-db/extracted` reflects workflow state, not PR
+      # content.
+      - name: Wipe reserved workspace paths (defense-in-depth vs fork-controlled placeholders)
+        if: steps.secrets-check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf _changed_md .reference-db .vyos-1x reviewer reviewer-src
+          rm -f changed-md.txt changed-rst.txt diff-md.patch pass1-findings.json
 
       - name: Download PR input
         if: steps.secrets-check.outputs.skip != 'true'
