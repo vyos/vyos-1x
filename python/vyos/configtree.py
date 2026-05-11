@@ -18,6 +18,12 @@ import json
 import logging
 
 from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
+from typing import TYPE_CHECKING
+
+# https://peps.python.org/pep-0484/#forward-references
+# for type 'ConfigDict'
+if TYPE_CHECKING:
+    from vyos.referencetree import ReferenceTree
 
 BUILD_PATH = '/tmp/libvyosconfig/_build/libvyosconfig.so'
 INSTALL_PATH = '/usr/lib/libvyosconfig.so.0'
@@ -67,11 +73,21 @@ class ConfigTreeError(Exception):
 
 class ConfigTree(object):
     def __init__(
-        self, config_string=None, address=None, internal=None, libpath=LIBPATH
+        self,
+        config_string=None,
+        address=None,
+        internal=None,
+        internal_string=None,
+        libpath=LIBPATH,
     ):
-        if config_string is None and address is None and internal is None:
+        if (
+            config_string is None
+            and address is None
+            and internal is None
+            and internal_string is None
+        ):
             raise TypeError(
-                "ConfigTree() requires one of 'config_string', 'address', or 'internal'"
+                "ConfigTree() requires one of 'config_string', 'address', 'internal', or 'internal_string'"
             )
 
         self.__config = None
@@ -100,6 +116,14 @@ class ConfigTree(object):
 
         self.__write_internal = self.__lib.write_internal
         self.__write_internal.argtypes = [c_void_p, c_char_p]
+
+        self.__read_internal_string = self.__lib.read_internal_string
+        self.__read_internal_string.argtypes = [c_char_p]
+        self.__read_internal_string.restype = c_void_p
+
+        self.__write_internal_string = self.__lib.write_internal_string
+        self.__write_internal_string.argtypes = [c_void_p]
+        self.__write_internal_string.restype = c_char_p
 
         self.__to_json = self.__lib.to_json
         self.__to_json.argtypes = [c_void_p]
@@ -206,7 +230,19 @@ class ConfigTree(object):
             config = self.__read_internal(internal.encode())
             if config is None:
                 msg = self.__get_error().decode()
-                raise ValueError('Failed to read internal rep: {0}'.format(msg))
+                raise ValueError(
+                    f'Failed to read internal representation from file {internal}: {msg}'
+                )
+            else:
+                self.__config = config
+                self.__version = ''
+        elif internal_string is not None:
+            config = self.__read_internal_string(internal_string.encode())
+            if config is None:
+                msg = self.__get_error().decode()
+                raise ValueError(
+                    f'Failed to read internal representation from string: {msg}'
+                )
             else:
                 self.__config = config
                 self.__version = ''
@@ -216,7 +252,7 @@ class ConfigTree(object):
             config = self.__from_string(config_section.encode())
             if config is None:
                 msg = self.__get_error().decode()
-                raise ValueError('Failed to parse config: {0}'.format(msg))
+                raise ValueError(f'Failed to parse config: {msg}')
             else:
                 self.__config = config
                 self.__version = version_section
@@ -249,6 +285,10 @@ class ConfigTree(object):
 
     def write_cache(self, file_name):
         self.__write_internal(self.get_tree(), file_name.encode())
+
+    def write_internal_string(self) -> str:
+        res = self.__write_internal_string(self.get_tree())
+        return res.decode()
 
     def to_string(self, ordered_values=False, no_version=False):
         config_string = self.__to_string(self.__config, ordered_values).decode()
@@ -584,13 +624,80 @@ def mask_inclusive(left, right, libpath=LIBPATH):
     try:
         __lib = cdll.LoadLibrary(libpath)
         __mask_tree = __lib.mask_tree
-        __mask_tree.argtypes = [c_void_p, c_void_p]
+        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
         __mask_tree.restype = c_void_p
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
 
-        res = __mask_tree(left.get_tree(), right.get_tree())
+        res = __mask_tree(left.get_tree(), right.get_tree(), False)
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if not res:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+    tree = ConfigTree(address=res)
+
+    return tree
+
+
+def mask_exclusive(left, right, libpath=LIBPATH):
+    if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+        raise TypeError('Arguments must be instances of ConfigTree')
+
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __mask_tree = __lib.mask_tree
+        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
+        __mask_tree.restype = c_void_p
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+
+        res = __mask_tree(left.get_tree(), right.get_tree(), True)
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if not res:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+    tree = ConfigTree(address=res)
+
+    return tree
+
+
+def subtree_from_partial(
+    config_tree: ConfigTree,
+    path: list[str],
+    reference_tree: 'ReferenceTree',
+    start: ConfigTree = None,
+    libpath=LIBPATH,
+):
+    if start:
+        if not isinstance(start, ConfigTree):
+            raise TypeError("Argument 'start' must be an instance of ConfigTree")
+    else:
+        start = ConfigTree('')
+
+    check_path(path)
+    path_str = ' '.join(map(str, path)).encode()
+
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __subtree_from_partial = __lib.subtree_from_partial
+        __subtree_from_partial.argtypes = [c_void_p, c_void_p, c_void_p, c_char_p]
+        __subtree_from_partial.restype = c_void_p
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+
+        res = __subtree_from_partial(
+            reference_tree.get_tree(),
+            config_tree.get_tree(),
+            start.get_tree(),
+            path_str,
+        )
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
