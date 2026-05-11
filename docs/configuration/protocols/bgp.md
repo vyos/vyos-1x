@@ -285,7 +285,7 @@ and happen automatically if local-role is set.
 
 ```{cfgcmd} set protocols bgp neighbor \<address|interface\> shutdown
 
-This command disable the peer or peer group. To re-enable the peer use
+This command disables the peer or peer group. To re-enable the peer, use
 the delete form of this command.
 ```
 
@@ -805,7 +805,7 @@ availability is also advertised. A route that continually fails and returns
 requires a great deal of network traffic to update the network about the
 route's status.
 
-Route dampening which described in {rfc}`2439` enables you to identify routes
+Route dampening, described in {rfc}`2439`, enables you to identify routes
 that repeatedly fail and return. If route dampening is enabled, an unstable
 route accumulates penalties each time the route fails and returns. If the
 accumulated penalties exceed a threshold, the route is no longer advertised.
