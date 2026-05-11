@@ -207,8 +207,15 @@ def cleanup(lb):
             suppress_prio = lb['mark_offset'] + index
             table_prio = suppress_prio + 100
             run(f'ip route del table {table_num} default')
-            run(f'ip rule del priority {suppress_prio}')
-            run(f'ip rule del priority {table_prio}')
+            run(
+                f'ip rule del fwmark {hex(table_num)} table main '
+                f'suppress_prefixlength 0 priority {suppress_prio}'
+            )
+            run(
+                f'ip rule del fwmark {hex(table_num)} table {table_num} '
+                f'priority {table_prio}'
+            )
+            run(f'ip rule del fwmark {hex(table_num)} table {table_num}')
             index += 1
 
     run(f'nft delete table ip vyos_wanloadbalance')
@@ -268,8 +275,17 @@ if __name__ == '__main__':
 
             suppress_prio = lb['mark_offset'] + index
             table_prio = suppress_prio + 100
-            run(f'ip rule add fwmark {hex(table_num)} table main suppress_prefixlength 0 priority {suppress_prio}')
-            run(f'ip rule add fwmark {hex(table_num)} table {table_num} priority {table_prio}')
+            if 'only_default_route' in lb:
+                run(
+                    f'ip rule add fwmark {hex(table_num)} table main '
+                    f'suppress_prefixlength 0 priority {suppress_prio}'
+                )
+                run(
+                    f'ip rule add fwmark {hex(table_num)} table {table_num} '
+                    f'priority {table_prio}'
+                )
+            else:
+                run(f'ip rule add fwmark {hex(table_num)} table {table_num}')
 
             index += 1
 
