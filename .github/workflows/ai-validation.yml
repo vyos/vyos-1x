@@ -295,21 +295,25 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
 
-      # Defense-in-depth: actions/checkout above brings the PR'"'"'s tree
+      # Defense-in-depth: actions/checkout above brings the PR's tree
       # into the workspace root, which means a malicious fork could
       # pre-create files/dirs at the same paths that workflow-producer
       # steps below populate (artifact download, vyos-1x checkout,
-      # reference-DB extract, reviewer install, Pass 1 output). Wiping
-      # the reserved paths guarantees subsequent producer steps start
-      # from a clean slate and the fail-closed gate that checks for
-      # `.reference-db/extracted` reflects workflow state, not PR
-      # content.
+      # reference-DB extract, reviewer install, Pass 1 output, the
+      # uv-managed .venv/). Wiping the reserved paths guarantees the
+      # subsequent producer steps start from a clean slate and that
+      # PATH (which setup-uv prepends with ${{ github.workspace }}/
+      # .venv/bin) is not poisoned by fork-controlled binaries.
+      # Uses `rm -rf` uniformly so that a fork-controlled DIRECTORY
+      # at a path normally holding a regular file (e.g. a malicious
+      # `pass1-findings.json/` directory) is also removed — `rm -f`
+      # silently no-ops on directories.
       - name: Wipe reserved workspace paths (defense-in-depth vs fork-controlled placeholders)
         if: steps.secrets-check.outputs.skip != 'true'
         run: |
           set -euo pipefail
-          rm -rf _changed_md .reference-db .vyos-1x reviewer reviewer-src
-          rm -f changed-md.txt changed-rst.txt diff-md.patch pass1-findings.json
+          rm -rf _changed_md .reference-db .vyos-1x reviewer reviewer-src .venv \
+                 changed-md.txt changed-rst.txt diff-md.patch pass1-findings.json
 
       - name: Download PR input
         if: steps.secrets-check.outputs.skip != 'true'
