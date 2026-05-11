@@ -431,6 +431,25 @@ jobs:
         uses: anthropics/claude-code-action@476e359e6203e73dad705c8b322e333fabbd7416 # v1.0.119
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Pass the workflow's default GITHUB_TOKEN explicitly. Without
+          # this the action mints an OIDC token (audience
+          # `claude-code-github-action`) and exchanges it at
+          # api.anthropic.com/api/github/github-app-token-exchange for
+          # an Anthropic-managed App token — which fails with "Invalid
+          # OIDC token" on repos where Anthropic-side federation isn't
+          # configured. Providing github_token bypasses the exchange
+          # entirely (the action checks process.env.OVERRIDE_GITHUB_TOKEN
+          # first; see anthropics/claude-code-action src/github/token.ts
+          # setupGitHubToken()). github.token here is auto-scoped to the
+          # current PR repo with the validate job's permissions block
+          # (pull-requests: write + issues: write + contents: read),
+          # which is exactly what the action needs to post inline review
+          # comments and a summary comment. steps.app.outputs.token is
+          # NOT suitable here: that token is scoped to the VyOS-Networks
+          # org repos (vyos-1x, vyos-docs-opus-reviewer) for the reviewer-
+          # source / vyos-1x checkouts above, and has no write access
+          # on vyos/vyos-documentation PRs.
+          github_token: ${{ github.token }}
           # claude-code-action@v1 removed the top-level `model` input; CLI
           # flags including --model now travel via `claude_args` (see the
           # claude_args: block at the bottom of this step).
