@@ -17,6 +17,11 @@ name: Context7 refresh
 # BACKWARD and trigger this workflow to refresh Context7 against stale
 # content. To force a Context7 refresh, use the workflow_dispatch input
 # below — it calls Context7 directly without touching any tag.
+#
+# Docs-only gating is enforced upstream: `Update version tags` has a
+# `paths:` filter scoped to `docs/**` and `context7.json`, so infra-only
+# pushes (workflows, scripts, README, etc.) never fire that workflow and
+# this one never sees a workflow_run event for them.
 
 on:
   workflow_run:
