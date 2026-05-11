@@ -78,8 +78,8 @@ jobs:
           # blobs for files that no longer exist in the merge ref.
           # Deletions still appear in diff-md.patch (full diff) but not
           # in changed-md.txt (which drives the bundling step).
-          git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.md'  > changed-md.z
-          git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- 'docs/**/*.rst' > changed-rst.z
+          git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- ':(glob)docs/**/*.md'  > changed-md.z
+          git diff "$BASE...HEAD" --name-only --diff-filter=ACMRT -z -- ':(glob)docs/**/*.rst' > changed-rst.z
           # Reject paths containing line-disrupting control bytes (LF, CR,
           # other 0x01-0x1F + 0x7F) before generating the newline-delimited
           # *.txt manifests. NUL itself can't appear in a git pathname
@@ -106,7 +106,7 @@ jobs:
           done
           tr '\0' '\n' < changed-md.z  > changed-md.txt
           tr '\0' '\n' < changed-rst.z > changed-rst.txt
-          git diff "$BASE...HEAD" -- 'docs/**/*.md' > diff-md.patch
+          git diff "$BASE...HEAD" -- ':(glob)docs/**/*.md' > diff-md.patch
           # Bundle .md files via git's blob store (NOT the filesystem).
           # The fork's merge ref can contain symlinks (mode 120000) committed
           # to docs/**/*.md that resolve to absolute paths on the runner.
