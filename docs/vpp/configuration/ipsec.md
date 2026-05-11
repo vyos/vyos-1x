@@ -10,7 +10,7 @@ lastproofread: '2025-09-04'
 # VPP IPsec Configuration
 
 VPP Dataplane in VyOS can offload IPSec processing from kernel. This allows
-to speed-up IPSec traffic handling significantly, when necessary conditions
+to speed up IPSec traffic handling significantly when necessary conditions
 are met.
 
 :::{note}
@@ -36,7 +36,7 @@ configuration itself. IPSec configuration management and control-plane
 operation, like IKE negotiation, is still done by the kernel and other daemons.
 
 After an IPSec tunnel is configured in the kernel, VPP receives the necessary
-information via netlink messages and creates a corresponding SAs and policies
+information via netlink messages and creates corresponding SAs and policies
 to be able to offload the traffic.
 
 When VPP is used for offloading IPsec, it creates a virtual interface of a
@@ -208,7 +208,7 @@ Improper IPsec configuration can lead to various issues, including:
 - **Conflicting with kernel routes**
 
   If the kernel routes synchronization option is enabled, VPP will install
-  all the routes from kernel. If you have there routes configured via VTI
+  all the routes from kernel. If you have these routes configured via VTI
   interfaces to the IPsec peer, they will conflict with the policy routes
   created for the IPsec tunnel in VPP. Consider using policy-based IPSec
   configuration to avoid this or
