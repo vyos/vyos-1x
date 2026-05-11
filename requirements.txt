@@ -1,4 +1,4 @@
-urllib3==2.6.3
+urllib3==2.7.0
 Sphinx==7.2.6
 sphinx-rtd-theme==2.0.0
 sphinx-autobuild==2021.3.14
