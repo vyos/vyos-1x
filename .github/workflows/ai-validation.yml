@@ -57,6 +57,14 @@ jobs:
       # validate's working-directory: _changed_md would otherwise fail
       # before any in-step short-circuit can run.
       has_md_changes: ${{ steps.changes.outputs.has_md_changes }}
+      # The exact SHA of the merge commit that prepare bundled. validate
+      # below checks out THIS sha (rather than re-resolving
+      # `refs/pull/<n>/merge`, which GitHub may update between prepare
+      # and validate on rapid pushes — concurrency.cancel-in-progress
+      # narrows the window but does not make the ref immutable). Pass 1
+      # (artifact) and Pass 2 (validate workspace) now operate on the
+      # same revision.
+      merge_sha: ${{ steps.changes.outputs.merge_sha }}
     steps:
       - name: Checkout PR merge ref (NO credentials)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -174,6 +182,11 @@ jobs:
             echo "has_md_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
+          # Pin the merge SHA that prepare bundled, so validate below can
+          # check out the exact same revision and avoid drift if GitHub
+          # advances refs/pull/<n>/merge between jobs.
+          echo "merge_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Upload PR input artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -255,6 +268,81 @@ jobs:
           gh pr comment "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
             --body "AI Validation skipped — required secrets are not configured on this repo (\`ANTHROPIC_API_KEY\`, \`VYOS_APP_ID\`, \`VYOS_APP_PRIVATE_KEY\`). Maintainers: see the workflow run for details."
+
+      # Check out the PR's MERGE REF into the workspace root. Required by
+      # anthropics/claude-code-action@v1: it runs `git fetch origin
+      # <head-ref>` and reads files from the working dir during setup.
+      # The merge ref is GitHub's auto-computed merge of base + head; the
+      # working tree matches the bundled diff-md.patch + _changed_md/
+      # produced by `prepare`, so Pass 1 (which reads the bundle) and
+      # Pass 2 (which can also Read/Glob/Grep the workspace) operate on
+      # the same tree.
+      #
+      # The token is used to download the tree (not an unauthenticated
+      # fetch); persist-credentials:false suppresses writing it into the
+      # resulting .git/config so fork-controlled file content the Pass 2
+      # LLM may read cannot exfiltrate it.
+      - name: Checkout PR merge ref (no persisted credentials)
+        if: steps.secrets-check.outputs.skip != 'true'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Pin to the exact merge SHA prepare bundled so validate's
+          # workspace tree matches Pass 1's artifact even on a PR that
+          # has had additional pushes between prepare and validate.
+          ref: ${{ needs.prepare.outputs.merge_sha }}
+          persist-credentials: false
+          fetch-depth: 2
+
+      # claude-code-action subsequently runs `git fetch origin <head-ref>`
+      # internally during its setup. `<head-ref>` is the branch name in
+      # the PR's HEAD repo — for fork PRs that branch does NOT exist on
+      # the base repo (which is what `origin` points at after the merge-
+      # ref checkout above), so the fetch fails with
+      #   fatal: couldn't find remote ref refs/heads/<head-ref>
+      #
+      # Re-point origin to the HEAD repo's URL so the action's fetch
+      # resolves. The workspace tree is unchanged — it remains the merge
+      # tree from above. For public forks (the only kind that target
+      # vyos/vyos-documentation, since the repo is public) the
+      # unauthenticated fetch from the fork succeeds without any credential
+      # (persist-credentials:false stripped the extraheader at the end of
+      # the previous step).
+      - name: Re-point origin to fork URL for claude-code-action's git fetch
+        if: steps.secrets-check.outputs.skip != 'true'
+        env:
+          FORK: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          git remote set-url origin "https://github.com/$FORK"
+
+      # Defense-in-depth: actions/checkout above brings the PR's merge
+      # tree into the workspace root, which means a malicious fork could
+      # pre-create files/dirs at workflow-reserved paths that producer
+      # steps below populate (artifact download, vyos-1x checkout,
+      # reference-DB extract, reviewer install, Pass 1 output, the
+      # uv-managed .venv/, plus CLAUDE.md / .claude/ which the Claude
+      # Code CLI auto-loads as session instructions on startup —
+      # documented at code.claude.com/docs/en/claude-directory.md and
+      # code.claude.com/docs/en/memory).
+      #
+      # Wiping the reserved paths guarantees:
+      #   * subsequent producer steps start from a clean slate
+      #   * PATH (which setup-uv prepends with ${{ github.workspace }}/
+      #     .venv/bin) is not poisoned by fork-controlled binaries
+      #   * Claude Code's auto-discovery of CLAUDE.md / .claude/ does
+      #     not pull fork-controlled prompt-injection instructions into
+      #     the Pass 2 session
+      #
+      # Uses `rm -rf` uniformly so a fork-controlled DIRECTORY at a path
+      # normally holding a regular file (e.g. `pass1-findings.json/`) is
+      # also removed — `rm -f` silently no-ops on directories.
+      - name: Wipe reserved workspace paths (defense-in-depth vs fork-controlled placeholders)
+        if: steps.secrets-check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          rm -rf _changed_md .reference-db .vyos-1x reviewer reviewer-src .venv \
+                 CLAUDE.md .claude \
+                 changed-md.txt changed-rst.txt diff-md.patch pass1-findings.json
 
       - name: Download PR input
         if: steps.secrets-check.outputs.skip != 'true'
