@@ -256,63 +256,76 @@ jobs:
             --repo "${{ github.repository }}" \
             --body "AI Validation skipped — required secrets are not configured on this repo (\`ANTHROPIC_API_KEY\`, \`VYOS_APP_ID\`, \`VYOS_APP_PRIVATE_KEY\`). Maintainers: see the workflow run for details."
 
-      # Check out the PR HEAD into the workspace root. Required by
-      # anthropics/claude-code-action@v1: it runs
-      # `git fetch origin <head-ref>` and reads files like
-      # `docs/<changed>.md` directly from the working dir during its
-      # setup. We check out the PR HEAD repo (which is the fork for
-      # fork PRs) so that the head-ref name resolves locally: doing a
-      # merge-ref checkout from `vyos/vyos-documentation` would leave
-      # origin pointed at the base repo, where `<head-ref>` (e.g.
-      # `contributor/branch`) does not exist and the action's fetch
-      # fails.
+      # Check out the PR's MERGE REF into the workspace root. Required by
+      # anthropics/claude-code-action@v1: it runs `git fetch origin
+      # <head-ref>` and reads files from the working dir during setup.
+      # The merge ref is GitHub's auto-computed merge of base + head; the
+      # working tree matches the bundled diff-md.patch + _changed_md/
+      # produced by `prepare`, so Pass 1 (which reads the bundle) and
+      # Pass 2 (which can also Read/Glob/Grep the workspace) operate on
+      # the same tree.
       #
-      # The token is still used to download the tree (this is not an
-      # unauthenticated fetch); `persist-credentials: false` prevents
-      # it from being written into the resulting .git/config — so any
-      # fork-controlled file content that the Pass 2 LLM tools may
-      # read cannot exfiltrate the token.
-      #
-      # Trust boundary preserved:
-      #   - persist-credentials: false (no token in .git/config)
-      #   - No shell step in validate executes fork code (no
-      #     `pip install` / `npm install` / `make` against the
-      #     workspace; Pass 1 runs the trusted reviewer CLI from
-      #     reviewer-src/; Pass 2's allowlisted tools are Read /
-      #     Glob / Grep / mcp__github_inline_comment + Bash
-      #     restricted to `gh pr comment|diff|view`).
-      #   - The "Wipe reserved workspace paths" step below strips any
-      #     fork-controlled placeholders at workflow-reserved paths
-      #     (.reference-db, .vyos-1x, reviewer, reviewer-src,
-      #     _changed_md, pass1-findings.json, diff-md.patch, changed-*
-      #     .txt) before the trusted producer steps re-create them.
-      - name: Checkout PR HEAD (no persisted credentials)
+      # The token is used to download the tree (not an unauthenticated
+      # fetch); persist-credentials:false suppresses writing it into the
+      # resulting .git/config so fork-controlled file content the Pass 2
+      # LLM may read cannot exfiltrate it.
+      - name: Checkout PR merge ref (no persisted credentials)
         if: steps.secrets-check.outputs.skip != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: refs/pull/${{ github.event.number }}/merge
           persist-credentials: false
           fetch-depth: 2
 
-      # Defense-in-depth: actions/checkout above brings the PR's tree
-      # into the workspace root, which means a malicious fork could
-      # pre-create files/dirs at the same paths that workflow-producer
+      # claude-code-action subsequently runs `git fetch origin <head-ref>`
+      # internally during its setup. `<head-ref>` is the branch name in
+      # the PR'"'"'s HEAD repo — for fork PRs that branch does NOT exist on
+      # the base repo (which is what `origin` points at after the merge-
+      # ref checkout above), so the fetch fails with
+      #   fatal: couldn't find remote ref refs/heads/<head-ref>
+      #
+      # Re-point origin to the HEAD repo'"'"'s URL so the action'"'"'s fetch
+      # resolves. The workspace tree is unchanged — it remains the merge
+      # tree from above. For public forks (the only kind that target
+      # vyos/vyos-documentation, since the repo is public) the
+      # unauthenticated fetch from the fork succeeds without any credential
+      # (persist-credentials:false stripped the extraheader at the end of
+      # the previous step).
+      - name: Re-point origin to fork URL for claude-code-action'"'"'s git fetch
+        if: steps.secrets-check.outputs.skip != 'true'
+        env:
+          FORK: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          git remote set-url origin "https://github.com/$FORK"
+
+      # Defense-in-depth: actions/checkout above brings the PR's merge
+      # tree into the workspace root, which means a malicious fork could
+      # pre-create files/dirs at workflow-reserved paths that producer
       # steps below populate (artifact download, vyos-1x checkout,
       # reference-DB extract, reviewer install, Pass 1 output, the
-      # uv-managed .venv/). Wiping the reserved paths guarantees the
-      # subsequent producer steps start from a clean slate and that
-      # PATH (which setup-uv prepends with ${{ github.workspace }}/
-      # .venv/bin) is not poisoned by fork-controlled binaries.
-      # Uses `rm -rf` uniformly so that a fork-controlled DIRECTORY
-      # at a path normally holding a regular file (e.g. a malicious
-      # `pass1-findings.json/` directory) is also removed — `rm -f`
-      # silently no-ops on directories.
+      # uv-managed .venv/, plus CLAUDE.md / .claude/ which the Claude
+      # Code CLI auto-loads as session instructions on startup —
+      # documented at code.claude.com/docs/en/claude-directory.md and
+      # code.claude.com/docs/en/memory).
+      #
+      # Wiping the reserved paths guarantees:
+      #   * subsequent producer steps start from a clean slate
+      #   * PATH (which setup-uv prepends with ${{ github.workspace }}/
+      #     .venv/bin) is not poisoned by fork-controlled binaries
+      #   * Claude Code's auto-discovery of CLAUDE.md / .claude/ does
+      #     not pull fork-controlled prompt-injection instructions into
+      #     the Pass 2 session
+      #
+      # Uses `rm -rf` uniformly so a fork-controlled DIRECTORY at a path
+      # normally holding a regular file (e.g. `pass1-findings.json/`) is
+      # also removed — `rm -f` silently no-ops on directories.
       - name: Wipe reserved workspace paths (defense-in-depth vs fork-controlled placeholders)
         if: steps.secrets-check.outputs.skip != 'true'
         run: |
           set -euo pipefail
           rm -rf _changed_md .reference-db .vyos-1x reviewer reviewer-src .venv \
+                 CLAUDE.md .claude \
                  changed-md.txt changed-rst.txt diff-md.patch pass1-findings.json
 
       - name: Download PR input
