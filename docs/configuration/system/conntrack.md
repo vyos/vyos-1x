@@ -175,7 +175,7 @@ the future the conntrack ignore rules will be removed.
 .. cfgcmd:: set system conntrack ignore [ipv4 | ipv6] rule <1-999999>
    tcp flags [not] <text>
 
-   Allowed values fpr TCP flags: ``ack``, ``cwr``, ``ecn``, ``fin``, ``psh``,
+   Allowed values for TCP flags: ``ack``, ``cwr``, ``ecn``, ``fin``, ``psh``,
    ``rst``, ``syn`` and ``urg``. Multiple values are supported, and for
    inverted selection use ``not``, as shown in the example.
 ```

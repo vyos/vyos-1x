@@ -193,7 +193,7 @@ You can also make this permanent by editing `/boot/grub/grub.cfg`.
 
 VyOS CLI depends heavily on priorities. Every CLI node has a corresponding
 `node.def` file and possibly an attached script. Nodes can have priorities,
-and on system bootup or any `commit` to the configuration, scripts execute
+and on system boot or any `commit` to the configuration, scripts execute
 from lowest to highest priority. This provides deterministic behavior.
 
 To debug priority issues or see script execution order, use the

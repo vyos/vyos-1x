@@ -108,7 +108,7 @@ Router Advertisements unless this option is set.
 ## Example
 
 Your LAN connected on eth0 uses prefix `2001:db8:beef:2::/64` with the router
-beeing `2001:db8:beef:2::1`
+being `2001:db8:beef:2::1`
 
 ```none
 set interfaces ethernet eth0 address 2001:db8:beef:2::1/64

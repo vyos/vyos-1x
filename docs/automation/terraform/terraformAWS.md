@@ -305,7 +305,7 @@ Make sure Ansible can ping from Terraform.
 ├── vyos.tf                            # The main script
 ├── var.tf                                     # The file of all variables in "vyos.tf"
 ├── versions.tf                        # File for the changing version of Terraform.
-└── terraform.tfvars           # The value of all variables (passwords, login, ip adresses and so on)
+└── terraform.tfvars           # The value of all variables (passwords, login, ip addresses and so on)
 ```
 
 ## File contents of Terraform for AWS

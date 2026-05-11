@@ -60,7 +60,7 @@ left unconfigured.
 
 :::{note}
 USB to serial converters will handle most of their work in software
-so you should be carefull with the selected baudrate as some times they
+so you should be careful with the selected baudrate as some times they
 can't cope with the expected speed.
 :::
 ```

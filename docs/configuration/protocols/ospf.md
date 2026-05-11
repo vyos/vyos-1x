@@ -1403,7 +1403,7 @@ This command displays the neighbor DR choice information.
 ```{opcmd} show ipv6 ospfv3 interface [prefix]|[\<interface\> [prefix]]
 
 This command displays state and configuration of OSPF the specified
-interface, or all interfaces if no interface is given. Whith the argument
+interface, or all interfaces if no interface is given. With the argument
 {cfgcmd}`prefix` this command shows connected prefixes to advertise.
 ```
 ```{opcmd} show ipv6 ospfv3 route

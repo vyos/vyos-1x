@@ -77,7 +77,7 @@ VPP **does not** support the following **integrity algorithms**:
 - AES CMAC
 - AES-GMAC
 
-If you have configured ESP profiles with algorithms not supported by VPP and the traffic for such peers flows trough VPP interfaces, such traffic will be dropped.
+If you have configured ESP profiles with algorithms not supported by VPP and the traffic for such peers flows through VPP interfaces, such traffic will be dropped.
 
 ## Configuration Examples
 
