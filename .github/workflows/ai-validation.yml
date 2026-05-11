@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REVIEWER_REF: reviewer-v1.0.1
+  REVIEWER_REF: reviewer-v1.0.2
   # Force JavaScript actions to run on Node 24. Some pinned action SHAs
   # we rely on still ship with Node 20 ABI; this env var opts the whole
   # workflow into Node 24 without per-action version churn.
@@ -331,8 +331,11 @@ jobs:
           # DB assets). The reference DB schema is intentionally backwards
           # compatible across reviewer Python releases; the freshest DB is
           # the right choice. If the DB schema ever changes incompatibly,
-          # bump REVIEWER_REF in the consuming workflow and the new code
-          # will refuse to load an older-format DB at the fail-closed gate.
+          # bump REVIEWER_REF in the consuming workflow — the newer
+          # reviewer code will error at DB-load time inside `Pass 1 —
+          # deterministic checks`. The workflow's own fail-closed gate
+          # is a presence check on `.reference-db/extracted`; it does
+          # not load or inspect DB schema.
           latest: true
           fileName: reference-db-${{ steps.branch.outputs.vyos1x }}.tar.gz
           out-file-path: .reference-db
