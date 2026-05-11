@@ -204,6 +204,17 @@ jobs:
       # permissions split issue and PR scopes.
       pull-requests: write
       issues: write
+      # id-token: write is required by anthropics/claude-code-action@v1.
+      # The action calls actions/core's getIDToken() internally to mint
+      # an OIDC token used for the Claude/Anthropic auth federation
+      # path; without this scope it fails with
+      #   `Could not fetch an OIDC token. Did you remember to add
+      #    id-token: write to your workflow permissions?`
+      # An earlier Copilot finding suggested dropping this permission as
+      # "unused" — that was wrong: no shell step in this workflow
+      # invokes OIDC directly, but the third-party action does. Verified
+      # by run 25658256103 on PR #1977.
+      id-token: write
     steps:
       # Pass secrets via env: rather than inlining ${{ secrets.X }} into the
       # shell script. GitHub Actions template-expands ${{ ... }} BEFORE bash
