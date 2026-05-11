@@ -329,6 +329,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         tcp_keepalive_idle = '66'
         tcp_keepalive_interval = '77'
         tcp_keepalive_probes = '22'
+        max_delay = '120'
+        establish_wait = '60'
 
         self.cli_set(base_path + ['parameters', 'allow-martian-nexthop'])
         self.cli_set(base_path + ['parameters', 'disable-ebgp-connected-route-check'])
@@ -376,6 +378,21 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', 'ebgp', max_path_v6])
         self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', 'ibgp', max_path_v6ibgp])
 
+        # BGP update-delay
+        self.cli_set(
+            base_path + ['parameters', 'update-delay', 'establish-wait', '200']
+        )
+        # establish-wait should not be set without max-delay
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['parameters', 'update-delay', 'max-delay', max_delay])
+        # establish-wait should not be greater than max-delay
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(
+            base_path + ['parameters', 'update-delay', 'establish-wait', establish_wait]
+        )
+
         # commit changes
         self.cli_commit()
 
@@ -408,6 +425,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp tcp-keepalive {tcp_keepalive_idle} {tcp_keepalive_interval} {tcp_keepalive_probes}', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
         self.assertIn(f' no bgp suppress-duplicates', frrconfig)
+        self.assertIn(f' update-delay {max_delay} {establish_wait}', frrconfig)
 
         afiv4_config = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit',
                                          start_subsection=' address-family ipv4 unicast',
