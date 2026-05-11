@@ -22,7 +22,6 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
-from vyos.base import Warning
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
 from vyos import ConfigError
@@ -62,9 +61,6 @@ def verify(relay):
         Warning('DHCP relay interface is DEPRECATED - please use upstream-interface and listen-interface instead!')
         if 'upstream_interface' in relay or 'listen_interface' in relay:
             raise ConfigError('<interface> configuration is not compatible with upstream/listen interface')
-        else:
-            Warning('<interface> is going to be deprecated.\n'  \
-                    'Please use <listen-interface> and <upstream-interface>')
 
         for interface in relay['interface']:
             verify_interface_exists(relay, interface, warning_only=True)
