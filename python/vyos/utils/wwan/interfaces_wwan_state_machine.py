@@ -288,6 +288,21 @@ class ModemStateMachine:
         # hardcode it in `service router-advert`.
         self._bridging_radvd = BridgingRadvdManager(self.interface_number)
 
+        # ── IPv6 management-address (FSM-stamped <prefix>::host-id on wwanN) ──
+        # Default-on whenever the bearer has IPv6 and ip-passthrough is not
+        # set.  Stamps a stable host address inside the carrier prefix on
+        # the WWAN interface itself and installs an FSM-owned ip6tables
+        # drop chain so all inbound to that address is dropped except for
+        # user-permitted ports / sources.  Refreshed from raw_config in
+        # _load_configuration().
+        self._mgmt_addr_config = {
+            'enabled': True, 'host_id': '::1',
+            'permit_tcp': [], 'permit_udp': [], 'permit_source': [],
+        }
+        self._mgmt_addr_applied = None       # currently-applied address string
+        self._mgmt_addr_prefix_len = None    # currently-applied carrier prefix len
+        self._mgmt_addr_chain_active = False # ip6tables INPUT jump installed?
+
         # IP Passthrough manager (DOCSIS-modem-style single-host handoff).
         # Instantiated ONCE here at FSM construction so its internal state
         # (_last_v4 / _last_v6 / _last_v6_prefix) survives config reloads —
@@ -2082,6 +2097,23 @@ class ModemStateMachine:
                        self._bridging_config['interface'],
                        self._bridging_reconciliation_interval,
                        extra={'interface_number': self.interface_number})
+
+        # IPv6 management-address (FSM-stamped <prefix>::host-id on wwanN)
+        self._mgmt_addr_config = self.parsed_config.raw_config.get(
+            'ipv6_management_address',
+            {'enabled': True, 'host_id': '::1',
+             'permit_tcp': [], 'permit_udp': [], 'permit_source': []},
+        )
+        if self._mgmt_addr_config.get('enabled'):
+            logger.info(
+                "IPv6 management-address enabled (host-id %s, permit-tcp %s, "
+                "permit-udp %s, permit-source %s)",
+                self._mgmt_addr_config.get('host_id', '::1'),
+                self._mgmt_addr_config.get('permit_tcp') or [],
+                self._mgmt_addr_config.get('permit_udp') or [],
+                self._mgmt_addr_config.get('permit_source') or [],
+                extra={'interface_number': self.interface_number},
+            )
 
     async def _configure_modem_initial(self):
         """Initial modem configuration - configure SIM/bands/carrier BEFORE network operations"""
@@ -9101,6 +9133,16 @@ class ModemStateMachine:
         self._bridging_stop_background_tasks()
         await self._bridging_remove_all()
 
+        # Retract FSM-stamped IPv6 management-address (and its firewall
+        # chain) so we don't keep a stale /128 in the kernel after the
+        # bearer is gone.
+        try:
+            await self._mgmt_addr_remove()
+        except Exception as mgmt_err:
+            logger.debug("IPv6 management-address remove failed: %s",
+                        mgmt_err,
+                        extra={'interface_number': self.interface_number})
+
         # Clear tracked IPs so first post-reconnect apply doesn't see a
         # phantom "change" from the old session
         self._current_bearer_ipv4 = None
@@ -10471,6 +10513,220 @@ class ModemStateMachine:
         logger.info("IPv6 bridging: removed bridged prefix",
                    extra={'interface_number': self.interface_number})
 
+    # ── IPv6 management-address (FSM-stamped <prefix>::host-id on wwanN) ──
+    #
+    # Whenever the bearer comes up with an IPv6 prefix and the user has
+    # not configured `ip-passthrough`, the FSM derives a stable host
+    # address inside the carrier prefix and adds it as /128 directly on
+    # wwanN.  By default the host portion is ::1 → `<prefix>::1/128`.
+    # That gives services on the router (nginx, ssh, …) a destination
+    # that does not move when the carrier rotates the bearer IID.
+    #
+    # The address is locked down by an FSM-owned ip6tables chain
+    # (MGMT_<IF>_IN) jumped from INPUT for traffic arriving on wwanN to
+    # that address.  All inbound is dropped except for user-configured
+    # permit-tcp / permit-udp / permit-source exceptions.  Established
+    # / related is always permitted so connect-out replies work.
+
+    def _mgmt_addr_chain_name(self):
+        return f"MGMT_W{self.interface_number}_IN"
+
+    def _mgmt_addr_compute(self, carrier_net, carrier_prefix_len, bearer_addr):
+        """Compute <prefix>::host-id, avoiding collision with bearer IID.
+
+        Returns the host address string or None when no address can be
+        derived (e.g. carrier prefix is /128, host-id parse failure).
+        """
+        if carrier_prefix_len >= 128:
+            return None
+        host_id_str = self._mgmt_addr_config.get('host_id') or '::1'
+        try:
+            host_id_int = int(ipaddress.IPv6Address(host_id_str))
+        except (ValueError, TypeError) as e:
+            logger.warning("IPv6 management-address: invalid host-id '%s': %s",
+                          host_id_str, e,
+                          extra={'interface_number': self.interface_number})
+            return None
+        # Upper bits of host-id must be zero so OR-merging with the
+        # carrier prefix is unambiguous.
+        host_mask = (1 << (128 - carrier_prefix_len)) - 1
+        if host_id_int & ~host_mask:
+            logger.warning(
+                "IPv6 management-address: host-id '%s' has bits outside "
+                "the carrier host portion (/%d) — truncating",
+                host_id_str, carrier_prefix_len,
+                extra={'interface_number': self.interface_number})
+            host_id_int &= host_mask
+        if host_id_int == 0:
+            host_id_int = 1  # ::0 would alias the network address
+        try:
+            net_int = int(carrier_net.network_address)
+        except Exception:
+            return None
+        addr_int = net_int | host_id_int
+        # Collision avoidance vs the bearer's own carrier-assigned IID.
+        try:
+            bearer_int = int(ipaddress.IPv6Address(bearer_addr)) if bearer_addr else None
+        except (ValueError, TypeError):
+            bearer_int = None
+        if bearer_int is not None and addr_int == bearer_int:
+            addr_int ^= 1  # flip lsb to step off the collision
+            if addr_int & ~host_mask:
+                # extremely improbable — keep original and let the kernel
+                # complain about duplicate-address detection instead
+                addr_int = net_int | host_id_int
+        try:
+            return str(ipaddress.IPv6Address(addr_int))
+        except Exception:
+            return None
+
+    async def _mgmt_addr_install_firewall(self, interface_name, addr):
+        """Install ip6tables drop chain for <addr> with user-permitted exceptions."""
+        chain = self._mgmt_addr_chain_name()
+        # Recreate idempotently: flush if present, otherwise create.
+        if self._mgmt_addr_chain_active:
+            await self._run_ipcmd('ip6tables', '-F', chain)
+        else:
+            # -N may fail if already exists — flush as fallback so we end
+            # up with an empty chain regardless of prior state.
+            rc, _, _ = await self._run_ipcmd('ip6tables', '-N', chain)
+            if rc != 0:
+                await self._run_ipcmd('ip6tables', '-F', chain)
+            await self._run_ipcmd(
+                'ip6tables', '-I', 'INPUT', '1',
+                '-i', interface_name, '-d', addr, '-j', chain,
+            )
+            self._mgmt_addr_chain_active = True
+
+        # Always-permit: ICMPv6 (PMTUD, NDP, ping), established/related.
+        await self._run_ipcmd(
+            'ip6tables', '-A', chain, '-p', 'ipv6-icmp', '-j', 'RETURN')
+        await self._run_ipcmd(
+            'ip6tables', '-A', chain, '-m', 'conntrack',
+            '--ctstate', 'ESTABLISHED,RELATED', '-j', 'RETURN')
+
+        sources = list(self._mgmt_addr_config.get('permit_source') or [])
+        tcp_ports = list(self._mgmt_addr_config.get('permit_tcp') or [])
+        udp_ports = list(self._mgmt_addr_config.get('permit_udp') or [])
+
+        # Auto-permit TCP 443 (VyOS HTTPS UI) when the feature is opted
+        # into, unless the user explicitly suppresses it.  The auto-permit
+        # is treated identically to user-supplied permits and is therefore
+        # gated by `permit-source` if any source prefixes are configured.
+        if not self._mgmt_addr_config.get('disable_default_https'):
+            if 443 not in tcp_ports:
+                tcp_ports = [443] + tcp_ports
+
+        def _emit_port_rules(proto, ports):
+            rules = []
+            for port in ports:
+                if sources:
+                    for src in sources:
+                        rules.append(
+                            ['-A', chain, '-p', proto, '--dport', str(port),
+                             '-s', src, '-j', 'RETURN'])
+                else:
+                    rules.append(
+                        ['-A', chain, '-p', proto, '--dport', str(port),
+                         '-j', 'RETURN'])
+            return rules
+
+        for args in _emit_port_rules('tcp', tcp_ports):
+            await self._run_ipcmd('ip6tables', *args)
+        for args in _emit_port_rules('udp', udp_ports):
+            await self._run_ipcmd('ip6tables', *args)
+
+        await self._run_ipcmd('ip6tables', '-A', chain, '-j', 'DROP')
+        logger.info(
+            "IPv6 management-address firewall installed: %s "
+            "(tcp=%s udp=%s sources=%s)",
+            addr, tcp_ports, udp_ports, sources,
+            extra={'interface_number': self.interface_number})
+
+    async def _mgmt_addr_remove_firewall(self, interface_name, addr):
+        """Tear down ip6tables drop chain for <addr>."""
+        if not self._mgmt_addr_chain_active:
+            return
+        chain = self._mgmt_addr_chain_name()
+        # Remove the INPUT jump first (idempotent — delete by spec).
+        await self._run_ipcmd(
+            'ip6tables', '-D', 'INPUT',
+            '-i', interface_name, '-d', addr, '-j', chain,
+        )
+        await self._run_ipcmd('ip6tables', '-F', chain)
+        await self._run_ipcmd('ip6tables', '-X', chain)
+        self._mgmt_addr_chain_active = False
+
+    async def _mgmt_addr_apply(self, carrier_net, carrier_prefix_len,
+                               bearer_addr=None):
+        """Apply <prefix>::host-id/128 on wwanN and install firewall chain."""
+        if not (self._mgmt_addr_config or {}).get('enabled'):
+            return
+        interface_name = f"wwan{self.interface_number}"
+        addr = self._mgmt_addr_compute(
+            carrier_net, carrier_prefix_len, bearer_addr)
+        if not addr:
+            return
+
+        # If the prefix changed under us, retract the previous address +
+        # firewall first so we don't leave a stale /128 floating around.
+        if self._mgmt_addr_applied and self._mgmt_addr_applied != addr:
+            try:
+                await self._run_ipcmd(
+                    'ip', '-6', 'addr', 'del',
+                    f"{self._mgmt_addr_applied}/128",
+                    'dev', interface_name,
+                )
+            except Exception:
+                pass
+            await self._mgmt_addr_remove_firewall(
+                interface_name, self._mgmt_addr_applied)
+
+        # Add the new address as /128 (point-to-point — same convention as
+        # the bearer's own carrier IID).  nodad: DAD is meaningless on a
+        # 3GPP PDN bearer.
+        rc, _, stderr = await self._run_ipcmd(
+            'ip', '-6', 'addr', 'add', f"{addr}/128",
+            'dev', interface_name, 'nodad',
+        )
+        if rc != 0 and 'exists' not in stderr.lower():
+            logger.error(
+                "IPv6 management-address add failed for %s on %s: %s",
+                addr, interface_name, stderr.strip(),
+                extra={'interface_number': self.interface_number})
+            return
+
+        await self._mgmt_addr_install_firewall(interface_name, addr)
+        self._mgmt_addr_applied = addr
+        self._mgmt_addr_prefix_len = carrier_prefix_len
+        logger.info("IPv6 management-address stamped: %s/128 on %s",
+                   addr, interface_name,
+                   extra={'interface_number': self.interface_number})
+
+    async def _mgmt_addr_remove(self):
+        """Retract the FSM-stamped management address and its firewall chain."""
+        if not self._mgmt_addr_applied:
+            # Still try to clear a leftover chain in case state is partial.
+            if self._mgmt_addr_chain_active:
+                interface_name = f"wwan{self.interface_number}"
+                chain = self._mgmt_addr_chain_name()
+                await self._run_ipcmd('ip6tables', '-F', chain)
+                await self._run_ipcmd('ip6tables', '-X', chain)
+                self._mgmt_addr_chain_active = False
+            return
+        interface_name = f"wwan{self.interface_number}"
+        addr = self._mgmt_addr_applied
+        await self._run_ipcmd(
+            'ip', '-6', 'addr', 'del', f"{addr}/128",
+            'dev', interface_name,
+        )
+        await self._mgmt_addr_remove_firewall(interface_name, addr)
+        self._mgmt_addr_applied = None
+        self._mgmt_addr_prefix_len = None
+        logger.info("IPv6 management-address removed from %s",
+                   interface_name,
+                   extra={'interface_number': self.interface_number})
+
     def _bridging_start_background_tasks(self):
         """Start netlink watch, reconciliation timer, and NDP-proxy tasks."""
         if not self._bridging_netlink_task or self._bridging_netlink_task.done():
@@ -11283,6 +11539,27 @@ class ModemStateMachine:
                 except Exception as brg_err:
                     logger.error("IPv6 bridging apply failed: %s", brg_err,
                                 extra={'interface_number': self.interface_number})
+
+            # ── IPv6 management-address: stamp <prefix>::host-id/128 on wwanN ──
+            # Default-on whenever bearer has IPv6 and ip-passthrough is not
+            # configured (verify() forbids coexistence).  Gives services on
+            # the router itself a stable, carrier-renumber-tolerant address.
+            pt_active = ((self.config or {}).get('ip_passthrough') or {}).get('enabled')
+            if bearer_ips.get('ipv6') and not pt_active \
+                    and (self._mgmt_addr_config or {}).get('enabled'):
+                ipv6_addr = bearer_ips['ipv6']
+                carrier_plen = int(bearer_ips.get('ipv6_prefix', '64'))
+                try:
+                    carrier_net = ipaddress.IPv6Network(
+                        f"{ipv6_addr}/{carrier_plen}", strict=False
+                    )
+                    await self._mgmt_addr_apply(
+                        carrier_net, carrier_plen, bearer_addr=ipv6_addr,
+                    )
+                except Exception as mgmt_err:
+                    logger.error(
+                        "IPv6 management-address apply failed: %s", mgmt_err,
+                        extra={'interface_number': self.interface_number})
 
             # Register all carrier DNS servers with VyOS hostsd (same mechanism as DHCP interfaces)
             all_dns = bearer_ips.get('ipv4_dns', []) + bearer_ips.get('ipv6_dns', [])

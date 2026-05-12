@@ -38,6 +38,94 @@
           #include <include/interface/ipv4-options.xml.i>
           #include <include/interface/ipv6-options.xml.i>
           #include <include/interface/ipv6-options-with-nd.xml.i>
+          <!-- ── IPv6 management-address (FSM-stamped <prefix>::1 on wwanN) ── -->
+          <!--
+            Extends the standard `ipv6` node above with a `management-address`
+            sub-tree.  Opt-in: creating this node tells the FSM to stamp a
+            stable host address inside the carrier prefix directly on wwanN
+            (default `<prefix>::1`) so the router itself is reachable from
+            the public internet at a name you can pin to DDNS.  An
+            FSM-owned ip6tables chain locks the address down: ICMPv6,
+            ESTABLISHED/RELATED, and TCP 443 (VyOS HTTPS UI) are permitted
+            by default; everything else is dropped.  Use `disable-default-https`
+            to suppress the auto-443 rule, `permit-tcp` / `permit-udp` to
+            open additional ports, and `permit-source` to restrict all
+            permits to specific source prefixes.  Mutually exclusive with
+            `ip-passthrough`.
+          -->
+          <node name="ipv6">
+            <children>
+              <node name="management-address">
+                <properties>
+                  <help>Stable management address inside the carrier IPv6 prefix on this WWAN interface</help>
+                </properties>
+                <children>
+                  <leafNode name="disable-default-https">
+                    <properties>
+                      <help>Suppress the default-permit rule for TCP 443 (VyOS HTTPS UI)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host-id">
+                    <properties>
+                      <help>Host portion of the management address (IPv6 literal with upper 64 bits zero)</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 host-id, e.g. ::1, ::cafe</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6"/>
+                      </constraint>
+                      <constraintErrorMessage>host-id must be a valid IPv6 literal with the upper 64 bits zero (e.g. ::1, ::cafe)</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>::1</defaultValue>
+                  </leafNode>
+                  <leafNode name="permit-tcp">
+                    <properties>
+                      <help>Permit inbound TCP destination port to the management address</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>TCP port number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>TCP port must be 1-65535</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="permit-udp">
+                    <properties>
+                      <help>Permit inbound UDP destination port to the management address</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>UDP port number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>UDP port must be 1-65535</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="permit-source">
+                    <properties>
+                      <help>Restrict inbound permits to traffic from this IPv6 source prefix</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 source prefix (e.g. 2001:db8::/32)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                      <constraintErrorMessage>permit-source must be a valid IPv6 prefix (e.g. 2001:db8::/32)</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           #include <include/interface/dhcpv6-options.xml.i>
           <!-- ── Connection mode ─────────────────────────────────── -->
           <leafNode name="connection-mode">

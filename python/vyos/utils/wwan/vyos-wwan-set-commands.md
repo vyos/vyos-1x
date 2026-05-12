@@ -41,7 +41,13 @@ interfaces
         ├── ipv6                                          # IPv6 routing parameters (kernel-level)
         │     ├── adjust-mss <bytes|clamp-mss-to-pmtu>
         │     ├── disable-forwarding                      # valueless
-        │     └── source-validation <strict|loose|disable>
+        │     ├── source-validation <strict|loose|disable>
+        │     └── management-address                      # FSM-stamped <prefix>::host-id/128 on wwanN (opt-in; auto-permits TCP 443 + ICMPv6 + ESTABLISHED)
+        │           ├── disable-default-https             # valueless — suppress auto-permit for TCP 443
+        │           ├── host-id <ipv6-literal>            # host portion (default: ::1)
+        │           ├── permit-tcp <1-65535> (multi)      # open additional inbound TCP port to mgmt address
+        │           ├── permit-udp <1-65535> (multi)      # open additional inbound UDP port to mgmt address
+        │           └── permit-source <ipv6-prefix> (multi)  # ACL: restrict all permits (including auto-443) to this source prefix
         │
         ├── ipv6-bridging                                # carrier /64 → single downstream LAN (NOT DHCPv6 PD)
         │     ├── interface <name>                        # downstream LAN interface that gets the carrier prefix
@@ -199,6 +205,7 @@ automatically using a 4-priority APN discovery chain:
 | **IPv4 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
 | **IPv6 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
 | **IPv6 bridging** | not configured | No prefix is bridged; configure `ipv6-bridging interface <lan>` to copy the carrier /64 onto a downstream LAN interface (NOT DHCPv6 PD). |
+| **IPv6 management-address** | not configured (opt-in) | FSM leaves `wwanN` address-only.  When the user creates `ipv6 management-address`, the FSM stamps `<carrier-prefix>::1/128` and installs an `ip6tables` chain permitting ICMPv6, ESTABLISHED/RELATED, and TCP 443 (VyOS HTTPS UI); everything else is dropped.  Use `disable-default-https` to suppress the 443 auto-permit, `permit-tcp` / `permit-udp` to open additional ports, and `permit-source` to gate all permits to a specific source prefix. |
 | **DHCPv6 PD** | not configured | Standard VyOS `dhcpv6-options pd …` is available; dhcp6c runs only when configured. |
 | **Bridging reconciliation** | `10 s` | Safety-net timer re-checks the downstream LAN interface; netlink watch provides instant detection |
 | **Active SIM slot** | `1` | Slot 1 is used |
@@ -312,6 +319,108 @@ set interfaces wwan wwan0 ip source-validation 'strict'
 set interfaces wwan wwan0 ipv6 adjust-mss '1380'
 # set interfaces wwan wwan0 ipv6 disable-forwarding
 set interfaces wwan wwan0 ipv6 source-validation 'strict'
+```
+
+### IPv6 Management-Address (FSM-stamped `<prefix>::host-id` on wwanN)
+
+> **If unconfigured:** No FSM-stamped address; `wwanN` carries only the
+> bearer's own carrier-assigned IID.  The feature is **opt-in** —
+> creating the `management-address` node turns it on.
+>
+> **When enabled** (any `set interfaces wwan wwanN ipv6 management-address …`
+> command), the FSM stamps `<carrier-prefix>::1/128` directly on `wwanN`
+> and installs an FSM-owned `ip6tables` chain that always permits:
+>
+> - ICMPv6 (PMTUD, NDP, ping)
+> - `ESTABLISHED,RELATED` (outbound-initiated flows return)
+> - **TCP 443** — the VyOS HTTPS UI is reachable out of the box; suppress
+>   this auto-permit with `disable-default-https` if you don't want the
+>   web UI exposed on the WAN side.
+>
+> Everything else is dropped.  Use `permit-tcp` / `permit-udp` to open
+> *additional* destination ports, and `permit-source` to restrict every
+> permit (including the default-443) to specific source prefixes.
+>
+> **What this solves:** Cellular bearers have a stable carrier /64 per
+> SIM/APN, but the per-bearer host IID (the lower 64 bits) changes every
+> time the modem reconnects.  Pinning `nginx` or any other listener to
+> the bearer address is therefore impractical, and binding to `::` exposes
+> all carrier-assigned addresses including the dynamic one.  The
+> management-address feature gives the router itself a permanent,
+> carrier-renumber-tolerant IPv6 destination — `<carrier-prefix>::1` —
+> that DDNS can track and external management can rely on.
+>
+> **How it works:**
+>
+> 1. **Address stamping** — when `_apply_bearer_ip_configuration` runs
+>    and the bearer's `Ip6Config` has an IPv6 address, the FSM reads
+>    the carrier prefix length, OR-merges the configured `host-id` onto
+>    the prefix's network address, and adds the result as `/128` on
+>    `wwanN` with `nodad` (DAD is meaningless on a 3GPP PDN bearer).
+> 2. **Collision avoidance** — if the computed address would equal the
+>    bearer's own carrier-assigned IID (extremely unlikely with the
+>    default `::1` but possible if you pick an unusual host-id), the FSM
+>    flips the low bit to step off the collision.
+> 3. **Default-drop firewall with HTTPS auto-permit** — the FSM creates
+>    an `ip6tables` chain `MGMT_W<N>_IN` and jumps to it from `INPUT` for
+>    packets arriving on `wwanN` destined to the management address.
+>    The chain permits ICMPv6, `ESTABLISHED,RELATED`, and (unless
+>    `disable-default-https` is set) TCP 443.  Any user-configured
+>    `permit-tcp` / `permit-udp` rules are appended next, then everything
+>    else is dropped.  When `permit-source` is set, *all* permits —
+>    including the auto-443 — are restricted to those source prefixes.
+> 4. **Carrier renumber** — if the bearer comes back with a different
+>    /64 (SIM swap, APN change), the FSM retracts the previous `/128`
+>    and its firewall chain, then stamps the new prefix's `::host-id`.
+> 5. **Bearer disconnect** — the address and chain are removed during
+>    `_handle_bearer_disconnect` so a stale `/128` does not survive the
+>    bearer going down.
+>
+> **Why this is separate from the carrier IID exposure problem.**  This
+> feature only locks down the FSM-stamped management address (`::1` by
+> default).  The bearer's own carrier-assigned IPv6 (the dynamic IID
+> the network gave you) is governed by your main `firewall ipv6 input`
+> configuration and is **not** touched by this chain.  If you want to
+> firewall the carrier IID, do so in the normal VyOS firewall tree.
+>
+> **Mutually exclusive with `ip-passthrough`.**  Passthrough hands the
+> carrier IPv6 to a downstream device — there is no FSM-owned address
+> on `wwanN` to attach to — so `verify()` refuses to commit a config
+> that sets both.
+>
+> **`host-id` format.**  The leaf accepts a full IPv6 literal with the
+> upper 64 bits set to zero, e.g. `::1`, `::cafe`, `::dead:beef`.  The
+> FSM OR-merges this with the carrier prefix's network address, so
+> `::cafe` under a `2605:b100:101:235e::/64` carrier prefix produces
+> the stamped address `2605:b100:101:235e::cafe`.  Bits outside the
+> carrier's host portion are truncated with a warning, and `::0` is
+> automatically promoted to `::1` (network address would alias the
+> prefix itself).
+>
+> **Permit-source as an ACL for every permit.**  When `permit-source` is
+> set, the auto-443 and every `permit-tcp` / `permit-udp` rule only
+> allow traffic *from* the listed source prefix(es).  When
+> `permit-source` is empty, ports are open to anyone.  Combine multiple
+> `permit-source` entries to whitelist several office / VPN / DDNS hosts.
+
+```
+# Enable the feature with all defaults — stamps <prefix>::1 and opens TCP 443
+# (VyOS HTTPS UI) to the whole internet.
+set interfaces wwan wwan0 ipv6 management-address
+
+# Open additional ports beyond the default 443 (e.g. SSH from anywhere):
+set interfaces wwan wwan0 ipv6 management-address permit-tcp '22'
+
+# Restrict the auto-443 and any extra permits to your office prefix only:
+set interfaces wwan wwan0 ipv6 management-address permit-source '2001:db8:office::/48'
+
+# Stamp the address but suppress the default HTTPS auto-permit — only the
+# ports you list under permit-tcp / permit-udp will be reachable:
+set interfaces wwan wwan0 ipv6 management-address disable-default-https
+set interfaces wwan wwan0 ipv6 management-address permit-tcp '8443'
+
+# Change the host-id from ::1 to something less guessable:
+set interfaces wwan wwan0 ipv6 management-address host-id '::cafe'
 ```
 
 ### IPv6 Bridging (carrier /64 → one downstream LAN)

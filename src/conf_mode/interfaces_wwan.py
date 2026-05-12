@@ -96,6 +96,16 @@ def get_config(config=None):
         'ipv6_bridging_interface': conf.exists(
             iface_base + ['ipv6-bridging', 'interface']
         ),
+        # IPv6 management-address — opt-in feature.  Presence of the
+        # `management-address` node enables stamping; otherwise the FSM
+        # leaves wwanN address-only.  `disable-default-https` is a
+        # node-level flag that suppresses the auto-permit for TCP 443.
+        'ipv6_mgmt_addr_configured': conf.exists(
+            iface_base + ['ipv6', 'management-address']
+        ),
+        'ipv6_mgmt_addr_disable_default_https': conf.exists(
+            iface_base + ['ipv6', 'management-address', 'disable-default-https']
+        ),
         # DHCPv6 prefix delegation — when set, the FSM-installed egress
         # hygiene chain must permit DHCPv6 client traffic (UDP/546) so
         # dhcp6c can solicit an IA_PD from the carrier.  Otherwise the
@@ -383,6 +393,30 @@ def build_fsm_config(wwan):
         'reconciliation_interval': _leaf_int(brg, 'reconciliation_interval', 10),
     }
 
+    # ── IPv6 management-address (FSM-stamped <prefix>::host-id on wwanN) ─
+    # Opt-in: enabled only when the user creates the `management-address`
+    # node.  When enabled the FSM stamps <prefix>::host-id on wwanN and
+    # installs an ip6tables chain that permits ICMPv6, ESTABLISHED/RELATED,
+    # and (unless `disable-default-https` is set) TCP 443.  Additional
+    # ports are opened via permit-tcp / permit-udp; permit-source narrows
+    # every permit (including the default-443) to listed source prefixes.
+    # Mutually exclusive with `ip-passthrough` (verify() refuses both).
+    ipv6_mgmt_node = (wwan.get('ipv6', {}) or {}).get('management_address', {}) or {}
+    def _as_list(v):
+        if not v:
+            return []
+        return v if isinstance(v, list) else [v]
+    mgmt_configured = wwan['_user_set'].get('ipv6_mgmt_addr_configured', False)
+    ipv6_management_address = {
+        'enabled': mgmt_configured and (not wwan['_user_set'].get('ip_passthrough')),
+        'host_id': _leaf(ipv6_mgmt_node, 'host_id', '::1'),
+        'disable_default_https': wwan['_user_set'].get(
+            'ipv6_mgmt_addr_disable_default_https', False),
+        'permit_tcp': [int(p) for p in _as_list(ipv6_mgmt_node.get('permit_tcp'))],
+        'permit_udp': [int(p) for p in _as_list(ipv6_mgmt_node.get('permit_udp'))],
+        'permit_source': _as_list(ipv6_mgmt_node.get('permit_source')),
+    }
+
     # ── Timeouts ─────────────────────────────────────────────────────────
     to = wwan.get('timeouts', {})
 
@@ -549,6 +583,10 @@ def build_fsm_config(wwan):
         # with ip-passthrough — see verify())
         'ipv6_bridging': ipv6_bridging,
 
+        # IPv6 management-address (FSM-stamped <prefix>::host-id on wwanN;
+        # mutually exclusive with ip-passthrough — see verify())
+        'ipv6_management_address': ipv6_management_address,
+
         # IP Passthrough (mutually exclusive with ipv6-bridging — see verify())
         'ip_passthrough': ip_passthrough,
 
@@ -641,6 +679,21 @@ def verify(wwan):
             f"'{brg_conflicts['bond_master']}' — point ipv6-bridging "
             f"at '{brg_conflicts['bond_master']}' instead so the "
             f"carrier prefix lands on the L3-owning interface."
+        )
+
+    # ── IPv6 management-address guard ────────────────────────────────────
+    # The FSM stamps `<carrier-prefix>::host-id` on wwanN whenever the
+    # bearer has IPv6 and ip-passthrough is not configured.  Passthrough
+    # hands the entire carrier prefix to a downstream device — there is
+    # no FSM-owned IP on wwanN to attach to — so the two are mutually
+    # exclusive.
+    if user_set.get('ipv6_mgmt_addr_configured') and \
+            user_set.get('ip_passthrough'):
+        raise ConfigError(
+            "'ipv6 management-address' is mutually exclusive with "
+            "'ip-passthrough' — passthrough hands the carrier IPv6 to "
+            "a downstream device, leaving no FSM-owned address on the "
+            "WWAN interface.  Remove one or the other."
         )
 
     return None
