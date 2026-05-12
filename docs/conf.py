@@ -300,6 +300,9 @@ def _copy_md_sources(app, exception):
     src = pathlib.Path(app.srcdir)
     out = pathlib.Path(app.outdir)
     for path in src.rglob("*.md"):
+        # Skip files in excluded directories to prevent recursive nesting
+        if any(part in {'_build', '_rst_legacy'} for part in path.parts):
+            continue
         dest = out / path.relative_to(src)
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, dest)
