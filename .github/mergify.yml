@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://docs.mergify.com/configuration/file-format/
+# Mergify configuration for vyos/vyos-documentation.
+#
+# Inherits the central baseline from vyos/mergify:.mergify.yml. The central
+# baseline provides:
+#   - `defaults.actions.backport.ignore_conflicts: false`
+#   - `pull_request_rules` → label conflicting PRs with `conflicts`
+#   - `commands_restrictions` → restrict @Mergifyio slash commands to
+#     @vyos/maintainers + vyosbot
+#
+# Rollout context: T8782 (Mergify central-config rollout). See
+# https://vyos.dev/T8782 and the Confluence spec at
+# https://vyos.atlassian.net/wiki/spaces/VYOS/pages/849477640.
+#
+# Local overrides for this repo go below the `extends:` line — any keys
+# defined here merge with (or, for same-name rules, replace) the inherited
+# configuration per Mergify's `extends:` semantics.
+
+extends: mergify
