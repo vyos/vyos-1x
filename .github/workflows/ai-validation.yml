@@ -293,27 +293,13 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
 
-      # claude-code-action subsequently runs `git fetch origin <head-ref>`
-      # internally during its setup. `<head-ref>` is the branch name in
-      # the PR's HEAD repo — for fork PRs that branch does NOT exist on
-      # the base repo (which is what `origin` points at after the merge-
-      # ref checkout above), so the fetch fails with
-      #   fatal: couldn't find remote ref refs/heads/<head-ref>
-      #
-      # Re-point origin to the HEAD repo's URL so the action's fetch
-      # resolves. The workspace tree is unchanged — it remains the merge
-      # tree from above. For public forks (the only kind that target
-      # vyos/vyos-documentation, since the repo is public) the
-      # unauthenticated fetch from the fork succeeds without any credential
-      # (persist-credentials:false stripped the extraheader at the end of
-      # the previous step).
-      - name: Re-point origin to fork URL for claude-code-action's git fetch
-        if: steps.secrets-check.outputs.skip != 'true'
-        env:
-          FORK: ${{ github.event.pull_request.head.repo.full_name }}
-        run: |
-          set -euo pipefail
-          git remote set-url origin "https://github.com/$FORK"
+      # Note: claude-code-action runs `git fetch origin pull/<n>/head` for
+      # fork PRs during its setup. Those refs only exist on the base repo,
+      # so `origin` must remain pointed at vyos/vyos-documentation (which
+      # is where actions/checkout above left it). Do NOT retarget origin
+      # to the fork URL — that breaks the fork-PR fetch path with
+      #   fatal: couldn't find remote ref pull/<n>/head
+      # (verified on run 25689321499, PR #1891).
 
       # Defense-in-depth: actions/checkout above brings the PR's merge
       # tree into the workspace root, which means a malicious fork could
