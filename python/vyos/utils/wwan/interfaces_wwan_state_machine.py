@@ -2041,6 +2041,16 @@ class ModemStateMachine:
         self._current_bearer_ipv6 = None      # Last applied IPv6 address (bare, no prefix)
         self._current_bearer_ipv6_prefix = None  # e.g. '64' — length of the carrier prefix
         self._ipv6_egress_filter_active = False  # True when ip6tables whitelist chain is installed
+        self._ipv4_egress_filter_active = False  # True when iptables whitelist chain is installed
+        self._fsm_mss_clamp_v4_active = False    # FSM-owned mangle/FORWARD TCPMSS rule (v4)
+        self._fsm_mss_clamp_v6_active = False    # FSM-owned mangle/FORWARD TCPMSS rule (v6)
+
+        # DHCPv6 PD configured upstream — gates DHCPv6 client (UDP/546) in
+        # the IPv6 egress hygiene chain.  When False, the chain drops
+        # outbound DHCPv6 to keep idle bearers free of forbidden chatter.
+        self._dhcpv6_pd_enabled = bool(
+            self.parsed_config.raw_config.get('dhcpv6_pd_enabled', False)
+        )
 
         # IP Passthrough manager: instantiated once in __init__ so its
         # _last_v4 / _last_v6 / _last_v6_prefix survive config reloads
@@ -9083,6 +9093,9 @@ class ModemStateMachine:
         # Remove IPv6 egress prefix filter (interface is going down)
         interface_name = f"wwan{self.interface_number}"
         await self._remove_ipv6_egress_filter(interface_name)
+        # Remove IPv4 source whitelist + FSM-wide MSS clamp.
+        await self._remove_ipv4_egress_filter(interface_name)
+        await self._remove_fsm_mss_clamp(interface_name)
 
         # Stop bridging background tasks and remove the carrier prefix from
         # the downstream LAN interface
@@ -10006,15 +10019,25 @@ class ModemStateMachine:
         return f"{interface_name.upper()}_SRC_ENFORCE"
 
     async def _install_ipv6_egress_filter(self, interface_name, ipv6_addr, prefix_len):
-        """Install or update a persistent ip6tables FORWARD chain that only
-        allows packets whose IPv6 source falls within the current carrier prefix.
+        """Install or update a persistent ip6tables FORWARD chain that enforces
+        carrier-contract egress hygiene on the WWAN interface.
 
-        The chain structure:
+        Carriers (and 3GPP TS 23.401 §4.7.3 / RFC 7066) require that the CPE
+        never send packets that violate the bearer contract.  PGW/UPF will
+        drop them, but persistent violations are logged as abuse signals and
+        on IoT/M2M plans can trigger throttling or SIM suspension.  We enforce
+        the floor here so the customer's `firewall` config cannot accidentally
+        relax it below the contract.
+
+        Chain structure (rules evaluated top-to-bottom):
           FORWARD → -o <iface> -j <CHAIN>
           <CHAIN>:
-            -s <prefix>::/<len> -j RETURN   (allow current prefix)
-            -s fe80::/10 -j RETURN          (allow link-local)
-            -j DROP                          (drop everything else)
+            -p icmpv6 --icmpv6-type 134           -j DROP   (outbound RA — illegal: router is a host)
+            -p udp --sport 547                    -j DROP   (outbound DHCPv6 server — never legal)
+            -p udp --sport 546                    -j DROP   (only if PD NOT configured)
+            -s <carrier_prefix>::/<len>           -j RETURN (permit current bearer prefix)
+            -s fe80::/10                          -j RETURN (permit link-local NDP / dhcp6c)
+                                                  -j DROP   (drop everything else — stale prefix, RFC4193, multicast, …)
         """
         chain = self._ipv6_chain_name(interface_name)
         import ipaddress
@@ -10033,13 +10056,36 @@ class ModemStateMachine:
             )
             self._ipv6_egress_filter_active = True
 
-        # Populate chain rules
+        # 1. Drop outbound Router Advertisements (RFC 7066 — CPE is a host upstream).
+        await self._run_ipcmd(
+            'ip6tables', '-A', chain,
+            '-p', 'icmpv6', '--icmpv6-type', 'router-advertisement', '-j', 'DROP',
+        )
+        # 2. Drop outbound DHCPv6 server packets (UDP/547 source).  No legitimate
+        #    source ever exists upstream — PGW is the DHCPv6 server (or none at all).
+        await self._run_ipcmd(
+            'ip6tables', '-A', chain,
+            '-p', 'udp', '--sport', '547', '-j', 'DROP',
+        )
+        # 3. Drop outbound DHCPv6 *client* packets unless the user configured
+        #    dhcpv6-options pd.  This prevents idle dhcp6c probes from leaking
+        #    upstream on bearers that don't support DHCPv6.  The drop is placed
+        #    before the fe80::/10 RETURN below so it wins precedence.
+        if not self._dhcpv6_pd_enabled:
+            await self._run_ipcmd(
+                'ip6tables', '-A', chain,
+                '-p', 'udp', '--sport', '546', '-j', 'DROP',
+            )
+        # 4. Permit current carrier prefix.
         await self._run_ipcmd('ip6tables', '-A', chain, '-s', prefix_cidr, '-j', 'RETURN')
+        # 5. Permit link-local (NDP, and dhcp6c when PD is enabled).
         await self._run_ipcmd('ip6tables', '-A', chain, '-s', 'fe80::/10', '-j', 'RETURN')
+        # 6. Drop everything else.
         await self._run_ipcmd('ip6tables', '-A', chain, '-j', 'DROP')
 
         logger.info(
-            "IPv6 egress filter updated: allow %s on %s", prefix_cidr, interface_name,
+            "IPv6 egress filter updated: allow %s on %s (dhcpv6-pd=%s)",
+            prefix_cidr, interface_name, self._dhcpv6_pd_enabled,
             extra={'interface_number': self.interface_number},
         )
 
@@ -10056,6 +10102,156 @@ class ModemStateMachine:
         await self._run_ipcmd('ip6tables', '-X', chain)
         self._ipv6_egress_filter_active = False
         logger.info("IPv6 egress filter removed from %s", interface_name,
+                    extra={'interface_number': self.interface_number})
+
+    # ── IPv4 egress source whitelist ────────────────────────────────────
+    #
+    # Mirrors the IPv6 chain.  Even with VyOS NAT correctly pointed at the
+    # bearer, a stray PBR rule or a misconfigured `outbound-interface` can
+    # leak RFC1918 sources upstream — carriers count those as abuse signals.
+    # The chain accepts only the current bearer /32, drops DHCPv4 (no
+    # cellular bearer ever runs DHCPv4), and drops everything else.
+
+    def _ipv4_chain_name(self, interface_name):
+        """Return the iptables chain name for v4 source enforcement."""
+        return f"{interface_name.upper()}_SRC_ENFORCE_V4"
+
+    async def _install_ipv4_egress_filter(self, interface_name, ipv4_addr):
+        """Install or update a persistent iptables FORWARD chain that only
+        allows packets whose IPv4 source equals the current bearer /32.
+
+        Chain structure:
+          FORWARD → -o <iface> -j <CHAIN>
+          <CHAIN>:
+            -p udp --sport 67  -j DROP      (outbound DHCPv4 server — never legal)
+            -p udp --sport 68  -j DROP      (outbound DHCPv4 client — cellular bearer
+                                             receives address via QMI/MBIM, not DHCP)
+            -s <bearer>/32     -j RETURN    (permit current bearer source)
+            -j DROP                          (drop RFC1918 leaks, 0.0.0.0, stale src, …)
+        """
+        if not ipv4_addr:
+            return
+        chain = self._ipv4_chain_name(interface_name)
+
+        if self._ipv4_egress_filter_active:
+            # Chain already exists — flush and repopulate with new bearer /32
+            await self._run_ipcmd('iptables', '-F', chain)
+        else:
+            await self._run_ipcmd('iptables', '-N', chain)
+            await self._run_ipcmd(
+                'iptables', '-I', 'FORWARD', '1',
+                '-o', interface_name, '-j', chain,
+            )
+            self._ipv4_egress_filter_active = True
+
+        await self._run_ipcmd(
+            'iptables', '-A', chain,
+            '-p', 'udp', '--sport', '67', '-j', 'DROP',
+        )
+        await self._run_ipcmd(
+            'iptables', '-A', chain,
+            '-p', 'udp', '--sport', '68', '-j', 'DROP',
+        )
+        await self._run_ipcmd(
+            'iptables', '-A', chain, '-s', f"{ipv4_addr}/32", '-j', 'RETURN',
+        )
+        await self._run_ipcmd('iptables', '-A', chain, '-j', 'DROP')
+
+        logger.info(
+            "IPv4 egress filter updated: allow %s/32 on %s", ipv4_addr, interface_name,
+            extra={'interface_number': self.interface_number},
+        )
+
+    async def _remove_ipv4_egress_filter(self, interface_name):
+        """Remove the persistent iptables FORWARD chain entirely."""
+        if not self._ipv4_egress_filter_active:
+            return
+        chain = self._ipv4_chain_name(interface_name)
+        await self._run_ipcmd(
+            'iptables', '-D', 'FORWARD', '-o', interface_name, '-j', chain,
+        )
+        await self._run_ipcmd('iptables', '-F', chain)
+        await self._run_ipcmd('iptables', '-X', chain)
+        self._ipv4_egress_filter_active = False
+        logger.info("IPv4 egress filter removed from %s", interface_name,
+                    extra={'interface_number': self.interface_number})
+
+    # ── FSM-wide TCP MSS clamp to PMTU ──────────────────────────────────
+    #
+    # Industry-standard fix for downstream clients that ignore DHCP option 26
+    # / RA MTU and emit oversized TCP segments.  The kernel rewrites the MSS
+    # option in SYN/SYN-ACK to fit the WWAN egress PMTU; --clamp-mss-to-pmtu
+    # auto-tracks the wwan<N> MTU so bearer MTU changes are picked up without
+    # rewriting the rule.
+    #
+    # This is installed for *every* WWAN mode (plain, ipv6-bridging, plus
+    # the modes that don't already manage their own clamp).  When the
+    # ip-passthrough manager is active, it installs its own clamp via
+    # PassthroughManager._install_mss_clamp(); to avoid duplicate rules we
+    # skip installing the FSM-wide clamp in that case.
+
+    async def _install_fsm_mss_clamp(self, interface_name):
+        """Install mangle/FORWARD TCPMSS --clamp-mss-to-pmtu (v4 + v6).
+
+        No-op when the ip-passthrough manager is already clamping, since
+        that path covers the same packets with an identical rule.
+        """
+        try:
+            passthrough_active = bool(
+                getattr(self, '_passthrough', None)
+                and self._passthrough.cfg.is_active()
+                and self._passthrough.cfg.mss_clamp_enabled
+            )
+        except Exception:
+            passthrough_active = False
+        if passthrough_active:
+            logger.debug(
+                "FSM MSS clamp skipped on %s (passthrough manages it)",
+                interface_name,
+                extra={'interface_number': self.interface_number},
+            )
+            return
+
+        if not self._fsm_mss_clamp_v4_active:
+            await self._run_ipcmd(
+                'iptables', '-t', 'mangle', '-A', 'FORWARD',
+                '-o', interface_name,
+                '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                '-j', 'TCPMSS', '--clamp-mss-to-pmtu',
+            )
+            self._fsm_mss_clamp_v4_active = True
+        if not self._fsm_mss_clamp_v6_active:
+            await self._run_ipcmd(
+                'ip6tables', '-t', 'mangle', '-A', 'FORWARD',
+                '-o', interface_name,
+                '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                '-j', 'TCPMSS', '--clamp-mss-to-pmtu',
+            )
+            self._fsm_mss_clamp_v6_active = True
+        logger.info(
+            "FSM MSS clamp-to-PMTU active on %s (v4+v6)", interface_name,
+            extra={'interface_number': self.interface_number},
+        )
+
+    async def _remove_fsm_mss_clamp(self, interface_name):
+        """Remove the FSM-wide mangle/FORWARD TCPMSS rules."""
+        if self._fsm_mss_clamp_v4_active:
+            await self._run_ipcmd(
+                'iptables', '-t', 'mangle', '-D', 'FORWARD',
+                '-o', interface_name,
+                '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                '-j', 'TCPMSS', '--clamp-mss-to-pmtu',
+            )
+            self._fsm_mss_clamp_v4_active = False
+        if self._fsm_mss_clamp_v6_active:
+            await self._run_ipcmd(
+                'ip6tables', '-t', 'mangle', '-D', 'FORWARD',
+                '-o', interface_name,
+                '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                '-j', 'TCPMSS', '--clamp-mss-to-pmtu',
+            )
+            self._fsm_mss_clamp_v6_active = False
+        logger.info("FSM MSS clamp removed from %s", interface_name,
                     extra={'interface_number': self.interface_number})
 
     async def _kill_stale_ipv6_sockets(self, old_ipv6):
@@ -10957,6 +11153,11 @@ class ModemStateMachine:
             # ── IPv4 source enforcement: unblock egress now that new IP + route are live ──
             if ipv4_changed:
                 await self._unblock_egress_ipv4(interface_name)
+            # Persistent IPv4 source whitelist (installed once the bearer /32
+            # is live; refreshed on every IP change).  Drops DHCPv4 + any
+            # non-bearer source.
+            if new_ipv4:
+                await self._install_ipv4_egress_filter(interface_name, new_ipv4)
             # Track current IPv4 for next change detection
             if new_ipv4:
                 self._current_bearer_ipv4 = new_ipv4
@@ -11059,6 +11260,12 @@ class ModemStateMachine:
                 # Track current IPv6 for next change detection
                 self._current_bearer_ipv6 = new_ipv6
                 self._current_bearer_ipv6_prefix = ipv6_prefix_len
+
+            # ── FSM-wide TCP MSS clamp ─────────────────────────────────────
+            # Apply once the bearer is live so PMTU is correctly tracked.
+            # Idempotent; skipped when ip-passthrough is already clamping.
+            if new_ipv4 or new_ipv6:
+                await self._install_fsm_mss_clamp(interface_name)
 
             # ── IPv6 bridging: copy carrier-supplied prefix to one downstream LAN ──
             if bearer_ips.get('ipv6') and self._bridging_config.get('enabled') \

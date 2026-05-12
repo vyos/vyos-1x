@@ -152,6 +152,14 @@ class InterfaceConfig(ServiceInterface):
         # user sets `interfaces wwan <if> ip-passthrough interface <lan>`.
         "ip_passthrough": {"enabled": False},
 
+        # DHCPv6 PD enabled — set by conf_mode when the user configures
+        # `interfaces wwan <if> dhcpv6-options pd ...`.  Controls whether
+        # the FSM-installed IPv6 egress hygiene chain permits DHCPv6
+        # client traffic (UDP/546) on the bearer.  Default OFF: cellular
+        # bearers do not run DHCPv6 unless the operator explicitly opts
+        # in via PD.
+        "dhcpv6_pd_enabled": False,
+
         # SIM configurations - array of SIM configs
         "sim_slots": [
             {

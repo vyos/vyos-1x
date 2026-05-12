@@ -96,6 +96,11 @@ def get_config(config=None):
         'ipv6_bridging_interface': conf.exists(
             iface_base + ['ipv6-bridging', 'interface']
         ),
+        # DHCPv6 prefix delegation — when set, the FSM-installed egress
+        # hygiene chain must permit DHCPv6 client traffic (UDP/546) so
+        # dhcp6c can solicit an IA_PD from the carrier.  Otherwise the
+        # chain drops it as forbidden upstream chatter.
+        'dhcpv6_pd': conf.exists(iface_base + ['dhcpv6-options', 'pd']),
     }
 
     # ── IP passthrough conflict guard ────────────────────────────────────
@@ -546,6 +551,11 @@ def build_fsm_config(wwan):
 
         # IP Passthrough (mutually exclusive with ipv6-bridging — see verify())
         'ip_passthrough': ip_passthrough,
+
+        # DHCPv6 PD configured — gates the egress-hygiene chain so DHCPv6
+        # client traffic (UDP/546) is allowed upstream.  Derived from the
+        # live-tree existence of `dhcpv6-options pd` (see _user_set).
+        'dhcpv6_pd_enabled': bool(wwan['_user_set'].get('dhcpv6_pd')),
     }
 
     return config

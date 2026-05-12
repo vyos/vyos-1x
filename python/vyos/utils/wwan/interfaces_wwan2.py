@@ -280,6 +280,11 @@ def build_config(raw_cfg):
 
         # IPv6 bridging (carrier /64 → one downstream LAN interface)
         'ipv6_bridging': _parse_ipv6_bridging_config(raw_cfg),
+
+        # DHCPv6 PD enabled — gates DHCPv6 client traffic in the FSM
+        # egress hygiene chain.  Conf_mode sets True when the user has
+        # `dhcpv6-options pd ...` configured on the wwan interface.
+        'dhcpv6_pd_enabled': _bool(raw_cfg.get('dhcpv6_pd_enabled', False)),
     }
 
     return config
