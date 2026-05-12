@@ -17,3 +17,51 @@
 # configuration per Mergify's `extends:` semantics.
 
 extends: mergify
+
+pull_request_rules:
+  # ------------------------------------------------------------------
+  # Override: disable T-ID-format checks for PR title and commit messages.
+  #
+  # The central baseline in vyos/mergify enforces `T<digits>: <text>` (with
+  # optional `scope: ` prefix) on both the PR title and every commit's first
+  # line. That matches the convention in vyos/vyos-1x and other code repos
+  # where engineering work tracks against a Phorge task.
+  #
+  # vyos-documentation does not require a Phorge T-ID per PR — much of the
+  # work here is conventional-commits style (`fix(ext): …`, `ci(...): …`,
+  # `chore(deps): …`) with no upstream ticket. Inheriting the central rules
+  # labels every such PR `invalid-title` / `invalid-commit-title`, which is
+  # noise.
+  #
+  # Per Mergify `extends:` semantics, same-name rules in the child REPLACE
+  # the parent's. The two rules below keep the original names so the parent
+  # versions are dropped; conditions are constructed to never match (a PR
+  # cannot simultaneously be closed and not closed), so the `toggle` action
+  # always falls into the "remove label" branch — cleaning up the labels on
+  # any PR that previously had them.
+  # ------------------------------------------------------------------
+
+  - name: Flag PR title not matching T-ID format
+    description: >
+      Disabled in vyos-documentation — this repo does not require Phorge
+      T-IDs in PR titles. Conventional-commits style is acceptable.
+    conditions:
+      - closed
+      - '-closed'
+    actions:
+      label:
+        toggle:
+          - invalid-title
+
+  - name: Flag commit message not matching T-ID format
+    description: >
+      Disabled in vyos-documentation — this repo does not require Phorge
+      T-IDs in commit message headlines. Conventional-commits style is
+      acceptable.
+    conditions:
+      - closed
+      - '-closed'
+    actions:
+      label:
+        toggle:
+          - invalid-commit-title
