@@ -415,6 +415,25 @@ set interfaces wwan wwan0 ipv6-bridging interface 'eth0'
 set interfaces wwan wwan0 ipv6-bridging reconciliation-interval 10
 ```
 
+> **Tip — stable carrier-independent IPv6 management address:**  Unlike
+> `ip-passthrough`, `ipv6-bridging` does not provision a management
+> address on the LAN interface — the router already owns
+> `<carrier-prefix>::1/64` there as soon as the bearer is up, so it is
+> reachable out of the box.  That address, however, changes if the
+> carrier reprovisions the prefix (SIM swap, APN change, multi-SIM
+> failover).  If you want a permanent management address that survives
+> carrier renumbering, configure a ULA (RFC 4193) directly on the LAN
+> interface — this is the standard VyOS pattern for any dynamic-prefix
+> uplink (PPPoE, DHCP-WAN, WWAN) and coexists cleanly with the carrier
+> /64 advertised by the FSM-owned radvd:
+>
+> ```
+> set interfaces ethernet eth0 address 'fd00:6c61:6e30::1/64'
+> ```
+>
+> SLAAC clients prefer the global carrier address for off-link traffic
+> and use the ULA for on-LAN management — no extra configuration needed.
+
 ### DHCPv6 (standard VyOS — real PD via dhcp6c)
 
 > Standard VyOS `dhcpv6-options` are available on the wwan interface and

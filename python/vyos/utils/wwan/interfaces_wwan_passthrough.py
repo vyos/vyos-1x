@@ -1465,10 +1465,19 @@ class PassthroughManager:
         await _run('ip', '-4', 'route', 'replace',
                    f'{carrier_v4}/32', 'dev', self.cfg.interface,
                    'table', str(self._table_id))
-        # Rule that diverts inbound traffic to the table
+        # Rule that diverts traffic destined to the carrier IP into the
+        # per-FSM table.  Intentionally NOT gated on `iif <wwan>`: the
+        # carrier IP unambiguously belongs to the downstream device, so
+        # *any* packet (inbound from wwan, OR locally-originated from
+        # the router itself — e.g. an HTTPS reply from the mgmt address
+        # back to the downstream's source IP) must be forwarded out the
+        # LAN port.  Without this, the kernel's main table picks the
+        # carrier-prefix /30 connected route via wwan (installed by the
+        # FSM's `ip addr add`) and ships the reply back to the carrier
+        # instead of to the downstream, breaking management access via
+        # the passthrough port (https://192.168.200.1, ICMP, etc.).
         await _run('ip', '-4', 'rule', 'add',
                    'priority', str(self._rule_prio),
-                   'iif', self._wwan_iface,
                    'to', f'{carrier_v4}/32',
                    'lookup', str(self._table_id))
         self._inbound_v4_addr = carrier_v4
@@ -1483,7 +1492,6 @@ class PassthroughManager:
             return
         await _run('ip', '-4', 'rule', 'del',
                    'priority', str(self._rule_prio),
-                   'iif', self._wwan_iface,
                    'to', f'{carrier_v4}/32',
                    'lookup', str(self._table_id))
         await _run('ip', '-4', 'route', 'del',
@@ -1521,9 +1529,11 @@ class PassthroughManager:
         await _run('ip', '-6', 'route', 'replace',
                    target, 'dev', self.cfg.interface,
                    'table', str(self._table_id))
+        # See v4 sibling: rule is intentionally NOT gated on iif so that
+        # locally-originated replies (HTTPS, ICMPv6, etc.) from the mgmt
+        # address back to the downstream also exit via the LAN port.
         await _run('ip', '-6', 'rule', 'add',
                    'priority', str(self._rule_prio),
-                   'iif', self._wwan_iface,
                    'to', target,
                    'lookup', str(self._table_id))
         self._inbound_v6_addr = target
@@ -1542,7 +1552,6 @@ class PassthroughManager:
         target = carrier_v6 if '/' in carrier_v6 else f'{carrier_v6}/128'
         await _run('ip', '-6', 'rule', 'del',
                    'priority', str(self._rule_prio),
-                   'iif', self._wwan_iface,
                    'to', target,
                    'lookup', str(self._table_id))
         await _run('ip', '-6', 'route', 'del',
