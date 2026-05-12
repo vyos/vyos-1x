@@ -285,7 +285,7 @@ and happen automatically if local-role is set.
 
 ```{cfgcmd} set protocols bgp neighbor \<address|interface\> shutdown
 
-This command disable the peer or peer group. To reenable the peer use
+This command disables the peer or peer group. To re-enable the peer, use
 the delete form of this command.
 ```
 
@@ -805,7 +805,7 @@ availability is also advertised. A route that continually fails and returns
 requires a great deal of network traffic to update the network about the
 route's status.
 
-Route dampening wich described in {rfc}`2439` enables you to identify routes
+Route dampening, described in {rfc}`2439`, enables you to identify routes
 that repeatedly fail and return. If route dampening is enabled, an unstable
 route accumulates penalties each time the route fails and returns. If the
 accumulated penalties exceed a threshold, the route is no longer advertised.
@@ -1016,7 +1016,7 @@ peer. The {cfgcmd}`receive` keyword configures a router to advertise ORF
 receive capabilities. The {cfgcmd}`send` keyword configures a router to
 advertise ORF send capabilities. To advertise a filter from a sender, you
 must create an IP prefix list for the specified BGP peer applied in inbound
-derection.
+direction.
 ```
 
 

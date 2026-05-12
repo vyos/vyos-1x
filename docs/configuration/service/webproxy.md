@@ -317,7 +317,7 @@ Defaults to 'uid'
 :::{note}
 This can only be done if all your users are located directly under
 the same position in the LDAP tree and the login name is used for naming
-each user object. If your LDAP tree does not match these criterias or if you
+each user object. If your LDAP tree does not match these criteria or if you
 want to filter who are valid users then you need to use a search filter to
 search for your users DN (filter-expression).
 :::
@@ -369,7 +369,7 @@ Download/Update complete blacklist
 vyos@vyos:~$ update webproxy blacklists
 Warning: No url-filtering blacklist installed
 Would you like to download a default blacklist? [confirm][y]
-Connecting to ftp.univ-tlse1.fr (193.49.48.249:21)
+Connecting to ftp.example.com (192.0.2.249:21)
 blacklists.gz        100% |*************************************************************************************************************| 17.0M  0:00:00 ETA
 Uncompressing blacklist...
 Checking permissions...

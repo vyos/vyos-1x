@@ -201,7 +201,7 @@ about what type-name criteria are supported.
 
 ```{cfgcmd} set policy route6 \<name\> rule \<n\> ipsec \<match-ipsec|match-none\>
 
-Set IPSec inbound match criterias, where:
+Set IPSec inbound match criteria, where:
 * match-ipsec: match inbound IPsec packets.
 * match-none: match inbound non-IPsec packets.
 ```
@@ -270,7 +270,7 @@ Match based on packet type criteria.
 ```{cfgcmd} set policy route6 \<name\> rule \<n\> recent time \<1-4294967295\>
 
 Set parameters for matching recently seen sources. This match could be used
-by seeting count (source address seen more than <1-255> times) and/or time
+by setting count (source address seen more than <1-255> times) and/or time
 (source address seen in the last <0-4294967295> seconds).
 ```
 
