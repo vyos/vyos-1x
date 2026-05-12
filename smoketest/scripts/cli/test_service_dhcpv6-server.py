@@ -121,6 +121,8 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['range', '1', 'start', range_start])
         self.cli_set(pool + ['range', '1', 'stop', range_stop])
 
+        self.cli_set(pool + ['option', 'time-zone', 'Europe/London'])
+
         for server in nis_servers:
             self.cli_set(pool + ['option', 'nis-server', server])
             self.cli_set(pool + ['option', 'nisplus-server', server])
@@ -193,6 +195,18 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
                 obj,
                 ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
                 {'name': 'sip-server-dns', 'data': sip_server})
+
+        # Time zone
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'new-posix-timezone', 'data': 'GMT0BST\\,M3.5.0/1\\,M10.5.0'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'new-tzdb-timezone', 'data': 'Europe/London'},
+        )
 
         # Verify pools
         self.verify_config_object(

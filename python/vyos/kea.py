@@ -289,6 +289,13 @@ def kea6_parse_options(config):
         if hosts:
             options.append({'name': 'sip-server-dns', 'data': ', '.join(hosts)})
 
+    if 'time_zone' in config:
+        with open('/usr/share/zoneinfo/' + config['time_zone'], 'rb') as f:
+            tz_string = f.read().split(b'\n')[-2].decode('utf-8').replace(',', '\\,')
+
+        options.append({'name': 'new-posix-timezone', 'data': tz_string})
+        options.append({'name': 'new-tzdb-timezone', 'data': config['time_zone']})
+
     cisco_tftp = dict_search_args(config, 'vendor_option', 'cisco', 'tftp-server')
     if cisco_tftp:
         options.append(
