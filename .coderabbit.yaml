@@ -18,6 +18,12 @@
 #
 # This makes one file the single source of truth across both orgs.
 
+# Opt this repo into the inheritance chain. Without this, the file below
+# would entirely REPLACE the central baseline rather than merge per-field
+# on top of it — inheritance is disabled by default per CodeRabbit's
+# schema (https://docs.coderabbit.ai/configuration/configuration-inheritance).
+inheritance: true
+
 knowledge_base:
   jira:
     # `auto` is the cross-org-safe value: enabled on private/internal
