@@ -8,6 +8,7 @@ import datetime
 import ipaddress
 import socket
 import struct
+import signal
 import logging
 from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
@@ -33,6 +34,7 @@ from vyos.utils.wwan.apn_discovery import APNDiscovery
 from vyos.utils.wwan.connection_manager import ConnectionManager
 from vyos.utils.wwan.state_transition_manager import StateTransitionManager
 from vyos.utils.wwan.interfaces_wwan_passthrough import PassthroughManager
+from vyos.utils.wwan.interfaces_wwan_bridging_radvd import BridgingRadvdManager
 
 from vyos.utils.wwan.wwan_logging import setup_logging, reconfigure_logging
 
@@ -278,6 +280,14 @@ class ModemStateMachine:
         self._bridging_reconciliation_interval = 10
         self._bridging_carrier_prefix = None      # IPv6Network
         self._bridging_carrier_prefix_len = None  # int
+        self._bridging_bearer_addr = None         # bearer's own /128 (excluded from LAN host bit)
+        self._bridging_saved_sysctls = {}         # {path: original_value} for teardown
+        self._bridging_proxy_entries = set()      # IPv6 addrs proxied on the wwan side
+        self._bridging_ndp_task = None            # neighbor-watch task on the LAN side
+        # FSM-owned radvd for SLAAC + RDNSS on the bridged LAN.  Tracks the
+        # carrier prefix automatically so the operator does not have to
+        # hardcode it in `service router-advert`.
+        self._bridging_radvd = BridgingRadvdManager(self.interface_number)
 
         # IP Passthrough manager (DOCSIS-modem-style single-host handoff).
         # Instantiated ONCE here at FSM construction so its internal state
@@ -10095,7 +10105,20 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number})
             return {}
         try:
-            host_int = int(carrier_net.network_address) | 1
+            net_int = int(carrier_net.network_address)
+            # Default host bit: network+1.  If that collides with the bearer's
+            # own address (carrier sometimes hands out ::1), pick network+2 so
+            # the router's bridged side never duplicates the upstream side.
+            host_int = net_int | 1
+            bearer_int = None
+            if self._bridging_bearer_addr:
+                try:
+                    bearer_int = int(ipaddress.IPv6Address(
+                        self._bridging_bearer_addr))
+                except Exception:
+                    bearer_int = None
+            if bearer_int is not None and host_int == bearer_int:
+                host_int = net_int | 2
             addr = str(ipaddress.IPv6Address(host_int))
         except Exception as e:
             logger.error("IPv6 bridging address compute failed: %s", e,
@@ -10108,10 +10131,15 @@ class ModemStateMachine:
         return os.path.isdir(f"/sys/class/net/{iface_name}")
 
     async def _bridging_apply_to_interface(self, iface_name, addr, prefix_len):
-        """Add the bridged carrier prefix to a downstream LAN interface."""
+        """Add the bridged carrier prefix to a downstream LAN interface.
+
+        Uses 'nodad' to skip Duplicate Address Detection — the router owns
+        this address by construction, and DAD against its own proxied entries
+        on the wwan side can otherwise mark the address dadfailed.
+        """
         cidr = f"{addr}/{prefix_len}"
         rc, _, stderr = await self._run_ipcmd(
-            'ip', '-6', 'addr', 'add', cidr, 'dev', iface_name
+            'ip', '-6', 'addr', 'add', cidr, 'dev', iface_name, 'nodad'
         )
         if rc == 0 or 'exists' in stderr:
             logger.info("IPv6 bridging applied %s on %s", cidr, iface_name,
@@ -10141,17 +10169,40 @@ class ModemStateMachine:
                         cidr, iface_name, stderr.strip(),
                         extra={'interface_number': self.interface_number})
 
-    async def _bridging_apply_all(self, carrier_net, carrier_prefix_len):
+    async def _bridging_apply_all(self, carrier_net, carrier_prefix_len,
+                                  bearer_addr=None, dns_servers=None):
         """Apply the carrier prefix to the configured downstream interface.
 
+        bearer_addr is the carrier-assigned address on the wwan side; it is
+        excluded from the LAN host-bit choice so we never duplicate it.
+        dns_servers is the carrier's IPv6 DNS list; advertised via RDNSS.
         If the interface does not exist yet, it is added to _bridging_pending.
         Starts netlink watch and reconciliation timer if bridging is configured.
         """
+        self._bridging_bearer_addr = bearer_addr
         if not self._bridging_target_interface():
             return
 
+        # Detect prefix change so we can deprecate the old LAN address (sends
+        # preferred_lft=0 RA to SLAAC clients) before swapping prefixes.
+        prev_net = self._bridging_carrier_prefix
+        prev_plen = self._bridging_carrier_prefix_len
+        prefix_changed = (
+            prev_net is not None and
+            (int(prev_net.network_address) != int(carrier_net.network_address)
+             or prev_plen != carrier_prefix_len)
+        )
+        if prefix_changed:
+            await self._bridging_deprecate_previous()
+
         self._bridging_carrier_prefix = carrier_net
         self._bridging_carrier_prefix_len = carrier_prefix_len
+
+        # Kernel sysctls required for end-to-end v6 reachability through the
+        # router: forward on both sides, accept the carrier's RA on wwan, and
+        # enable proxy-NDP on wwan so the router can answer NSes for hosts on
+        # the LAN side.  Saved values are restored in _bridging_remove_all.
+        await self._bridging_apply_sysctls()
 
         desired = self._bridging_build_desired_state(carrier_net, carrier_prefix_len)
         self._bridging_pending = set()
@@ -10177,12 +10228,41 @@ class ModemStateMachine:
         if desired:
             self._bridging_start_background_tasks()
 
+        # FSM-owned radvd: start (or reload) advertising the current
+        # carrier prefix + carrier DNS on the LAN.  This replaces any
+        # need for the operator to configure `service router-advert`
+        # for the bridged interface — the prefix tracks the bearer.
+        lan = self._bridging_target_interface()
+        if lan and self._bridging_applied.get(lan):
+            try:
+                net_str = str(self._bridging_carrier_prefix.network_address)
+                await self._bridging_radvd.apply(
+                    lan=lan,
+                    prefix=net_str,
+                    plen=carrier_prefix_len,
+                    dns_servers=list(dns_servers or []),
+                )
+            except Exception as e:
+                logger.error("IPv6 bridging radvd apply failed: %s", e,
+                            extra={'interface_number': self.interface_number})
+
         logger.info("IPv6 bridging apply complete: %d applied, %d pending",
                    len(self._bridging_applied), len(self._bridging_pending),
                    extra={'interface_number': self.interface_number})
 
     async def _bridging_remove_all(self):
         """Remove the bridged prefix from the downstream interface and reset state."""
+        # Stop background tasks first so they don't race with cleanup.
+        self._bridging_stop_background_tasks()
+        # Stop the FSM-owned radvd so it doesn't keep advertising a
+        # prefix we no longer hold.
+        try:
+            await self._bridging_radvd.stop()
+        except Exception as e:
+            logger.debug("IPv6 bridging radvd stop failed: %s", e,
+                        extra={'interface_number': self.interface_number})
+        # Flush any proxy-NDP entries we installed on the wwan side.
+        await self._bridging_flush_proxy_entries()
         for iface_name, info in list(self._bridging_applied.items()):
             await self._bridging_remove_from_interface(
                 iface_name, info['addr'], info['prefix_len']
@@ -10191,11 +10271,13 @@ class ModemStateMachine:
         self._bridging_pending.clear()
         self._bridging_carrier_prefix = None
         self._bridging_carrier_prefix_len = None
+        # Restore kernel sysctls to their pre-bridging values.
+        await self._bridging_restore_sysctls()
         logger.info("IPv6 bridging: removed bridged prefix",
                    extra={'interface_number': self.interface_number})
 
     def _bridging_start_background_tasks(self):
-        """Start netlink watch and reconciliation timer tasks."""
+        """Start netlink watch, reconciliation timer, and NDP-proxy tasks."""
         if not self._bridging_netlink_task or self._bridging_netlink_task.done():
             self._bridging_netlink_task = self._safe_create_task(
                 self._bridging_netlink_watch(), name='bridging-netlink-watch'
@@ -10204,6 +10286,10 @@ class ModemStateMachine:
                 self._bridging_reconciliation_task.done():
             self._bridging_reconciliation_task = self._safe_create_task(
                 self._bridging_reconciliation_loop(), name='bridging-reconciliation'
+            )
+        if not self._bridging_ndp_task or self._bridging_ndp_task.done():
+            self._bridging_ndp_task = self._safe_create_task(
+                self._bridging_ndp_proxy_watch(), name='bridging-ndp-proxy'
             )
 
     def _bridging_stop_background_tasks(self):
@@ -10215,6 +10301,297 @@ class ModemStateMachine:
                 not self._bridging_reconciliation_task.done():
             self._bridging_reconciliation_task.cancel()
             self._bridging_reconciliation_task = None
+        if self._bridging_ndp_task and not self._bridging_ndp_task.done():
+            self._bridging_ndp_task.cancel()
+            self._bridging_ndp_task = None
+
+    # ── sysctl save/apply/restore for bridging ─────────────────────────
+    #
+    # End-to-end IPv6 reachability through a bridging router needs:
+    #   - all.forwarding=1            (allow forwarding at all)
+    #   - <wwan>.accept_ra=2          (keep honoring carrier RA even while
+    #                                  forwarding=1; default of 1 stops
+    #                                  accepting once forwarding is on)
+    #   - <wwan>.proxy_ndp=1          (answer NS for hosts on the LAN side)
+    #   - <lan>.forwarding=1          (forward replies back to wwan)
+    # We snapshot prior values so removal restores the system to its
+    # exact previous state.
+
+    def _bridging_sysctl_targets(self):
+        wwan = f"wwan{self.interface_number}"
+        lan = self._bridging_target_interface()
+        targets = {
+            f"/proc/sys/net/ipv6/conf/all/forwarding": "1",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra": "2",
+            f"/proc/sys/net/ipv6/conf/{wwan}/proxy_ndp": "1",
+        }
+        if lan:
+            targets[f"/proc/sys/net/ipv6/conf/{lan}/forwarding"] = "1"
+        return targets
+
+    async def _bridging_apply_sysctls(self):
+        """Apply forwarding/accept_ra/proxy_ndp sysctls, saving prior values."""
+        for path, desired in self._bridging_sysctl_targets().items():
+            try:
+                with open(path, 'r') as fh:
+                    current = fh.read().strip()
+                if path not in self._bridging_saved_sysctls:
+                    self._bridging_saved_sysctls[path] = current
+                if current != desired:
+                    with open(path, 'w') as fh:
+                        fh.write(desired + '\n')
+                    logger.info("IPv6 bridging sysctl: %s %s → %s",
+                               path, current, desired,
+                               extra={'interface_number': self.interface_number})
+            except FileNotFoundError:
+                # Interface not present yet — reconciliation will retry.
+                logger.debug("IPv6 bridging sysctl skipped (missing): %s", path,
+                            extra={'interface_number': self.interface_number})
+            except Exception as e:
+                logger.warning("IPv6 bridging sysctl %s failed: %s", path, e,
+                              extra={'interface_number': self.interface_number})
+
+    async def _bridging_restore_sysctls(self):
+        """Restore the sysctls captured by _bridging_apply_sysctls."""
+        for path, original in list(self._bridging_saved_sysctls.items()):
+            try:
+                with open(path, 'w') as fh:
+                    fh.write(original + '\n')
+                logger.info("IPv6 bridging sysctl restore: %s → %s",
+                           path, original,
+                           extra={'interface_number': self.interface_number})
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                logger.debug("IPv6 bridging sysctl restore %s failed: %s",
+                            path, e,
+                            extra={'interface_number': self.interface_number})
+        self._bridging_saved_sysctls.clear()
+
+    # ── radvd reload + LAN address deprecation on prefix change ────────
+
+    async def _bridging_signal_radvd(self):
+        """Deprecated — no-op shim kept so older call sites do not crash.
+
+        Replaced by self._bridging_radvd.apply() which manages the FSM's
+        own radvd instance.  Left in place because external code paths
+        (e.g. status reporters) may still reference it.
+        """
+        return
+
+    async def _bridging_deprecate_previous(self):
+        """Deprecate the currently-applied LAN address before swapping prefix.
+
+        Two steps:
+          1. Ask our FSM-owned radvd to advertise preferred_lft=0 on the
+             previous prefix so SLAAC clients mark their old addresses
+             deprecated as soon as they hear the next RA.
+          2. Set the kernel's own address to preferred_lft=0 / valid_lft=30
+             so the router itself stops sourcing traffic from it.
+        """
+        try:
+            await self._bridging_radvd.deprecate_previous()
+        except Exception as e:
+            logger.debug("IPv6 bridging radvd deprecate failed: %s", e,
+                        extra={'interface_number': self.interface_number})
+
+        for iface_name, info in list(self._bridging_applied.items()):
+            cidr = f"{info['addr']}/{info['prefix_len']}"
+            await self._run_ipcmd(
+                'ip', '-6', 'addr', 'change', cidr, 'dev', iface_name,
+                'preferred_lft', '0', 'valid_lft', '30'
+            )
+            logger.info("IPv6 bridging: deprecated %s on %s before renumber",
+                       cidr, iface_name,
+                       extra={'interface_number': self.interface_number})
+
+    # ── proxy-NDP entry management on the wwan side ────────────────────
+    #
+    # When a LAN host has an address inside the carrier prefix, the carrier
+    # router will Neighbor-Solicit that address on the bearer link.  Because
+    # the host is on the LAN side, the kernel won't answer unless we install
+    # a proxy entry: `ip -6 neigh add proxy <addr> dev <wwan>`.  We learn
+    # those addresses by watching RTM_NEWNEIGH events on the LAN interface.
+
+    async def _bridging_add_proxy(self, addr):
+        """Install a proxy-NDP entry on the wwan side for one LAN host."""
+        if addr in self._bridging_proxy_entries:
+            return
+        wwan = f"wwan{self.interface_number}"
+        rc, _, stderr = await self._run_ipcmd(
+            'ip', '-6', 'neigh', 'add', 'proxy', addr, 'dev', wwan
+        )
+        if rc == 0 or 'exists' in stderr.lower() or 'file exists' in stderr.lower():
+            self._bridging_proxy_entries.add(addr)
+            logger.info("IPv6 bridging: proxy-NDP +%s on %s", addr, wwan,
+                       extra={'interface_number': self.interface_number})
+        else:
+            logger.debug("IPv6 bridging: proxy-NDP add %s on %s failed: %s",
+                        addr, wwan, stderr.strip(),
+                        extra={'interface_number': self.interface_number})
+
+    async def _bridging_del_proxy(self, addr):
+        """Remove a proxy-NDP entry on the wwan side."""
+        if addr not in self._bridging_proxy_entries:
+            return
+        wwan = f"wwan{self.interface_number}"
+        await self._run_ipcmd(
+            'ip', '-6', 'neigh', 'del', 'proxy', addr, 'dev', wwan
+        )
+        self._bridging_proxy_entries.discard(addr)
+        logger.info("IPv6 bridging: proxy-NDP -%s on %s", addr, wwan,
+                   extra={'interface_number': self.interface_number})
+
+    async def _bridging_flush_proxy_entries(self):
+        """Remove all proxy-NDP entries we installed."""
+        for addr in list(self._bridging_proxy_entries):
+            await self._bridging_del_proxy(addr)
+
+    def _bridging_addr_eligible_for_proxy(self, addr_str):
+        """True if addr is inside the carrier prefix and not the bearer/router itself."""
+        if not self._bridging_carrier_prefix:
+            return False
+        try:
+            addr = ipaddress.IPv6Address(addr_str)
+        except Exception:
+            return False
+        if addr.is_link_local or addr.is_multicast or addr.is_unspecified:
+            return False
+        if addr not in self._bridging_carrier_prefix:
+            return False
+        if self._bridging_bearer_addr:
+            try:
+                if addr == ipaddress.IPv6Address(self._bridging_bearer_addr):
+                    return False
+            except Exception:
+                pass
+        for info in self._bridging_applied.values():
+            try:
+                if addr == ipaddress.IPv6Address(info['addr']):
+                    return False
+            except Exception:
+                pass
+        return True
+
+    async def _bridging_ndp_proxy_watch(self):
+        """Watch RTM_NEWNEIGH/DELNEIGH on the LAN and mirror proxy entries on wwan."""
+        NETLINK_ROUTE = 0
+        RTMGRP_NEIGH = 0x4
+        RTM_NEWNEIGH = 28
+        RTM_DELNEIGH = 29
+        NDA_DST = 1
+        NLMSG_HDRLEN = 16
+        NDMSG_LEN = 12   # family,_pad,ifindex(4),state(2),flags,type
+
+        sock = None
+        try:
+            # Find LAN ifindex (the only one we care about).
+            lan = self._bridging_target_interface()
+            if not lan:
+                return
+            try:
+                lan_ifindex = socket.if_nametoindex(lan)
+            except OSError:
+                lan_ifindex = None  # may appear later; we still watch
+
+            sock = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM, NETLINK_ROUTE)
+            sock.bind((0, RTMGRP_NEIGH))
+            sock.setblocking(False)
+            loop = asyncio.get_event_loop()
+
+            # Seed with current LAN neighbors so we don't have to wait for
+            # gratuitous traffic before installing proxies.
+            await self._bridging_seed_proxy_from_neigh_dump(lan)
+
+            while True:
+                future = loop.create_future()
+
+                def _on_readable():
+                    if not future.done():
+                        future.set_result(None)
+
+                loop.add_reader(sock.fileno(), _on_readable)
+                try:
+                    await future
+                finally:
+                    loop.remove_reader(sock.fileno())
+
+                try:
+                    data = sock.recv(65535)
+                except BlockingIOError:
+                    continue
+
+                # Refresh lan ifindex lazily in case it appeared late.
+                if lan_ifindex is None:
+                    try:
+                        lan_ifindex = socket.if_nametoindex(lan)
+                    except OSError:
+                        lan_ifindex = None
+
+                offset = 0
+                while offset < len(data):
+                    if offset + NLMSG_HDRLEN > len(data):
+                        break
+                    nlmsg_len, nlmsg_type, _, _, _ = struct.unpack_from(
+                        '=IHHII', data, offset
+                    )
+                    if nlmsg_len < NLMSG_HDRLEN or offset + nlmsg_len > len(data):
+                        break
+                    if nlmsg_type in (RTM_NEWNEIGH, RTM_DELNEIGH):
+                        fam, _pad, ifindex = struct.unpack_from(
+                            '=BBxxI', data, offset + NLMSG_HDRLEN
+                        )
+                        if fam == socket.AF_INET6 and (
+                            lan_ifindex is None or ifindex == lan_ifindex
+                        ):
+                            attr_offset = offset + NLMSG_HDRLEN + NDMSG_LEN
+                            dst = None
+                            while attr_offset + 4 <= offset + nlmsg_len:
+                                rta_len, rta_type = struct.unpack_from(
+                                    '=HH', data, attr_offset
+                                )
+                                if rta_len < 4:
+                                    break
+                                if rta_type == NDA_DST and rta_len >= 4 + 16:
+                                    raw16 = data[attr_offset + 4:attr_offset + 4 + 16]
+                                    try:
+                                        dst = str(ipaddress.IPv6Address(raw16))
+                                    except Exception:
+                                        dst = None
+                                    break
+                                attr_offset += (rta_len + 3) & ~3
+                            if dst and self._bridging_addr_eligible_for_proxy(dst):
+                                if nlmsg_type == RTM_NEWNEIGH:
+                                    await self._bridging_add_proxy(dst)
+                                else:
+                                    await self._bridging_del_proxy(dst)
+                    offset += (nlmsg_len + 3) & ~3
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("IPv6 bridging NDP-proxy watch error: %s", e,
+                        extra={'interface_number': self.interface_number})
+        finally:
+            if sock is not None:
+                sock.close()
+
+    async def _bridging_seed_proxy_from_neigh_dump(self, lan):
+        """Pre-populate proxy entries from `ip -6 neigh show dev <lan>`."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                'ip', '-6', 'neigh', 'show', 'dev', lan,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, _ = await proc.communicate()
+            for line in stdout.decode().splitlines():
+                addr = line.split()[0] if line.split() else ''
+                if addr and self._bridging_addr_eligible_for_proxy(addr):
+                    await self._bridging_add_proxy(addr)
+        except Exception as e:
+            logger.debug("IPv6 bridging proxy seed failed: %s", e,
+                        extra={'interface_number': self.interface_number})
 
     async def _bridging_reconciliation_loop(self):
         """Periodically re-check the downstream interface and reconcile state."""
@@ -10692,7 +11069,11 @@ class ModemStateMachine:
                     carrier_net = ipaddress.IPv6Network(
                         f"{ipv6_addr}/{carrier_plen}", strict=False
                     )
-                    await self._bridging_apply_all(carrier_net, carrier_plen)
+                    await self._bridging_apply_all(
+                        carrier_net, carrier_plen,
+                        bearer_addr=ipv6_addr,
+                        dns_servers=ipv6_dns,
+                    )
                 except Exception as brg_err:
                     logger.error("IPv6 bridging apply failed: %s", brg_err,
                                 extra={'interface_number': self.interface_number})

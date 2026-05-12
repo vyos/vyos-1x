@@ -160,6 +160,43 @@ def get_config(config=None):
             'bond_master': bond_master,
         }
 
+    # ── IPv6 bridging conflict guard ─────────────────────────
+    # Mirrors the passthrough check: if the user pointed ipv6-bridging at a
+    # physical interface that is itself enslaved in a bridge or bond, the
+    # address would be added to a slave that does not carry L3 — SLAAC
+    # clients on the actual master would see nothing useful.  Stash the
+    # conflict so verify() can raise a clean ConfigError instructing the
+    # user to target the master interface instead.
+    brg_iface_lookup = None
+    if wwan['_user_set']['ipv6_bridging_interface']:
+        brg_iface_lookup = conf.return_value(
+            iface_base + ['ipv6-bridging', 'interface']
+        )
+    wwan['_ipv6_bridging_conflicts'] = {}
+    if brg_iface_lookup:
+        brg_bridge_master = None
+        for br in (conf.list_nodes(['interfaces', 'bridge']) or []):
+            if br == brg_iface_lookup:
+                continue  # targeting the bridge itself is fine
+            members = conf.list_nodes(
+                ['interfaces', 'bridge', br, 'member', 'interface']) or []
+            if brg_iface_lookup in members:
+                brg_bridge_master = br
+                break
+        brg_bond_master = None
+        for bn in (conf.list_nodes(['interfaces', 'bonding']) or []):
+            if bn == brg_iface_lookup:
+                continue  # targeting the bond itself is fine
+            members = conf.list_nodes(
+                ['interfaces', 'bonding', bn, 'member', 'interface']) or []
+            if brg_iface_lookup in members:
+                brg_bond_master = bn
+                break
+        wwan['_ipv6_bridging_conflicts'] = {
+            'bridge_master': brg_bridge_master,
+            'bond_master': brg_bond_master,
+        }
+
     # ── SNMP trap target lookup ──────────────────────────────────────
     # Resolve the first `service snmp trap-target` entry (v2c only) from the
     # live tree and stash for apply()-time use.  Done here (not in apply())
@@ -578,6 +615,23 @@ def verify(wwan):
                 f"'{conflicts['bond_master']}' — the designated LAN "
                 f"port must be a standalone wired interface."
             )
+
+    # ── ipv6-bridging guard ── must target the L3-owning interface ────────
+    brg_conflicts = wwan.get('_ipv6_bridging_conflicts', {}) or {}
+    if brg_conflicts.get('bridge_master'):
+        raise ConfigError(
+            f"ipv6-bridging interface is a member of bridge "
+            f"'{brg_conflicts['bridge_master']}' — point ipv6-bridging "
+            f"at '{brg_conflicts['bridge_master']}' instead so the "
+            f"carrier prefix lands on the L3-owning interface."
+        )
+    if brg_conflicts.get('bond_master'):
+        raise ConfigError(
+            f"ipv6-bridging interface is a member of bond "
+            f"'{brg_conflicts['bond_master']}' — point ipv6-bridging "
+            f"at '{brg_conflicts['bond_master']}' instead so the "
+            f"carrier prefix lands on the L3-owning interface."
+        )
 
     return None
 

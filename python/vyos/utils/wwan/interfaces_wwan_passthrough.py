@@ -27,6 +27,11 @@
 #    then unblock once downstream renews (or after a 5 s grace window).
 #  * Bearer-down: stop dnsmasq, drop mgmt addr (if FSM-owned), tear down
 #    iptables rules.
+#
+# MAINTAINER NOTE — see also interfaces_wwan_bridging_radvd.py, which
+# implements a slimmer radvd-only v6 path for the "many LAN devices on a
+# bridge" use case.  Both files emit v6 RA/prefix info; bug fixes to v6
+# advertisement here should be cross-checked there (and vice versa).
 
 from __future__ import annotations
 

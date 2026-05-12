@@ -331,9 +331,65 @@ set interfaces wwan wwan0 ipv6 source-validation 'strict'
 >
 > **How it works:** The FSM reads the bearer's `Ip6Config` to learn the
 > carrier prefix and prefix length.  It then assigns the first usable
-> host address inside that prefix (network + 1) at the carrier's prefix
-> length onto the configured downstream interface.  SLAAC clients on the
-> LAN auto-configure addresses inside the same prefix.
+> host address inside that prefix (network + 1, or network + 2 if that
+> would collide with the bearer's own carrier-assigned address) at the
+> carrier's prefix length onto the configured downstream interface.
+> SLAAC clients on the LAN auto-configure addresses inside the same
+> prefix, and standard `service router-advert` / `service dhcp-server ipv6`
+> can be layered on top — both work because the prefix is genuinely
+> on-link on the LAN interface.
+>
+> **End-to-end reachability — what bridging configures for you:**
+> Putting the same /64 on two interfaces is necessary but not sufficient.
+> When bridging is active the FSM also configures:
+>
+> 1. **Kernel sysctls** (saved on apply, restored on remove):
+>    - `net.ipv6.conf.all.forwarding = 1`
+>    - `net.ipv6.conf.<wwan>.accept_ra = 2`  (keep honoring carrier RA
+>      while forwarding is on)
+>    - `net.ipv6.conf.<wwan>.proxy_ndp = 1`
+>    - `net.ipv6.conf.<lan>.forwarding = 1`
+> 2. **Dynamic proxy-NDP** — an asyncio task watches `RTM_NEWNEIGH`/
+>    `RTM_DELNEIGH` on the LAN interface.  Every LAN neighbor with an
+>    address inside the carrier prefix gets a matching
+>    `ip -6 neigh add proxy <addr> dev <wwan>` entry, so the carrier
+>    router's Neighbor Solicitations on the bearer link are answered by
+>    the router on behalf of the LAN host.  Entries are removed when the
+>    neighbor disappears and on bearer disconnect.  Without this, LAN
+>    clients can SLAAC successfully but return traffic from the carrier
+>    is black-holed.
+> 3. **Address sanity** — the LAN address is added with `nodad` to
+>    suppress DAD against the router's own proxy entries, and the host
+>    bit is shifted off network+1 if that would duplicate the bearer's
+>    address.
+> 4. **FSM-owned radvd (SLAAC + RDNSS)** — a dedicated `radvd` instance
+>    is started per wwan interface (conf at
+>    `/run/wwan/bridging-radvd-wwanN.conf`, pid at
+>    `/run/wwan/bridging-radvd-wwanN.pid`) and advertises the carrier
+>    prefix plus the carrier's IPv6 DNS servers via RDNSS.  The whole
+>    point of this feature is that the operator never has to *know*,
+>    let alone type, the carrier-assigned prefix — the FSM reads it
+>    from the bearer on first connect and configures radvd
+>    automatically.
+> 5. **Rare-renumber safety net** — in practice the carrier-assigned
+>    /64 is bound to the APN/IMSI and stays put for the life of the
+>    SIM.  On the rare event that does change it (SIM swap, APN change,
+>    multi-SIM failover) the FSM detects the difference, briefly
+>    advertises `AdvPreferredLifetime 0` on the old prefix, marks the
+>    kernel address `preferred_lft 0 valid_lft 30`, then installs the
+>    new prefix.  This path is a no-op on every normal bearer-up.
+>
+> **Do NOT configure `service router-advert` for the bridged LAN.**
+> The FSM owns the RA daemon for that interface.  Layering a
+> user-configured radvd on top will cause two daemons to bind the same
+> interface and SLAAC clients will see conflicting prefixes/lifetimes.
+> Standard `service router-advert` for *other* (non-bridged) LANs is
+> unaffected.
+>
+> **DHCPv6 server is intentionally not provided.**  Stateful DHCPv6 on
+> the bridged LAN would exclude every Android device (Android does not
+> implement DHCPv6 IA_NA).  SLAAC + RDNSS via the FSM-owned radvd covers
+> all modern clients including Windows, macOS, iOS, Linux, and Android.
 >
 > **Late-appearing LAN interfaces:**  The downstream LAN interface (e.g.
 > `eth0`) may not exist when the bearer connects.  The FSM handles this
