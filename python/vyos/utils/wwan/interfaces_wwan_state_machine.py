@@ -8,7 +8,6 @@ import datetime
 import ipaddress
 import socket
 import struct
-import signal
 import logging
 from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
