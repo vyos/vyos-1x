@@ -364,18 +364,29 @@ class CmdInclude(SphinxDirective):
                     line = re.sub('{{\s?var' + str(i) + '\s?}}',value,line)
             new_include_lines.append(line)
         
-        if hasattr(self.state, '_renderer'):
-            self.state._renderer.nested_render_text(''.join(new_include_lines), self.lineno)
-            return []
-        from docutils.statemachine import ViewList
-        from docutils import nodes
+        # The _include/*.txt library is written in reStructuredText
+        # (`.. cfgcmd::`, `.. code-block::`, `.. note::`, `.. cmdinclude::`).
+        # When called from a MyST `.md` page, `self.state` is MyST's
+        # MockState whose `nested_parse` just routes back through MyST —
+        # so the RST directives render as literal paragraph text.
+        #
+        # Parse the file as RST directly, mirroring what MyST itself does
+        # for `{eval-rst}` blocks (myst_parser.mocking.MockRSTParser via
+        # render_restructuredtext): build a fresh document that inherits
+        # the parent's settings (so Sphinx env / reporter survive) and
+        # graft its children back into the calling document.
+        from docutils.utils import new_document
+        from myst_parser.mocking import MockRSTParser
+
         content = ''.join(new_include_lines)
-        vl = ViewList()
-        for i, line in enumerate(content.splitlines(keepends=False)):
-            vl.append(line, include_file[1], i)
-        node = nodes.Element()
-        self.state.nested_parse(vl, self.content_offset, node, match_titles=True)
-        return node.children
+        outer_doc = self.state.document
+        newdoc = new_document(include_file[1], outer_doc.settings)
+        newdoc.reporter = outer_doc.reporter
+        MockRSTParser().parse(content, newdoc)
+        for node in newdoc.children:
+            if getattr(node, 'attributes', None) and node.get('names'):
+                outer_doc.note_explicit_target(node, node)
+        return list(newdoc.children)
 
 
 class CfgcmdlistDirective(Directive):
