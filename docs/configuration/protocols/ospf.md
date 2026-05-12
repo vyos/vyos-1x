@@ -807,7 +807,7 @@ interface.
 
 ```{opcmd} show ip ospf interface [\<interface\>]
 
-This command displays state and configuration of OSPF the specified
+This command displays state and configuration of OSPF for the specified
 interface, or all interfaces if no interface is given.
 ```
 
@@ -1402,7 +1402,7 @@ This command displays the neighbor DR choice information.
 ```
 ```{opcmd} show ipv6 ospfv3 interface [prefix]|[\<interface\> [prefix]]
 
-This command displays state and configuration of OSPF the specified
+This command displays state and configuration of OSPF for the specified
 interface, or all interfaces if no interface is given. With the argument
 {cfgcmd}`prefix` this command shows connected prefixes to advertise.
 ```

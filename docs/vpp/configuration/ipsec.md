@@ -9,12 +9,12 @@ lastproofread: '2025-09-04'
 
 # VPP IPsec Configuration
 
-VPP Dataplane in VyOS can offload IPSec processing from kernel. This allows
-to speed up IPSec traffic handling significantly when necessary conditions
+VPP Dataplane in VyOS can offload IPSec processing from the kernel. This can
+significantly speed up IPSec traffic handling when the necessary conditions
 are met.
 
 :::{note}
-VPP IPsec implementation is not as feature rich as Linux kernel IPsec. It
+VPP IPsec implementation is not as feature-rich as Linux kernel IPsec. It
 supports only a subset of algorithms and modes.
 :::
 

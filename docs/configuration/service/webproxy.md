@@ -369,7 +369,7 @@ Download/Update complete blacklist
 vyos@vyos:~$ update webproxy blacklists
 Warning: No url-filtering blacklist installed
 Would you like to download a default blacklist? [confirm][y]
-Connecting to ftp.univ-tlse1.fr (192.0.2.249:21)
+Connecting to ftp.example.com (192.0.2.249:21)
 blacklists.gz        100% |*************************************************************************************************************| 17.0M  0:00:00 ETA
 Uncompressing blacklist...
 Checking permissions...
