@@ -55,6 +55,38 @@ def is_docs_path(path):
 # Same character and length-or-greater closes.
 MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})(.*)$')
 
+# MyST directive names whose body is code-like — line-length exception applies.
+# Anything else with a `{directive}` info string is treated as prose-bearing
+# (`{note}`, `{warning}`, `{tip}`, `{deprecated}`, …); their content is normal
+# Markdown and gets line-length checked. Plain fences with no info string OR a
+# bare language tag (`python`, `bash`, `yaml`, …) are code blocks per
+# CommonMark and always skip line-length.
+CODE_BEARING_DIRECTIVES = frozenset({
+    'code-block', 'code', 'sourcecode',
+    'cfgcmd', 'opcmd', 'cmdinclude', 'cmdincludemd',
+    'literalinclude', 'parsed-literal', 'raw',
+    'command-output',
+    'eval-rst',  # body is RST; its own line-length is handled via the
+                 # `.. code-block::` tracker for nested code blocks.
+})
+
+
+def _fence_is_code(info):
+    """Return True iff the fence opener `info` string designates a code-like block.
+
+    Used to gate the line-length-check skip — only code-like fences should
+    suppress line-length linting; prose-bearing directive fences like
+    `{note}` / `{warning}` must still have their content checked.
+    """
+    info = info.strip()
+    if not info:
+        return True  # plain ``` is code per CommonMark
+    if not info.startswith('{'):
+        return True  # python, bash, yaml, text, etc.
+    # `{code-block} python` -> `code-block`; `{note}` -> `note`.
+    name = info[1:].split('}', 1)[0].strip()
+    return name in CODE_BEARING_DIRECTIVES
+
 SUPPRESSION_MARKER_RE = {
     'rst': {
         'stop': re.compile(r'^\s*\.\.\s+stop_vyoslinter\s*$'),
@@ -136,10 +168,12 @@ def handle_file_action(filepath):
     """Run all lint checks on one file, respecting fence/code-block and suppression context."""
     errors = []
     file_ext = os.path.splitext(filepath)[1].lower()
-    # Stack of open MD/MyST fences: (char, min_len). Supports nesting like
-    # `:::{note}` containing `::::{code-block}`, where the inner opener does
-    # not close the outer note (CommonMark closing rule: matching closer must
-    # have no info string after the fence chars).
+    # Stack of open MD/MyST fences: (char, min_len, is_code). Supports
+    # nesting like `:::{note}` containing `::::{code-block}`, where the
+    # inner opener does not close the outer note (CommonMark closing rule:
+    # matching closer must have no info string after the fence chars).
+    # `is_code` records whether THAT fence is a code-bearing one — gates the
+    # line-length skip per the innermost (top-of-stack) entry.
     md_fence_stack = []
     md_fence_is_eval_rst = False
     in_rst_codeblock = False
@@ -172,9 +206,10 @@ def handle_file_action(filepath):
                 else:
                     if not md_fence_stack:
                         md_fence_is_eval_rst = info.startswith('{eval-rst}')
-                    md_fence_stack.append((fence_char, fence_len))
+                    md_fence_stack.append((fence_char, fence_len, _fence_is_code(info)))
 
             in_md_fence = bool(md_fence_stack)
+            in_md_code_fence = bool(md_fence_stack) and md_fence_stack[-1][2]
 
             # RST `.. code-block::` tracking (existing semantics for .rst/.txt).
             # Each `.. code-block::` directive resets the tracked indent so a
@@ -219,7 +254,10 @@ def handle_file_action(filepath):
             if not start_vyoslinter:
                 continue
 
-            test_line_length = not (in_md_fence or in_rst_codeblock)
+            # Only code-bearing fences (plain ```python```, `{code-block}`,
+            # `{cfgcmd}`, etc.) skip line-length. Prose-bearing directives
+            # like `{note}` and `{warning}` have their content checked.
+            test_line_length = not (in_md_code_fence or in_rst_codeblock)
 
             err_ip4 = lint_ipv4(cnt, line.strip())
             err_ip6 = lint_ipv6(cnt, line.strip())
