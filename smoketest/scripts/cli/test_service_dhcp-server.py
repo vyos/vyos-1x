@@ -1800,6 +1800,39 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         host_json = cmd(f'{HOSTSD_CLIENT} --get-hosts {tag_regex}')
         self.assertTrue(host_json)
 
+    def test_dhcp_log_level(self):
+        shared_net_name = 'SMOKE-TEST'
+        subnet_range_start = inc_ip(subnet, 10)
+        subnet_range_stop = inc_ip(subnet, 20)
+        log_level = 'error'
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['option', 'domain-name', domain_name])
+        self.cli_set(pool + ['range', '0', 'start', subnet_range_start])
+        self.cli_set(pool + ['range', '0', 'stop', subnet_range_stop])
+
+        # Set log level
+        self.cli_set(base_path + ['log-level', log_level])
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        # Check log level is ERROR
+        self.verify_config_value(obj, ['Dhcp4', 'loggers', 0], 'name', 'kea-dhcp4')
+        self.verify_config_value(
+            obj, ['Dhcp4', 'loggers', 0], 'severity', log_level.upper()
+        )
+
+        # Delete log-level and check it is set to default INFO
+        self.cli_delete(base_path + ['log-level'])
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(obj, ['Dhcp4', 'loggers', 0], 'severity', 'INFO')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
