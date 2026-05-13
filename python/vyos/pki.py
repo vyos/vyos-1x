@@ -207,7 +207,16 @@ def create_certificate_revocation_list(ca_cert, ca_private_key, serial_numbers=[
     builder = x509.CertificateRevocationListBuilder() \
         .issuer_name(ca_cert.subject) \
         .last_update(datetime.datetime.today()) \
-        .next_update(datetime.datetime.today() + datetime.timedelta(1, 0, 0))
+        .next_update(datetime.datetime.today() + datetime.timedelta(1, 0, 0)) \
+        .add_extension(add_key_identifier(ca_cert), critical=False) \
+        .add_extension(
+            x509.CRLNumber(
+                int(
+                    datetime.datetime.now(datetime.timezone.utc).timestamp() * 1_000_000
+                )
+            ),
+            critical=False,
+        )
 
     for serial_number in serial_numbers:
         revoked_cert = x509.RevokedCertificateBuilder() \
