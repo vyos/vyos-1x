@@ -177,13 +177,13 @@ def verify(container):
                             try:
                                 network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
                                 cnt_ipv4 += 1
-                            except:
+                            except Exception:
                                 raise ConfigError(f'Network "{network_name}" does not contain an IPv4 prefix!')
                         elif is_ipv6(address):
                             try:
                                 network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
                                 cnt_ipv6 += 1
-                            except:
+                            except Exception:
                                 raise ConfigError(f'Network "{network_name}" does not contain an IPv6 prefix!')
 
                         # Specified container IP address must belong to network prefix
