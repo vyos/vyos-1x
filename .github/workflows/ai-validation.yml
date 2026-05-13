@@ -234,21 +234,45 @@ jobs:
       # parses the script, so a secret containing a single quote, backtick,
       # or $ could break the [ -z ... ] test syntactically or be evaluated.
       # The env: mapping hands the value to bash as an already-quoted env
-      # variable that "$VAR" expansion handles safely.
-      - name: Check secrets availability
+      # variable that "$VAR" expansion handles safely. The same env-binding
+      # discipline applies to user-controlled inputs (PR author login below).
+      #
+      # Step id stays `secrets-check` for backwards compat with the cascade
+      # of `if: steps.secrets-check.outputs.skip != 'true'` gates below.
+      # Scope is now broader — also short-circuits on bot-authored PRs.
+      - name: Decide whether to skip validation
         id: secrets-check
         env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           VYOS_APP_ID: ${{ secrets.VYOS_APP_ID }}
           VYOS_APP_PRIVATE_KEY: ${{ secrets.VYOS_APP_PRIVATE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          # Skip on Mergify-authored PRs (backport PRs, queue PRs). The
+          # underlying change was already reviewed on the source PR;
+          # re-validating the backport just produces duplicate findings
+          # and (worse) the upstream anthropics/claude-code-action rejects
+          # bot-initiated runs with:
+          #   "Workflow initiated by non-human actor: mergify (type: Bot).
+          #    Add bot to allowed_bots list or use '*' to allow all bots."
+          # which leaves a failing required check and blocks the backport
+          # from auto-merging. Org rule: Mergify-authored PRs skip bot
+          # review entirely.
+          if [ "$PR_AUTHOR" = "mergify[bot]" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=bot-author" >> "$GITHUB_OUTPUT"
+            printf '::notice::Skipping AI validation — PR authored by %s (already reviewed on source PR)\n' "$PR_AUTHOR"
+            exit 0
+          fi
           if [ -z "$VYOS_APP_ID" ] \
              || [ -z "$VYOS_APP_PRIVATE_KEY" ] \
              || [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=missing-secrets" >> "$GITHUB_OUTPUT"
             echo "::notice::Skipping AI validation — required secrets not available"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=" >> "$GITHUB_OUTPUT"
           fi
 
       # Surface the skip to PR authors as a normal review comment in
@@ -260,8 +284,13 @@ jobs:
       # flooding the PR conversation on rapid push sequences while the
       # secrets stay missing. Open/reopen is the right moment to inform
       # the PR author once; further pushes don't add new information.
-      - name: Notify on PR (when skipping)
-        if: steps.secrets-check.outputs.skip == 'true' && (github.event.action == 'opened' || github.event.action == 'reopened')
+      #
+      # Gate also on skip_reason == 'missing-secrets'. We deliberately do
+      # NOT post a notice on bot-author skips — every Mergify backport
+      # would carry a noise comment that adds no signal to a maintainer
+      # who knows the source PR was already reviewed.
+      - name: Notify on PR (when skipping for missing secrets)
+        if: steps.secrets-check.outputs.skip_reason == 'missing-secrets' && (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
