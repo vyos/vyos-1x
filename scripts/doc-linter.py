@@ -89,32 +89,41 @@ def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock,
 
 
 def lint_ipv4(cnt, line):
-    """Flag IPv4 addresses outside RFC 5737 / private / multicast ranges."""
-    ip = re.search(IPV4ADDR, line, re.I)
-    if ip is not None:
-        ip = ipaddress.ip_address(ip.group().strip(' '))
+    """Flag IPv4 addresses outside RFC 5737 / private / multicast ranges.
+
+    Iterates over every IPv4 match on the line — a line with an
+    allowed address followed by a real public address must not
+    pass just because the first match is allowed.
+    """
+    for match in re.finditer(IPV4ADDR, line, re.I):
+        ip = ipaddress.ip_address(match.group().strip(' '))
         # https://docs.python.org/3/library/ipaddress.html#ipaddress.IPv4Address.is_private
         if ip.is_private:
-            return None
+            continue
         if ip.is_multicast:
-            return None
+            continue
         if ip.is_global is False:
-            return None
-        return (f"Use IPv4 reserved for Documentation (RFC 5737) or private Space: {ip}", cnt, 'error')
+            continue
+        return (f"Use IPv4 reserved for Documentation (RFC 5737) or private space: {ip}", cnt, 'error')
+    return None
 
 
 def lint_ipv6(cnt, line):
-    """Flag IPv6 addresses outside RFC 3849 / private / multicast ranges."""
-    ip = re.search(IPV6ADDR, line, re.I)
-    if ip is not None:
-        ip = ipaddress.ip_address(ip.group().strip(' '))
+    """Flag IPv6 addresses outside RFC 3849 / private / multicast ranges.
+
+    Iterates over every IPv6 match on the line — same all-matches
+    discipline as `lint_ipv4`.
+    """
+    for match in re.finditer(IPV6ADDR, line, re.I):
+        ip = ipaddress.ip_address(match.group().strip(' '))
         if ip.is_private:
-            return None
+            continue
         if ip.is_multicast:
-            return None
+            continue
         if ip.is_global is False:
-            return None
-        return (f"Use IPv6 reserved for Documentation (RFC 3849) or private Space: {ip}", cnt, 'error')
+            continue
+        return (f"Use IPv6 reserved for Documentation (RFC 3849) or private space: {ip}", cnt, 'error')
+    return None
 
 
 def lint_linelen(cnt, line):
