@@ -3,10 +3,27 @@
 Source for the VyOS user documentation hosted on Read the Docs at
 https://docs.vyos.io.
 
-[![Documentation Status](https://readthedocs.org/projects/vyos/badge/?version=rolling)](https://docs.vyos.io/en/rolling/?badge=rolling)
+[![Documentation Status][badge]][rtd]
 
 The earlier wiki for VyOS 1.1.x and pre-1.2.0 docs is preserved on the
-[Wayback Machine](https://web.archive.org/web/20200225171529/https://wiki.vyos.net/wiki/Main_Page).
+[Wayback Machine][wayback].
+
+[badge]: https://readthedocs.org/projects/vyos/badge/?version=rolling
+[rtd]: https://docs.vyos.io/en/rolling/?badge=rolling
+[wayback]: https://web.archive.org/web/2020/https://wiki.vyos.net/wiki/Main_Page
+
+## Source format
+
+Pages are [MyST Markdown](https://myst-parser.readthedocs.io/) (`.md`) and
+are built with Sphinx — `source_suffix` in `docs/conf.py` lists `.md` only.
+The pre-migration RST originals are archived under `docs/_rst_legacy/`
+for reference; they are excluded from the build and should not be edited.
+
+VyOS-specific command directives (`cfgcmd`, `opcmd`, `cmdincludemd`) are
+written as MyST fenced blocks and rendered as directives via
+`myst_fence_as_directive`. Shared snippets under `docs/_include/*.txt` are
+still RST — they are included into MyST pages through `cmdincludemd`, which
+parses their content as RST so the legacy templates keep working unchanged.
 
 ## Branches
 
@@ -16,7 +33,7 @@ constellation:
 
 | Branch | VyOS version | Role |
 |--------|--------------|------|
-| `rolling` | 1.5+ rolling | Default branch — all new contributions target this. |
+| `rolling` | 1.5+ rolling | Default branch — new contributions land here. |
 | `circinus` | 1.5.x | LTS docs. |
 | `sagitta` | 1.4.x | Previous LTS docs. |
 | `equuleus` | 1.3.x | Legacy. |
@@ -60,6 +77,7 @@ Output lands in `docs/_build/html/`.
 
 ## Contributing
 
-See [AGENTS.md](AGENTS.md) for the full contributor guide — source format
-conventions (MyST Markdown for migrated pages, RST for the rest), CLI
-directive syntax, IP-address rules, the linter, and the bot review workflow.
+See [AGENTS.md](AGENTS.md) for the full contributor guide — MyST source
+conventions, the VyOS command directives (`cfgcmd` / `opcmd` /
+`cmdincludemd`), IP-address rules, the linter and its suppression markers,
+and the Copilot/CodeRabbit bot review workflow.

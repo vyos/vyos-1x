@@ -29,6 +29,32 @@ NUMBER = r"([\s']\d+[\s'])"
 
 SUPPORTED_EXTS = ('.md', '.rst', '.txt')
 
+# Linter only applies to published documentation sources under docs/. Repo-root
+# files (README.md, AGENTS.md, .github/copilot-instructions.md) are project
+# meta, not docs content, and are out of scope.
+DOCS_ROOT = 'docs'
+
+
+def is_docs_path(path):
+    """Return True iff `path` resolves under the repo's `docs/` tree.
+
+    Accepts both repo-relative and absolute paths. Both `path` and
+    `DOCS_ROOT` are resolved with `os.path.realpath`, so symlinks are
+    followed to their real targets — a symlink under `docs/` that
+    points outside the tree is correctly treated as out-of-scope, and
+    a `docs/` that is itself a symlink (e.g., in some CI checkouts) is
+    correctly treated as the docs root. Paths are normalized against
+    the linter's working directory (CI invokes it from the repo root;
+    the same is expected for local runs).
+    """
+    abs_path = os.path.realpath(path)
+    abs_docs = os.path.realpath(DOCS_ROOT)
+    try:
+        return os.path.commonpath([abs_path, abs_docs]) == abs_docs
+    except ValueError:
+        # commonpath raises on mixed drives (Windows) or empty input.
+        return False
+
 # MyST / Markdown fenced code block: leading whitespace + 3+ backticks or 3+ colons.
 # Same character and length-or-greater closes.
 MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})(.*)$')
@@ -67,6 +93,7 @@ def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock,
 
 
 def lint_mac(cnt, line):
+    """Flag MAC addresses outside the RFC 7042 documentation range."""
     mac = re.search(MAC, line, re.I)
     if mac is not None:
         mac = mac.group()
@@ -77,6 +104,7 @@ def lint_mac(cnt, line):
 
 
 def lint_ipv4(cnt, line):
+    """Flag IPv4 addresses outside RFC 5737 / private / multicast ranges."""
     ip = re.search(IPV4ADDR, line, re.I)
     if ip is not None:
         ip = ipaddress.ip_address(ip.group().strip(' '))
@@ -91,6 +119,7 @@ def lint_ipv4(cnt, line):
 
 
 def lint_ipv6(cnt, line):
+    """Flag IPv6 addresses outside RFC 3849 / private / multicast ranges."""
     ip = re.search(IPV6ADDR, line, re.I)
     if ip is not None:
         ip = ipaddress.ip_address(ip.group().strip(' '))
@@ -104,6 +133,7 @@ def lint_ipv6(cnt, line):
 
 
 def lint_AS(cnt, line):
+    """Placeholder for future AS-number documentation-range checks (RFC 5398)."""
     number = re.search(NUMBER, line, re.I)
     if number:
         pass
@@ -111,11 +141,13 @@ def lint_AS(cnt, line):
 
 
 def lint_linelen(cnt, line):
+    """Warn when a line exceeds the 80-character docs convention."""
     line = line.rstrip()
     if len(line) > 80:
         return (f"Line too long: len={len(line)}", cnt, 'warning')
 
 def handle_file_action(filepath):
+    """Run all lint checks on one file, respecting fence/code-block and suppression context."""
     errors = []
     file_ext = os.path.splitext(filepath)[1].lower()
     # Stack of open MD/MyST fences: (char, min_len). Supports nesting like
@@ -215,16 +247,29 @@ def handle_file_action(filepath):
 
 
 def main():
+    """Entry point: lint the changed-file list from argv, or fall back to walking `docs/`."""
     bool_error = True
     print('start')
+    # Only the argv-parsing step is wrapped in try/except. Errors raised by
+    # handle_file_action() must propagate so CI failures stay visible instead
+    # of silently triggering a full docs/ walk.
     try:
         files = ast.literal_eval(sys.argv[1])
+    except (IndexError, SyntaxError, ValueError):
+        # No argv or malformed list -> fall back to walking DOCS_ROOT.
+        files = None
+
+    if files is not None:
         for file in files:
-                if file.endswith(SUPPORTED_EXTS) and "_build" not in file:
-                    if handle_file_action(file) is False:
-                        bool_error = False
-    except Exception as e:
-        for root, dirs, files in os.walk("docs"):
+            if (
+                file.endswith(SUPPORTED_EXTS)
+                and "_build" not in file
+                and is_docs_path(file)
+            ):
+                if handle_file_action(file) is False:
+                    bool_error = False
+    else:
+        for root, _dirs, files in os.walk(DOCS_ROOT):
             path = root.split(os.sep)
             for file in files:
                 if file.endswith(SUPPORTED_EXTS) and "_build" not in path:
