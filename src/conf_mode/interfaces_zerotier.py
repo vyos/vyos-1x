@@ -7,6 +7,8 @@
 # published by the Free Software Foundation.
 
 from sys import exit
+from time import monotonic
+from time import sleep
 
 from vyos import ConfigError
 from vyos import airbag
@@ -120,6 +122,16 @@ def _has_active_interfaces(zerotier):
     return bool(_active_networks(zerotier))
 
 
+def _wait_for_interface(ifname, timeout=15):
+    deadline = monotonic() + timeout
+    while monotonic() < deadline:
+        if ZeroTierIf.exists(ifname):
+            return True
+        sleep(1)
+
+    return False
+
+
 def generate(zerotier):
     networks_dir = ZEROTIER_HOME / 'networks.d'
     networks_dir.mkdir(parents=True, exist_ok=True)
@@ -163,25 +175,27 @@ def apply(zerotier):
                 api_request('DELETE', f'/network/{zerotier["network_id"].lower()}')
             except ZeroTierAPIError:
                 pass
-        if ZeroTierIf.exists(ifname):
-            zt = ZeroTierIf(ifname, create=False)
-            zt.remove()
         if not has_active_interfaces:
             call(f'systemctl --quiet stop {ZEROTIER_UNIT}')
             call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
         return None
 
-    zt = ZeroTierIf(**zerotier)
-    zt.update(zerotier)
-
     call('systemctl daemon-reload')
     call(f'systemctl --quiet enable {ZEROTIER_UNIT}')
     call(f'systemctl --quiet start {ZEROTIER_UNIT}')
-    if wait_for_api():
-        for moon, config in zerotier.get('service', {}).get('moon', {}).items():
-            api_request('POST', f'/moon/{moon}', {'seed': config['seed']})
-        network = zerotier['network_id'].lower()
-        api_request('POST', f'/network/{network}', _network_settings(zerotier))
+    if not wait_for_api():
+        raise ConfigError('ZeroTier local API is not ready')
+
+    for moon, config in zerotier.get('service', {}).get('moon', {}).items():
+        api_request('POST', f'/moon/{moon}', {'seed': config['seed']})
+    network = zerotier['network_id'].lower()
+    api_request('POST', f'/network/{network}', _network_settings(zerotier))
+
+    if not _wait_for_interface(ifname):
+        raise ConfigError(f'ZeroTier interface "{ifname}" was not created')
+
+    zt = ZeroTierIf(ifname, create=False)
+    zt.update(zerotier)
 
     return None
 

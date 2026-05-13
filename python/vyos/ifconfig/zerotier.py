@@ -21,8 +21,4 @@ class ZeroTierIf(Interface):
     }
 
     def _create(self):
-        if self.exists(self.ifname):
-            return
-
-        self._cmd(f'ip tuntap add dev {self.ifname} mode tap')
-        self._cmd(f'ip link set dev {self.ifname} up')
+        raise RuntimeError('ZeroTier interfaces are created by the vyos-zerotier wrapper')
