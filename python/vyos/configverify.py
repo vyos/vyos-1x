@@ -432,8 +432,8 @@ def verify_diffie_hellman_length(file, min_keysize):
     from vyos.utils.process import cmd
 
     try:
-        keysize = str(min_keysize)
-    except:
+        min_keysize_int = int(min_keysize)
+    except (TypeError, ValueError):
         return False
 
     if os.path.exists(file):
@@ -441,7 +441,7 @@ def verify_diffie_hellman_length(file, min_keysize):
         prog = re.compile('\d+\s+bit')
         if prog.search(out):
             bits = prog.search(out)[0].split()[0]
-            if int(bits) >= int(min_keysize):
+            if int(bits) >= min_keysize_int:
                 return True
 
     return False
