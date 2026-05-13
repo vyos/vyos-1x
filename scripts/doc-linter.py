@@ -9,7 +9,7 @@ IPV4ADDR = r'\b(?:(?:' + IPV4SEG + r'\.){3,3}' + IPV4SEG + r')\b'
 IPV6SEG  = r'(?:(?:[0-9a-fA-F]){1,4})'
 IPV6GROUPS = (
     r'(?:' + IPV6SEG + r':){7,7}' + IPV6SEG,                  # 1:2:3:4:5:6:7:8
-    r'(?:' + IPV6SEG + r':){1,7}:',                             # 1::                                 1:2:3:4:5:6:7::
+    r'\b(?:' + IPV6SEG + r':){1,7}:',                           # 1::                                 1:2:3:4:5:6:7::
     r'(?:' + IPV6SEG + r':){1,6}:' + IPV6SEG,                 # 1::8               1:2:3:4:5:6::8   1:2:3:4:5:6::8
     r'(?:' + IPV6SEG + r':){1,5}(?::' + IPV6SEG + r'){1,2}',  # 1::7:8             1:2:3:4:5::7:8   1:2:3:4:5::8
     r'(?:' + IPV6SEG + r':){1,4}(?::' + IPV6SEG + r'){1,3}',  # 1::6:7:8           1:2:3:4::6:7:8   1:2:3:4::8
@@ -101,6 +101,7 @@ def _fence_is_code(info):
     # `{code-block} python` -> `code-block`; `{note}` -> `note`.
     name = info[1:].split('}', 1)[0].strip()
     return name in CODE_BEARING_DIRECTIVES
+
 
 SUPPRESSION_MARKER_RE = {
     'rst': {
@@ -324,7 +325,6 @@ def main():
         for file in files:
             if (
                 file.endswith(SUPPORTED_EXTS)
-                and "_build" not in file
                 and is_docs_path(file)
             ):
                 if handle_file_action(file) is False:
