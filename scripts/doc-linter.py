@@ -180,8 +180,21 @@ def handle_file_action(filepath):
             # Each `.. code-block::` directive resets the tracked indent so a
             # later dedent past that column exits the block — even when the
             # directive itself appears inside an already-open outer block.
-            if in_rst_codeblock:
-                if len(line) > rst_codeblock_indent and not line[rst_codeblock_indent].isspace():
+            #
+            # Exit when the next non-blank line's leading-whitespace count is
+            # <= the directive's column. The body of an RST code-block must
+            # be indented MORE than the directive itself, so leading-ws at or
+            # below `rst_codeblock_indent` signals the block has ended.
+            #
+            # Previously this used `len(line) > rst_codeblock_indent and not
+            # line[rst_codeblock_indent].isspace()`, which silently skipped
+            # the exit check on lines shorter than `rst_codeblock_indent + 1`
+            # chars — e.g., a 3-char dedented line under a directive at
+            # column 4 left the block open, suppressing line-length checks
+            # downstream.
+            if in_rst_codeblock and line.strip():
+                leading = len(line) - len(line.lstrip())
+                if leading <= rst_codeblock_indent:
                     in_rst_codeblock = False
             if ".. code-block::" in line:
                 in_rst_codeblock = True
