@@ -161,7 +161,12 @@ modes.
 
 For more information about integrating with AWS Gateway Load Balancer, see
 the following article from AWS:
+
+% stop_vyoslinter
+
 [How to integrate Linux instances with AWS Gateway Load Balancer](https://aws.amazon.com/blogs/networking-and-content-delivery/how-to-integrate-linux-instances-with-aws-gateway-load-balancer/).
+
+% start_vyoslinter
 
 ### Configuration Example
 
@@ -181,8 +186,12 @@ set service aws glb threads udp-affinity '0-3'
 
 ## References
 
+% stop_vyoslinter
+
 - <https://console.aws.amazon.com/>
 - <https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html>
 - <https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-on-EC2-Instance-fleet.html>
 - <https://aws.amazon.com/blogs/networking-and-content-delivery/how-to-integrate-linux-instances-with-aws-gateway-load-balancer/>
+
+% start_vyoslinter
 
