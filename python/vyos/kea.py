@@ -144,7 +144,7 @@ def kea_parse_options(config):
 
     if 'time_zone' in config:
         with open('/usr/share/zoneinfo/' + config['time_zone'], 'rb') as f:
-            tz_string = f.read().split(b'\n')[-2].decode('utf-8')
+            tz_string = f.read().split(b'\n')[-2].decode('utf-8').replace(',', '\\,')
 
         options.append({'name': 'pcode', 'data': tz_string})
         options.append({'name': 'tcode', 'data': config['time_zone']})

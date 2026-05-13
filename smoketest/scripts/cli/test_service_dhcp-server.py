@@ -574,7 +574,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_object(
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
-            {'name': 'pcode', 'data': 'GMT0BST,M3.5.0/1,M10.5.0'},
+            {'name': 'pcode', 'data': 'GMT0BST\\,M3.5.0/1\\,M10.5.0'},
         )
         self.verify_config_object(
             obj,
