@@ -53,6 +53,21 @@ MSG_DELROUTERESP = 19
 MSG_NETWORKSTATUS = 20
 
 NETWORK_STATUS_OK = 1
+NETWORK_STATUS_NAMES = {
+    0: 'REQUESTING_CONFIGURATION',
+    1: 'OK',
+    2: 'ACCESS_DENIED',
+    3: 'NOT_FOUND',
+    4: 'PORT_ERROR',
+    5: 'CLIENT_TOO_OLD',
+    6: 'AUTHENTICATION_REQUIRED',
+}
+NETWORK_OPERATION_NAMES = {
+    1: 'UP',
+    2: 'CONFIG_UPDATE',
+    3: 'DOWN',
+    4: 'DESTROY',
+}
 
 MGMT_DELETE = 0
 MGMT_GET = 1
@@ -64,6 +79,10 @@ IFF_TAP = 0x0002
 IFF_NO_PI = 0x1000
 ESRCH = 3
 EEXIST = 17
+
+
+def log_event(message: str) -> None:
+    print(f'vyos-zerotier: {message}', file=sys.stderr, flush=True)
 
 
 def ip_json(command: list[str]) -> object:
@@ -185,7 +204,7 @@ def set_tap_carrier(fd: int, up: bool) -> None:
     try:
         fcntl.ioctl(fd, TUNSETCARRIER, struct.pack('I', int(up)))
     except OSError as e:
-        print(f'vyos-zerotier: failed setting TAP carrier: {e}', file=sys.stderr, flush=True)
+        log_event(f'failed setting TAP carrier: {e}')
 
 
 def send_with_fd(sock: socket.socket, data: bytes, fd: int) -> None:
@@ -266,7 +285,7 @@ class ZeroTierExtOsdep:
                 elif command == MSG_NETWORKSTATUS:
                     self.handle_network_status(data)
             except Exception as e:
-                print(f'vyos-zerotier: failed handling extosdep command {command}: {e}', file=sys.stderr, flush=True)
+                log_event(f'failed handling extosdep command {command}: {e}')
                 self.send_error_response(command)
 
     def send_error_response(self, command: int) -> None:
@@ -304,6 +323,8 @@ class ZeroTierExtOsdep:
         self.tap_fds[name] = fd
         self.tap_carrier[name] = False
         self.network_ifnames[nwid] = name
+        mac_text = ':'.join(f'{b:02x}' for b in mac)
+        log_event(f'tap add network={nwid:016x} interface={name} mtu={mtu} mac={mac_text}')
         send_with_fd(self.eod_sock, struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname(name)), fd)
 
     def set_network_carrier(self, name: str, up: bool) -> None:
@@ -316,11 +337,14 @@ class ZeroTierExtOsdep:
         self.tap_carrier[name] = up
 
     def handle_network_status(self, data: bytes) -> None:
-        _, nwid, raw_name, status, _operation = struct.unpack('=BQ16sII', data)
+        _, nwid, raw_name, status, operation = struct.unpack('=BQ16sII', data)
         name = ifname(raw_name) or self.network_ifnames.get(nwid, '')
         if not name:
             return
         self.network_ifnames[nwid] = name
+        status_name = NETWORK_STATUS_NAMES.get(status, str(status))
+        operation_name = NETWORK_OPERATION_NAMES.get(operation, str(operation))
+        log_event(f'network status network={nwid:016x} interface={name} status={status_name} operation={operation_name} carrier={"up" if status == NETWORK_STATUS_OK else "down"}')
         self.set_network_carrier(name, status == NETWORK_STATUS_OK)
 
     def handle_deltap(self, data: bytes) -> None:
@@ -333,6 +357,8 @@ class ZeroTierExtOsdep:
             except OSError:
                 pass
         self.tap_carrier.pop(name, None)
+        if name:
+            log_event(f'tap delete interface={name}')
         if name and name not in configured_ifnames(self.home):
             delete_tap(name)
         self.eod_sock.send(bytes([MSG_DELTAPRESP]))
@@ -343,6 +369,7 @@ class ZeroTierExtOsdep:
         if index is not None:
             with IPRoute() as ipr:
                 ipr.link('set', index=index, mtu=mtu)
+            log_event(f'mtu set interface={ifname(raw_name)} mtu={mtu}')
         self.eod_sock.send(bytes([MSG_SETMTURESP]))
 
     def handle_ip(self, command: int, data: bytes) -> None:
@@ -361,6 +388,7 @@ class ZeroTierExtOsdep:
                     pass
                 else:
                     raise
+        log_event(f'ip {"add" if command == MSG_ADDIP else "delete"} interface={name} address={address}/{prefixlen}')
         self.eod_sock.send(bytes([MSG_ADDIPRESP if command == MSG_ADDIP else MSG_DELIPRESP]))
 
     def handle_getips(self, data: bytes) -> None:
@@ -410,6 +438,14 @@ class ZeroTierExtOsdep:
                     pass
                 else:
                     raise
+        route_parts = [f'target={target}']
+        if route.get('gateway'):
+            route_parts.append(f'via={route["gateway"]}')
+        if dev:
+            route_parts.append(f'interface={dev}')
+        if route.get('prefsrc'):
+            route_parts.append(f'source={route["prefsrc"]}')
+        log_event(f'route {"add" if command == MSG_ADDROUTE else "delete"} {" ".join(route_parts)}')
         self.eod_sock.send(bytes([MSG_ADDROUTERESP if command == MSG_ADDROUTE else MSG_DELROUTERESP]))
 
     def handle_getbindaddrs(self) -> None:
