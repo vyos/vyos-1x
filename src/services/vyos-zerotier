@@ -1,0 +1,404 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+
+import argparse
+import array
+import json
+import os
+import selectors
+import signal
+import socket
+import struct
+import subprocess
+import sys
+import threading
+from ipaddress import ip_address
+from ipaddress import ip_network
+from pathlib import Path
+
+import fcntl
+
+
+EOD_MAXMSGSIZE = 64 * 1024
+
+MSG_STARTED = 1
+MSG_ADDTAP = 2
+MSG_ADDTAPRESP = 3
+MSG_DELTAP = 4
+MSG_DELTAPRESP = 5
+MSG_SETMTU = 6
+MSG_SETMTURESP = 7
+MSG_ADDIP = 8
+MSG_ADDIPRESP = 9
+MSG_DELIP = 10
+MSG_DELIPRESP = 11
+MSG_GETIPS = 12
+MSG_GETIPSRESP = 13
+MSG_GETBINDADDRS = 14
+MSG_GETBINDADDRSRESP = 15
+MSG_ADDROUTE = 16
+MSG_ADDROUTERESP = 17
+MSG_DELROUTE = 18
+MSG_DELROUTERESP = 19
+
+MGMT_DELETE = 0
+MGMT_GET = 1
+MGMT_POST = 3
+
+TUNSETIFF = 0x400454ca
+TUNSETPERSIST = 0x400454cb
+IFF_TAP = 0x0002
+IFF_NO_PI = 0x1000
+
+
+def run(command: list[str], check: bool = False) -> subprocess.CompletedProcess:
+    return subprocess.run(command, check=check, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def ip_json(command: list[str]) -> object:
+    output = subprocess.check_output(['ip', '-j', *command], text=True)
+    return json.loads(output)
+
+
+def ifname(value: bytes) -> str:
+    return value.split(b'\0', 1)[0].decode()
+
+
+def pack_ifname(name: str) -> bytes:
+    return name.encode()[:15].ljust(16, b'\0')
+
+
+def ip_from_raw(afi: int, data: bytes) -> str:
+    return str(ip_address(data[:4] if afi == 1 else data[:16]))
+
+
+def ip_is_unspecified(afi: int, data: bytes) -> bool:
+    return all(b == 0 for b in data[:4 if afi == 1 else 16])
+
+
+def load_devicemap(home: Path) -> dict[int, str]:
+    result = {}
+    try:
+        lines = (home / 'devicemap').read_text().splitlines()
+    except OSError:
+        return result
+
+    for line in lines:
+        if not line or line.lstrip().startswith('#') or '=' not in line:
+            continue
+        network, name = line.split('=', 1)
+        try:
+            result[int(network.strip(), 16)] = name.strip()
+        except ValueError:
+            continue
+    return result
+
+
+def fallback_ifname(nwid: int) -> str:
+    return f'zt{nwid:016x}'[:15]
+
+
+def interface_exists(name: str) -> bool:
+    return run(['ip', 'link', 'show', 'dev', name]).returncode == 0
+
+
+def ensure_tap(name: str, mac: bytes, mtu: int) -> None:
+    if not interface_exists(name):
+        run(['ip', 'tuntap', 'add', 'dev', name, 'mode', 'tap'], check=True)
+
+    mac_text = ':'.join(f'{b:02x}' for b in mac)
+    run(['ip', 'link', 'set', 'dev', name, 'address', mac_text], check=True)
+    run(['ip', 'link', 'set', 'dev', name, 'mtu', str(mtu), 'up'], check=True)
+
+
+def open_tap(name: str) -> int:
+    fd = os.open('/dev/net/tun', os.O_RDWR | os.O_NONBLOCK)
+    ifreq = struct.pack('16sH', pack_ifname(name), IFF_TAP | IFF_NO_PI)
+    try:
+        fcntl.ioctl(fd, TUNSETIFF, ifreq)
+        fcntl.ioctl(fd, TUNSETPERSIST, 1)
+    except OSError:
+        os.close(fd)
+        raise
+    return fd
+
+
+def send_with_fd(sock: socket.socket, data: bytes, fd: int) -> None:
+    fds = array.array('i', [fd])
+    sock.sendmsg([data], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, fds)])
+
+
+class ZeroTierExtOsdep:
+    def __init__(self, home: Path, zerotier_one: str):
+        self.home = home
+        self.zerotier_one = zerotier_one
+        self.tap_fds: dict[str, int] = {}
+        self.child: subprocess.Popen | None = None
+        self.running = True
+
+        self.eod_sock, self.child_eod_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+        self.mgmt_sock, self.child_mgmt_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.mgmt_sock.settimeout(10)
+        self.mgmt_lock = threading.Lock()
+
+    def start(self) -> None:
+        args = [
+            self.zerotier_one,
+            '-d',
+            str(self.home),
+            f'-x{self.child_eod_sock.fileno()},{self.child_mgmt_sock.fileno()}',
+        ]
+        self.child = subprocess.Popen(args, pass_fds=(self.child_eod_sock.fileno(), self.child_mgmt_sock.fileno()))
+        self.child_eod_sock.close()
+        self.child_mgmt_sock.close()
+
+    def stop(self) -> None:
+        self.running = False
+        if self.child and self.child.poll() is None:
+            self.child.terminate()
+            try:
+                self.child.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.child.kill()
+
+        for fd in self.tap_fds.values():
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+    def serve_eod(self) -> None:
+        while self.running:
+            try:
+                data = self.eod_sock.recv(EOD_MAXMSGSIZE)
+            except OSError:
+                break
+            if not data:
+                break
+
+            command = data[0]
+            try:
+                if command == MSG_STARTED:
+                    continue
+                if command == MSG_ADDTAP:
+                    self.handle_addtap(data)
+                elif command == MSG_DELTAP:
+                    self.handle_deltap(data)
+                elif command == MSG_SETMTU:
+                    self.handle_setmtu(data)
+                elif command in (MSG_ADDIP, MSG_DELIP):
+                    self.handle_ip(command, data)
+                elif command == MSG_GETIPS:
+                    self.handle_getips(data)
+                elif command in (MSG_ADDROUTE, MSG_DELROUTE):
+                    self.handle_route(command, data)
+                elif command == MSG_GETBINDADDRS:
+                    self.handle_getbindaddrs()
+            except Exception as e:
+                print(f'vyos-zerotier: failed handling extosdep command {command}: {e}', file=sys.stderr, flush=True)
+                self.send_error_response(command)
+
+    def send_error_response(self, command: int) -> None:
+        responses = {
+            MSG_ADDTAP: struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname('')),
+            MSG_DELTAP: bytes([MSG_DELTAPRESP]),
+            MSG_SETMTU: bytes([MSG_SETMTURESP]),
+            MSG_ADDIP: bytes([MSG_ADDIPRESP]),
+            MSG_DELIP: bytes([MSG_DELIPRESP]),
+            MSG_GETIPS: bytes([MSG_GETIPSRESP]),
+            MSG_GETBINDADDRS: bytes([MSG_GETBINDADDRSRESP, 0]),
+            MSG_ADDROUTE: bytes([MSG_ADDROUTERESP]),
+            MSG_DELROUTE: bytes([MSG_DELROUTERESP]),
+        }
+        response = responses.get(command)
+        if response:
+            try:
+                self.eod_sock.send(response)
+            except OSError:
+                pass
+
+    def handle_addtap(self, data: bytes) -> None:
+        _, nwid, mtu, _metric, _friendly, mac = struct.unpack('=BQII128s6s', data)
+        name = load_devicemap(self.home).get(nwid, fallback_ifname(nwid))
+        ensure_tap(name, mac, mtu)
+        fd = open_tap(name)
+        self.tap_fds[name] = fd
+        send_with_fd(self.eod_sock, struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname(name)), fd)
+
+    def handle_deltap(self, data: bytes) -> None:
+        _, raw_name = struct.unpack('=B16s', data)
+        name = ifname(raw_name)
+        fd = self.tap_fds.pop(name, None)
+        if fd is not None:
+            os.close(fd)
+        self.eod_sock.send(bytes([MSG_DELTAPRESP]))
+
+    def handle_setmtu(self, data: bytes) -> None:
+        _, raw_name, mtu = struct.unpack('=B16sI', data)
+        run(['ip', 'link', 'set', 'dev', ifname(raw_name), 'mtu', str(mtu)])
+        self.eod_sock.send(bytes([MSG_SETMTURESP]))
+
+    def handle_ip(self, command: int, data: bytes) -> None:
+        _, raw_name, afi, prefixlen, raw_addr = struct.unpack('=B16sBB16s', data)
+        name = ifname(raw_name)
+        address = f'{ip_from_raw(afi, raw_addr)}/{prefixlen}'
+        if command == MSG_ADDIP:
+            run(['ip', 'address', 'replace', address, 'dev', name])
+            self.eod_sock.send(bytes([MSG_ADDIPRESP]))
+        else:
+            run(['ip', 'address', 'del', address, 'dev', name])
+            self.eod_sock.send(bytes([MSG_DELIPRESP]))
+
+    def handle_getips(self, data: bytes) -> None:
+        _, raw_name = struct.unpack('=B16s', data)
+        name = ifname(raw_name)
+        response = bytearray([MSG_GETIPSRESP])
+        try:
+            interfaces = ip_json(['address', 'show', 'dev', name])
+        except subprocess.CalledProcessError:
+            interfaces = []
+        for interface in interfaces:
+            for info in interface.get('addr_info', []):
+                family = info.get('family')
+                if family not in ('inet', 'inet6'):
+                    continue
+                address = ip_address(info['local'])
+                response.extend(struct.pack('=BB16s', 1 if family == 'inet' else 2, int(info['prefixlen']), address.packed.ljust(16, b'\0')))
+        self.eod_sock.send(bytes(response))
+
+    def handle_route(self, command: int, data: bytes) -> None:
+        _, afi, prefixlen, raw_dst, raw_gw, raw_dev, raw_src = struct.unpack('=BBB16s16s16s16s', data)
+        family_flag = '-4' if afi == 1 else '-6'
+        target = str(ip_network((ip_from_raw(afi, raw_dst), prefixlen), strict=False))
+        dev = ifname(raw_dev)
+        action = 'replace' if command == MSG_ADDROUTE else 'del'
+        route = ['ip', family_flag, 'route', action, target]
+        if not ip_is_unspecified(afi, raw_gw):
+            route.extend(['via', ip_from_raw(afi, raw_gw)])
+        if dev:
+            route.extend(['dev', dev])
+        if command == MSG_ADDROUTE and not ip_is_unspecified(afi, raw_src):
+            route.extend(['src', ip_from_raw(afi, raw_src)])
+        run(route)
+        self.eod_sock.send(bytes([MSG_ADDROUTERESP if command == MSG_ADDROUTE else MSG_DELROUTERESP]))
+
+    def handle_getbindaddrs(self) -> None:
+        response = bytearray([MSG_GETBINDADDRSRESP, 1])
+        try:
+            interfaces = ip_json(['address', 'show'])
+        except subprocess.CalledProcessError:
+            interfaces = []
+        for interface in interfaces:
+            name = interface.get('ifname', '')
+            if not name or name == 'lo':
+                continue
+            for info in interface.get('addr_info', []):
+                family = info.get('family')
+                if family not in ('inet', 'inet6'):
+                    continue
+                address = ip_address(info['local'])
+                response.extend(struct.pack('=BB16s16s', 1 if family == 'inet' else 2, int(info['prefixlen']), address.packed.ljust(16, b'\0'), pack_ifname(name)))
+        self.eod_sock.send(bytes(response))
+
+    def mgmt_request(self, method: str, path: str, body: str) -> tuple[int, str]:
+        methods = {'DELETE': MGMT_DELETE, 'GET': MGMT_GET, 'POST': MGMT_POST, 'PUT': MGMT_POST}
+        method_id = methods[method.upper()]
+        clean_path = path[1:] if path.startswith('/') else path
+        path_data = clean_path.encode()
+        body_data = body.encode()
+        request = struct.pack('=III', method_id, len(path_data), len(body_data)) + path_data + body_data
+
+        with self.mgmt_lock:
+            self.mgmt_sock.sendall(request)
+            header = self._recv_exact(self.mgmt_sock, 8)
+            status, length = struct.unpack('=II', header)
+            response = self._recv_exact(self.mgmt_sock, length).decode() if length else ''
+            return status, response
+
+    @staticmethod
+    def _recv_exact(sock: socket.socket, length: int) -> bytes:
+        data = bytearray()
+        while len(data) < length:
+            chunk = sock.recv(length - len(data))
+            if not chunk:
+                raise ConnectionError('ZeroTier management socket closed')
+            data.extend(chunk)
+        return bytes(data)
+
+
+class ApiServer:
+    def __init__(self, path: Path, extosdep: ZeroTierExtOsdep):
+        self.path = path
+        self.extosdep = extosdep
+        self.selector = selectors.DefaultSelector()
+        self.server: socket.socket | None = None
+
+    def serve(self) -> None:
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            pass
+        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.server.bind(str(self.path))
+        os.chmod(self.path, 0o600)
+        self.server.listen()
+        self.server.setblocking(False)
+        self.selector.register(self.server, selectors.EVENT_READ)
+
+        while self.extosdep.running:
+            for key, _events in self.selector.select(timeout=1):
+                if key.fileobj is self.server:
+                    conn, _ = self.server.accept()
+                    threading.Thread(target=self.handle_client, args=(conn,), daemon=True).start()
+
+    def handle_client(self, conn: socket.socket) -> None:
+        with conn:
+            request = b''
+            while not request.endswith(b'\n'):
+                chunk = conn.recv(65536)
+                if not chunk:
+                    return
+                request += chunk
+            try:
+                payload = json.loads(request.decode())
+                status, body = self.extosdep.mgmt_request(payload['method'], payload['path'], payload.get('body', ''))
+                response = {'status': status, 'body': body}
+            except Exception as e:
+                response = {'status': 500, 'body': str(e)}
+            conn.sendall(json.dumps(response).encode() + b'\n')
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--home', type=Path, required=True)
+    parser.add_argument('--zerotier-one', default='/usr/sbin/zerotier-one')
+    args = parser.parse_args()
+
+    args.home.mkdir(parents=True, exist_ok=True)
+    extosdep = ZeroTierExtOsdep(args.home, args.zerotier_one)
+
+    def stop(_signum, _frame):
+        extosdep.stop()
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+
+    extosdep.start()
+    api = ApiServer(args.home / 'api.sock', extosdep)
+    threading.Thread(target=api.serve, daemon=True).start()
+
+    try:
+        extosdep.serve_eod()
+    finally:
+        extosdep.stop()
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

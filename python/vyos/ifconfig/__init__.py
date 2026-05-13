@@ -29,6 +29,7 @@ from vyos.ifconfig.macvlan import MACVLANIf
 from vyos.ifconfig.input import InputIf
 from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
+from vyos.ifconfig.zerotier import ZeroTierIf
 from vyos.ifconfig.vtun import VTunIf
 from vyos.ifconfig.vti import VTIIf
 from vyos.ifconfig.pppoe import PPPoEIf

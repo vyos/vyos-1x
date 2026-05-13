@@ -1,0 +1,13 @@
+[Unit]
+Description=ZeroTier One
+After=network.target
+
+[Service]
+Type=simple
+RuntimeDirectory=vyos-zerotier
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-zerotier --home {{ zerotier_home }}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
