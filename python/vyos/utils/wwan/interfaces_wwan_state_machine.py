@@ -5770,9 +5770,75 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number})
             # For non-connection changes, just update internal state
             # The FSM will continue in its current state with updated parameters
+            # Reconcile downstream-LAN features (ip-passthrough, ipv6-bridging)
+            # immediately rather than waiting for the next bearer event —
+            # disabling these features should take effect on commit, not at
+            # the next IP-change.
+            await self._reconcile_downstream_features()
 
         # Store current config for future comparisons
         self._previous_config = self.config.copy() if self.config else {}
+
+    async def _reconcile_downstream_features(self):
+        """Reconcile passthrough + ipv6-bridging state with the live config.
+
+        Invoked on a no-disconnect config update so that the operator
+        sees an immediate effect when they remove or retarget either of
+        these downstream-LAN features.  Without this, stale state
+        (dnsmasq + policy routes for passthrough, a bridged /64 + radvd
+        for ipv6-bridging) lingers until the bearer bounces.
+
+        The method is idempotent and safe regardless of bearer state.
+        """
+        # ── IP passthrough ───────────────────────────────────────────
+        # Push the latest config to the manager.  If the feature is no
+        # longer active (node removed, or `interface` leaf cleared),
+        # tear down.  If the target interface changed, also tear down —
+        # the next bearer event will re-apply on the new interface with
+        # current carrier IPs.
+        try:
+            pt_cfg = (self.config or {}).get('ip_passthrough')
+            iface_changed = self._passthrough.update_config(pt_cfg)
+            if not self._passthrough.cfg.is_active():
+                await self._passthrough.teardown()
+            elif iface_changed:
+                await self._passthrough.teardown()
+        except Exception as e:
+            logger.warning("Passthrough reconcile failed: %s", e,
+                           extra={'interface_number': self.interface_number})
+
+        # ── IPv6 bridging ────────────────────────────────────────────
+        # `_bridging_config` is already updated via _apply_parsed_configuration().
+        # If we currently have a prefix applied somewhere but the feature
+        # is now disabled or aimed at a different LAN interface, remove.
+        try:
+            enabled = bool(self._bridging_config.get('enabled'))
+            new_iface = self._bridging_config.get('interface') or ''
+            applied_ifaces = list(self._bridging_applied.keys()) \
+                if hasattr(self, '_bridging_applied') else []
+            target_changed = bool(applied_ifaces) and (new_iface not in applied_ifaces)
+            if applied_ifaces and (not enabled or target_changed):
+                await self._bridging_remove_all()
+        except Exception as e:
+            logger.warning("IPv6 bridging reconcile failed: %s", e,
+                           extra={'interface_number': self.interface_number})
+
+        # ── Re-apply on live bearer ──────────────────────────────────
+        # If the bearer is up, re-invoke the bearer-IP apply path so that
+        # newly-enabled features (e.g. just-added ipv6-bridging or
+        # ip-passthrough) are installed immediately, and feature-enabled
+        # changes that depend on bearer IPs (DNS, MTU, prefix) refresh
+        # without waiting for the next IP-change event.  The apply path
+        # is idempotent — re-applying with unchanged IPs is a no-op.
+        if self.machine.current_state in (
+                ModemState.CONNECTED.value,
+                ModemState.USAGE_MONITORING.value):
+            try:
+                await self._apply_bearer_ip_configuration()
+            except Exception as e:
+                logger.warning(
+                    "Bearer IP re-apply during reconcile failed: %s", e,
+                    extra={'interface_number': self.interface_number})
 
     async def _disconnect_bearer(self):
         """Disconnect the current bearer connection"""
