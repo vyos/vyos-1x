@@ -29,6 +29,16 @@ NUMBER = r"([\s']\d+[\s'])"
 
 SUPPORTED_EXTS = ('.md', '.rst', '.txt')
 
+# Linter only applies to published documentation sources under docs/. Repo-root
+# files (README.md, AGENTS.md, .github/copilot-instructions.md) are project
+# meta, not docs content, and are out of scope.
+DOCS_ROOT = 'docs' + os.sep
+
+
+def is_docs_path(path):
+    norm = os.path.normpath(path)
+    return norm == 'docs' or norm.startswith(DOCS_ROOT)
+
 # MyST / Markdown fenced code block: leading whitespace + 3+ backticks or 3+ colons.
 # Same character and length-or-greater closes.
 MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})(.*)$')
@@ -220,7 +230,11 @@ def main():
     try:
         files = ast.literal_eval(sys.argv[1])
         for file in files:
-                if file.endswith(SUPPORTED_EXTS) and "_build" not in file:
+                if (
+                    file.endswith(SUPPORTED_EXTS)
+                    and "_build" not in file
+                    and is_docs_path(file)
+                ):
                     if handle_file_action(file) is False:
                         bool_error = False
     except Exception as e:
