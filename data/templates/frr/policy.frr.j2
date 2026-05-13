@@ -245,6 +245,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.match.peer is vyos_defined %}
  match peer {{ rule_config.match.peer }}
 {%                     endif %}
+{%                     if rule_config.match.source_peer is vyos_defined %}
+ match src-peer {{ rule_config.match.source_peer }}
+{%                     endif %}
 {%                     if rule_config.match.protocol is vyos_defined %}
 {%                         set source_protocol = 'ospf6' if rule_config.match.protocol == 'ospfv3' else rule_config.match.protocol %}
  match source-protocol {{ source_protocol }}
