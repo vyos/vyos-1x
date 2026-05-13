@@ -19,8 +19,8 @@ import struct
 import subprocess
 import sys
 import threading
-from time import sleep
 from ipaddress import ip_address
+from ipaddress import IPv6Address
 from ipaddress import ip_network
 from pathlib import Path
 
@@ -50,6 +50,9 @@ MSG_ADDROUTE = 16
 MSG_ADDROUTERESP = 17
 MSG_DELROUTE = 18
 MSG_DELROUTERESP = 19
+MSG_NETWORKSTATUS = 20
+
+NETWORK_STATUS_OK = 1
 
 MGMT_DELETE = 0
 MGMT_GET = 1
@@ -119,13 +122,44 @@ def configured_ifnames(home: Path) -> set[str]:
     return {config['ifname'] for config in load_interfaces(home).values()}
 
 
+def eui64_link_local(mac: bytes) -> str:
+    eui = bytearray(mac[:3] + b'\xff\xfe' + mac[3:])
+    eui[0] ^= 0x02
+    return str(IPv6Address(int(IPv6Address('fe80::')) | int.from_bytes(eui, 'big')))
+
+
+def remove_stale_eui64_link_locals(name: str, mac: bytes) -> None:
+    expected = eui64_link_local(mac)
+    index = link_index(name)
+    if index is None:
+        return
+
+    with IPRoute() as ipr:
+        for entry in ipr.get_addr(index=index, family=socket.AF_INET6):
+            attrs = dict(entry['attrs'])
+            address = attrs.get('IFA_ADDRESS')
+            if not address or address == expected:
+                continue
+
+            addr = ip_address(address)
+            iid = addr.packed[8:]
+            if addr.is_link_local and iid[3:5] == b'\xff\xfe':
+                try:
+                    ipr.addr('del', index=index, address=address, prefixlen=entry['prefixlen'])
+                except NetlinkError:
+                    pass
+
+
 def configure_tap(name: str, mac: bytes, mtu: int) -> None:
     mac_text = ':'.join(f'{b:02x}' for b in mac)
     index = link_index(name)
     if index is None:
         raise OSError(f'interface {name} does not exist')
     with IPRoute() as ipr:
+        ipr.link('set', index=index, addrgenmode='none')
         ipr.link('set', index=index, address=mac_text, mtu=mtu, state='up')
+    remove_stale_eui64_link_locals(name, mac)
+
 
 
 def delete_tap(name: str) -> None:
@@ -202,27 +236,6 @@ class ZeroTierExtOsdep:
         self.tap_fds.clear()
         self.tap_carrier.clear()
 
-    def monitor_carrier(self) -> None:
-        while self.running:
-            for nwid, name in list(self.network_ifnames.items()):
-                fd = self.tap_fds.get(name)
-                if fd is None:
-                    continue
-                try:
-                    status, body = self.mgmt_request('GET', f'/network/{nwid:016x}', '')
-                    network = json.loads(body) if status >= 200 and status < 300 and body else {}
-                    carrier = network.get('status') == 'OK'
-                except Exception as e:
-                    print(f'vyos-zerotier: failed checking network {nwid:016x} status: {e}', file=sys.stderr, flush=True)
-                    carrier = False
-                if self.tap_carrier.get(name) != carrier:
-                    set_tap_carrier(fd, carrier)
-                    self.tap_carrier[name] = carrier
-            self._sleep(2)
-
-    def _sleep(self, seconds: int) -> None:
-        sleep(seconds)
-
     def serve_eod(self) -> None:
         while self.running:
             try:
@@ -250,6 +263,8 @@ class ZeroTierExtOsdep:
                     self.handle_route(command, data)
                 elif command == MSG_GETBINDADDRS:
                     self.handle_getbindaddrs()
+                elif command == MSG_NETWORKSTATUS:
+                    self.handle_network_status(data)
             except Exception as e:
                 print(f'vyos-zerotier: failed handling extosdep command {command}: {e}', file=sys.stderr, flush=True)
                 self.send_error_response(command)
@@ -290,6 +305,23 @@ class ZeroTierExtOsdep:
         self.tap_carrier[name] = False
         self.network_ifnames[nwid] = name
         send_with_fd(self.eod_sock, struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname(name)), fd)
+
+    def set_network_carrier(self, name: str, up: bool) -> None:
+        fd = self.tap_fds.get(name)
+        if fd is None:
+            return
+        if self.tap_carrier.get(name) == up:
+            return
+        set_tap_carrier(fd, up)
+        self.tap_carrier[name] = up
+
+    def handle_network_status(self, data: bytes) -> None:
+        _, nwid, raw_name, status, _operation = struct.unpack('=BQ16sII', data)
+        name = ifname(raw_name) or self.network_ifnames.get(nwid, '')
+        if not name:
+            return
+        self.network_ifnames[nwid] = name
+        self.set_network_carrier(name, status == NETWORK_STATUS_OK)
 
     def handle_deltap(self, data: bytes) -> None:
         _, raw_name = struct.unpack('=B16s', data)
@@ -500,7 +532,6 @@ def main() -> int:
     extosdep.start()
     api = ApiServer(args.home / 'api.sock', extosdep)
     threading.Thread(target=api.serve, daemon=True).start()
-    threading.Thread(target=extosdep.monitor_carrier, daemon=True).start()
 
     try:
         extosdep.serve_eod()

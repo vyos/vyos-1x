@@ -11,6 +11,8 @@ import os
 import struct
 from sys import exit
 
+from pyroute2.iproute import IPRoute
+
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
@@ -127,14 +129,23 @@ def _has_active_interfaces(zerotier):
     return bool(_active_networks(zerotier))
 
 
+def _set_addrgenmode_none(ifname):
+    with IPRoute() as ipr:
+        indexes = ipr.link_lookup(ifname=ifname)
+        if indexes:
+            ipr.link('set', index=indexes[0], addrgenmode='none')
+
+
 def _create_persistent_tap(ifname):
     if ZeroTierIf.exists(ifname):
+        _set_addrgenmode_none(ifname)
         return None
 
     fd = os.open('/dev/net/tun', os.O_RDWR | os.O_NONBLOCK)
     ifreq = struct.pack('16sH', ifname.encode()[:15].ljust(16, b'\0'), IFF_TAP | IFF_NO_PI)
     try:
         fcntl.ioctl(fd, TUNSETIFF, ifreq)
+        _set_addrgenmode_none(ifname)
         fcntl.ioctl(fd, TUNSETPERSIST, 1)
     finally:
         os.close(fd)
