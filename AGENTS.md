@@ -37,12 +37,12 @@ Output: `docs/_build/html/`.
 
 ## Lint
 
-The repo doesn't ship a local lint config or pin a linter binary. CI runs
-`vyoslinter` (`doc-linter.py` from the `vyos/.github` repo, via the
-`lint-doc.yml` workflow) on changed files only — see the CI section
-below. For local checks, manually grep for the rules in
-[Source conventions](#source-conventions) (line length, address space,
-suppression markers).
+The repo doesn't ship a local lint config or pin a linter binary. CI
+runs `scripts/doc-linter.py` (in-repo, invoked from
+`.github/workflows/lint-doc.yml`) on changed files only, scoped to
+`docs/` — see the CI section below. For local checks, manually grep
+for the rules in [Source conventions](#source-conventions) (line
+length, address space, suppression markers).
 
 ## Branches and versions
 
@@ -287,9 +287,11 @@ serves and crawlers skip the redirect hop.
 
 ## CI
 
-- **vyoslinter** (`doc-linter.py` from the `vyos/.github` repo, run
-  via `lint-doc.yml`) — line length and IP rules, on changed files
-  only.
+- **doc-linter** (`scripts/doc-linter.py` in-repo, invoked via
+  `.github/workflows/lint-doc.yml`) — line length and IP rules, on
+  changed files under `docs/` only. Repo-root meta files
+  (README.md, AGENTS.md, `.github/copilot-instructions.md`) are out
+  of scope.
 - **Sphinx build** — runs on Read the Docs for every PR; preview URL
   appears as a check.
 - **CLA check** — contributors must sign the VyOS CLA before merge.
