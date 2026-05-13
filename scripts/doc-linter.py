@@ -250,8 +250,16 @@ def main():
     """Entry point: lint the changed-file list from argv, or fall back to walking `docs/`."""
     bool_error = True
     print('start')
+    # Only the argv-parsing step is wrapped in try/except. Errors raised by
+    # handle_file_action() must propagate so CI failures stay visible instead
+    # of silently triggering a full docs/ walk.
     try:
         files = ast.literal_eval(sys.argv[1])
+    except (IndexError, SyntaxError, ValueError):
+        # No argv or malformed list -> fall back to walking DOCS_ROOT.
+        files = None
+
+    if files is not None:
         for file in files:
             if (
                 file.endswith(SUPPORTED_EXTS)
@@ -260,7 +268,7 @@ def main():
             ):
                 if handle_file_action(file) is False:
                     bool_error = False
-    except Exception as e:
+    else:
         for root, _dirs, files in os.walk(DOCS_ROOT):
             path = root.split(os.sep)
             for file in files:
