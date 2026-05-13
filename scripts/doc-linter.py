@@ -38,12 +38,17 @@ DOCS_ROOT = 'docs'
 def is_docs_path(path):
     """Return True iff `path` resolves under the repo's `docs/` tree.
 
-    Accepts both repo-relative and absolute paths. Paths are normalized
-    against the linter's working directory (CI invokes it from the repo
-    root; the same is expected for local runs).
+    Accepts both repo-relative and absolute paths. Both `path` and
+    `DOCS_ROOT` are resolved with `os.path.realpath`, so symlinks are
+    followed to their real targets — a symlink under `docs/` that
+    points outside the tree is correctly treated as out-of-scope, and
+    a `docs/` that is itself a symlink (e.g., in some CI checkouts) is
+    correctly treated as the docs root. Paths are normalized against
+    the linter's working directory (CI invokes it from the repo root;
+    the same is expected for local runs).
     """
-    abs_path = os.path.abspath(path)
-    abs_docs = os.path.abspath(DOCS_ROOT)
+    abs_path = os.path.realpath(path)
+    abs_docs = os.path.realpath(DOCS_ROOT)
     try:
         return os.path.commonpath([abs_path, abs_docs]) == abs_docs
     except ValueError:
@@ -248,15 +253,15 @@ def main():
     try:
         files = ast.literal_eval(sys.argv[1])
         for file in files:
-                if (
-                    file.endswith(SUPPORTED_EXTS)
-                    and "_build" not in file
-                    and is_docs_path(file)
-                ):
-                    if handle_file_action(file) is False:
-                        bool_error = False
+            if (
+                file.endswith(SUPPORTED_EXTS)
+                and "_build" not in file
+                and is_docs_path(file)
+            ):
+                if handle_file_action(file) is False:
+                    bool_error = False
     except Exception as e:
-        for root, dirs, files in os.walk("docs"):
+        for root, dirs, files in os.walk(DOCS_ROOT):
             path = root.split(os.sep)
             for file in files:
                 if file.endswith(SUPPORTED_EXTS) and "_build" not in path:
