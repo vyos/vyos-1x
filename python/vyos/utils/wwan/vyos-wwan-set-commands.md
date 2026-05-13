@@ -1266,3 +1266,262 @@ set interfaces wwan wwan0 interface-management bearer-disconnect-delay 15
 # set interfaces wwan wwan0 hardware-reset disable
 set interfaces wwan wwan0 logging level 'info'
 ```
+
+---
+
+## Example: Full Site Configuration (Bridge + NAT + DHCP + RA + Firewall)
+
+This is a complete worked example that turns a fresh VyOS unit into a
+cellular-uplinked LAN router:
+
+- `eth0` + `eth1` bridged into `br0` (LAN segment)
+- IPv4 `192.168.10.0/24` with DHCP server on the bridge
+- IPv6 ULA `fd00:6c61:6e30::/64` with SLAAC + RDNSS on the bridge
+- `wwan0` as the WAN uplink, with IPv4 masquerade NAT
+- Default-drop firewall on both `input` and `forward` chains for IPv4/IPv6
+- SSH, HTTPS/API, and DNS forwarder bound to LAN addresses only
+- Sensible conntrack sizing for a NAT router
+
+> **Paste from the console (`ttyS0`/`ttyS3`), not over WWAN.** The
+> `service ssh listen-address` and `service https listen-address` lines
+> will detach those daemons from `wwan0` at commit time. If you also
+> want HTTPS reachable on the cellular side, add
+> `set interfaces wwan wwan0 ipv6 management-address` — that gives you a
+> stable `<carrier-prefix>::1/128` on `wwan0` with its own auto-443
+> firewall chain.
+
+```bash
+# ===========================================================================
+# LAN bridge — eth0 + eth1 on br0
+# ===========================================================================
+set interfaces bridge br0 description 'LAN / management'
+set interfaces bridge br0 address '192.168.10.1/24'
+set interfaces bridge br0 address 'fd00:6c61:6e30::1/64'
+set interfaces bridge br0 stp
+set interfaces bridge br0 member interface eth0
+set interfaces bridge br0 member interface eth1
+
+# ===========================================================================
+# WWAN uplink
+# ===========================================================================
+set interfaces wwan wwan0 description 'LTE uplink'
+# Uncomment if you know the APN; otherwise APN discovery handles it:
+# set interfaces wwan wwan0 sim slot 1 apn 'your.carrier.apn'
+
+# ===========================================================================
+# IPv4 NAT — masquerade LAN out wwan0
+# ===========================================================================
+set nat source rule 100 description 'Masquerade LAN to WWAN'
+set nat source rule 100 outbound-interface name 'wwan0'
+set nat source rule 100 source address '192.168.10.0/24'
+set nat source rule 100 translation address 'masquerade'
+
+# ===========================================================================
+# DHCPv4 server on the bridge
+# ===========================================================================
+set service dhcp-server shared-network-name LAN authoritative
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 subnet-id '1'
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 option default-router '192.168.10.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 option name-server '192.168.10.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 option domain-name 'lan.local'
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 lease '86400'
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 range LAN start '192.168.10.100'
+set service dhcp-server shared-network-name LAN subnet 192.168.10.0/24 range LAN stop '192.168.10.200'
+
+# ===========================================================================
+# IPv6 Router Advertisements on the bridge (SLAAC + RDNSS for the ULA)
+# ===========================================================================
+set service router-advert interface br0 default-lifetime '1800'
+set service router-advert interface br0 name-server 'fd00:6c61:6e30::1'
+set service router-advert interface br0 prefix fd00:6c61:6e30::/64 autonomous-flag 'true'
+set service router-advert interface br0 prefix fd00:6c61:6e30::/64 on-link-flag 'true'
+set service router-advert interface br0 prefix fd00:6c61:6e30::/64 valid-lifetime '2592000'
+set service router-advert interface br0 prefix fd00:6c61:6e30::/64 preferred-lifetime '604800'
+
+# ===========================================================================
+# DNS forwarder — listens on LAN only, serves LAN only
+# ===========================================================================
+set service dns forwarding system
+set service dns forwarding cache-size '10000'
+set service dns forwarding listen-address '192.168.10.1'
+set service dns forwarding listen-address 'fd00:6c61:6e30::1'
+set service dns forwarding allow-from '192.168.10.0/24'
+set service dns forwarding allow-from 'fd00:6c61:6e30::/64'
+
+# ===========================================================================
+# SSH — bind to LAN only
+# ===========================================================================
+set service ssh port '22'
+set service ssh listen-address '192.168.10.1'
+set service ssh listen-address 'fd00:6c61:6e30::1'
+
+# ===========================================================================
+# HTTPS / API — bind to LAN only
+# ===========================================================================
+set service https listen-address '192.168.10.1'
+set service https listen-address 'fd00:6c61:6e30::1'
+
+# ===========================================================================
+# Firewall — global state policy
+# ===========================================================================
+set firewall global-options state-policy established action 'accept'
+set firewall global-options state-policy related action 'accept'
+set firewall global-options state-policy invalid action 'drop'
+
+# ===========================================================================
+# Firewall — IPv4 input (to the router itself)
+# ===========================================================================
+set firewall ipv4 input filter default-action 'drop'
+
+set firewall ipv4 input filter rule 10 action 'accept'
+set firewall ipv4 input filter rule 10 inbound-interface name 'lo'
+
+set firewall ipv4 input filter rule 20 action 'accept'
+set firewall ipv4 input filter rule 20 inbound-interface name 'br0'
+
+set firewall ipv4 input filter rule 30 action 'accept'
+set firewall ipv4 input filter rule 30 protocol 'icmp'
+set firewall ipv4 input filter rule 30 icmp type-name 'echo-request'
+set firewall ipv4 input filter rule 30 limit rate '5/second'
+
+set firewall ipv4 input filter rule 100 action 'drop'
+set firewall ipv4 input filter rule 100 inbound-interface name 'wwan0'
+set firewall ipv4 input filter rule 100 log
+
+# ===========================================================================
+# Firewall — IPv4 forward (transit)
+# ===========================================================================
+set firewall ipv4 forward filter default-action 'drop'
+
+set firewall ipv4 forward filter rule 10 action 'accept'
+set firewall ipv4 forward filter rule 10 inbound-interface name 'br0'
+set firewall ipv4 forward filter rule 10 outbound-interface name 'wwan0'
+
+# ===========================================================================
+# Firewall — IPv6 input
+# ===========================================================================
+set firewall ipv6 input filter default-action 'drop'
+
+set firewall ipv6 input filter rule 10 action 'accept'
+set firewall ipv6 input filter rule 10 inbound-interface name 'lo'
+
+set firewall ipv6 input filter rule 20 action 'accept'
+set firewall ipv6 input filter rule 20 inbound-interface name 'br0'
+
+set firewall ipv6 input filter rule 30 action 'accept'
+set firewall ipv6 input filter rule 30 protocol 'ipv6-icmp'
+
+set firewall ipv6 input filter rule 40 action 'accept'
+set firewall ipv6 input filter rule 40 inbound-interface name 'wwan0'
+set firewall ipv6 input filter rule 40 protocol 'udp'
+set firewall ipv6 input filter rule 40 destination port '546'
+
+set firewall ipv6 input filter rule 100 action 'drop'
+set firewall ipv6 input filter rule 100 inbound-interface name 'wwan0'
+set firewall ipv6 input filter rule 100 log
+
+# ===========================================================================
+# Firewall — IPv6 forward
+# ===========================================================================
+set firewall ipv6 forward filter default-action 'drop'
+
+set firewall ipv6 forward filter rule 10 action 'accept'
+set firewall ipv6 forward filter rule 10 inbound-interface name 'br0'
+set firewall ipv6 forward filter rule 10 outbound-interface name 'wwan0'
+
+set firewall ipv6 forward filter rule 20 action 'accept'
+set firewall ipv6 forward filter rule 20 protocol 'ipv6-icmp'
+
+# ===========================================================================
+# System odds and ends
+# ===========================================================================
+set system time-zone 'America/Toronto'                    # adjust as needed
+set system name-server '127.0.0.1'
+set system name-server '::1'
+set system conntrack hash-size '32768'
+set system conntrack table-size '262144'
+```
+
+Then commit and save:
+
+```bash
+compare
+commit
+save
+```
+
+### Notes
+
+1. After commit, SSH / HTTPS will only answer on `192.168.10.1` and
+   `fd00:6c61:6e30::1`. Use the console or the LAN side.
+2. To expose HTTPS on cellular at a stable IPv6, add
+   `set interfaces wwan wwan0 ipv6 management-address` — that creates
+   `<carrier-prefix>::1/128` on `wwan0` with an FSM-owned firewall
+   chain that auto-permits TCP 443, ICMPv6, and ESTABLISHED/RELATED.
+3. If your carrier needs an explicit APN, uncomment the `sim slot 1 apn`
+   line under the WWAN section.
+4. DHCPv6 server on LAN is deliberately omitted — RA + SLAAC + RDNSS is
+   enough for almost every modern client. Add `service dhcp-server-v6`
+   only if you have older Windows clients that ignore RDNSS.
+
+---
+
+## Optional: Performance & Robustness Extras
+
+These are things commonly omitted from a basic site config but worth adding
+on a production WWAN-uplinked router. None are strictly required — they're
+quality-of-life and resilience tweaks.
+
+```bash
+# ===========================================================================
+# Performance / throughput tuning
+# ===========================================================================
+# Profiles the kernel for throughput (vs. latency). Sensible for a NAT router.
+set system option performance 'throughput'
+
+# Reboot automatically on kernel panic (60 s grace).
+set system option reboot-on-panic
+
+# BBR congestion control + fq qdisc — better behaviour over lossy LTE/5G.
+set system sysctl parameter net.ipv4.tcp_congestion_control value 'bbr'
+set system sysctl parameter net.core.default_qdisc value 'fq'
+
+# ===========================================================================
+# Larger ARP / NDP tables (only if you expect >256 LAN clients)
+# ===========================================================================
+# set system sysctl parameter net.ipv4.neigh.default.gc_thresh3 value '4096'
+# set system sysctl parameter net.ipv6.neigh.default.gc_thresh3 value '4096'
+
+# ===========================================================================
+# LLDP — handy for switch/AP discovery on the LAN
+# ===========================================================================
+set service lldp interface br0
+set service lldp legacy-protocols cdp
+
+# ===========================================================================
+# WAN-side hardening recap (also documented under "IPv4/IPv6 Options")
+# ===========================================================================
+# Drop packets arriving on wwan0 whose source address isn't routable back
+# out wwan0 — kills spoofed/martian traffic at the WAN edge.
+set interfaces wwan wwan0 ip source-validation 'strict'
+set interfaces wwan wwan0 ipv6 source-validation 'strict'
+
+# Clamp TCP MSS to path MTU on the WAN — prevents PMTUD blackholes behind
+# carriers that drop ICMP "frag needed" / "packet too big".
+set interfaces wwan wwan0 ip adjust-mss 'clamp-mss-to-pmtu'
+set interfaces wwan wwan0 ipv6 adjust-mss 'clamp-mss-to-pmtu'
+
+# ===========================================================================
+# Dynamic DNS (optional — uncomment and fill in if you publish a hostname)
+# ===========================================================================
+# set service dns dynamic name-server cloudflare address 'wwan0'
+# set service dns dynamic name-server cloudflare protocol 'cloudflare'
+# set service dns dynamic name-server cloudflare host-name 'router.example.com'
+# set service dns dynamic name-server cloudflare zone 'example.com'
+# set service dns dynamic name-server cloudflare key '/config/auth/cloudflare.key'
+```
+
+> The `ip source-validation` and `adjust-mss` lines duplicate examples shown
+> earlier under "IPv4 Options" / "IPv6 Options" — they're repeated here so
+> the full-site recipe is self-contained.
+

@@ -781,8 +781,28 @@ def apply(wwan):
     match = re.search(r'(\d+)$', ifname)
     interface_number = int(match.group(1)) if match else 0
 
-    if 'deleted' in wwan or _leaf_exists(wwan, 'disable'):
-        # Interface is being removed or disabled — tell the FSM
+    if 'deleted' in wwan:
+        # Interface node is gone from the CLI tree — fully tear down on
+        # the FSM side: shut the state machine down, unexport the D-Bus
+        # object, and delete the persisted config cache so a later
+        # service restart will NOT replay a stale configuration.
+        asyncio.run(_remove_via_dbus(interface_number))
+
+        if interface_exists(ifname):
+            w = WWANIf(ifname)
+            w.remove()
+
+        # Stop the trap emitter (no live wwan interface to source alerts).
+        try:
+            _sync_snmp_trap_unit(wwan)
+        except Exception as exc:
+            print(f'Warning: failed to sync WWAN SNMP trap unit: {exc}')
+        return None
+
+    if _leaf_exists(wwan, 'disable'):
+        # Admin-disable — keep the FSM/D-Bus object around but tell it to
+        # drop the bearer and suppress activity.  Persisted config is
+        # retained so re-enable picks up the previous configuration.
         config = {'interface_disabled': True}
         asyncio.run(_apply_via_dbus(interface_number, config))
 
@@ -790,7 +810,6 @@ def apply(wwan):
             w = WWANIf(ifname)
             w.remove()
 
-        # Stop the trap emitter (no live wwan interface to source alerts).
         try:
             _sync_snmp_trap_unit(wwan)
         except Exception as exc:
@@ -835,6 +854,31 @@ async def _apply_via_dbus(interface_number, config):
         raise ConfigError(
             f'Failed to communicate with WWAN service: {exc}'
         ) from exc
+
+
+async def _remove_via_dbus(interface_number):
+    """Tell the FSM service to fully remove an interface.
+
+    Calls ``RemoveInterface`` on the WWAN D-Bus service which shuts the
+    FSM down, unexports the per-interface D-Bus object, and deletes the
+    persisted JSON config cache.  Without this step a subsequent service
+    restart would replay the last-known configuration even though the
+    user has removed the interface from the VyOS CLI tree.
+
+    Failures are surfaced as warnings rather than ConfigError so that a
+    transient D-Bus issue does not block a `commit` that is otherwise
+    deleting state (the on-disk cache will be cleaned up on next start).
+    """
+    from vyos.utils.wwan.wwan_client import WWANClient, WWANError
+
+    try:
+        async with WWANClient() as client:
+            result = await client.remove_interface(interface_number)
+            print(f'WWAN interface {interface_number}: {result}')
+    except WWANError as exc:
+        print(f'Warning: WWAN RemoveInterface failed: {exc}')
+    except Exception as exc:
+        print(f'Warning: failed to communicate with WWAN service: {exc}')
 
 
 # ---------------------------------------------------------------------------

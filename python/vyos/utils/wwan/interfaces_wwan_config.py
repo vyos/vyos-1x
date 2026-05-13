@@ -41,6 +41,16 @@ def resolve_carrier_code(carrier_input):
 logger = setup_logging(__name__, "wwan-config")
 
 class InterfaceConfig(ServiceInterface):
+    # Cache schema version — bump this whenever the on-disk JSON layout
+    # changes incompatibly (renamed/removed/retyped keys, new required
+    # fields, etc.).  At startup _restore_configuration() refuses to
+    # replay any cache file whose `__schema_version__` does not match —
+    # which prevents a freshly-upgraded service from trying to apply a
+    # stale dict shaped for the previous code version.  The cache lives
+    # in /run/wwan (tmpfs) so this only matters across service restarts
+    # within the same boot — across reboots the cache is empty anyway.
+    SCHEMA_VERSION = 1
+
     # Centralized default configuration values
     DEFAULT_CONFIG = {
         # Interface-level settings
@@ -259,6 +269,10 @@ class InterfaceConfig(ServiceInterface):
                     runtime_state = {}
 
             json_safe_config['__runtime_state__'] = runtime_state
+            # Stamp the cache schema so a future service restart can
+            # detect on-disk-vs-code drift and refuse the replay cleanly
+            # instead of partially applying a wrong-shaped dict.
+            json_safe_config['__schema_version__'] = self.SCHEMA_VERSION
 
             # Atomic write: write to temp file then rename so a crash
             # mid-write never leaves a truncated/corrupt config file.
@@ -352,6 +366,38 @@ class InterfaceConfig(ServiceInterface):
             logger.error(f"Failed to remove configuration file: {e}",
                         extra={'interface_number': self.interface_number})
 
+    def _quarantine_cache(self, reason: str) -> None:
+        """Move the persisted cache aside as `<file>.bad` for forensics.
+
+        Called whenever a restore is rejected (schema mismatch, validation
+        failure, apply-time exception).  Renaming rather than deleting
+        preserves the offending document for inspection.  Best-effort —
+        a failure to rename simply leaves the file in place.
+        """
+        try:
+            import os
+            if not os.path.exists(self.config_state_file):
+                return
+            bad_path = self.config_state_file + '.bad'
+            # If a previous .bad already exists, drop it — the most recent
+            # failure is the most useful one to keep.
+            try:
+                if os.path.exists(bad_path):
+                    os.remove(bad_path)
+            except OSError:
+                pass
+            os.rename(self.config_state_file, bad_path)
+            logger.error(
+                f"Quarantined unusable cache: {reason}",
+                extra={'interface_number': self.interface_number,
+                       'config_file': self.config_state_file,
+                       'quarantine_file': bad_path,
+                       'reason': reason})
+        except Exception as exc:
+            logger.error(
+                f"Failed to quarantine cache (leaving in place): {exc}",
+                extra={'interface_number': self.interface_number})
+
     def _restore_configuration(self):
         """Restore configuration from persistent storage on service restart"""
         try:
@@ -369,21 +415,56 @@ class InterfaceConfig(ServiceInterface):
                     saved_config = json.load(f)
             except (json.JSONDecodeError, ValueError) as je:
                 logger.error(
-                    f"Corrupt configuration file, removing: {je}",
+                    f"Corrupt configuration file, quarantining: {je}",
                     extra={'interface_number': self.interface_number,
                            'config_file': self.config_state_file})
-                try:
-                    os.remove(self.config_state_file)
-                except OSError:
-                    pass
+                self._quarantine_cache(f"corrupt json: {je}")
+                return
+
+            # Schema-version gate.  Cache files written by a previous
+            # code version may have keys this version no longer expects
+            # (or be missing keys it now requires).  Refuse to replay —
+            # the FSM will sit in WAITING_FOR_CONFIG until a fresh CLI
+            # commit arrives, which is the correct behaviour after an
+            # upgrade.
+            cache_schema = saved_config.get('__schema_version__')
+            if cache_schema != self.SCHEMA_VERSION:
+                logger.warning(
+                    "Cache schema mismatch — refusing restore "
+                    f"(cache={cache_schema!r}, code={self.SCHEMA_VERSION!r})",
+                    extra={'interface_number': self.interface_number,
+                           'config_file': self.config_state_file,
+                           'cache_schema': cache_schema,
+                           'code_schema': self.SCHEMA_VERSION})
+                self._quarantine_cache(
+                    f"schema mismatch: cache={cache_schema} code={self.SCHEMA_VERSION}"
+                )
+                return
+
+            # Restore runtime state section separately (not part of SetConfiguration)
+            self._restored_runtime_state = saved_config.pop('__runtime_state__', {}) or {}
+            # Strip the schema marker before the config is handed to the
+            # validator / FSM — it's metadata, not a configuration field.
+            saved_config.pop('__schema_version__', None)
+
+            # Validate-before-apply.  _validate_configuration() is the
+            # only thing allowed to refuse a restore: if it passes here,
+            # downstream apply MUST NOT raise.  Anything that does is a
+            # code bug, not a cache problem — and is handled in
+            # _apply_restored_config() by quarantining and logging.
+            try:
+                self._validate_configuration(saved_config)
+            except Exception as ve:
+                logger.error(
+                    f"Restored configuration failed validation, quarantining: {ve}",
+                    extra={'interface_number': self.interface_number,
+                           'config_file': self.config_state_file})
+                self._quarantine_cache(f"validation failed: {ve}")
                 return
 
             logger.info("Restored configuration from persistent storage",
                        extra={'interface_number': self.interface_number,
                               'config_file': self.config_state_file})
-
-            # Restore runtime state section separately (not part of SetConfiguration)
-            self._restored_runtime_state = saved_config.pop('__runtime_state__', {}) or {}
 
             # Apply the restored configuration
             from dbus_next import Variant  # pylint: disable=import-error
@@ -466,8 +547,34 @@ class InterfaceConfig(ServiceInterface):
                        extra={'interface_number': self.interface_number})
 
         except Exception as e:
-            logger.error(f"Failed to apply restored configuration: {e}",
-                        extra={'interface_number': self.interface_number})
+            # If we reach here, validation passed in _restore_configuration()
+            # but apply still raised — this is a code bug, not a cache
+            # problem.  Log loud (full traceback + the offending dict),
+            # quarantine the cache so the next service start does NOT
+            # replay the same broken state, and leave the FSM in
+            # whatever state it has now.  The FSM starts in
+            # WAITING_FOR_CONFIG; if apply_config never completed cleanly
+            # it has likely not progressed past that, and a fresh CLI
+            # commit will push a known-good config.
+            import traceback
+            logger.error(
+                f"Failed to apply restored configuration: {e}",
+                extra={'interface_number': self.interface_number})
+            logger.error(
+                f"Apply-restored traceback: {traceback.format_exc()}",
+                extra={'interface_number': self.interface_number})
+            try:
+                # Surface the dict we tried to apply (Variants → values)
+                debug_cfg = {
+                    k: self._extract_variant_value(v)
+                    for k, v in dbus_config.items()
+                }
+                logger.info(
+                    f"Apply-restored offending config: {debug_cfg}",
+                    extra={'interface_number': self.interface_number})
+            except Exception:
+                pass
+            self._quarantine_cache(f"apply raised: {e}")
 
     def _extract_variant_value(self, value):
         """Extract value from D-Bus Variant, handling nested structures"""
