@@ -21,4 +21,4 @@ class ZeroTierIf(Interface):
     }
 
     def _create(self):
-        raise RuntimeError('ZeroTier interfaces are created by the vyos-zerotier wrapper')
+        raise RuntimeError('ZeroTier interfaces are created by ZeroTier configuration')

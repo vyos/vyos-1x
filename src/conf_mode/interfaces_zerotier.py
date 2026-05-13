@@ -6,9 +6,10 @@
 # it under the terms of the GNU General Public License version 2 or later as
 # published by the Free Software Foundation.
 
+import fcntl
+import os
+import struct
 from sys import exit
-from time import monotonic
-from time import sleep
 
 from vyos import ConfigError
 from vyos import airbag
@@ -35,6 +36,10 @@ from vyos.zerotier import write_json
 airbag.enable()
 
 base = ['interfaces', 'zerotier']
+TUNSETIFF = 0x400454ca
+TUNSETPERSIST = 0x400454cb
+IFF_TAP = 0x0002
+IFF_NO_PI = 0x1000
 
 
 def _all_interfaces(conf):
@@ -122,14 +127,25 @@ def _has_active_interfaces(zerotier):
     return bool(_active_networks(zerotier))
 
 
-def _wait_for_interface(ifname, timeout=15):
-    deadline = monotonic() + timeout
-    while monotonic() < deadline:
-        if ZeroTierIf.exists(ifname):
-            return True
-        sleep(1)
+def _create_persistent_tap(ifname):
+    if ZeroTierIf.exists(ifname):
+        return None
 
-    return False
+    fd = os.open('/dev/net/tun', os.O_RDWR | os.O_NONBLOCK)
+    ifreq = struct.pack('16sH', ifname.encode()[:15].ljust(16, b'\0'), IFF_TAP | IFF_NO_PI)
+    try:
+        fcntl.ioctl(fd, TUNSETIFF, ifreq)
+        fcntl.ioctl(fd, TUNSETPERSIST, 1)
+    finally:
+        os.close(fd)
+
+    return None
+
+
+def _delete_tap(ifname):
+    if ZeroTierIf.exists(ifname):
+        zt = ZeroTierIf(ifname, create=False)
+        zt.remove()
 
 
 def generate(zerotier):
@@ -178,24 +194,21 @@ def apply(zerotier):
         if not has_active_interfaces:
             call(f'systemctl --quiet stop {ZEROTIER_UNIT}')
             call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
+        _delete_tap(ifname)
         return None
+
+    _create_persistent_tap(ifname)
+    zt = ZeroTierIf(ifname, create=False)
+    zt.update(zerotier)
 
     call('systemctl daemon-reload')
     call(f'systemctl --quiet enable {ZEROTIER_UNIT}')
-    call(f'systemctl --quiet start {ZEROTIER_UNIT}')
-    if not wait_for_api():
-        raise ConfigError('ZeroTier local API is not ready')
-
-    for moon, config in zerotier.get('service', {}).get('moon', {}).items():
-        api_request('POST', f'/moon/{moon}', {'seed': config['seed']})
-    network = zerotier['network_id'].lower()
-    api_request('POST', f'/network/{network}', _network_settings(zerotier))
-
-    if not _wait_for_interface(ifname):
-        raise ConfigError(f'ZeroTier interface "{ifname}" was not created')
-
-    zt = ZeroTierIf(ifname, create=False)
-    zt.update(zerotier)
+    call(f'systemctl --quiet restart {ZEROTIER_UNIT}')
+    if wait_for_api(timeout=3):
+        for moon, config in zerotier.get('service', {}).get('moon', {}).items():
+            api_request('POST', f'/moon/{moon}', {'seed': config['seed']})
+        network = zerotier['network_id'].lower()
+        api_request('POST', f'/network/{network}', _network_settings(zerotier))
 
     return None
 
