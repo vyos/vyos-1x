@@ -11,9 +11,9 @@ provisioning via Ansible. Terraform allows you to automate the
 process of deploying instances on many cloud and virtual
 platforms. In this article, we will look at using Terraform to
 deploy VyOS on platforms - AWS, Azure, and vSphere. For more
-details about Terraform please have a look at [link].
+details about Terraform, see the [Terraform introduction].
 
-You will need to [install] Terraform before proceeding.
+You will need to [install Terraform] before proceeding.
 
 Structure of files in the standard Terraform project:
 
@@ -39,6 +39,6 @@ yes                     # apply running
 
 % start_vyoslinter
 
-[install]: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
-[link]: https://developer.hashicorp.com/terraform/intro
+[install Terraform]: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+[Terraform introduction]: https://developer.hashicorp.com/terraform/intro
 
