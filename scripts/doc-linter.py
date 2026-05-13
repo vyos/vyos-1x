@@ -117,14 +117,6 @@ def lint_ipv6(cnt, line):
         return (f"Use IPv6 reserved for Documentation (RFC 3849) or private Space: {ip}", cnt, 'error')
 
 
-def lint_AS(cnt, line):
-    """Placeholder for future AS-number documentation-range checks (RFC 5398)."""
-    number = re.search(NUMBER, line, re.I)
-    if number:
-        pass
-        # find a way to detect AS numbers
-
-
 def lint_linelen(cnt, line):
     """Warn when a line exceeds the 80-character docs convention."""
     line = line.rstrip()
