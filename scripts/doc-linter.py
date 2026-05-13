@@ -2,7 +2,7 @@ import os
 import re
 import ipaddress
 import sys
-import ast
+import json
 
 IPV4SEG  = r'(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
 IPV4ADDR = r'\b(?:(?:' + IPV4SEG + r'\.){3,3}' + IPV4SEG + r')\b'
@@ -302,11 +302,23 @@ def main():
     # Only the argv-parsing step is wrapped in try/except. Errors raised by
     # handle_file_action() must propagate so CI failures stay visible instead
     # of silently triggering a full docs/ walk.
-    try:
-        files = ast.literal_eval(sys.argv[1])
-    except (IndexError, SyntaxError, ValueError):
-        # No argv or malformed list -> fall back to walking DOCS_ROOT.
+    #
+    # Accepts one or more positional argv entries, each a JSON array of
+    # paths (e.g., `'["foo.md", "bar.rst"]'`). Arrays are merged and
+    # deduplicated before linting. CI passes `files_modified`,
+    # `files_added`, etc. as separate args — see lint-doc.yml.
+    if len(sys.argv) <= 1:
         files = None
+    else:
+        try:
+            files = []
+            for arg in sys.argv[1:]:
+                if arg.strip():
+                    files.extend(json.loads(arg))
+            files = sorted(set(files))
+        except (json.JSONDecodeError, TypeError):
+            # Malformed input -> fall back to walking DOCS_ROOT.
+            files = None
 
     if files is not None:
         for file in files:

@@ -30,5 +30,14 @@ jobs:
 
       - name: run doc linter
         env:
+          # Pass modified + added + renamed file lists. `files_modified`
+          # alone misses newly-added pages — a PR adding a new doc with
+          # long lines or real public IPs would otherwise slip through.
           FILES_MODIFIED: ${{ steps.file_changes.outputs.files_modified }}
-        run: python scripts/doc-linter.py "$FILES_MODIFIED"
+          FILES_ADDED: ${{ steps.file_changes.outputs.files_added }}
+          FILES_RENAMED: ${{ steps.file_changes.outputs.files_renamed }}
+        run: |
+          python scripts/doc-linter.py \
+            "$FILES_MODIFIED" \
+            "$FILES_ADDED" \
+            "$FILES_RENAMED"
