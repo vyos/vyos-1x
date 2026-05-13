@@ -6,6 +6,8 @@
 # it under the terms of the GNU General Public License version 2 or later as
 # published by the Free Software Foundation.
 
+# pylint: disable=no-member
+
 import argparse
 import array
 import json
@@ -22,6 +24,8 @@ from ipaddress import ip_network
 from pathlib import Path
 
 import fcntl
+from pyroute2.iproute import IPRoute
+from pyroute2.netlink.exceptions import NetlinkError
 
 
 EOD_MAXMSGSIZE = 64 * 1024
@@ -54,10 +58,8 @@ TUNSETIFF = 0x400454ca
 TUNSETPERSIST = 0x400454cb
 IFF_TAP = 0x0002
 IFF_NO_PI = 0x1000
-
-
-def run(command: list[str], check: bool = False) -> subprocess.CompletedProcess:
-    return subprocess.run(command, check=check, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+ESRCH = 3
+EEXIST = 17
 
 
 def ip_json(command: list[str]) -> object:
@@ -81,19 +83,18 @@ def ip_is_unspecified(afi: int, data: bytes) -> bool:
     return all(b == 0 for b in data[:4 if afi == 1 else 16])
 
 
-def load_devicemap(home: Path) -> dict[int, str]:
-    result = {}
+def load_interfaces(home: Path) -> dict[int, dict]:
     try:
-        lines = (home / 'devicemap').read_text().splitlines()
-    except OSError:
-        return result
+        networks = json.loads((home / 'interfaces.json').read_text()).get('networks', {})
+    except (OSError, ValueError, AttributeError):
+        return {}
 
-    for line in lines:
-        if not line or line.lstrip().startswith('#') or '=' not in line:
+    result = {}
+    for network, config in networks.items():
+        if not isinstance(config, dict) or not config.get('ifname'):
             continue
-        network, name = line.split('=', 1)
         try:
-            result[int(network.strip(), 16)] = name.strip()
+            result[int(network, 16)] = config
         except ValueError:
             continue
     return result
@@ -103,17 +104,35 @@ def fallback_ifname(nwid: int) -> str:
     return f'zt{nwid:016x}'[:15]
 
 
+def link_index(name: str) -> int | None:
+    with IPRoute() as ipr:
+        indexes = ipr.link_lookup(ifname=name)
+    return indexes[0] if indexes else None
+
+
 def interface_exists(name: str) -> bool:
-    return run(['ip', 'link', 'show', 'dev', name]).returncode == 0
+    return link_index(name) is not None
 
 
-def ensure_tap(name: str, mac: bytes, mtu: int) -> None:
-    if not interface_exists(name):
-        run(['ip', 'tuntap', 'add', 'dev', name, 'mode', 'tap'], check=True)
+def configured_ifnames(home: Path) -> set[str]:
+    return {config['ifname'] for config in load_interfaces(home).values()}
 
+
+def configure_tap(name: str, mac: bytes, mtu: int) -> None:
     mac_text = ':'.join(f'{b:02x}' for b in mac)
-    run(['ip', 'link', 'set', 'dev', name, 'address', mac_text], check=True)
-    run(['ip', 'link', 'set', 'dev', name, 'mtu', str(mtu), 'up'], check=True)
+    index = link_index(name)
+    if index is None:
+        raise OSError(f'interface {name} does not exist')
+    with IPRoute() as ipr:
+        ipr.link('set', index=index, address=mac_text, mtu=mtu, state='up')
+
+
+def delete_tap(name: str) -> None:
+    index = link_index(name)
+    if index is None:
+        return
+    with IPRoute() as ipr:
+        ipr.link('del', index=index)
 
 
 def open_tap(name: str) -> int:
@@ -138,6 +157,7 @@ class ZeroTierExtOsdep:
         self.home = home
         self.zerotier_one = zerotier_one
         self.tap_fds: dict[str, int] = {}
+        self.network_ifnames: dict[int, str] = {}
         self.child: subprocess.Popen | None = None
         self.running = True
 
@@ -225,10 +245,15 @@ class ZeroTierExtOsdep:
 
     def handle_addtap(self, data: bytes) -> None:
         _, nwid, mtu, _metric, _friendly, mac = struct.unpack('=BQII128s6s', data)
-        name = load_devicemap(self.home).get(nwid, fallback_ifname(nwid))
-        ensure_tap(name, mac, mtu)
+        name = load_interfaces(self.home).get(nwid, {}).get('ifname', fallback_ifname(nwid))
         fd = open_tap(name)
+        try:
+            configure_tap(name, mac, mtu)
+        except Exception:
+            os.close(fd)
+            raise
         self.tap_fds[name] = fd
+        self.network_ifnames[nwid] = name
         send_with_fd(self.eod_sock, struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname(name)), fd)
 
     def handle_deltap(self, data: bytes) -> None:
@@ -240,23 +265,35 @@ class ZeroTierExtOsdep:
                 os.close(fd)
             except OSError:
                 pass
+        if name and name not in configured_ifnames(self.home):
+            delete_tap(name)
         self.eod_sock.send(bytes([MSG_DELTAPRESP]))
 
     def handle_setmtu(self, data: bytes) -> None:
         _, raw_name, mtu = struct.unpack('=B16sI', data)
-        run(['ip', 'link', 'set', 'dev', ifname(raw_name), 'mtu', str(mtu)])
+        index = link_index(ifname(raw_name))
+        if index is not None:
+            with IPRoute() as ipr:
+                ipr.link('set', index=index, mtu=mtu)
         self.eod_sock.send(bytes([MSG_SETMTURESP]))
 
     def handle_ip(self, command: int, data: bytes) -> None:
         _, raw_name, afi, prefixlen, raw_addr = struct.unpack('=B16sBB16s', data)
         name = ifname(raw_name)
-        address = f'{ip_from_raw(afi, raw_addr)}/{prefixlen}'
-        if command == MSG_ADDIP:
-            run(['ip', 'address', 'replace', address, 'dev', name])
-            self.eod_sock.send(bytes([MSG_ADDIPRESP]))
-        else:
-            run(['ip', 'address', 'del', address, 'dev', name])
-            self.eod_sock.send(bytes([MSG_DELIPRESP]))
+        address = ip_from_raw(afi, raw_addr)
+        with IPRoute() as ipr:
+            index = ipr.link_lookup(ifname=name)[0]
+            try:
+                if command == MSG_ADDIP:
+                    ipr.addr('replace', index=index, address=address, prefixlen=prefixlen)
+                else:
+                    ipr.addr('delete', index=index, address=address, prefixlen=prefixlen)
+            except NetlinkError as e:
+                if command == MSG_DELIP and e.code == ESRCH:
+                    pass
+                else:
+                    raise
+        self.eod_sock.send(bytes([MSG_ADDIPRESP if command == MSG_ADDIP else MSG_DELIPRESP]))
 
     def handle_getips(self, data: bytes) -> None:
         _, raw_name = struct.unpack('=B16s', data)
@@ -277,18 +314,34 @@ class ZeroTierExtOsdep:
 
     def handle_route(self, command: int, data: bytes) -> None:
         _, afi, prefixlen, raw_dst, raw_gw, raw_dev, raw_src = struct.unpack('=BBB16s16s16s16s', data)
-        family_flag = '-4' if afi == 1 else '-6'
-        target = str(ip_network((ip_from_raw(afi, raw_dst), prefixlen), strict=False))
+        family = socket.AF_INET if afi == 1 else socket.AF_INET6
+        target = ip_network((ip_from_raw(afi, raw_dst), prefixlen), strict=False)
         dev = ifname(raw_dev)
-        action = 'replace' if command == MSG_ADDROUTE else 'del'
-        route = ['ip', family_flag, 'route', action, target]
-        if not ip_is_unspecified(afi, raw_gw):
-            route.extend(['via', ip_from_raw(afi, raw_gw)])
+        route = {'family': family, 'dst': str(target)}
         if dev:
-            route.extend(['dev', dev])
+            with IPRoute() as ipr:
+                route['oif'] = ipr.link_lookup(ifname=dev)[0]
+        if not ip_is_unspecified(afi, raw_gw):
+            route['gateway'] = ip_from_raw(afi, raw_gw)
         if command == MSG_ADDROUTE and not ip_is_unspecified(afi, raw_src):
-            route.extend(['src', ip_from_raw(afi, raw_src)])
-        run(route)
+            route['prefsrc'] = ip_from_raw(afi, raw_src)
+        with IPRoute() as ipr:
+            try:
+                if command == MSG_ADDROUTE:
+                    try:
+                        ipr.route('replace', **route)
+                    except NetlinkError as e:
+                        if e.code != EEXIST:
+                            raise
+                        ipr.route('delete', **route)
+                        ipr.route('add', **route)
+                else:
+                    ipr.route('delete', **route)
+            except NetlinkError as e:
+                if command == MSG_DELROUTE and e.code == ESRCH:
+                    pass
+                else:
+                    raise
         self.eod_sock.send(bytes([MSG_ADDROUTERESP if command == MSG_ADDROUTE else MSG_DELROUTERESP]))
 
     def handle_getbindaddrs(self) -> None:
@@ -324,7 +377,21 @@ class ZeroTierExtOsdep:
             response = self._recv_exact(self.mgmt_sock, length).decode() if length else ''
             if status == 0xffffffff:
                 status = 200
+            if method.upper() == 'DELETE' and status >= 200 and status < 300:
+                self.cleanup_deleted_network(clean_path)
             return status, response
+
+    def cleanup_deleted_network(self, path: str) -> None:
+        parts = path.split('/')
+        if len(parts) != 2 or parts[0] != 'network':
+            return
+        try:
+            nwid = int(parts[1], 16)
+        except ValueError:
+            return
+        name = self.network_ifnames.pop(nwid, '')
+        if name and name not in configured_ifnames(self.home):
+            delete_tap(name)
 
     @staticmethod
     def _recv_exact(sock: socket.socket, length: int) -> bytes:

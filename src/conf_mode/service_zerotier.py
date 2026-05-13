@@ -24,6 +24,22 @@ from vyos.zerotier import write_json
 airbag.enable()
 
 unit_file = '/run/systemd/system/vyos-zerotier.service'
+interface_base = ['interfaces', 'zerotier']
+
+
+def _has_active_interfaces(conf):
+    if not conf.exists(interface_base):
+        return False
+
+    interfaces = conf.get_config_dict(interface_base, key_mangling=('-', '_'),
+                                      no_tag_node_value_mangle=True,
+                                      get_first_key=True,
+                                      with_recursive_defaults=True)
+    for config in interfaces.values():
+        if 'disable' not in config and 'network_id' in config:
+            return True
+
+    return False
 
 
 def get_config(config=None):
@@ -33,9 +49,12 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    return conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True,
-                                with_recursive_defaults=True)
+    zerotier = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                    get_first_key=True,
+                                    with_recursive_defaults=True)
+    zerotier['has_active_interfaces'] = _has_active_interfaces(conf)
+
+    return zerotier
 
 
 def verify(zerotier):
@@ -81,6 +100,11 @@ def apply(zerotier):
         return None
 
     call('systemctl daemon-reload')
+    if not zerotier.get('has_active_interfaces'):
+        call(f'systemctl --quiet stop {ZEROTIER_UNIT}')
+        call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
+        return None
+
     call(f'systemctl --quiet enable {ZEROTIER_UNIT}')
     call(f'systemctl --quiet restart {ZEROTIER_UNIT}')
 

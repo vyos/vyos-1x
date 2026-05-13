@@ -17,6 +17,7 @@ from vyos.utils.process import cmd
 
 ZEROTIER_HOME = Path('/run/vyos-zerotier')
 ZEROTIER_API_SOCKET = ZEROTIER_HOME / 'api.sock'
+ZEROTIER_INTERFACES_FILE = ZEROTIER_HOME / 'interfaces.json'
 ZEROTIER_UNIT = 'vyos-zerotier.service'
 
 
