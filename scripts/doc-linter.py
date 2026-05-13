@@ -261,7 +261,7 @@ def main():
                 if handle_file_action(file) is False:
                     bool_error = False
     except Exception as e:
-        for root, dirs, files in os.walk(DOCS_ROOT):
+        for root, _dirs, files in os.walk(DOCS_ROOT):
             path = root.split(os.sep)
             for file in files:
                 if file.endswith(SUPPORTED_EXTS) and "_build" not in path:
