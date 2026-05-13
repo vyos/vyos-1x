@@ -142,6 +142,11 @@ include logic but follow the host file's parser, so pick
 
 ### RST heading hierarchy
 
+Applies only to RST contexts — `_include/*.txt` snippets and
+`{eval-rst}` blocks inside MyST pages. Canonical pages are MyST and
+use ATX `#` / `##` / `###` etc. headings; this hierarchy does not
+apply to them.
+
 ```
 ##### Title (overline+underline, one per file)
 ***** Chapters
@@ -151,8 +156,9 @@ include logic but follow the host file's parser, so pick
 """"" Paragraphs
 ```
 
-The first heading in every RST file uses `#` overline+underline. Field
-lists (e.g., `:lastproofread:`) or labels may precede it.
+The first heading in every embedded RST snippet that introduces a
+title uses `#` overline+underline. Field lists (e.g.,
+`:lastproofread:`) or labels may precede it.
 
 ### Formatting
 
@@ -161,7 +167,9 @@ lists (e.g., `:lastproofread:`) or labels may precede it.
 - American English.
 - Indent with 2 spaces.
 - Blank lines around headings.
-- Inline code: use double backticks per RST convention.
+- Inline code: single backticks in MyST (the canonical form). Double
+  backticks only inside `{eval-rst}` blocks and `_include/*.txt`
+  snippets, per RST convention.
 
 ### IP addresses (linter-enforced)
 
@@ -177,10 +185,9 @@ Allowed MAC ranges: `00-53-00`–`00-53-FF` (unicast),
 
 **Requires `stop/start_vyoslinter` suppression:**
 
-% stop_vyoslinter
-- Real public IPs (e.g., `8.8.8.8` for DNS examples).
+- Real public IPs (e.g., a DNS server's address in a DNS forwarder
+  example, or an upstream peer's address in an EBGP example).
 - NAT64 well-known prefix `64:ff9b::/96`.
-% start_vyoslinter
 - Lines over 80 chars (URLs, certificate fingerprints).
 
 ### Linter suppression markers
@@ -216,9 +223,13 @@ surrounding directive (indented inside a block) or sit at column 0
 4. **Known issues** — problems and workarounds.
 5. **Debugging** — log collection, `show` commands, state indicators.
 
-### `.. TODO::` markers
+### `{todo}` markers
 
-Two valid uses:
+In MyST pages, write TODO markers as `{todo}` fenced directives
+(triple-backtick or `:::` fenced blocks with `{todo}` as the info
+string). In RST contexts (`{eval-rst}` blocks, `_include/*.txt`
+snippets) use the RST form `.. TODO::`. Two valid uses:
+
 1. **Tracking** marker on pages that still need `cfgcmd`/`opcmd`
    conversion — intentional.
 2. **Stale** marker on pages that already have full content — should
