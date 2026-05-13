@@ -480,21 +480,24 @@ class Config(object):
         else:
             return(value)
 
-    def return_values(self, path, default=[]):
+    def return_values(self, path, default=None):
         """
         Retrieve all values of a multi-value leaf node in the running or proposed config
 
         Args:
             path (str): Configuration tree path
+            default (list): Value returned (as a copy) when the node does not exist or has no values. Defaults to an empty list.
 
         Returns:
             str list: Node values, if it has any
-            []: if node does not exist
+            default.copy(): if node does not exist or has no values
 
         Note:
             This function cannot be used outside a configuration session.
             In operational mode scripts, use ``return_effective_values``.
         """
+        if default is None:
+            default = []
         if self._session_config:
             try:
                 values = self._session_config.return_values(self._make_path(path))
@@ -508,17 +511,20 @@ class Config(object):
         else:
             return(values)
 
-    def list_nodes(self, path, default=[]):
+    def list_nodes(self, path, default=None):
         """
         Retrieve names of all children of a tag node in the running or proposed config
 
         Args:
             path (str): Configuration tree path
+            default (list): Value returned (as a copy) when the tag node does not exist or has no children. Defaults to an empty list.
 
         Returns:
-            string list: child node names
+            string list: child node names, or default.copy() if the node does not exist or has no children
 
         """
+        if default is None:
+            default = []
         if self._session_config:
             try:
                 nodes = self._session_config.list_nodes(self._make_path(path))
@@ -596,16 +602,19 @@ class Config(object):
         else:
             return(value)
 
-    def return_effective_values(self, path, default=[]):
+    def return_effective_values(self, path, default=None):
         """
         Retrieve all values of a multi-value node in a running (effective) config
 
         Args:
             path (str): Configuration tree path
+            default (list): Value returned (as a copy) when the node does not exist or has no values. Defaults to an empty list.
 
         Returns:
-            str list: A list of values
+            str list: A list of values, or default.copy() if the node does not exist or has no values
         """
+        if default is None:
+            default = []
         if self._running_config:
             try:
                 values = self._running_config.return_values(self._make_path(path))
@@ -619,16 +628,19 @@ class Config(object):
         else:
             return(values)
 
-    def list_effective_nodes(self, path, default=[]):
+    def list_effective_nodes(self, path, default=None):
         """
         Retrieve names of all children of a tag node in the running config
 
         Args:
             path (str): Configuration tree path
+            default (list): Value returned (as a copy) when the tag node does not exist or has no children. Defaults to an empty list.
 
         Returns:
-            str list: child node names
+            str list: child node names, or default.copy() if the node does not exist or has no children
         """
+        if default is None:
+            default = []
         if self._running_config:
             try:
                 nodes = self._running_config.list_nodes(self._make_path(path))
