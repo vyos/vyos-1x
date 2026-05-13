@@ -34,17 +34,23 @@ pull_request_rules:
   # noise.
   #
   # Per Mergify `extends:` semantics, same-name rules in the child REPLACE
-  # the parent's. The two rules below keep the original names so the parent
-  # versions are dropped; conditions are constructed to never match (a PR
-  # cannot simultaneously be closed and not closed), so the `toggle` action
-  # always falls into the "remove label" branch — cleaning up the labels on
-  # any PR that previously had them.
+  # the parent's. The override below MUST use the parent's exact rule name
+  # — `Flag T-ID format violation in PR title or commit messages` — or the
+  # parent rule keeps firing and `invalid-title` labels every PR. (The
+  # earlier two-rule override shipped in 3d44fe06 used the wrong names
+  # and was a no-op; PR #2014 surfaced the regression.)
+  #
+  # Conditions are constructed to never match (a PR cannot simultaneously
+  # be closed and not closed), so the `toggle` action always falls into
+  # the "remove label" branch — cleaning up `invalid-title` on any PR
+  # that picked it up while the broken override was in place.
   # ------------------------------------------------------------------
 
-  - name: Flag PR title not matching T-ID format
+  - name: Flag T-ID format violation in PR title or commit messages
     description: >
       Disabled in vyos-documentation — this repo does not require Phorge
-      T-IDs in PR titles. Conventional-commits style is acceptable.
+      T-IDs in PR titles or commit message headlines. Conventional-commits
+      style (`fix(ext): …`, `ci(...): …`, `chore(deps): …`) is acceptable.
     conditions:
       - closed
       - '-closed'
@@ -52,16 +58,3 @@ pull_request_rules:
       label:
         toggle:
           - invalid-title
-
-  - name: Flag commit message not matching T-ID format
-    description: >
-      Disabled in vyos-documentation — this repo does not require Phorge
-      T-IDs in commit message headlines. Conventional-commits style is
-      acceptable.
-    conditions:
-      - closed
-      - '-closed'
-    actions:
-      label:
-        toggle:
-          - invalid-commit-title
