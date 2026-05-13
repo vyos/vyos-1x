@@ -30,9 +30,15 @@ SUPPORTED_EXTS = ('.md', '.rst', '.txt')
 # meta, not docs content, and are out of scope.
 DOCS_ROOT = 'docs'
 
+# Subtrees under docs/ that are excluded from the build (per docs/conf.py)
+# and therefore also excluded from lint.
+DOCS_EXCLUDED_SUBDIRS = ('_build', '_rst_legacy')
+
 
 def is_docs_path(path):
-    """Return True iff `path` resolves under the repo's `docs/` tree.
+    """Return True iff `path` resolves under the repo's `docs/` tree AND
+    is not inside one of the build-excluded subtrees (``_build``,
+    ``_rst_legacy``).
 
     Accepts both repo-relative and absolute paths. Both `path` and
     `DOCS_ROOT` are resolved with `os.path.realpath`, so symlinks are
@@ -46,10 +52,19 @@ def is_docs_path(path):
     abs_path = os.path.realpath(path)
     abs_docs = os.path.realpath(DOCS_ROOT)
     try:
-        return os.path.commonpath([abs_path, abs_docs]) == abs_docs
+        if os.path.commonpath([abs_path, abs_docs]) != abs_docs:
+            return False
     except ValueError:
         # commonpath raises on mixed drives (Windows) or empty input.
         return False
+    for excluded in DOCS_EXCLUDED_SUBDIRS:
+        abs_excluded = os.path.realpath(os.path.join(DOCS_ROOT, excluded))
+        try:
+            if os.path.commonpath([abs_path, abs_excluded]) == abs_excluded:
+                return False
+        except ValueError:
+            continue
+    return True
 
 # MyST / Markdown fenced code block: leading whitespace + 3+ backticks or 3+ colons.
 # Same character and length-or-greater closes.
@@ -303,12 +318,18 @@ def main():
                 if handle_file_action(file) is False:
                     bool_error = False
     else:
-        for root, _dirs, files in os.walk(DOCS_ROOT):
-            path = root.split(os.sep)
+        # In-place dirs prune: skip descending into build-excluded subtrees.
+        # is_docs_path() also rejects paths under those subtrees, so the
+        # prune is an optimization (avoids walking thousands of archived
+        # legacy RST files) and the filter is correctness.
+        for root, dirs, files in os.walk(DOCS_ROOT):
+            dirs[:] = [d for d in dirs if d not in DOCS_EXCLUDED_SUBDIRS]
             for file in files:
-                if file.endswith(SUPPORTED_EXTS) and "_build" not in path:
-                    fpath = '/'.join(path)
-                    filepath = f"{fpath}/{file}"
+                filepath = os.path.join(root, file)
+                if (
+                    file.endswith(SUPPORTED_EXTS)
+                    and is_docs_path(filepath)
+                ):
                     if handle_file_action(filepath) is False:
                         bool_error = False
 
