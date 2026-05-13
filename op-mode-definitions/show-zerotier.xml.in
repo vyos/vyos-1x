@@ -35,6 +35,20 @@
               </leafNode>
             </children>
           </node>
+          <node name="peers">
+            <properties>
+              <help>Show ZeroTier peers</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/zerotier.py peers</command>
+            <children>
+              <leafNode name="json">
+                <properties>
+                  <help>Show ZeroTier peers in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/zerotier.py peers --json</command>
+              </leafNode>
+            </children>
+          </node>
           <node name="moons">
             <properties>
               <help>Show ZeroTier moons</help>

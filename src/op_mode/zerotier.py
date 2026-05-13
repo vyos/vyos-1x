@@ -41,6 +41,32 @@ def _format_routes(routes):
     return ','.join(formatted) if formatted else '-'
 
 
+def _format_latency(value):
+    try:
+        latency = int(value)
+    except (TypeError, ValueError):
+        return '-'
+    if latency < 0:
+        return '-'
+    return f'{latency} ms'
+
+
+def _active_paths(paths):
+    return [path for path in paths if path.get('active') and not path.get('expired')]
+
+
+def _preferred_path(paths):
+    active = _active_paths(paths)
+    for path in active:
+        if path.get('preferred'):
+            return path.get('address') or '-'
+
+    if active:
+        return active[0].get('address') or '-'
+
+    return '-'
+
+
 def _show_networks(data):
     rows = []
     for network in data:
@@ -57,6 +83,28 @@ def _show_networks(data):
 
     if not rows:
         print('No ZeroTier networks joined')
+        return
+
+    print(tabulate(rows, headers='keys', tablefmt='simple', numalign='left'))
+
+
+def _show_peers(data):
+    rows = []
+    for peer in data:
+        paths = peer.get('paths', [])
+        rows.append({
+            'Address': peer.get('address') or '-',
+            'Role': peer.get('role') or '-',
+            'Version': peer.get('version') or '-',
+            'Latency': _format_latency(peer.get('latency')),
+            'Bonded': _format_bool(peer.get('isBonded', False)),
+            'Tunneled': _format_bool(peer.get('tunneled', False)),
+            'Active paths': len(_active_paths(paths)),
+            'Preferred path': _preferred_path(paths),
+        })
+
+    if not rows:
+        print('No ZeroTier peers')
         return
 
     print(tabulate(rows, headers='keys', tablefmt='simple', numalign='left'))
@@ -91,6 +139,10 @@ def show(path, raw_json=False):
         _show_networks(data)
         return
 
+    if path == '/peer':
+        _show_peers(data)
+        return
+
     print(json.dumps(data, indent=2, sort_keys=True))
 
 
@@ -110,6 +162,9 @@ def main():
     moons = subparsers.add_parser('moons')
     moons.add_argument('--json', action='store_true')
 
+    peers = subparsers.add_parser('peers')
+    peers.add_argument('--json', action='store_true')
+
     args = parser.parse_args()
 
     try:
@@ -121,6 +176,8 @@ def main():
             show('/network', raw_json=args.json)
         elif args.command == 'moons':
             show('/moon', raw_json=args.json)
+        elif args.command == 'peers':
+            show('/peer', raw_json=args.json)
     except ZeroTierAPIError as e:
         print(e)
         exit(1)
