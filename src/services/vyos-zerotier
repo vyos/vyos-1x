@@ -171,6 +171,7 @@ class ZeroTierExtOsdep:
                 os.close(fd)
             except OSError:
                 pass
+        self.tap_fds.clear()
 
     def serve_eod(self) -> None:
         while self.running:
@@ -235,7 +236,10 @@ class ZeroTierExtOsdep:
         name = ifname(raw_name)
         fd = self.tap_fds.pop(name, None)
         if fd is not None:
-            os.close(fd)
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         self.eod_sock.send(bytes([MSG_DELTAPRESP]))
 
     def handle_setmtu(self, data: bytes) -> None:
@@ -318,6 +322,8 @@ class ZeroTierExtOsdep:
             header = self._recv_exact(self.mgmt_sock, 8)
             status, length = struct.unpack('=II', header)
             response = self._recv_exact(self.mgmt_sock, length).decode() if length else ''
+            if status == 0xffffffff:
+                status = 200
             return status, response
 
     @staticmethod
