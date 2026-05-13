@@ -23,10 +23,6 @@ IPV6GROUPS = (
 )
 IPV6ADDR = '|'.join(['(?:{})'.format(g) for g in IPV6GROUPS[::-1]])  # Reverse rows for greedy match
 
-MAC = r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})'
-
-NUMBER = r"([\s']\d+[\s'])"
-
 SUPPORTED_EXTS = ('.md', '.rst', '.txt')
 
 # Linter only applies to published documentation sources under docs/. Repo-root
@@ -90,17 +86,6 @@ def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock,
     if in_md_fence:
         return md_fence_is_eval_rst
     return False
-
-
-def lint_mac(cnt, line):
-    """Flag MAC addresses outside the RFC 7042 documentation range."""
-    mac = re.search(MAC, line, re.I)
-    if mac is not None:
-        mac = mac.group()
-        u_mac = re.search(r'((00)[:-](53)([:-][0-9A-F]{2}){4})', mac, re.I)
-        m_mac = re.search(r'((90)[:-](10)([:-][0-9A-F]{2}){4})', mac, re.I)
-        if u_mac is None and m_mac is None:
-            return (f"Use MAC reserved for Documentation (RFC7042): {mac}", cnt, 'error')
 
 
 def lint_ipv4(cnt, line):
@@ -222,13 +207,10 @@ def handle_file_action(filepath):
 
             test_line_length = not (in_md_fence or in_rst_codeblock)
 
-            err_mac = lint_mac(cnt, line.strip())
-            # disable mac detection for the moment, too many false positives
-            err_mac = None
             err_ip4 = lint_ipv4(cnt, line.strip())
             err_ip6 = lint_ipv6(cnt, line.strip())
             err_len = lint_linelen(cnt, line) if test_line_length else None
-            for e in (err_mac, err_ip4, err_ip6, err_len):
+            for e in (err_ip4, err_ip6, err_len):
                 if e:
                     errors.append(e)
 
