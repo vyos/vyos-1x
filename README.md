@@ -8,6 +8,19 @@ https://docs.vyos.io.
 The earlier wiki for VyOS 1.1.x and pre-1.2.0 docs is preserved on the
 [Wayback Machine](https://web.archive.org/web/20200225171529/https://wiki.vyos.net/wiki/Main_Page).
 
+## Source format
+
+Pages are [MyST Markdown](https://myst-parser.readthedocs.io/) (`.md`) and
+build with Sphinx — `source_suffix` in `docs/conf.py` lists `.md` only.
+The pre-migration RST originals are archived under `docs/_rst_legacy/`
+for reference; they are excluded from the build and should not be edited.
+
+VyOS-specific command directives (`cfgcmd`, `opcmd`, `cmdincludemd`) are
+written as MyST fenced blocks and rendered as directives via
+`myst_fence_as_directive`. Shared snippets under `docs/_include/*.txt` are
+still RST — they are included into MyST pages through `cmdincludemd`, which
+parses their content as RST so the legacy templates keep working unchanged.
+
 ## Branches
 
 The documentation repository tracks the same branch convention as the VyOS
@@ -60,6 +73,7 @@ Output lands in `docs/_build/html/`.
 
 ## Contributing
 
-See [AGENTS.md](AGENTS.md) for the full contributor guide — source format
-conventions (MyST Markdown for migrated pages, RST for the rest), CLI
-directive syntax, IP-address rules, the linter, and the bot review workflow.
+See [AGENTS.md](AGENTS.md) for the full contributor guide — MyST source
+conventions, the VyOS command directives (`cfgcmd` / `opcmd` /
+`cmdincludemd`), IP-address rules, the linter and its suppression markers,
+and the Copilot/CodeRabbit bot review workflow.
