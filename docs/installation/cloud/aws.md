@@ -115,7 +115,7 @@ Parameter Store. For instructions on creating a configuration, see
 
 ### CloudWatch SSM Configuration creation
 
-Creating the Amazon Cloudwatch Agent Configuration in Amazon
+Creating the Amazon CloudWatch Agent Configuration in Amazon
 {abbr}`SSM (Systems Manager)` Parameter Store.
 
 1. Create an {abbr}`IAM (Identity and Access Management)` role for your

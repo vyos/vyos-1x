@@ -461,7 +461,7 @@ Configuration commands are flattened from the tree into \'one-liner\' commands s
 
 ``` none
 [edit]
-vyos@vyos# set interface ethernet eth0 address 192.0.2.100/24
+vyos@vyos# set interfaces ethernet eth0 address 192.0.2.100/24
 ```
 
 ``` none
@@ -524,8 +524,7 @@ Saving configuration to 'tftp://192.168.0.100/vyos-test.config.boot'...
 
 Done
 ```
-:::
-::::
+
 ```{cfgcmd} exit \[discard\]
 
 Configuration mode can not be exited while uncommitted changes exist. To exit configuration mode without applying changes, the {cfgcmd}`exit discard` command must be used.
