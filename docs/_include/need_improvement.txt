@@ -1,3 +1,4 @@
+::::{only} not latex
 :::{admonition} Call for Contributions
 :class: error
 
@@ -5,3 +6,4 @@ Help improve this section with additional content, examples, and explanations.
 
 For contribution guidelines, see {ref}`documentation`.
 :::
+::::
