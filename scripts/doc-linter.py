@@ -88,6 +88,7 @@ def is_suppression_marker(line, kind, in_md_fence, in_rst_codeblock,
 
 
 def lint_mac(cnt, line):
+    """Flag MAC addresses outside the RFC 7042 documentation range."""
     mac = re.search(MAC, line, re.I)
     if mac is not None:
         mac = mac.group()
@@ -98,6 +99,7 @@ def lint_mac(cnt, line):
 
 
 def lint_ipv4(cnt, line):
+    """Flag IPv4 addresses outside RFC 5737 / private / multicast ranges."""
     ip = re.search(IPV4ADDR, line, re.I)
     if ip is not None:
         ip = ipaddress.ip_address(ip.group().strip(' '))
@@ -112,6 +114,7 @@ def lint_ipv4(cnt, line):
 
 
 def lint_ipv6(cnt, line):
+    """Flag IPv6 addresses outside RFC 3849 / private / multicast ranges."""
     ip = re.search(IPV6ADDR, line, re.I)
     if ip is not None:
         ip = ipaddress.ip_address(ip.group().strip(' '))
@@ -125,6 +128,7 @@ def lint_ipv6(cnt, line):
 
 
 def lint_AS(cnt, line):
+    """Placeholder for future AS-number documentation-range checks (RFC 5398)."""
     number = re.search(NUMBER, line, re.I)
     if number:
         pass
@@ -132,11 +136,13 @@ def lint_AS(cnt, line):
 
 
 def lint_linelen(cnt, line):
+    """Warn when a line exceeds the 80-character docs convention."""
     line = line.rstrip()
     if len(line) > 80:
         return (f"Line too long: len={len(line)}", cnt, 'warning')
 
 def handle_file_action(filepath):
+    """Run all lint checks on one file, respecting fence/code-block and suppression context."""
     errors = []
     file_ext = os.path.splitext(filepath)[1].lower()
     # Stack of open MD/MyST fences: (char, min_len). Supports nesting like
@@ -236,6 +242,7 @@ def handle_file_action(filepath):
 
 
 def main():
+    """Entry point: lint the changed-file list from argv, or fall back to walking `docs/`."""
     bool_error = True
     print('start')
     try:
