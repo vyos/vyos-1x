@@ -32,12 +32,23 @@ SUPPORTED_EXTS = ('.md', '.rst', '.txt')
 # Linter only applies to published documentation sources under docs/. Repo-root
 # files (README.md, AGENTS.md, .github/copilot-instructions.md) are project
 # meta, not docs content, and are out of scope.
-DOCS_ROOT = 'docs' + os.sep
+DOCS_ROOT = 'docs'
 
 
 def is_docs_path(path):
-    norm = os.path.normpath(path)
-    return norm == 'docs' or norm.startswith(DOCS_ROOT)
+    """Return True iff `path` resolves under the repo's `docs/` tree.
+
+    Accepts both repo-relative and absolute paths. Paths are normalized
+    against the linter's working directory (CI invokes it from the repo
+    root; the same is expected for local runs).
+    """
+    abs_path = os.path.abspath(path)
+    abs_docs = os.path.abspath(DOCS_ROOT)
+    try:
+        return os.path.commonpath([abs_path, abs_docs]) == abs_docs
+    except ValueError:
+        # commonpath raises on mixed drives (Windows) or empty input.
+        return False
 
 # MyST / Markdown fenced code block: leading whitespace + 3+ backticks or 3+ colons.
 # Same character and length-or-greater closes.
