@@ -37,8 +37,9 @@ yes                     # apply running
 
 % stop_vyoslinter
 
+[install Terraform]: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+
 % start_vyoslinter
 
-[install Terraform]: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
 [Terraform introduction]: https://developer.hashicorp.com/terraform/intro
 
