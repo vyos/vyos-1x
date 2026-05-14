@@ -32,6 +32,7 @@ from vyos.utils.commit import commit_in_progress
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import stop_systemd_unit
 
 running = True
 
@@ -62,10 +63,10 @@ def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
         # Interface moved state to down
         if is_systemd_service_active(systemdV4_service):
             syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV4_service}...')
-            cmd(f'systemctl stop {systemdV4_service}')
+            stop_systemd_unit(systemdV4_service, raise_on_failure=False)
         if is_systemd_service_active(systemdV6_service):
             syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV6_service}...')
-            cmd(f'systemctl stop {systemdV6_service}')
+            stop_systemd_unit(systemdV6_service, raise_on_failure=False)
 
     elif operstate == 'UP':
         v6_restart = False
