@@ -8203,6 +8203,16 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
             self.bearer_path = None
 
+        # Tear down every downstream artifact (passthrough,
+        # ipv6-bridging, FSM MSS clamp, link DOWN).  Same cleanup the
+        # admin-disable path performs — operator deleting the interface
+        # expects no LAN-side state to linger.
+        try:
+            await self._teardown_downstream_features()
+        except Exception as e:
+            logger.warning(f"Downstream teardown failed during shutdown: {e}",
+                          extra={'interface_number': self.interface_number})
+
         # Remove from global registry
         ModemStateMachine.modem_state_machines.pop(f"wwan{self.interface_number}", None)
 
@@ -8267,6 +8277,12 @@ class ModemStateMachine:
                     logger.debug(f"Disconnect-all returned (non-fatal): {e}",
                                 extra={'interface_number': self.interface_number})
 
+            # Tear down every downstream artifact (passthrough,
+            # ipv6-bridging, FSM MSS clamp, link DOWN).  Done BEFORE we
+            # power the modem off so that any feature whose teardown
+            # needs working network/DBus state can still complete.
+            await self._teardown_downstream_features()
+
             # Drive modem into airplane mode (RF off) — this is the real
             # "off" the user expects when they `set ... disable`.  If the
             # modem isn't bound yet (proxy is None), the flag is set and
@@ -8281,6 +8297,64 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"Error during admin disable: {e}",
                        extra={'interface_number': self.interface_number})
+
+    async def _teardown_downstream_features(self):
+        """Tear down every FSM-installed downstream artifact.
+
+        Used by both ``shutdown()`` (interface deleted) and
+        ``_admin_disable()`` (interface administratively disabled) so the
+        operator sees a clean slate on the LAN side regardless of which
+        path was taken.  Idempotent — each sub-teardown is gated on
+        whether the feature was actually active.
+
+        Cleans up:
+          * IP passthrough (dnsmasq, policy routes, conntrack rules)
+          * IPv6 bridging (LAN /64 address, proxy-NDP entries, radvd,
+            sysctl restores, netlink watcher tasks)
+          * FSM-owned mangle/FORWARD TCPMSS clamp rules (v4 + v6)
+          * Sets the wwanN link DOWN so no stale IPs linger
+        """
+        interface_name = f"wwan{self.interface_number}"
+
+        # IP passthrough — only torn down if the manager believes it is
+        # active.  teardown() is itself idempotent but this avoids log noise.
+        try:
+            if hasattr(self, '_passthrough') and self._passthrough.cfg.is_active():
+                await self._passthrough.teardown()
+                logger.info("IP passthrough torn down",
+                           extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.warning(f"IP passthrough teardown failed: {e}",
+                          extra={'interface_number': self.interface_number})
+
+        # IPv6 bridging — remove bridged /64, proxy-NDP, stop radvd,
+        # cancel background netlink watcher.
+        try:
+            if (hasattr(self, '_bridging_applied') and self._bridging_applied):
+                await self._bridging_remove_all()
+                logger.info("IPv6 bridging torn down",
+                           extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.warning(f"IPv6 bridging teardown failed: {e}",
+                          extra={'interface_number': self.interface_number})
+
+        # FSM-owned MSS clamp (mangle/FORWARD TCPMSS rules)
+        try:
+            if (getattr(self, '_fsm_mss_clamp_v4_active', False)
+                    or getattr(self, '_fsm_mss_clamp_v6_active', False)):
+                await self._remove_fsm_mss_clamp(interface_name)
+        except Exception as e:
+            logger.warning(f"FSM MSS clamp removal failed: {e}",
+                          extra={'interface_number': self.interface_number})
+
+        # Set the link DOWN so any address ModemManager leaves behind
+        # is not advertised, and so downstream code sees the interface
+        # as offline.  Gated by interface_management_enabled internally.
+        try:
+            await self._set_interface_down()
+        except Exception as e:
+            logger.warning(f"Set interface down failed: {e}",
+                          extra={'interface_number': self.interface_number})
 
     async def _enter_airplane_mode(self):
         """Drive the modem into low-power RF-off state.
