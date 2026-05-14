@@ -123,12 +123,17 @@ def main():
                 # timeout - retry
                 continue
 
+            # Check if a config commit is in progress before processing any
+            # messages. This avoids blocking per-message and reduces unnecessary
+            # commit_in_progress() calls.
+            if commit_in_progress():
+                syslog.syslog(syslog.LOG_DEBUG,
+                              'Config commit in progress, skipping netlink events')
+                sleep(1)
+                continue
+
             # Receive and process any messages
             for message in ipr.get():
-                # Wait for commit to complete
-                while commit_in_progress():
-                    sleep(0.250)
-
                 # Parse NETLINK message
                 match message['event']:
                     # Message received during interface creation or modification
