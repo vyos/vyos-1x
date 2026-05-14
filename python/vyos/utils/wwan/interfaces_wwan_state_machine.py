@@ -147,7 +147,33 @@ class ModemStateMachine:
         self._shutting_down = False         # Set by shutdown() to suppress recovery
         self._airplane_mode_requested = False  # Set when disable=true is applied
         self._airplane_mode_active = False     # True once SetPowerState(LOW) succeeded
+        # Timers/tasks referenced by _admin_disable() →
+        # _stop_network_interface_monitoring() before any config is applied.
+        # _apply_parsed_configuration() re-initializes these to None as well,
+        # but admin-disable can fire on cold start before that ever runs.
+        self._bearer_disconnect_timer = None
+        self._registration_debounce_timer = None
+        self._ip_monitoring_task = None
         self.usage_monitor_task = None
+        # Egress-filter / MSS-clamp state also referenced during teardown
+        self._ipv6_egress_filter_active = False
+        self._ipv4_egress_filter_active = False
+        self._fsm_mss_clamp_v4_active = False
+        self._fsm_mss_clamp_v6_active = False
+        self._current_bearer_ipv4 = None
+        self._current_bearer_ipv6 = None
+        self._current_bearer_ipv6_prefix = None
+        # interface_management_enabled gates _set_interface_down(), which the
+        # _teardown_downstream_features() path calls.  monitor_ip_changes
+        # gates _start_network_interface_monitoring().  Both default to the
+        # standard "we manage the link" behavior; _apply_parsed_configuration
+        # overrides them from the parsed config.
+        self.interface_management_enabled = True
+        self.monitor_ip_changes = False
+        # _dhcpv6_pd_enabled is read by _remove_ipv6_egress_filter().  That
+        # function is gated on _ipv6_egress_filter_active=True (which is
+        # already False on cold start), but pre-init defensively anyway.
+        self._dhcpv6_pd_enabled = False
         self.current_active_sim = None      # Track actual active SIM
         self.config_active_sim = None       # Track configured active SIM
         self.sim_switch_reason = None       # Track why SIM was switched
