@@ -144,6 +144,7 @@ class ModemStateMachine:
         self.modem_path = None
         self.bearer_path = None
         self.user_disconnected = False
+        self._shutting_down = False         # Set by shutdown() to suppress recovery
         self.usage_monitor_task = None
         self.current_active_sim = None      # Track actual active SIM
         self.config_active_sim = None       # Track configured active SIM
@@ -8078,6 +8079,18 @@ class ModemStateMachine:
         logger.info("Shutting down FSM",
                    extra={'interface_number': self.interface_number})
 
+        # CRITICAL: set user_disconnected BEFORE doing anything else.
+        # This flag is checked by handle_disconnection_recovery() and the
+        # bearer-disconnect signal handlers — without it, our intentional
+        # disconnect below is treated as an unexpected bearer drop and
+        # the enhanced-reconnection path immediately re-establishes the
+        # bearer (observed in production: "Disconnection recovery
+        # attempt 1/3" firing right after we disconnect).
+        self.user_disconnected = True
+        # Mark shutdown explicitly — used as belt-and-suspenders for any
+        # code path that might not check user_disconnected.
+        self._shutting_down = True
+
         # Cancel failed-state retry timer (would reconnect after disconnect)
         try:
             self._cancel_failed_retry()
@@ -8115,6 +8128,22 @@ class ModemStateMachine:
                 and not self._initial_config_task.done()):
             self._initial_config_task.cancel()
             self._initial_config_task = None
+
+        # Cancel bearer-disconnect debounce timer (would otherwise still
+        # fire and trigger handle_disconnection_recovery — gated now by
+        # user_disconnected but cancel anyway to avoid log noise)
+        if (hasattr(self, '_bearer_disconnect_timer')
+                and self._bearer_disconnect_timer
+                and not self._bearer_disconnect_timer.done()):
+            self._bearer_disconnect_timer.cancel()
+            self._bearer_disconnect_timer = None
+
+        # Cancel registration debounce timer
+        if (hasattr(self, '_registration_debounce_timer')
+                and self._registration_debounce_timer
+                and not self._registration_debounce_timer.done()):
+            self._registration_debounce_timer.cancel()
+            self._registration_debounce_timer = None
 
         # Force-disconnect the bearer unconditionally — do NOT gate on
         # current_state, because the FSM's internal state may lag the
