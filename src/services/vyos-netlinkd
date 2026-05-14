@@ -22,6 +22,7 @@ import select
 
 from pyroute2 import IPRoute # pylint: disable = no-name-in-module
 from pyroute2 import NetlinkError # pylint: disable = no-name-in-module
+from pyroute2.netlink.rtnl import RTMGRP_LINK
 from time import sleep
 from typing import Optional
 
@@ -105,7 +106,8 @@ def main():
                    facility=syslog.LOG_DAEMON)
     syslog.syslog(syslog.LOG_INFO, "VyOS Netlink listener daemon started.")
 
-    ipr = IPRoute()
+    # Subscribe to link notifications only (not routes/rules/neigh/addr/...).
+    ipr = IPRoute(groups=RTMGRP_LINK)
     ipr.bind()
     fd = ipr.fileno()
 
@@ -157,6 +159,8 @@ def main():
 
                     # Deletion of a network link which has been previously added to the kernel
                     case 'RTM_DELLINK':
+                        pass
+                    case _:
                         pass
 
         except NetlinkError as e:
