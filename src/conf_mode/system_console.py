@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import platform
 from pathlib import Path
 
 from vyos.base import Warning
@@ -26,6 +27,7 @@ from vyos.system import grub_util
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
+from vyos import flavor
 airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
@@ -87,8 +89,17 @@ def generate(console):
             if 'serial-getty' in basename:
                 os.unlink(os.path.join(root, basename))
 
-    # Define a default console on a tty framebuffer
-    default_tty_console = ('tty', '0', '')
+    # PSL: Try to get console from the flavor.json files before defaulting
+    try:
+        default_tty_console = flavor.get_image_serial_console()
+    except Exception:
+        if platform.machine() == 'aarch64':
+            # PSL: prefer ttyS0/115200 on arm64.
+            default_tty_console = ('ttyS', '0', '115200')
+        else:
+            # Define a default console on a tty framebuffer
+            default_tty_console = ('tty', '0', '')
+
     if not console or 'device' not in console:
         grub_util.update_serial_console(*default_tty_console)
         return None
