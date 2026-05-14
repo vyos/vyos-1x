@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+# Use lxml xpath capability to detect multiple properties elements at the
+# same path with differing content.
+
+
+import sys
+import glob
+import logging
+import io
+from lxml import etree
+
+
+debug = False
+
+logger = logging.getLogger(__name__)
+logs_handler = logging.StreamHandler()
+logger.addHandler(logs_handler)
+
+if debug:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+
+
+def canonical_form(e):
+    # pylint: disable=c-extension-no-member
+    out = io.BytesIO()
+
+    etree.ElementTree(e).write_c14n(out)
+    return out.getvalue()
+
+
+def check_properties_collision(dir_name):
+    # pylint: disable=too-many-locals,too-many-branches,c-extension-no-member
+    """
+    Collect elements with help tag into dictionary indexed by name
+    attributes of ancestor path.
+    """
+    buffer = io.StringIO()
+    for fname in glob.glob(f'{dir_name}/*.xml'):
+        tree = etree.parse(fname)
+        defv = {}
+
+        xpath_str = '//properties'
+        xp = tree.xpath(xpath_str)
+
+        for element in xp:
+            ap = element.xpath('ancestor::*[@name]')
+            ap_name = [el.get('name') for el in ap]
+            ap_path_str = ' '.join(ap_name)
+            defv.setdefault(ap_path_str, []).append(element)
+
+        trivial = []
+        for k, v in defv.items():
+            if len(v) < 2:
+                trivial.append(k)
+        for i in trivial:
+            del defv[i]
+
+        for k, v in defv.items():
+            collisions = []
+            for i in v:
+                # If properties contains more than just a help element:
+                if len(list(i)) > 1:
+                    collisions.append(i)
+            if len(collisions) > 1:
+                property_set = set()
+                for j in collisions:
+                    prop = canonical_form(j)
+                    property_set.add(prop)
+                if len(property_set) > 1:
+                    buffer.write(f'Collision in file {fname}:\n')
+                    for e in collisions:
+                        buffer.write(
+                            f'Element {e.tag} at {e.sourceline} with content:\n {canonical_form(e)}\n'
+                        )
+
+    content = buffer.getvalue()
+    if content:
+        logger.info(
+            'Collisions detected: multiple <properties> elements at a path with differing content other than <help>.\n'
+            'Information beyond the first instance will be ignored in the resulting node.def file.'
+        )
+        logger.info(content)
+
+    buffer.close()
+
+
+def main():
+    if len(sys.argv) < 2:
+        logger.critical('Must specify XML directory!')
+        sys.exit(1)
+
+    dir_name = sys.argv[1]
+
+    check_properties_collision(dir_name)
+
+
+if __name__ == '__main__':
+    main()
