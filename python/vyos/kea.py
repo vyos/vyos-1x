@@ -385,10 +385,10 @@ def kea6_parse_subnet(subnet, config):
                 reservation['duid'] = host_config['duid']
 
             if 'ipv6_address' in host_config:
-                reservation['ip-addresses'] = [host_config['ipv6_address']]
+                reservation['ip-addresses'] = host_config['ipv6_address']
 
             if 'ipv6_prefix' in host_config:
-                reservation['prefixes'] = [host_config['ipv6_prefix']]
+                reservation['prefixes'] = host_config['ipv6_prefix']
 
             if 'option' in host_config:
                 reservation['option-data'] = kea6_parse_options(host_config['option'])

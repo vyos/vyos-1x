@@ -226,8 +226,9 @@ def verify(dhcpv6):
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
                     if 'ipv6_address' in mapping_config:
                         # Static address must be in subnet
-                        if ip_address(mapping_config['ipv6_address']) not in ip_network(subnet):
-                            raise ConfigError(f'static-mapping address for mapping "{mapping}" is not in subnet "{subnet}"!')
+                        for address in mapping_config['ipv6_address']:
+                            if ip_address(address) not in ip_network(subnet):
+                                raise ConfigError(f'static-mapping address for mapping "{mapping}" is not in subnet "{subnet}"!')
 
                         if ('mac' not in mapping_config and 'duid' not in mapping_config) or \
                             ('mac' in mapping_config and 'duid' in mapping_config):

@@ -242,6 +242,7 @@
                 <constraint>
                   <validator name="ipv6-address"/>
                 </constraint>
+                <multi/>
               </properties>
             </leafNode>
             <leafNode name="ipv6-prefix">
@@ -254,6 +255,7 @@
                 <constraint>
                   <validator name="ipv6-prefix"/>
                 </constraint>
+                <multi/>
               </properties>
             </leafNode>
           </children>
