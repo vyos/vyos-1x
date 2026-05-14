@@ -145,6 +145,8 @@ class ModemStateMachine:
         self.bearer_path = None
         self.user_disconnected = False
         self._shutting_down = False         # Set by shutdown() to suppress recovery
+        self._airplane_mode_requested = False  # Set when disable=true is applied
+        self._airplane_mode_active = False     # True once SetPowerState(LOW) succeeded
         self.usage_monitor_task = None
         self.current_active_sim = None      # Track actual active SIM
         self.config_active_sim = None       # Track configured active SIM
@@ -1254,6 +1256,22 @@ class ModemStateMachine:
         # Always transition to WAITING_FOR_CONFIG first (valid from MODEM_FOUND)
         self.transition(ModemEvent.WAIT_FOR_CONFIG)
 
+        # If config says the interface is admin-disabled, drive the
+        # modem to airplane mode now and stop — don't run the initial
+        # configuration cascade.  Covers the cold-start case where the
+        # FSM service restarted with cached `interface_disabled=True`.
+        if getattr(self, '_admin_disabled', False) or (
+                self.config and self.config.get('interface_disabled')):
+            logger.info("Interface is admin-disabled — driving modem to airplane mode",
+                       extra={'interface_number': self.interface_number})
+            self._admin_disabled = True
+            self.user_disconnected = True
+            self._safe_create_task(self._enter_airplane_mode())
+            # Still synthesize an initial state read so observability
+            # works, but don't run the connection cascade.
+            self._safe_create_task(self._dispatch_initial_modem_state())
+            return
+
         # Check if config was already applied before modem was found
         if self.config:
             logger.info("Configuration already available, applying immediately",
@@ -1874,6 +1892,13 @@ class ModemStateMachine:
             self.user_disconnected = False
             logger.info("Interface re-enabled from admin-disabled state",
                        extra={'interface_number': self.interface_number})
+            # Exit airplane mode (PowerState LOW → ON) before falling
+            # through to the normal apply path.  Scheduled as a task so
+            # the apply_config sync entry-point isn't blocked; the normal
+            # path's _ensure_modem_enabled also handles LOW→ON
+            # defensively if this hasn't completed in time.
+            if self._airplane_mode_requested or self._airplane_mode_active:
+                self._safe_create_task(self._exit_airplane_mode_if_needed())
             # Fall through to normal apply logic — will trigger
             # RECONFIGURE or initial config depending on current state.
 
@@ -3329,6 +3354,20 @@ class ModemStateMachine:
                     logger.warning(f"Failed to power on modem: {power_error}",
                                   extra={'interface_number': self.interface_number})
                     # Continue anyway - maybe it will work
+            elif power_state == 2:  # Low power (airplane-mode leftover)
+                # Modem is RF-off — raise to ON before Enable(True),
+                # otherwise some drivers reject the enable call.
+                logger.info("Modem in low-power state, raising to ON before enable",
+                           extra={'interface_number': self.interface_number})
+                iface = self.proxy.get_interface(MODEM_INTERFACE)
+                try:
+                    await iface.call_set_power_state(3)  # 3 = on
+                    await asyncio.sleep(3)
+                    self._airplane_mode_active = False
+                except Exception as power_error:
+                    logger.warning(f"Failed to raise power to ON: {power_error}",
+                                  extra={'interface_number': self.interface_number})
+                    # Continue anyway — Enable() may still work on some firmware
 
             logger.info(f"Modem is disabled, enabling... (timeout: {timeout_seconds}s)",
                        extra={'interface_number': self.interface_number})
@@ -8216,6 +8255,24 @@ class ModemStateMachine:
                     logger.error(f"Error disconnecting bearer during admin disable: {e}",
                                extra={'interface_number': self.interface_number})
                 self.bearer_path = None
+            elif self.proxy:
+                # No tracked bearer path, but the modem may have an
+                # auto-established bearer (initial-EPS) we need to drop.
+                try:
+                    simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                    await simple_iface.call_disconnect('/')
+                    logger.info("All bearers disconnected for admin disable",
+                               extra={'interface_number': self.interface_number})
+                except Exception as e:
+                    logger.debug(f"Disconnect-all returned (non-fatal): {e}",
+                                extra={'interface_number': self.interface_number})
+
+            # Drive modem into airplane mode (RF off) — this is the real
+            # "off" the user expects when they `set ... disable`.  If the
+            # modem isn't bound yet (proxy is None), the flag is set and
+            # the airplane transition runs from on_modem_found() once we
+            # bind to MM.
+            await self._enter_airplane_mode()
 
             logger.info("Interface admin-disabled — modem idle, all tasks cancelled",
                        extra={'interface_number': self.interface_number,
@@ -8224,6 +8281,99 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"Error during admin disable: {e}",
                        extra={'interface_number': self.interface_number})
+
+    async def _enter_airplane_mode(self):
+        """Drive the modem into low-power RF-off state.
+
+        Sequence: Modem.Enable(False) → Modem.SetPowerState(LOW).
+        Some modems reject SetPowerState while still enabled, so disable
+        first.  If SetPowerState is unsupported, we fall back to leaving
+        the modem disabled — caller has already torn down the bearer.
+        """
+        if not self.proxy:
+            logger.info("Modem not bound yet — airplane mode will apply when modem appears",
+                       extra={'interface_number': self.interface_number})
+            self._airplane_mode_requested = True
+            return
+
+        self._airplane_mode_requested = True
+        try:
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            modem_iface = self.proxy.get_interface(MODEM_INTERFACE)
+
+            # Step 1: disable the modem (state 3 = DISABLED).  If already
+            # disabled, this is a no-op.  ModemManager rejects power-state
+            # changes on an enabled modem on most drivers.
+            try:
+                state_v = await props.call_get(MODEM_INTERFACE, "State")
+                state = state_v.value
+                if state >= 6:  # ENABLING or higher — needs disable first
+                    try:
+                        await modem_iface.call_enable(False)
+                        logger.info("Modem disabled for airplane mode",
+                                   extra={'interface_number': self.interface_number})
+                        # Brief settle — MM signals propagate
+                        await asyncio.sleep(1)
+                    except Exception as e:
+                        logger.warning(f"Modem disable failed (continuing to power-state): {e}",
+                                      extra={'interface_number': self.interface_number})
+            except Exception as e:
+                logger.debug(f"Could not read Modem.State (continuing): {e}",
+                            extra={'interface_number': self.interface_number})
+
+            # Step 2: power state LOW (2).  Telit/Quectel/Sierra all
+            # support this on QMI; if not, log and leave modem disabled.
+            try:
+                await modem_iface.call_set_power_state(2)
+                logger.info("Modem RF disabled (PowerState=LOW) — airplane mode active",
+                           extra={'interface_number': self.interface_number})
+                self._airplane_mode_active = True
+            except Exception as e:
+                logger.warning(
+                    f"SetPowerState(LOW) failed: {e} — modem remains disabled only",
+                    extra={'interface_number': self.interface_number})
+                self._airplane_mode_active = False
+        except Exception as e:
+            logger.error(f"Error entering airplane mode: {e}",
+                        extra={'interface_number': self.interface_number})
+
+    async def _exit_airplane_mode_if_needed(self):
+        """Restore modem power state to ON if we previously set it to LOW.
+
+        Called when the interface is re-enabled.  The subsequent normal
+        flow (``_ensure_modem_enabled``) handles the Enable(True) step;
+        here we only need to bring power back up so Enable() will be
+        accepted.
+        """
+        # Clear the request flag unconditionally — caller wants normal ops
+        self._airplane_mode_requested = False
+
+        if not self.proxy:
+            self._airplane_mode_active = False
+            return
+
+        try:
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            modem_iface = self.proxy.get_interface(MODEM_INTERFACE)
+            ps_v = await props.call_get(MODEM_INTERFACE, "PowerState")
+            ps = ps_v.value
+            # PowerState: 0=unknown, 1=off, 2=low, 3=on
+            if ps != 3:
+                logger.info(f"Exiting airplane mode (PowerState={ps} → ON)",
+                           extra={'interface_number': self.interface_number})
+                try:
+                    await modem_iface.call_set_power_state(3)
+                    # Modem firmware may take a few seconds to bring the
+                    # RF subsystem back up before Enable() will succeed.
+                    await asyncio.sleep(3)
+                except Exception as e:
+                    logger.warning(f"SetPowerState(ON) failed: {e}",
+                                  extra={'interface_number': self.interface_number})
+            self._airplane_mode_active = False
+        except Exception as e:
+            logger.error(f"Error exiting airplane mode: {e}",
+                        extra={'interface_number': self.interface_number})
+            self._airplane_mode_active = False
 
     async def handle_disconnection_recovery(self, escalate=True,
                                               connectivity_triggered=False):
