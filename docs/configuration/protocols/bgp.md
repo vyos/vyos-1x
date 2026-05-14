@@ -797,6 +797,52 @@ This command specifies keep-alive time in seconds. The timer
 can range from 4 to 65535. The default value is 60 second.
 ```
 
+
+##### BGP read-only mode
+
+```{eval-rst}
+.. cfgcmd:: set protocols bgp parameters update-delay max-delay <seconds>
+
+**Enable BGP read-only mode after a BGP process restart or clearing all BGP sessions, and configure the mode’s maximum delay.**
+
+In read-only mode, BGP suspends best-path selection and does not send routing
+updates to peers. The mode ends when the router receives all expected
+End-of-RIB (EOR) messages from BGP peers or when the maximum delay is
+reached, whichever occurs first.
+
+The router expects EOR messages from all configured BGP peers except those
+that are administratively shut down. If the ``establish-wait`` parameter is
+configured, the router waits for EOR messages only from BGP peers that reach
+the Established state within the ``establish-wait`` window.
+
+The allowed range is 0 to 3600 seconds. By default, this feature is disabled.
+
+Example:
+
+.. code-block:: none
+
+   set protocols bgp parameters update-delay max-delay 120
+```
+
+```{eval-rst}
+.. cfgcmd:: set protocols bgp parameters update-delay establish-wait <seconds>
+
+**Configure how long the router waits for BGP peers to reach the Established state after read-only mode begins.**
+
+The router waits for EOR messages only from BGP peers that reach the
+Established state within the ``establish-wait`` window. The ``establish-wait``
+value must not exceed the ``max-delay`` value.
+
+The allowed range is 1 to 3600 seconds. This parameter requires ``max-delay`` to
+be configured.
+
+Example:
+
+.. code-block:: none
+
+   set protocols bgp parameters update-delay establish-wait 90
+```
+
 ##### Route Dampening
 
 When a route fails, a routing update is sent to withdraw the route from the
