@@ -8065,26 +8065,75 @@ class ModemStateMachine:
         await self.initialize()
 
     async def shutdown(self):
-        """Graceful shutdown of the FSM"""
+        """Graceful shutdown of the FSM.
+
+        Cancels all background tasks (including failed-state retry timers
+        that would otherwise reconnect after we disconnect) and forces
+        the bearer down on ModemManager.  We do NOT gate the disconnect
+        on the FSM's internal ``current_state`` because the modem may be
+        connected via an externally-established bearer (or our state may
+        not have caught up yet) — in that case we still want the bearer
+        torn down on `del interfaces wwan wwanN`.
+        """
         logger.info("Shutting down FSM",
                    extra={'interface_number': self.interface_number})
 
-        # Cancel usage monitoring
-        if self.usage_monitor_task:
-            self.usage_monitor_task.cancel()
-            self.usage_monitor_task = None
+        # Cancel failed-state retry timer (would reconnect after disconnect)
+        try:
+            self._cancel_failed_retry()
+        except Exception as e:
+            logger.debug(f"Error cancelling failed-retry during shutdown: {e}",
+                        extra={'interface_number': self.interface_number})
 
-        # Disconnect if connected
-        if (self.machine.current_state == ModemState.CONNECTED.value and
-            self.bearer_path and self.proxy):
+        # Cancel usage monitoring
+        if self.usage_monitor_task and not self.usage_monitor_task.done():
+            self.usage_monitor_task.cancel()
+        self.usage_monitor_task = None
+
+        # Cancel connectivity monitoring
+        if (hasattr(self, 'connectivity_monitor_task')
+                and self.connectivity_monitor_task
+                and not self.connectivity_monitor_task.done()):
+            self.connectivity_monitor_task.cancel()
+            self.connectivity_monitor_task = None
+
+        # Stop network interface monitoring (bearer signal, IP change, etc.)
+        try:
+            await self._stop_network_interface_monitoring()
+        except Exception as e:
+            logger.debug(f"Error stopping netdev monitoring during shutdown: {e}",
+                        extra={'interface_number': self.interface_number})
+
+        # Cancel failback check task
+        if (hasattr(self, 'failback_task') and self.failback_task
+                and not self.failback_task.done()):
+            self.failback_task.cancel()
+            self.failback_task = None
+
+        # Cancel any in-progress initial configuration task
+        if (hasattr(self, '_initial_config_task') and self._initial_config_task
+                and not self._initial_config_task.done()):
+            self._initial_config_task.cancel()
+            self._initial_config_task = None
+
+        # Force-disconnect the bearer unconditionally — do NOT gate on
+        # current_state, because the FSM's internal state may lag the
+        # real modem state (e.g. when an empty config was applied and a
+        # bearer was auto-established by ModemManager).  If we don't
+        # know the exact bearer path, pass '/' to disconnect all
+        # bearers on this modem (ModemManager convention).
+        if self.proxy:
             try:
                 simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
-                await simple_iface.call_disconnect(self.bearer_path)
-                logger.info("Modem disconnected during shutdown",
-                           extra={'interface_number': self.interface_number})
+                target = self.bearer_path if self.bearer_path else '/'
+                await simple_iface.call_disconnect(target)
+                logger.info("Bearer disconnected during shutdown",
+                           extra={'interface_number': self.interface_number,
+                                  'bearer_path': target})
             except Exception as e:
-                logger.error(f"Error disconnecting during shutdown: {e}",
+                logger.error(f"Error disconnecting bearer during shutdown: {e}",
                            extra={'interface_number': self.interface_number})
+            self.bearer_path = None
 
         # Remove from global registry
         ModemStateMachine.modem_state_machines.pop(f"wwan{self.interface_number}", None)
