@@ -1129,6 +1129,64 @@ class WWANClient:
         """
         return (await self.get_bearer_status(interface_number)) == "connected"
 
+    async def connect_bearer_and_wait(
+        self,
+        interface_number: int,
+        timeout: float = 60.0,
+        poll_interval: float = 1.0,
+    ) -> bool:
+        """Request bearer connect and block until it comes up (or timeout).
+
+        Convenience wrapper that calls :meth:`connect_bearer` (fire-and-
+        forget) and then polls :meth:`get_bearer_status` until the bearer
+        reaches ``"connected"``.
+
+        Parameters
+        ----------
+        interface_number : int
+            Interface index.
+        timeout : float
+            Maximum seconds to wait for the bearer to come up.
+        poll_interval : float
+            Seconds between status polls.
+
+        Returns
+        -------
+        bool
+            ``True`` if the bearer reached ``"connected"`` before timeout,
+            ``False`` otherwise.  Raises :class:`WWANError` if the service
+            rejects the connect request (e.g. interface is in airplane
+            mode — ``com.igos.IgosModemManager.AdminDisabled``).
+        """
+        await self.connect_bearer(interface_number)
+        return await self.wait_for_bearer(
+            interface_number, target="connected",
+            timeout=timeout, poll_interval=poll_interval)
+
+    async def disconnect_bearer_and_wait(
+        self,
+        interface_number: int,
+        timeout: float = 30.0,
+        poll_interval: float = 1.0,
+    ) -> bool:
+        """Request bearer disconnect and block until it drops (or timeout).
+
+        Companion to :meth:`connect_bearer_and_wait`.  Calls
+        :meth:`disconnect_bearer` (fire-and-forget) and then polls
+        :meth:`get_bearer_status` until the bearer reaches
+        ``"disconnected"``.
+
+        Returns
+        -------
+        bool
+            ``True`` if the bearer reached ``"disconnected"`` before
+            timeout, ``False`` otherwise.
+        """
+        await self.disconnect_bearer(interface_number)
+        return await self.wait_for_bearer(
+            interface_number, target="disconnected",
+            timeout=timeout, poll_interval=poll_interval)
+
 
 # ─── Synchronous wrapper ────────────────────────────────────────────────────
 
@@ -1207,6 +1265,30 @@ class WWANClientSync:
     def disconnect_bearer(self, interface_number: int) -> str:
         """Fire-and-forget bearer disconnect.  See :meth:`WWANClient.disconnect_bearer`."""
         return self._run(self._call("disconnect_bearer", interface_number))
+
+    def connect_bearer_and_wait(
+        self, interface_number: int,
+        timeout: float = 60.0, poll_interval: float = 1.0,
+    ) -> bool:
+        """Connect bearer and block until up.  See :meth:`WWANClient.connect_bearer_and_wait`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.connect_bearer_and_wait(
+                    interface_number, timeout=timeout,
+                    poll_interval=poll_interval)
+        return self._run(_inner())
+
+    def disconnect_bearer_and_wait(
+        self, interface_number: int,
+        timeout: float = 30.0, poll_interval: float = 1.0,
+    ) -> bool:
+        """Disconnect bearer and block until down.  See :meth:`WWANClient.disconnect_bearer_and_wait`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.disconnect_bearer_and_wait(
+                    interface_number, timeout=timeout,
+                    poll_interval=poll_interval)
+        return self._run(_inner())
 
     def get_bearer_status(self, interface_number: int) -> str:
         """Poll bearer state.  See :meth:`WWANClient.get_bearer_status`."""
