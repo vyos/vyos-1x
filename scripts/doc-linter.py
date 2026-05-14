@@ -70,6 +70,12 @@ def is_docs_path(path):
 # Same character and length-or-greater closes.
 MD_FENCE_RE = re.compile(r'^(\s*)(`{3,}|:{3,})(.*)$')
 
+# RST `.. code-block::` directive: leading whitespace + literal `.. code-block::`.
+# Anchored to start-of-line so prose mentions like `\`\`.. code-block::\`\`` inside
+# a Markdown paragraph (see docs/documentation.md) don't false-trigger the
+# code-block tracker.
+RST_CODEBLOCK_RE = re.compile(r'^(\s*)\.\.\s+code-block::')
+
 # MyST directive names whose body is code-like — line-length exception applies.
 # Anything else with a `{directive}` info string is treated as prose-bearing
 # (`{note}`, `{warning}`, `{tip}`, `{deprecated}`, …); their content is normal
@@ -247,14 +253,15 @@ def handle_file_action(filepath):
                 leading = len(line) - len(line.lstrip())
                 if leading <= rst_codeblock_indent:
                     in_rst_codeblock = False
-            if ".. code-block::" in line:
-                in_rst_codeblock = True
-                rst_codeblock_indent = 0
-                for ch in line:
-                    if ch.isspace():
-                        rst_codeblock_indent += 1
-                    else:
-                        break
+            # Only treat `.. code-block::` as a directive opener in RST/TXT
+            # files or inside an `{eval-rst}` MyST fence. In plain Markdown
+            # the same characters can appear as prose (e.g., backtick-quoted
+            # mentions of the directive name) and must not open a block.
+            if file_ext in ('.rst', '.txt') or md_fence_is_eval_rst:
+                rst_open = RST_CODEBLOCK_RE.match(line)
+                if rst_open:
+                    in_rst_codeblock = True
+                    rst_codeblock_indent = len(rst_open.group(1))
 
             if is_suppression_marker(
                 line, 'stop', in_md_fence, in_rst_codeblock,
@@ -299,7 +306,6 @@ def handle_file_action(filepath):
 def main():
     """Entry point: lint the changed-file list from argv, or fall back to walking `docs/`."""
     bool_error = True
-    print('start')
     # Only the argv-parsing step is wrapped in try/except. Errors raised by
     # handle_file_action() must propagate so CI failures stay visible instead
     # of silently triggering a full docs/ walk.
