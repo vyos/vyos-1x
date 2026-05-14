@@ -1622,6 +1622,18 @@ class InterfaceConfig(ServiceInterface):
         ``"accepted"``; the caller polls ``get_bearer_status()`` separately.
         """
         try:
+            # Reject if the interface is administratively disabled (airplane
+            # mode).  Without this guard the request would silently queue
+            # via connect_requested and never fire until the operator runs
+            # 'delete interfaces wwan wwanN disable'.
+            if (getattr(self.fsm, '_airplane_mode_active', False)
+                    or getattr(self.fsm, '_airplane_mode_requested', False)):
+                raise DBusError(
+                    "com.igos.IgosModemManager.AdminDisabled",
+                    f"Interface {self.interface_number} is administratively "
+                    f"disabled (airplane mode). Run 'delete interfaces wwan "
+                    f"wwan{self.interface_number} disable' to re-enable.")
+
             current_state = (
                 getattr(self.fsm.machine, 'current_state', 'UNKNOWN')
                 if hasattr(self.fsm, 'machine') and self.fsm.machine
@@ -1777,6 +1789,18 @@ class InterfaceConfig(ServiceInterface):
         observe the result.
         """
         try:
+            # Reject if the interface is administratively disabled (airplane
+            # mode).  Without this guard the request would silently queue
+            # via connect_requested and never fire until the operator runs
+            # 'delete interfaces wwan wwanN disable'.
+            if (getattr(self.fsm, '_airplane_mode_active', False)
+                    or getattr(self.fsm, '_airplane_mode_requested', False)):
+                raise DBusError(
+                    "com.igos.IgosModemManager.AdminDisabled",
+                    f"Interface {self.interface_number} is administratively "
+                    f"disabled (airplane mode). Run 'delete interfaces wwan "
+                    f"wwan{self.interface_number} disable' to re-enable.")
+
             from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent, ModemState
             current_state = (
                 self.fsm.machine.current_state
