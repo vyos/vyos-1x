@@ -3,6 +3,13 @@
 {# peer needs to reference the global IKE configuration for certain values #}
 {% set ike = ike_group[peer_conf.ike_group] %}
     {{ name }} {
+{# Resolve effective reauth setting: peer overrides ike-group #}
+{% set reauth = peer_conf.ikev2_reauth if peer_conf.ikev2_reauth is vyos_defined else '' %}
+{% if reauth == 'inherit' %}
+{%     set reauth = ike.ikev2_reauth is vyos_defined %}
+{% else %}
+{%     set reauth = reauth == 'yes' %}
+{% endif %}
 {% if peer_conf.authentication.ppk.id is vyos_defined %}
         ppk_id = {{ peer_conf.authentication.ppk.id }}
 {% endif %}
@@ -36,6 +43,9 @@
         reauth_time = 0
 {% elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
         keyingtries = 0
+{%     if reauth and ike.key_exchange is vyos_defined('ikev2') %}
+        reauth_time = {{ ike.lifetime }}s
+{%     endif %}
 {% elif peer_conf.connection_type is vyos_defined('trap') %}
         keyingtries = 1
 {% endif %}

@@ -1246,7 +1246,7 @@
                       </completionHelp>
                       <valueHelp>
                         <format>yes</format>
-                        <description>Enable remote host re-authentication during an IKE re-key. Currently broken due to a strong swan bug</description>
+                        <description>Enable remote host re-authentication during an IKE re-key</description>
                       </valueHelp>
                       <valueHelp>
                         <format>no</format>
