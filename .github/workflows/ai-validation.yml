@@ -46,6 +46,19 @@ jobs:
   #   - GitHub-hosted runners are ephemeral — every run starts on a fresh
   #     VM, so cross-run state leakage is not possible.
   prepare:
+    # Skip the whole pipeline on Mergify-authored PRs (backport PRs, queue
+    # PRs). The underlying change was already reviewed on the source PR;
+    # re-running prepare wastes a runner and — for backports to branches
+    # that have advanced since the merge ref was computed — fails with
+    # `fatal: FETCH_HEAD...HEAD: no merge base` during the shallow-fetch
+    # diff step, leaving a red "prepare" check on every Mergify backport
+    # (proximate symptom: run 25842928620 on PR #2042, the sagitta
+    # backport of #2023). validate already short-circuits on bot authors
+    # via its `secrets-check` step, but that fires too late — guarding at
+    # the job level skips prepare entirely, and `needs: [prepare]` +
+    # `if: needs.prepare.outputs.has_md_changes == 'true'` cascades the
+    # skip to validate as well.
+    if: github.event.pull_request.user.login != 'mergify[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
