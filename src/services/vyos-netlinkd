@@ -29,7 +29,7 @@ from typing import Optional
 from vyos.configquery import op_mode_config_dict
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
-from vyos.utils.commit import commit_in_progress
+from vyos.utils.commit import commit_in_progress2
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
@@ -127,8 +127,8 @@ def main():
 
             # Check if a config commit is in progress before processing any
             # messages. This avoids blocking per-message and reduces unnecessary
-            # commit_in_progress() calls.
-            if commit_in_progress():
+            # calls to commit_in_progress2()
+            if commit_in_progress2():
                 syslog.syslog(syslog.LOG_DEBUG,
                               'Config commit in progress, skipping netlink events')
                 sleep(1)
