@@ -13,12 +13,14 @@ import time
 from pathlib import Path
 
 from vyos.utils.process import cmd
+from vyos.utils.file import write_file
 
 
 ZEROTIER_HOME = Path('/run/vyos-zerotier')
 ZEROTIER_API_SOCKET = ZEROTIER_HOME / 'api.sock'
-ZEROTIER_INTERFACES_FILE = ZEROTIER_HOME / 'interfaces.json'
 ZEROTIER_UNIT = 'vyos-zerotier.service'
+ZEROTIER_USER = 'zerotier-one'
+ZEROTIER_GROUP = 'zerotier-one'
 
 
 class ZeroTierAPIError(Exception):
@@ -34,13 +36,26 @@ def identity_public(secret: str) -> str:
 
 def write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, sort_keys=True) + '\n')
+    write_file(str(path), json.dumps(data, indent=2, sort_keys=True) + '\n',
+               user=ZEROTIER_USER, group=ZEROTIER_GROUP, mode=0o644)
 
 
 def write_identity(secret: str) -> None:
     ZEROTIER_HOME.mkdir(parents=True, exist_ok=True)
-    (ZEROTIER_HOME / 'identity.secret').write_text(secret.rstrip() + '\n')
-    (ZEROTIER_HOME / 'identity.public').write_text(identity_public(secret) + '\n')
+    write_file(str(ZEROTIER_HOME / 'identity.secret'), secret.rstrip() + '\n',
+               user=ZEROTIER_USER, group=ZEROTIER_GROUP, mode=0o600)
+    write_file(str(ZEROTIER_HOME / 'identity.public'), identity_public(secret) + '\n',
+               user=ZEROTIER_USER, group=ZEROTIER_GROUP, mode=0o644)
+
+
+def network_settings(interface: dict) -> dict:
+    manual_address = bool(interface.get('address', []))
+    return {
+        'allowManaged': not manual_address,
+        'allowGlobal': 'allow_global' in interface,
+        'allowDefault': 'allow_default_route' in interface,
+        'allowDNS': False,
+    }
 
 
 def local_conf(service: dict) -> dict:
@@ -103,7 +118,7 @@ def api_request(method: str, path: str, body: dict | None = None) -> object:
     }
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
-            sock.settimeout(10)
+            sock.settimeout(60)
             sock.connect(str(ZEROTIER_API_SOCKET))
             sock.sendall(json.dumps(request).encode() + b'\n')
             response = b''

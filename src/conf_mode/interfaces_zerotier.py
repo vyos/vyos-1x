@@ -6,6 +6,8 @@
 # it under the terms of the GNU General Public License version 2 or later as
 # published by the Free Software Foundation.
 
+# pylint: disable=no-member
+
 import fcntl
 import os
 import struct
@@ -23,17 +25,15 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import ZeroTierIf
-from vyos.template import render
 from vyos.utils.process import call
-from vyos.zerotier import ZeroTierAPIError
 from vyos.zerotier import ZEROTIER_HOME
-from vyos.zerotier import ZEROTIER_INTERFACES_FILE
 from vyos.zerotier import ZEROTIER_UNIT
+from vyos.zerotier import ZEROTIER_GROUP
+from vyos.zerotier import ZEROTIER_USER
 from vyos.zerotier import local_conf
-from vyos.zerotier import wait_for_api
-from vyos.zerotier import api_request
 from vyos.zerotier import write_identity
 from vyos.zerotier import write_json
+from vyos.utils.permission import chown
 
 airbag.enable()
 
@@ -103,25 +103,12 @@ def verify(zerotier):
     return None
 
 
-def _network_settings(config):
-    manual_address = bool(config.get('address', []))
-    return {
-        'allowManaged': not manual_address,
-        'allowGlobal': 'allow_global' in config,
-        'allowDefault': 'allow_default_route' in config,
-        'allowDNS': False,
-    }
-
-
 def _active_networks(zerotier):
     active = {}
     for ifname, config in zerotier.get('interfaces', {}).items():
         if 'disable' in config or 'network_id' not in config:
             continue
-        active[config['network_id'].lower()] = {
-            'ifname': ifname,
-            'settings': _network_settings(config),
-        }
+        active[config['network_id'].lower()] = ifname
     return active
 
 
@@ -160,9 +147,10 @@ def _delete_tap(ifname):
 
 
 def generate(zerotier):
-    networks_dir = ZEROTIER_HOME / 'networks.d'
-    networks_dir.mkdir(parents=True, exist_ok=True)
+    ZEROTIER_HOME.mkdir(parents=True, exist_ok=True)
     (ZEROTIER_HOME / 'moons.d').mkdir(parents=True, exist_ok=True)
+    chown(ZEROTIER_HOME, ZEROTIER_USER, ZEROTIER_GROUP)
+    chown(ZEROTIER_HOME / 'moons.d', ZEROTIER_USER, ZEROTIER_GROUP)
 
     service = zerotier.get('service', {})
     if service:
@@ -170,24 +158,15 @@ def generate(zerotier):
             write_identity(service['identity']['secret'])
         write_json(ZEROTIER_HOME / 'local.conf', local_conf(service))
 
-    render('/run/systemd/system/vyos-zerotier.service', 'zerotier/systemd-unit.j2',
-           {'zerotier_home': ZEROTIER_HOME})
-
-    active = _active_networks(zerotier)
-
-    write_json(ZEROTIER_INTERFACES_FILE, {'networks': active})
-
-    for path in networks_dir.glob('*.conf'):
-        network = path.name.removesuffix('.local.conf').removesuffix('.conf')
-        if network not in active:
+    for stale_file in ('devicemap', 'interfaces.json'):
+        try:
+            (ZEROTIER_HOME / stale_file).unlink()
+        except FileNotFoundError:
+            pass
+    networks_dir = ZEROTIER_HOME / 'networks.d'
+    if networks_dir.exists():
+        for path in networks_dir.glob('*.conf'):
             path.unlink()
-
-    for network, config in active.items():
-        (networks_dir / f'{network}.conf').touch(exist_ok=True)
-        settings = config['settings']
-        (networks_dir / f'{network}.local.conf').write_text(
-            ''.join(f'{key}={int(value) if isinstance(value, bool) else value}\n'
-                    for key, value in settings.items()))
 
     return None
 
@@ -197,11 +176,6 @@ def apply(zerotier):
     has_active_interfaces = _has_active_interfaces(zerotier)
 
     if 'deleted' in zerotier or 'disable' in zerotier:
-        if 'network_id' in zerotier and wait_for_api(timeout=3):
-            try:
-                api_request('DELETE', f'/network/{zerotier["network_id"].lower()}')
-            except ZeroTierAPIError:
-                pass
         if not has_active_interfaces:
             call(f'systemctl --quiet stop {ZEROTIER_UNIT}')
             call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
@@ -212,14 +186,8 @@ def apply(zerotier):
     zt = ZeroTierIf(ifname, create=False)
     zt.update(zerotier)
 
-    call('systemctl daemon-reload')
-    call(f'systemctl --quiet enable {ZEROTIER_UNIT}')
-    call(f'systemctl --quiet restart {ZEROTIER_UNIT}')
-    if wait_for_api(timeout=3):
-        for moon, config in zerotier.get('service', {}).get('moon', {}).items():
-            api_request('POST', f'/moon/{moon}', {'seed': config['seed']})
-        network = zerotier['network_id'].lower()
-        api_request('POST', f'/network/{network}', _network_settings(zerotier))
+    call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
+    call(f'systemctl --quiet start {ZEROTIER_UNIT}')
 
     return None
 

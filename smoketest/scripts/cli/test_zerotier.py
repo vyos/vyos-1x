@@ -35,7 +35,8 @@ class TestZeroTier(VyOSUnitTestSHIM.TestCase):
 
         self.assertTrue((config_dir / 'identity.secret').exists())
         self.assertTrue((config_dir / 'identity.public').exists())
-        self.assertEqual((config_dir / 'devicemap').read_text(), '0123456789abcdef=zt0\n')
+        self.assertFalse((config_dir / 'devicemap').exists())
+        self.assertFalse((config_dir / 'interfaces.json').exists())
         self.assertTrue((config_dir / 'networks.d' / '0123456789abcdef.conf').exists())
 
         local = (config_dir / 'networks.d' / '0123456789abcdef.local.conf').read_text()

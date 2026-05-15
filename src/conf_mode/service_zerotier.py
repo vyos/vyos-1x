@@ -11,19 +11,15 @@ from sys import exit
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
-from vyos.template import render
 from vyos.utils.process import call
 from vyos.zerotier import ZEROTIER_HOME
 from vyos.zerotier import ZEROTIER_UNIT
 from vyos.zerotier import local_conf
-from vyos.zerotier import wait_for_api
-from vyos.zerotier import api_request
 from vyos.zerotier import write_identity
 from vyos.zerotier import write_json
 
 airbag.enable()
 
-unit_file = '/run/systemd/system/vyos-zerotier.service'
 interface_base = ['interfaces', 'zerotier']
 
 
@@ -83,12 +79,14 @@ def generate(zerotier):
         return None
 
     ZEROTIER_HOME.mkdir(parents=True, exist_ok=True)
-    (ZEROTIER_HOME / 'networks.d').mkdir(parents=True, exist_ok=True)
     (ZEROTIER_HOME / 'moons.d').mkdir(parents=True, exist_ok=True)
+    networks_dir = ZEROTIER_HOME / 'networks.d'
+    if networks_dir.exists():
+        for path in networks_dir.glob('*.conf'):
+            path.unlink()
 
     write_identity(zerotier['identity']['secret'])
     write_json(ZEROTIER_HOME / 'local.conf', local_conf(zerotier))
-    render(unit_file, 'zerotier/systemd-unit.j2', {'zerotier_home': ZEROTIER_HOME})
 
     return None
 
@@ -99,18 +97,13 @@ def apply(zerotier):
         call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
         return None
 
-    call('systemctl daemon-reload')
     if not zerotier.get('has_active_interfaces'):
         call(f'systemctl --quiet stop {ZEROTIER_UNIT}')
         call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
         return None
 
-    call(f'systemctl --quiet enable {ZEROTIER_UNIT}')
-    call(f'systemctl --quiet restart {ZEROTIER_UNIT}')
-
-    if wait_for_api():
-        for moon, config in zerotier.get('moon', {}).items():
-            api_request('POST', f'/moon/{moon}', {'seed': config['seed']})
+    call(f'systemctl --quiet disable {ZEROTIER_UNIT}')
+    call(f'systemctl --quiet start {ZEROTIER_UNIT}')
 
     return None
 

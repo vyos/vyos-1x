@@ -6,7 +6,7 @@
 # it under the terms of the GNU General Public License version 2 or later as
 # published by the Free Software Foundation.
 
-# pylint: disable=no-member
+# pylint: disable=no-member,unexpected-keyword-arg
 
 import argparse
 import array
@@ -19,7 +19,9 @@ import struct
 import subprocess
 import sys
 import threading
+import time
 from ipaddress import ip_address
+from ipaddress import ip_interface
 from ipaddress import IPv6Address
 from ipaddress import ip_network
 from pathlib import Path
@@ -27,6 +29,10 @@ from pathlib import Path
 import fcntl
 from pyroute2.iproute import IPRoute
 from pyroute2.netlink.exceptions import NetlinkError
+from vyos.configquery import op_mode_config_dict
+from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.commit import commit_in_progress
+from vyos.zerotier import network_settings
 
 
 EOD_MAXMSGSIZE = 64 * 1024
@@ -50,35 +56,30 @@ MSG_ADDROUTE = 16
 MSG_ADDROUTERESP = 17
 MSG_DELROUTE = 18
 MSG_DELROUTERESP = 19
-MSG_NETWORKSTATUS = 20
+MSG_CONFIGUPDATE = 20
 
 NETWORK_STATUS_OK = 1
-NETWORK_STATUS_NAMES = {
-    0: 'REQUESTING_CONFIGURATION',
-    1: 'OK',
-    2: 'ACCESS_DENIED',
-    3: 'NOT_FOUND',
-    4: 'PORT_ERROR',
-    5: 'CLIENT_TOO_OLD',
-    6: 'AUTHENTICATION_REQUIRED',
-}
-NETWORK_OPERATION_NAMES = {
-    1: 'UP',
-    2: 'CONFIG_UPDATE',
-    3: 'DOWN',
-    4: 'DESTROY',
-}
 
 MGMT_DELETE = 0
 MGMT_GET = 1
 MGMT_POST = 3
+MGMT_PUT = 3
 
 TUNSETIFF = 0x400454ca
 TUNSETCARRIER = 0x400454e2
 IFF_TAP = 0x0002
 IFF_NO_PI = 0x1000
 ESRCH = 3
-EEXIST = 17
+RECONCILE_INTERVAL = 30
+JOIN_RETRY_INTERVAL = 30
+BOOT_CONFIG_WAIT_INTERVAL = 0.250
+BOOT_CONFIG_WAIT_TIMEOUT = 120
+CONFIG_INTERFACE_WAIT_TIMEOUT = 10
+CONFIG_INTERFACE_WAIT_INTERVAL = 0.250
+ZEROTIER_ROUTE_PROTOCOL = 112
+ZEROTIER_ROUTE_PROTOCOL_FILE = Path('/etc/iproute2/rt_protos.d/zerotier.conf')
+
+CONFIG_UPDATE_SIZE = struct.calcsize('=BQQ')
 
 
 def log_event(message: str) -> None:
@@ -88,6 +89,25 @@ def log_event(message: str) -> None:
 def ip_json(command: list[str]) -> object:
     output = subprocess.check_output(['ip', '-j', *command], text=True)
     return json.loads(output)
+
+
+def ensure_route_protocol_name() -> None:
+    content = f'{ZEROTIER_ROUTE_PROTOCOL}  zerotier\n'
+    try:
+        ZEROTIER_ROUTE_PROTOCOL_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if not ZEROTIER_ROUTE_PROTOCOL_FILE.exists() or ZEROTIER_ROUTE_PROTOCOL_FILE.read_text() != content:
+            ZEROTIER_ROUTE_PROTOCOL_FILE.write_text(content)
+    except OSError as e:
+        log_event(f'failed registering route protocol name: {e}')
+
+
+def wait_for_boot_configuration() -> None:
+    deadline = time.monotonic() + BOOT_CONFIG_WAIT_TIMEOUT
+    while not boot_configuration_complete():
+        if time.monotonic() >= deadline:
+            log_event('boot configuration not complete, continuing with active config reads')
+            return
+        time.sleep(BOOT_CONFIG_WAIT_INTERVAL)
 
 
 def ifname(value: bytes) -> str:
@@ -106,21 +126,48 @@ def ip_is_unspecified(afi: int, data: bytes) -> bool:
     return all(b == 0 for b in data[:4 if afi == 1 else 16])
 
 
-def load_interfaces(home: Path) -> dict[int, dict]:
+def configured_interfaces() -> dict:
+    # Follow vyos-netlinkd's long-running service pattern: take a read-only
+    # running-config snapshot without keeping Config/Vyconf state in process.
+    return op_mode_config_dict(
+        ['interfaces', 'zerotier'],
+        key_mangling=('-', '_'),
+        no_tag_node_value_mangle=True,
+        get_first_key=True,
+    ) or {}
+
+
+def load_interfaces() -> dict[int, dict]:
     try:
-        networks = json.loads((home / 'interfaces.json').read_text()).get('networks', {})
-    except (OSError, ValueError, AttributeError):
-        return {}
+        interfaces = configured_interfaces()
+    except Exception as e:
+        log_event(f'failed reading ZeroTier config: {e}')
+        interfaces = {}
 
     result = {}
-    for network, config in networks.items():
-        if not isinstance(config, dict) or not config.get('ifname'):
+    for name, config in (interfaces or {}).items():
+        if not isinstance(config, dict):
             continue
+        if 'disable' in config or not config.get('network_id'):
+            continue
+        network = config['network_id'].lower()
         try:
-            result[int(network, 16)] = config
+            result[int(network, 16)] = {
+                'ifname': name,
+                'settings': network_settings(config),
+            }
         except ValueError:
             continue
     return result
+
+
+def wait_for_interface_config(nwid: int) -> dict:
+    deadline = time.monotonic() + CONFIG_INTERFACE_WAIT_TIMEOUT
+    while True:
+        config = load_interfaces().get(nwid, {})
+        if config or time.monotonic() >= deadline:
+            return config
+        time.sleep(CONFIG_INTERFACE_WAIT_INTERVAL)
 
 
 def fallback_ifname(nwid: int) -> str:
@@ -137,8 +184,8 @@ def interface_exists(name: str) -> bool:
     return link_index(name) is not None
 
 
-def configured_ifnames(home: Path) -> set[str]:
-    return {config['ifname'] for config in load_interfaces(home).values()}
+def configured_ifnames() -> set[str]:
+    return {config['ifname'] for config in load_interfaces().values()}
 
 
 def eui64_link_local(mac: bytes) -> str:
@@ -212,6 +259,49 @@ def send_with_fd(sock: socket.socket, data: bytes, fd: int) -> None:
     sock.sendmsg([data], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, fds)])
 
 
+def network_status_ok(snapshot: dict) -> bool:
+    return snapshot.get('status') == 'OK' or snapshot.get('status') == NETWORK_STATUS_OK
+
+
+def managed_allowed(settings: dict, target) -> bool:
+    if not settings.get('allowManaged', True):
+        return False
+
+    if hasattr(target, 'is_default') and target.is_default:
+        return bool(settings.get('allowDefault', False))
+
+    ip = target.ip if hasattr(target, 'ip') else target.network_address
+    if ip.is_unspecified or ip.is_multicast or ip.is_loopback or ip.is_link_local:
+        return False
+    if ip.is_global and not settings.get('allowGlobal', False):
+        return False
+    return True
+
+
+def link_addresses(name: str) -> list:
+    try:
+        interfaces = ip_json(['address', 'show', 'dev', name])
+    except subprocess.CalledProcessError:
+        return []
+
+    addresses = []
+    for interface in interfaces:
+        for info in interface.get('addr_info', []):
+            family = info.get('family')
+            if family not in ('inet', 'inet6'):
+                continue
+            addresses.append(ip_interface(f'{info["local"]}/{info["prefixlen"]}'))
+    return addresses
+
+
+def same_ip_version(left, right) -> bool:
+    return left.version == right.version
+
+
+class ZeroTierAPIError(Exception):
+    pass
+
+
 class ZeroTierExtOsdep:
     def __init__(self, home: Path, zerotier_one: str):
         self.home = home
@@ -219,24 +309,34 @@ class ZeroTierExtOsdep:
         self.tap_fds: dict[str, int] = {}
         self.tap_carrier: dict[str, bool] = {}
         self.network_ifnames: dict[int, str] = {}
+        self.last_revisions: dict[int, int] = {}
+        self.last_join_attempts: dict[int, float] = {}
+        self.applied_addresses: dict[int, set[str]] = {}
+        self.applied_routes: dict[int, set[tuple[str, str]]] = {}
+        self.reconcile_pending: set[int] = set()
+        self.reconcile_all = False
+        self.reconcile_lock = threading.Lock()
+        self.reconcile_event = threading.Event()
         self.child: subprocess.Popen | None = None
         self.running = True
 
         self.eod_sock, self.child_eod_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
         self.mgmt_sock, self.child_mgmt_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.mgmt_sock.settimeout(10)
+        self.mgmt_sock.settimeout(60)
         self.mgmt_lock = threading.Lock()
 
     def start(self) -> None:
+        wait_for_boot_configuration()
+        ensure_route_protocol_name()
         args = [
             self.zerotier_one,
-            '-d',
-            str(self.home),
             f'-x{self.child_eod_sock.fileno()},{self.child_mgmt_sock.fileno()}',
+            str(self.home),
         ]
         self.child = subprocess.Popen(args, pass_fds=(self.child_eod_sock.fileno(), self.child_mgmt_sock.fileno()))
         self.child_eod_sock.close()
         self.child_mgmt_sock.close()
+        threading.Thread(target=self.reconcile_loop, daemon=True).start()
 
     def stop(self) -> None:
         self.running = False
@@ -254,6 +354,22 @@ class ZeroTierExtOsdep:
                 pass
         self.tap_fds.clear()
         self.tap_carrier.clear()
+        self.reconcile_event.set()
+
+    def schedule_reconcile(self, nwid: int | None = None) -> None:
+        with self.reconcile_lock:
+            if nwid is None:
+                self.reconcile_all = True
+            else:
+                self.reconcile_pending.add(nwid)
+        self.reconcile_event.set()
+
+    def schedule_reconcile_by_ifname(self, name: str) -> None:
+        for nwid, ifname_value in self.network_ifnames.items():
+            if ifname_value == name:
+                self.schedule_reconcile(nwid)
+                return
+        self.schedule_reconcile()
 
     def serve_eod(self) -> None:
         while self.running:
@@ -267,6 +383,7 @@ class ZeroTierExtOsdep:
             command = data[0]
             try:
                 if command == MSG_STARTED:
+                    self.schedule_reconcile()
                     continue
                 if command == MSG_ADDTAP:
                     self.handle_addtap(data)
@@ -282,8 +399,10 @@ class ZeroTierExtOsdep:
                     self.handle_route(command, data)
                 elif command == MSG_GETBINDADDRS:
                     self.handle_getbindaddrs()
-                elif command == MSG_NETWORKSTATUS:
-                    self.handle_network_status(data)
+                elif command == MSG_CONFIGUPDATE:
+                    self.handle_config_update(data)
+                else:
+                    self.schedule_reconcile()
             except Exception as e:
                 log_event(f'failed handling extosdep command {command}: {e}')
                 self.send_error_response(command)
@@ -309,7 +428,7 @@ class ZeroTierExtOsdep:
 
     def handle_addtap(self, data: bytes) -> None:
         _, nwid, mtu, _metric, _friendly, mac = struct.unpack('=BQII128s6s', data)
-        config = load_interfaces(self.home).get(nwid, {})
+        config = wait_for_interface_config(nwid)
         name = config.get('ifname', fallback_ifname(nwid))
         if config and not interface_exists(name):
             raise OSError(f'configured ZeroTier TAP {name} does not exist')
@@ -326,6 +445,7 @@ class ZeroTierExtOsdep:
         mac_text = ':'.join(f'{b:02x}' for b in mac)
         log_event(f'tap add network={nwid:016x} interface={name} mtu={mtu} mac={mac_text}')
         send_with_fd(self.eod_sock, struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname(name)), fd)
+        self.schedule_reconcile(nwid)
 
     def set_network_carrier(self, name: str, up: bool) -> None:
         fd = self.tap_fds.get(name)
@@ -336,20 +456,21 @@ class ZeroTierExtOsdep:
         set_tap_carrier(fd, up)
         self.tap_carrier[name] = up
 
-    def handle_network_status(self, data: bytes) -> None:
-        _, nwid, raw_name, status, operation = struct.unpack('=BQ16sII', data)
-        name = ifname(raw_name) or self.network_ifnames.get(nwid, '')
-        if not name:
+    def handle_config_update(self, data: bytes) -> None:
+        if len(data) != CONFIG_UPDATE_SIZE:
+            raise ValueError(f'invalid config update message length {len(data)}')
+
+        _, nwid, revision = struct.unpack('=BQQ', data)
+        if self.last_revisions.get(nwid) == revision:
             return
-        self.network_ifnames[nwid] = name
-        status_name = NETWORK_STATUS_NAMES.get(status, str(status))
-        operation_name = NETWORK_OPERATION_NAMES.get(operation, str(operation))
-        log_event(f'network status network={nwid:016x} interface={name} status={status_name} operation={operation_name} carrier={"up" if status == NETWORK_STATUS_OK else "down"}')
-        self.set_network_carrier(name, status == NETWORK_STATUS_OK)
+        self.last_revisions[nwid] = revision
+        log_event(f'config update network={nwid:016x} revision={revision}')
+        self.schedule_reconcile(nwid)
 
     def handle_deltap(self, data: bytes) -> None:
         _, raw_name = struct.unpack('=B16s', data)
         name = ifname(raw_name)
+        nwids = [nwid for nwid, ifname_value in self.network_ifnames.items() if ifname_value == name]
         fd = self.tap_fds.pop(name, None)
         if fd is not None:
             try:
@@ -359,9 +480,11 @@ class ZeroTierExtOsdep:
         self.tap_carrier.pop(name, None)
         if name:
             log_event(f'tap delete interface={name}')
-        if name and name not in configured_ifnames(self.home):
+        if name and name not in configured_ifnames():
             delete_tap(name)
         self.eod_sock.send(bytes([MSG_DELTAPRESP]))
+        for nwid in nwids:
+            self.schedule_reconcile(nwid)
 
     def handle_setmtu(self, data: bytes) -> None:
         _, raw_name, mtu = struct.unpack('=B16sI', data)
@@ -371,25 +494,15 @@ class ZeroTierExtOsdep:
                 ipr.link('set', index=index, mtu=mtu)
             log_event(f'mtu set interface={ifname(raw_name)} mtu={mtu}')
         self.eod_sock.send(bytes([MSG_SETMTURESP]))
+        self.schedule_reconcile_by_ifname(ifname(raw_name))
 
     def handle_ip(self, command: int, data: bytes) -> None:
         _, raw_name, afi, prefixlen, raw_addr = struct.unpack('=B16sBB16s', data)
         name = ifname(raw_name)
         address = ip_from_raw(afi, raw_addr)
-        with IPRoute() as ipr:
-            index = ipr.link_lookup(ifname=name)[0]
-            try:
-                if command == MSG_ADDIP:
-                    ipr.addr('replace', index=index, address=address, prefixlen=prefixlen)
-                else:
-                    ipr.addr('delete', index=index, address=address, prefixlen=prefixlen)
-            except NetlinkError as e:
-                if command == MSG_DELIP and e.code == ESRCH:
-                    pass
-                else:
-                    raise
-        log_event(f'ip {"add" if command == MSG_ADDIP else "delete"} interface={name} address={address}/{prefixlen}')
+        log_event(f'ip {"add" if command == MSG_ADDIP else "delete"} nudge interface={name} address={address}/{prefixlen}')
         self.eod_sock.send(bytes([MSG_ADDIPRESP if command == MSG_ADDIP else MSG_DELIPRESP]))
+        self.schedule_reconcile_by_ifname(name)
 
     def handle_getips(self, data: bytes) -> None:
         _, raw_name = struct.unpack('=B16s', data)
@@ -410,43 +523,21 @@ class ZeroTierExtOsdep:
 
     def handle_route(self, command: int, data: bytes) -> None:
         _, afi, prefixlen, raw_dst, raw_gw, raw_dev, raw_src = struct.unpack('=BBB16s16s16s16s', data)
-        family = socket.AF_INET if afi == 1 else socket.AF_INET6
         target = ip_network((ip_from_raw(afi, raw_dst), prefixlen), strict=False)
         dev = ifname(raw_dev)
-        route = {'family': family, 'dst': str(target)}
-        if dev:
-            with IPRoute() as ipr:
-                route['oif'] = ipr.link_lookup(ifname=dev)[0]
-        if not ip_is_unspecified(afi, raw_gw):
-            route['gateway'] = ip_from_raw(afi, raw_gw)
-        if command == MSG_ADDROUTE and not ip_is_unspecified(afi, raw_src):
-            route['prefsrc'] = ip_from_raw(afi, raw_src)
-        with IPRoute() as ipr:
-            try:
-                if command == MSG_ADDROUTE:
-                    try:
-                        ipr.route('replace', **route)
-                    except NetlinkError as e:
-                        if e.code != EEXIST:
-                            raise
-                        ipr.route('delete', **route)
-                        ipr.route('add', **route)
-                else:
-                    ipr.route('delete', **route)
-            except NetlinkError as e:
-                if command == MSG_DELROUTE and e.code == ESRCH:
-                    pass
-                else:
-                    raise
         route_parts = [f'target={target}']
-        if route.get('gateway'):
-            route_parts.append(f'via={route["gateway"]}')
+        if not ip_is_unspecified(afi, raw_gw):
+            route_parts.append(f'via={ip_from_raw(afi, raw_gw)}')
         if dev:
             route_parts.append(f'interface={dev}')
-        if route.get('prefsrc'):
-            route_parts.append(f'source={route["prefsrc"]}')
-        log_event(f'route {"add" if command == MSG_ADDROUTE else "delete"} {" ".join(route_parts)}')
+        if not ip_is_unspecified(afi, raw_src):
+            route_parts.append(f'source={ip_from_raw(afi, raw_src)}')
+        log_event(f'route {"add" if command == MSG_ADDROUTE else "delete"} nudge {" ".join(route_parts)}')
         self.eod_sock.send(bytes([MSG_ADDROUTERESP if command == MSG_ADDROUTE else MSG_DELROUTERESP]))
+        if dev:
+            self.schedule_reconcile_by_ifname(dev)
+        else:
+            self.schedule_reconcile()
 
     def handle_getbindaddrs(self) -> None:
         response = bytearray([MSG_GETBINDADDRSRESP, 1])
@@ -466,8 +557,243 @@ class ZeroTierExtOsdep:
                 response.extend(struct.pack('=BB16s16s', 1 if family == 'inet' else 2, int(info['prefixlen']), address.packed.ljust(16, b'\0'), pack_ifname(name)))
         self.eod_sock.send(bytes(response))
 
+    def reconcile_loop(self) -> None:
+        next_full = time.monotonic() + RECONCILE_INTERVAL
+        while self.running:
+            timeout = max(0, next_full - time.monotonic())
+            self.reconcile_event.wait(timeout)
+            if not self.running:
+                break
+            now = time.monotonic()
+
+            with self.reconcile_lock:
+                reconcile_all = self.reconcile_all or now >= next_full
+                pending = set(self.reconcile_pending)
+                self.reconcile_all = False
+                self.reconcile_pending.clear()
+                self.reconcile_event.clear()
+
+            if reconcile_all:
+                pending.update(load_interfaces().keys())
+                next_full = now + RECONCILE_INTERVAL
+
+            if pending and commit_in_progress():
+                with self.reconcile_lock:
+                    self.reconcile_pending.update(pending)
+                time.sleep(0.250)
+                continue
+
+            for nwid in sorted(pending):
+                try:
+                    self.reconcile_network(nwid)
+                except Exception as e:
+                    log_event(f'reconcile failed network={nwid:016x}: {e}')
+
+    def reconcile_network(self, nwid: int) -> None:
+        interfaces = load_interfaces()
+        config = interfaces.get(nwid)
+        if not config:
+            self.clear_managed_state(nwid)
+            return
+
+        name = config['ifname']
+        self.network_ifnames[nwid] = name
+        status, body = self.mgmt_request('GET', f'/network/{nwid:016x}', '')
+        if status == 404:
+            self.set_network_carrier(name, False)
+            self.clear_managed_state(nwid)
+            self.join_network(nwid, name, config.get('settings', {}))
+            return
+        if status < 200 or status >= 300:
+            raise ZeroTierAPIError(f'GET /network/{nwid:016x} failed: HTTP {status}: {body}')
+
+        snapshot = json.loads(body) if body else {}
+        settings = config.get('settings', {})
+        if not network_status_ok(snapshot):
+            log_event(f'network not ready network={nwid:016x} interface={name} status={snapshot.get("status", "-")}')
+            self.set_network_carrier(name, False)
+            self.clear_managed_state(nwid)
+            return
+
+        self.set_network_carrier(name, True)
+        self.apply_snapshot(nwid, name, snapshot, settings)
+
+    def join_network(self, nwid: int, name: str, settings: dict) -> None:
+        now = time.monotonic()
+        last_attempt = self.last_join_attempts.get(nwid, 0)
+        if now - last_attempt < JOIN_RETRY_INTERVAL:
+            log_event(f'network absent network={nwid:016x} interface={name} join deferred')
+            return
+
+        self.last_join_attempts[nwid] = now
+        body = json.dumps(settings)
+        status, response = self.mgmt_request('POST', f'/network/{nwid:016x}', body)
+        if status < 200 or status >= 300:
+            raise ZeroTierAPIError(f'POST /network/{nwid:016x} failed: HTTP {status}: {response}')
+
+        log_event(f'network join requested network={nwid:016x} interface={name}')
+        self.schedule_reconcile(nwid)
+
+    def apply_snapshot(self, nwid: int, name: str, snapshot: dict, settings: dict) -> None:
+        index = link_index(name)
+        if index is None:
+            raise OSError(f'interface {name} does not exist')
+
+        mtu = int(snapshot.get('mtu') or 0)
+        if mtu > 0:
+            with IPRoute() as ipr:
+                ipr.link('set', index=index, mtu=mtu)
+
+        desired_addresses = self.desired_addresses(snapshot, settings)
+        self.sync_addresses(nwid, name, desired_addresses)
+        desired_routes = self.desired_routes(name, snapshot, settings, desired_addresses)
+        self.sync_routes(nwid, name, desired_routes)
+
+    def desired_addresses(self, snapshot: dict, settings: dict) -> set[str]:
+        desired = set()
+        if not settings.get('allowManaged', True):
+            return desired
+        for value in snapshot.get('assignedAddresses', []):
+            try:
+                address = ip_interface(value)
+            except ValueError:
+                continue
+            if managed_allowed(settings, address):
+                desired.add(str(address))
+        return desired
+
+    def desired_routes(self, name: str, snapshot: dict, settings: dict, managed_addresses: set[str]) -> set[tuple[str, str]]:
+        if not settings.get('allowManaged', True):
+            return set()
+
+        managed_interfaces = [ip_interface(value) for value in managed_addresses]
+        candidate_sources = managed_interfaces + link_addresses(name)
+        desired = set()
+        for route in snapshot.get('routes', []):
+            try:
+                target = ip_network(route['target'], strict=False)
+            except (KeyError, ValueError):
+                continue
+            if not managed_allowed(settings, target):
+                continue
+
+            via = route.get('via') or ''
+            if via:
+                try:
+                    via_addr = ip_address(via)
+                except ValueError:
+                    continue
+                if any(same_ip_version(addr.ip, via_addr) and addr.ip == via_addr for addr in candidate_sources):
+                    continue
+
+            if any(target == addr.network for addr in managed_interfaces):
+                continue
+
+            src = self.route_source(target, candidate_sources)
+            if src is None:
+                continue
+            desired.add((str(target), via))
+        return desired
+
+    @staticmethod
+    def route_source(target, candidates: list):
+        best = None
+        best_prefix = -1
+        for candidate in candidates:
+            if candidate.ip.version != target.version:
+                continue
+            prefix = target.prefixlen if candidate.ip in target else 0
+            if prefix >= best_prefix:
+                best = candidate
+                best_prefix = prefix
+        return best
+
+    def sync_addresses(self, nwid: int, name: str, desired: set[str]) -> None:
+        current = self.applied_addresses.setdefault(nwid, set())
+        for value in sorted(current - desired):
+            self.delete_address(name, value)
+            current.remove(value)
+        for value in sorted(desired - current):
+            self.add_address(name, value)
+            current.add(value)
+
+    def sync_routes(self, nwid: int, name: str, desired: set[tuple[str, str]]) -> None:
+        current = self.applied_routes.setdefault(nwid, set())
+        for target, via in sorted(current - desired):
+            self.delete_route(name, target, via)
+            current.remove((target, via))
+        for target, via in sorted(desired - current):
+            self.add_route(name, target, via)
+            current.add((target, via))
+
+    def clear_managed_state(self, nwid: int) -> None:
+        name = self.network_ifnames.get(nwid, '')
+        if not name:
+            self.applied_addresses.pop(nwid, None)
+            self.applied_routes.pop(nwid, None)
+            return
+
+        for target, via in sorted(self.applied_routes.pop(nwid, set())):
+            self.delete_route(name, target, via)
+        for value in sorted(self.applied_addresses.pop(nwid, set())):
+            self.delete_address(name, value)
+
+    def add_address(self, name: str, value: str) -> None:
+        address = ip_interface(value)
+        index = link_index(name)
+        if index is None:
+            raise OSError(f'interface {name} does not exist')
+        with IPRoute() as ipr:
+            ipr.addr('replace', index=index, address=str(address.ip), prefixlen=address.network.prefixlen)
+        log_event(f'ip reconcile add interface={name} address={value}')
+
+    def delete_address(self, name: str, value: str) -> None:
+        address = ip_interface(value)
+        index = link_index(name)
+        if index is None:
+            return
+        with IPRoute() as ipr:
+            try:
+                ipr.addr('delete', index=index, address=str(address.ip), prefixlen=address.network.prefixlen)
+            except NetlinkError as e:
+                if e.code != ESRCH:
+                    raise
+        log_event(f'ip reconcile delete interface={name} address={value}')
+
+    def route_data(self, name: str, target: str, via: str) -> dict:
+        network = ip_network(target, strict=False)
+        family = socket.AF_INET if network.version == 4 else socket.AF_INET6
+        index = link_index(name)
+        if index is None:
+            raise OSError(f'interface {name} does not exist')
+        route = {'family': family, 'dst': target, 'oif': index, 'proto': ZEROTIER_ROUTE_PROTOCOL}
+        if via:
+            route['gateway'] = via
+        return route
+
+    def add_route(self, name: str, target: str, via: str) -> None:
+        route = self.route_data(name, target, via)
+        with IPRoute() as ipr:
+            ipr.route('replace', **route)
+        via_text = f' via={via}' if via else ''
+        log_event(f'route reconcile add target={target}{via_text} interface={name}')
+
+    def delete_route(self, name: str, target: str, via: str) -> None:
+        try:
+            route = self.route_data(name, target, via)
+        except OSError:
+            return
+        with IPRoute() as ipr:
+            try:
+                ipr.route('delete', **route)
+            except NetlinkError as e:
+                if e.code != ESRCH:
+                    raise
+        via_text = f' via={via}' if via else ''
+        log_event(f'route reconcile delete target={target}{via_text} interface={name}')
+
     def mgmt_request(self, method: str, path: str, body: str) -> tuple[int, str]:
-        methods = {'DELETE': MGMT_DELETE, 'GET': MGMT_GET, 'POST': MGMT_POST, 'PUT': MGMT_POST}
+        methods = {'DELETE': MGMT_DELETE, 'GET': MGMT_GET, 'POST': MGMT_POST, 'PUT': MGMT_PUT}
         method_id = methods[method.upper()]
         clean_path = path[1:] if path.startswith('/') else path
         path_data = clean_path.encode()
@@ -483,7 +809,7 @@ class ZeroTierExtOsdep:
                 status = 200
             if method.upper() == 'DELETE' and status >= 200 and status < 300:
                 self.cleanup_deleted_network(clean_path)
-            return status, response
+        return status, response
 
     def cleanup_deleted_network(self, path: str) -> None:
         parts = path.split('/')
@@ -493,8 +819,10 @@ class ZeroTierExtOsdep:
             nwid = int(parts[1], 16)
         except ValueError:
             return
+        self.clear_managed_state(nwid)
+        self.last_join_attempts.pop(nwid, None)
         name = self.network_ifnames.pop(nwid, '')
-        if name and name not in configured_ifnames(self.home):
+        if name and name not in configured_ifnames():
             delete_tap(name)
 
     @staticmethod
@@ -547,7 +875,10 @@ class ApiServer:
                 response = {'status': status, 'body': body}
             except Exception as e:
                 response = {'status': 500, 'body': str(e)}
-            conn.sendall(json.dumps(response).encode() + b'\n')
+            try:
+                conn.sendall(json.dumps(response).encode() + b'\n')
+            except BrokenPipeError:
+                pass
 
 
 def main() -> int:
