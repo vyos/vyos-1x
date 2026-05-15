@@ -1252,6 +1252,7 @@ def show_certificate_authority(
 def show_certificate(
     raw: bool,
     name: typing.Optional[str] = None,
+    private: typing.Optional[bool] = False,
     pem: typing.Optional[bool] = False,
     fingerprint: typing.Optional[ArgsFingerprint] = None,
 ):
@@ -1282,11 +1283,30 @@ def show_certificate(
             if not cert:
                 continue
 
-            if name and pem:
+            if name and pem and not (private or fingerprint):
                 print(encode_certificate(cert))
                 return
-            elif name and fingerprint:
+            elif name and fingerprint and not private:
                 print(get_certificate_fingerprint(cert, fingerprint))
+                return
+            elif name and private:
+                if 'private' in cert_dict and 'key' in cert_dict['private']:
+                    protected = 'password_protected' in cert_dict['private']
+                    private_key = load_private_key(
+                        cert_dict['private']['key'],
+                        passphrase=None,
+                        wrap_tags=True,
+                    )
+                    if private_key:
+                        print(encode_private_key(private_key, passphrase=None))
+                    else:
+                        if protected:
+                            print(f'Private key for certificate "{cert_name}" is '
+                                  'password-protected and cannot be displayed')
+                        else:
+                            print(f'Failed to load private key for certificate "{cert_name}"')
+                else:
+                    print(f'No private key found for certificate "{cert_name}"')
                 return
 
             ca_name = get_certificate_ca(cert, ca_certs)
