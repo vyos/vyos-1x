@@ -58,3 +58,5 @@ pull_request_rules:
       label:
         toggle:
           - invalid-title
+merge_protections_settings:
+  reporting_method: check-runs
