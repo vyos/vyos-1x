@@ -90,11 +90,6 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
-    def test_vmware_support(self):
-        for option in ['CONFIG_VMXNET3']:
-            tmp = re.findall(f'{option}=(y|m)', self._config_data)
-            self.assertTrue(tmp)
-
     def test_container_cgroup_support(self):
         options_to_check = [
             'CONFIG_CGROUPS', 'CONFIG_MEMCG',
@@ -229,6 +224,47 @@ class TestKernelModules(unittest.TestCase):
                     tmp, msg=f'{option} must be enabled (=y or =m) on arm64'
                 )
 
+    def test_hypervisor_hyperv(self):
+        if IS_ARM64:
+            self.skipTest('Hyper-V only available on X86 platform')
+
+        options_to_check = ['CONFIG_HYPERV_VSOCKETS', 'CONFIG_HYPERV_STORAGE',
+                            'CONFIG_HYPERV_NET', 'CONFIG_HYPERV_KEYBOARD',
+                            'CONFIG_HYPERV_VTL_MODE', 'CONFIG_HYPERV_TIMER',
+                            'CONFIG_HYPERV_UTILS', 'CONFIG_HYPERV_BALLOON',
+                            'CONFIG_HYPERV_VMBUS', 'CONFIG_HYPERV_IOMMU']
+
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_hypervisor_vmware(self):
+        if IS_ARM64:
+            self.skipTest('VMware only available on X86 platform')
+
+        options_to_check = ['CONFIG_VMWARE_VMCI_VSOCKETS', 'CONFIG_VMXNET3',
+                            'CONFIG_VMWARE_BALLOON', 'CONFIG_VMWARE_VMCI',
+                            'CONFIG_VMWARE_PVSCSI']
+
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_hypervisor_virtio(self):
+        options_to_check = ['CONFIG_VIRTIO_BLK', 'CONFIG_VIRTIO_NET',
+                            'CONFIG_VIRTIO_CONSOLE', 'CONFIG_VIRTIO_ANCHOR',
+                            'CONFIG_VIRTIO_PCI_LIB',
+                            'CONFIG_VIRTIO_PCI_LIB_LEGACY',
+                            'CONFIG_VIRTIO_MENU', 'CONFIG_VIRTIO_PCI',
+                            'CONFIG_VIRTIO_PCI_LEGACY', 'CONFIG_VIRTIO_VDPA',
+                            'CONFIG_VIRTIO_BALLOON', 'CONFIG_VIRTIO_INPUT',
+                            'CONFIG_VIRTIO_MMIO',
+                            'CONFIG_VIRTIO_MMIO_CMDLINE_DEVICES',
+                            'CONFIG_VIRTIO_IOMMU']
+
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
