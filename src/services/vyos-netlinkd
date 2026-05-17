@@ -38,7 +38,7 @@ from vyos.utils.process import stop_systemd_unit
 running = True
 
 # compile regex once during startup for fast match
-IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan)")
+IFACE_RE = re.compile(r"^(?:eth|lan|eno|ens|enp|enx|br|bond|sw|wlan)")
 
 def match_iface(ifname: str) -> bool:
     """ Helper function returning true if interface name is a match for further

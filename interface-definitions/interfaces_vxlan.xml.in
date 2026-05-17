@@ -87,6 +87,18 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="no-udp-checksum-v4">
+                <properties>
+                  <help>Disable UDP checksum validation for IPv4</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="no-udp-checksum-v6">
+                <properties>
+                  <help>Disable UDP checksum validation for IPv6</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="neighbor-suppress">
                 <properties>
                   <help>Enable neighbor discovery (ARP and ND) suppression</help>

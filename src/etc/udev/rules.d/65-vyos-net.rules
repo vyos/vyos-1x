@@ -4,6 +4,9 @@
 ACTION!="add", 				GOTO="vyos_net_end"
 SUBSYSTEM!="net",			GOTO="vyos_net_end"
 
+# Use switchport names for Mellanox switches, so interface names match the front-panel labels
+DRIVERS=="mlxsw_spectrum*", NAME="sw$attr{phys_port_name}", GOTO="vyos_net_end"
+
 # Do name change for ethernet and wireless devices only
 KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"
 

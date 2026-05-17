@@ -31,6 +31,8 @@ from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
+from vyos.base import Warning
+from vyos.mlxsw import is_mlxsw
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
 from vyos.vpp.utils import cli_ifaces_list
@@ -151,6 +153,7 @@ def verify(bridge):
     verify_vrf(bridge)
     verify_mtu_ipv6(bridge)
     verify_mirror_redirect(bridge)
+    verify_mlxsw_bridge(bridge)
 
     ifname = bridge['ifname']
 
@@ -242,6 +245,17 @@ def apply(bridge):
             )
 
     return None
+
+
+def verify_mlxsw_bridge(bridge):
+    if not is_mlxsw():
+        return None
+
+    if 'mac' not in bridge:
+        Warning('Must explicitly set bridge MAC on Mellanox switches')
+
+    return None
+
 
 if __name__ == '__main__':
     try:

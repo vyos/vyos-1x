@@ -87,7 +87,7 @@ def get_wireless_physical_device(intf: str) -> str:
     return phy
 
 def get_interface_type(intf: str) -> str:
-    if 'eth' in intf:
+    if intf.startswith(('eth', 'lan', 'eno', 'ens', 'enp', 'enx', 'sw')):
         intf_type = 'ethernet'
     elif 'wlan' in intf:
         intf_type = 'wireless'

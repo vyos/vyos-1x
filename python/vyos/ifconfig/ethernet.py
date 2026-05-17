@@ -38,11 +38,11 @@ class EthernetIf(Interface):
         **Interface.definition,
         **{
             'section': 'ethernet',
-            'prefixes': ['lan', 'eth', 'eno', 'ens', 'enp', 'enx'],
+            'prefixes': ['lan', 'eth', 'eno', 'ens', 'enp', 'enx', 'sw', 'swp'],
             'bondable': True,
             'broadcast': True,
             'bridgeable': True,
-            'eternal': '(lan|eth|eno|ens|enp|enx)[0-9]+$',
+            'eternal': '^((lan|eth|eno|ens|enp|enx)[0-9]+|sw[0-9]*p[0-9]+(s[0-9]+)?)$',
         },
     }
 
