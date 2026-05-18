@@ -125,6 +125,8 @@ class TestConfigSyncWithHTTPS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['system', 'time-zone', 'UTC'])
         self.cli_commit()
 
+        time.sleep(2)
+
         output = self.op_mode(
             [
                 'show',
