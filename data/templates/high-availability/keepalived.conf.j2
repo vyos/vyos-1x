@@ -228,7 +228,9 @@ virtual_server fwmark {{ vserver_config.fwmark }} {
 {%         elif vserver_config.forward_method is vyos_defined('tunnel') %}
     lb_kind TUN
 {%         endif %}
+{%         if vserver_config.persistence_timeout | int > 0 %}
     persistence_timeout {{ vserver_config.persistence_timeout }}
+{%         endif %}
     protocol {{ vserver_config.protocol | upper }}
 {%         if vserver_config.real_server is vyos_defined %}
 {%             for rserver, rserver_config in vserver_config.real_server.items() %}
