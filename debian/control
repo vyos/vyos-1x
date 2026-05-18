@@ -428,6 +428,13 @@ Depends:
 ## Serial nfs remote port buffer
   nfs-common
 ## End serial nfs remote port buffer
+Recommends:
+# Used by vyos.hardware (GPIO control for cellular modem reset, SIM
+# select, RS-232/485 transceiver mode, etc.). Lazy-imported, so absence
+# only matters on images whose flavor wires up a pinmap overlay; cloud,
+# VM and x86 generic images are unaffected. Pulled in for hardware
+# flavors via the igOS platform fragments in vyos-build.
+  python3-libgpiod,
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
