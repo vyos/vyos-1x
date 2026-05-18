@@ -446,6 +446,20 @@ set high-availability virtual-server 203.0.113.1 algorithm 'least-connection'
 set high-availability virtual-server 203.0.113.1 forward-method 'nat'
 ```
 
+### Persistence timeout
+
+Timeout in seconds for persistent connections. IPVS will forward all
+connections from the same source IP to the same real server for the
+duration of the timeout.
+Default value is 300 seconds.
+
+Set to `0` to disable persistence and allow the load-balancing
+algorithm to distribute every connection independently.
+
+```none
+set high-availability virtual-server 203.0.113.1 persistence-timeout '180'
+```
+
 ### Health-check
 
 Custom health-check script allows checking real-server availability
