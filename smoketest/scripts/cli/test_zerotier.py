@@ -28,19 +28,18 @@ class TestZeroTier(VyOSUnitTestSHIM.TestCase):
     def configure_identity(self):
         self.cli_set(service_path + ['identity', 'secret', identity_secret])
 
-    def test_basic_interface_files(self):
+    def test_basic_interface_runtime_files(self):
         self.configure_identity()
         self.cli_set(base_path + ['zt0', 'network-id', '0123456789abcdef'])
         self.cli_commit()
 
         self.assertTrue((config_dir / 'identity.secret').exists())
         self.assertTrue((config_dir / 'identity.public').exists())
+        self.assertTrue((config_dir / 'local.conf').exists())
         self.assertFalse((config_dir / 'devicemap').exists())
         self.assertFalse((config_dir / 'interfaces.json').exists())
-        self.assertTrue((config_dir / 'networks.d' / '0123456789abcdef.conf').exists())
-
-        local = (config_dir / 'networks.d' / '0123456789abcdef.local.conf').read_text()
-        self.assertIn('allowManaged=1\n', local)
+        self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.conf').exists())
+        self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.local.conf').exists())
 
     def test_manual_address_disables_managed_addressing(self):
         self.configure_identity()
@@ -48,8 +47,7 @@ class TestZeroTier(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['zt0', 'address', '192.0.2.1/24'])
         self.cli_commit()
 
-        local = (config_dir / 'networks.d' / '0123456789abcdef.local.conf').read_text()
-        self.assertIn('allowManaged=0\n', local)
+        self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.local.conf').exists())
 
     def test_manual_address_rejects_allow_managed(self):
         self.configure_identity()
