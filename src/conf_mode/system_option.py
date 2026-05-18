@@ -196,6 +196,7 @@ def get_config(config=None):
     if 'performance' in options:
         # Update IPv4/IPv6 and sysctl options after tuned applied it's settings
         set_dependents('ip_ipv6', conf)
+        set_dependents('firewall', conf)
         set_dependents('sysctl', conf)
 
     return options
