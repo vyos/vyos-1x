@@ -427,16 +427,17 @@ pull-request. This requires you already have a GitHub account.
 
   ```none
   $ git fetch upstream
-  $ git checkout current
-  $ git merge upstream/current
-```
+  $ git checkout rolling
+  $ git merge upstream/rolling
 
-- If you also want to update your fork on GitHub, use the following: `$ git
-  push origin current`
+  ```
 
-[dockerfile]: https://github.com/vyos/vyos-documentation/blob/current/docker/Dockerfile
+- If you also want to update your fork on GitHub, use the following:
+`$ git push origin rolling`
+
+[dockerfile]: https://github.com/vyos/vyos-documentation/blob/rolling/docker/Dockerfile
 [grammarly]: https://www.grammarly.com/
-[readme.md]: https://github.com/vyos/vyos-documentation/blob/current/README.md
+[readme.md]: https://github.com/vyos/vyos-documentation/blob/rolling/README.md
 [restructuredtext]: http://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html
 [restructuredtextdirectives]: https://docutils.sourceforge.io/docs/ref/rst/directives.html
 [sphinx-doc]: https://www.sphinx-doc.org
