@@ -22,7 +22,6 @@ import threading
 import time
 from ipaddress import ip_address
 from ipaddress import ip_interface
-from ipaddress import IPv6Address
 from ipaddress import ip_network
 from pathlib import Path
 
@@ -32,6 +31,7 @@ from pyroute2.netlink.exceptions import NetlinkError
 from vyos.configquery import op_mode_config_dict
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.commit import commit_in_progress
+from vyos.utils.network import mac2eui64
 from vyos.zerotier import network_settings
 
 
@@ -157,6 +157,7 @@ def load_interfaces() -> dict[int, dict] | None:
             result[int(network, 16)] = {
                 'ifname': name,
                 'settings': network_settings(config),
+                'config': config,
             }
         except ValueError:
             continue
@@ -193,43 +194,52 @@ def configured_ifnames() -> set[str]:
     return {config['ifname'] for config in (load_interfaces() or {}).values()}
 
 
-def eui64_link_local(mac: bytes) -> str:
-    eui = bytearray(mac[:3] + b'\xff\xfe' + mac[3:])
-    eui[0] ^= 0x02
-    return str(IPv6Address(int(IPv6Address('fe80::')) | int.from_bytes(eui, 'big')))
+def mac_text(mac: bytes) -> str:
+    return ':'.join(f'{b:02x}' for b in mac)
 
 
-def remove_stale_eui64_link_locals(name: str, mac: bytes) -> None:
-    expected = eui64_link_local(mac)
+def default_link_local_enabled(config: dict) -> bool:
+    return 'no_default_link_local' not in config.get('ipv6', {}).get('address', {})
+
+
+def sync_eui64_link_local(name: str, mac: bytes, config: dict) -> None:
+    expected = mac2eui64(mac_text(mac), 'fe80::/64')
     index = link_index(name)
-    if index is None:
+    if index is None or not expected:
         return
 
+    enabled = default_link_local_enabled(config)
     with IPRoute() as ipr:
         for entry in ipr.get_addr(index=index, family=socket.AF_INET6):
             attrs = dict(entry['attrs'])
             address = attrs.get('IFA_ADDRESS')
-            if not address or address == expected:
+            if not address:
                 continue
 
             addr = ip_address(address)
             iid = addr.packed[8:]
-            if addr.is_link_local and iid[3:5] == b'\xff\xfe':
+            if addr.is_link_local and iid[3:5] == b'\xff\xfe' and (address != expected or not enabled):
                 try:
                     ipr.addr('del', index=index, address=address, prefixlen=entry['prefixlen'])
                 except NetlinkError:
                     pass
 
+        if enabled:
+            try:
+                ipr.addr('replace', index=index, address=expected, prefixlen=64)
+            except NetlinkError as e:
+                log_event(f'link-local add failed interface={name} address={expected}/64 error={e}')
 
-def configure_tap(name: str, mac: bytes, mtu: int) -> None:
-    mac_text = ':'.join(f'{b:02x}' for b in mac)
+
+def configure_tap(name: str, mac: bytes, mtu: int, config: dict) -> None:
+    address = mac_text(mac)
     index = link_index(name)
     if index is None:
         raise OSError(f'interface {name} does not exist')
     with IPRoute() as ipr:
         ipr.link('set', index=index, addrgenmode='none')
-        ipr.link('set', index=index, address=mac_text, mtu=mtu, state='up')
-    remove_stale_eui64_link_locals(name, mac)
+        ipr.link('set', index=index, address=address, mtu=mtu, state='up')
+    sync_eui64_link_local(name, mac, config)
 
 
 
@@ -412,7 +422,7 @@ class ZeroTierExtOsdep:
         fd = open_tap(name)
         set_tap_carrier(fd, False)
         try:
-            configure_tap(name, mac, mtu)
+            configure_tap(name, mac, mtu, config.get('config', {}))
         except Exception:
             os.close(fd)
             raise
@@ -420,8 +430,7 @@ class ZeroTierExtOsdep:
         self.tap_carrier[name] = False
         self.network_ifnames[nwid] = name
         self.pending_ifnames.pop(nwid, None)
-        mac_text = ':'.join(f'{b:02x}' for b in mac)
-        log_event(f'tap add network={nwid:016x} interface={name} mtu={mtu} mac={mac_text}')
+        log_event(f'tap add network={nwid:016x} interface={name} mtu={mtu} mac={mac_text(mac)}')
         send_with_fd(self.eod_sock, struct.pack('=B16s', MSG_ADDTAPRESP, pack_ifname(name)), fd)
         self.schedule_reconcile(nwid)
 
