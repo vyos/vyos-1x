@@ -107,8 +107,17 @@ def main():
     syslog.syslog(syslog.LOG_INFO, "VyOS Netlink listener daemon started.")
 
     # Subscribe to link notifications only (not routes/rules/neigh/addr/...).
-    ipr = IPRoute(groups=RTMGRP_LINK)
-    ipr.bind()
+    ipr = IPRoute()
+    try:
+        # newer pyroute2 versions support bind group in IPRoute() constructor
+        ipr.bind(groups=RTMGRP_LINK)
+        syslog.syslog(syslog.LOG_INFO,
+            'IPRoute.bind() using groups=RTMGRP_LINK RTNL subscription')
+    except TypeError:
+        syslog.syslog(syslog.LOG_WARNING,
+            'IPRoute.bind() has no groups= support; using default RTNL subscriptions',
+        )
+        ipr.bind()
     fd = ipr.fileno()
 
     global running
