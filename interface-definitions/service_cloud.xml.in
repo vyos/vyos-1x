@@ -12,12 +12,13 @@
             <properties>
               <help>Cloud registration code</help>
               <valueHelp>
-                <format>123456</format>
+                <format>txt</format>
                 <description>6-digit registration code provided by PerleCloud</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 100000-999999"/>
+                <regex>[0-9]{6}</regex>
               </constraint>
+              <constraintErrorMessage>Registration code must be exactly 6 digits</constraintErrorMessage>
             </properties>
           </leafNode>
         </children>
