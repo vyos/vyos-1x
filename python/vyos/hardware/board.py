@@ -320,14 +320,26 @@ def _discover_serial_ports(
         types[port] = t
 
         # Safety: every board must ship transceivers in shutdown so a
-        # cold boot never drives a wrong protocol on the bus.
+        # cold boot never drives a wrong protocol on the bus. ``default``
+        # is the *logical* level (active_low is applied below it), so a
+        # SHUT-asserted cold boot is either default=None (Hi-Z + bias) or
+        # default=1 on an active_low pin / default=0 on an active_high
+        # pin. The opposite polarity would deassert SHUT at boot.
         shut_pin = pins[roles["shut"]]
-        if shut_pin.default not in (None, 0):
+        shipped_in_shutdown = (
+            shut_pin.default is None
+            or (shut_pin.active_low and shut_pin.default == 1)
+            or (not shut_pin.active_low and shut_pin.default == 0)
+        )
+        if not shipped_in_shutdown:
             raise ValueError(
                 f"pinmap SERIAL_PORTS[{port!r}]: SHUT pin "
-                f"{roles['shut']!r} has Pin(default={shut_pin.default!r}); "
-                "must be 0 (transceiver shipped in shutdown). "
-                "Software enables the port when the user configures it."
+                f"{roles['shut']!r} has "
+                f"Pin(default={shut_pin.default!r}, "
+                f"active_low={shut_pin.active_low!r}); cold boot would "
+                "deassert SHUT and drive the bus. Transceiver must ship "
+                "in shutdown; software enables the port when the user "
+                "configures it."
             )
 
     return ports, meta, types
