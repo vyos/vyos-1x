@@ -8,5 +8,7 @@ Environment=
 Environment="MIBDIRS=/usr/share/snmp/mibs:/usr/share/snmp/mibs/iana:/usr/share/snmp/mibs/ietf:/usr/share/vyos/mibs"
 ExecStart=
 ExecStart={{ vrf_command }}/usr/sbin/snmpd -LS0-5d -Lf /dev/null -u Debian-snmp -g Debian-snmp -f -p /run/snmpd.pid
+# Sync engineBoot value between snmpd.conf and engineboots.count when user restarts the service manually
+ExecStartPost=!/usr/bin/python3 /usr/libexec/vyos/system/sync-snmp-engine-boots.py
 Restart=always
 RestartSec=10
