@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<!--
+  test hardware ... — bench / field diagnostics for board GPIO, serial
+  transceivers, and modem control pins. Reads from / writes to GPIOs
+  directly through vyos.hardware.api, bypassing the conf-mode model.
+
+  This subtree is intentionally NOT under "set" / "show" — it's an
+  out-of-band test interface for bring-up. Use sparingly on a live system.
+-->
+<interfaceDefinition>
+  <node name="test">
+    <children>
+      <node name="hardware">
+        <properties>
+          <help>Board hardware diagnostics (out-of-band; bypasses configuration)</help>
+        </properties>
+        <children>
+
+          <!-- ===== show ===== -->
+          <node name="show">
+            <properties>
+              <help>Show hardware state</help>
+            </properties>
+            <children>
+              <leafNode name="serial">
+                <properties>
+                  <help>List declared serial ports with type and tty</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py show_serial</command>
+              </leafNode>
+              <leafNode name="modem">
+                <properties>
+                  <help>List declared modems</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py show_modem</command>
+              </leafNode>
+              <node name="pin">
+                <properties>
+                  <help>Show GPIO pin state (all pins)</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py show_pin</command>
+                <children>
+                  <tagNode name="name">
+                    <properties>
+                      <help>Show a single pin by name</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/test_hardware.py show_pin --name="$5"</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+
+          <!-- ===== serial &lt;port&gt; protocol &lt;proto&gt; [...] ===== -->
+          <tagNode name="serial">
+            <properties>
+              <help>Switch a serial port transceiver to a protocol (out-of-band)</help>
+              <completionHelp>
+                <script>${vyos_op_scripts_dir}/test_hardware.py show_serial | awk 'NR>1 {print $1}'</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="protocol">
+                <properties>
+                  <help>Protocol to apply</help>
+                  <completionHelp>
+                    <list>isolate rs232 rs485h rs485f rs422</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5"</command>
+                <children>
+                  <tagNode name="termination">
+                    <properties>
+                      <help>Set termination on/off</help>
+                      <completionHelp>
+                        <list>on off</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5" --termination="$7"</command>
+                    <children>
+                      <tagNode name="slew-rate">
+                        <properties>
+                          <help>Set slew-rate on/off</help>
+                          <completionHelp>
+                            <list>on off</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5" --termination="$7" --slew-rate="$9"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="slew-rate">
+                    <properties>
+                      <help>Set slew-rate on/off</help>
+                      <completionHelp>
+                        <list>on off</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5" --slew-rate="$7"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+
+          <!-- ===== modem &lt;name&gt; ... ===== -->
+          <tagNode name="modem">
+            <properties>
+              <help>Modem GPIO control (out-of-band)</help>
+              <completionHelp>
+                <script>${vyos_op_scripts_dir}/test_hardware.py show_modem | awk '{print $1}'</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="reset">
+                <properties>
+                  <help>Issue an unconditional reset pulse</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py modem_reset --modem="$3"</command>
+              </leafNode>
+              <tagNode name="power">
+                <properties>
+                  <help>Power on or off</help>
+                  <completionHelp>
+                    <list>on off</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py modem_power --modem="$3" --state="$5"</command>
+              </tagNode>
+              <tagNode name="sim">
+                <properties>
+                  <help>Select SIM slot</help>
+                  <completionHelp>
+                    <list>1 2</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py modem_sim --modem="$3" --slot="$5"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+
+          <!-- ===== pin &lt;name&gt; set|pulse ===== -->
+          <tagNode name="pin">
+            <properties>
+              <help>Raw GPIO pin control (out-of-band)</help>
+              <completionHelp>
+                <script>${vyos_op_scripts_dir}/test_hardware.py show_pin | awk 'NR>1 {print $1}'</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="set">
+                <properties>
+                  <help>Set pin value (0 or 1)</help>
+                  <completionHelp>
+                    <list>0 1</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py pin_set --name="$3" --value="$5"</command>
+              </tagNode>
+              <leafNode name="pulse">
+                <properties>
+                  <help>Pulse pin (default 200 ms, asserted=1)</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py pin_pulse --name="$3"</command>
+              </leafNode>
+            </children>
+          </tagNode>
+
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

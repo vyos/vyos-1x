@@ -21,10 +21,11 @@ is ``generic``) does not raise.
 
 from __future__ import annotations
 
+import datetime
 import os
 import time
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, Iterator, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,11 @@ class Pin:
     bias: str = "as-is"            # "pull-up" | "pull-down" | "as-is"
     default: Optional[int] = None  # initial value for outputs (0/1) or None
     group: str = ""                # free-form tag for grouping in listings
+    # Per-pin debounce overrides used by Board.watch_pins(). When the caller
+    # passes None for the corresponding watch_pins() argument these values
+    # are used. None here means "fall back to the watch_pins() default".
+    debounce_us: Optional[int] = None  # kernel hardware debounce, microseconds
+    settle_ms: Optional[int] = None    # userspace quiet period, milliseconds
 
 
 class Board:
@@ -150,3 +156,147 @@ class Board:
                         term: Optional[bool] = None,
                         slr: Optional[bool] = None) -> None:
         raise NotImplementedError(f"{self.NAME}: serial_protocol not supported")
+
+    # ------------------------------------------------------------------ events
+    def watch_pins(
+        self,
+        names: Iterable[str],
+        *,
+        stop_fd: Optional[int] = None,
+        debounce_us: Optional[int] = 20_000,
+        settle_ms: Optional[int] = 750,
+        coalesce: bool = True,
+    ) -> Iterator[Tuple[str, int, int]]:
+        """
+        Yield ``(name, level, timestamp_ns)`` tuples for edge events on the
+        named input pins. Blocks; designed to be driven from a single
+        background thread that pushes events onto the FSM queue.
+
+        Two layers of debounce:
+
+        * ``debounce_us`` — kernel hardware debounce applied per line via
+          libgpiod ``LineSettings.debounce_period``. Suppresses contact
+          bounce in the µs–ms range; never reaches userspace.
+        * ``settle_ms`` — userspace quiet period per pin. After any edge,
+          the watcher waits this long for the line to stop changing before
+          emitting an event. With ``coalesce=True`` (default) only the
+          final stable level is emitted, so a remove→insert→remove burst
+          inside the window produces a single ``REMOVE``.
+
+        Per-pin overrides on :class:`Pin` (``debounce_us`` / ``settle_ms``)
+        take precedence over the function arguments when not ``None``.
+
+        ``stop_fd`` is an optional file descriptor (e.g. one end of
+        ``os.pipe()``) that, when made readable, causes the iterator to
+        return cleanly and release all GPIO requests.
+
+        Pass ``settle_ms=0`` and ``coalesce=False`` for fire-fast mode
+        (every kernel-debounced edge is emitted immediately).
+        """
+        import selectors
+
+        gpiod = self._gpiod()
+
+        # Resolve pins, group by bank, and compute per-line effective
+        # debounce/settle values (Pin override > caller arg > builtin).
+        by_bank: Dict[int, Dict[int, str]] = {}
+        eff_settle_ms: Dict[str, int] = {}
+        for n in names:
+            p = self._require(n)
+            if p.dir != "in":
+                raise ValueError(
+                    f"{self.NAME}: watch_pins {n!r} is not an input pin"
+                )
+            by_bank.setdefault(p.bank, {})[p.line] = n
+            eff_settle_ms[n] = (
+                p.settle_ms if p.settle_ms is not None else (settle_ms or 0)
+            )
+
+        bias_map = {
+            "pull-up": gpiod.line.Bias.PULL_UP,
+            "pull-down": gpiod.line.Bias.PULL_DOWN,
+            "as-is": gpiod.line.Bias.AS_IS,
+        }
+
+        requests = []  # list[(req, {line: name})]
+        try:
+            for bank, lines in by_bank.items():
+                cfg = {}
+                for line, name in lines.items():
+                    p = self.PINS[name]
+                    eff_db = (
+                        p.debounce_us
+                        if p.debounce_us is not None
+                        else (debounce_us or 0)
+                    )
+                    cfg[line] = self._line_settings(
+                        direction=gpiod.line.Direction.INPUT,
+                        edge_detection=gpiod.line.Edge.BOTH,
+                        bias=bias_map.get(p.bias, gpiod.line.Bias.AS_IS),
+                        active_low=p.active_low,
+                        debounce_period=datetime.timedelta(microseconds=eff_db),
+                    )
+                req = gpiod.request_lines(
+                    self._resolve_bank(bank),
+                    consumer=f"vyos-hw/{self.NAME}/watch",
+                    config=cfg,
+                )
+                requests.append((req, lines))
+
+            sel = selectors.DefaultSelector()
+            for req, lines in requests:
+                sel.register(req.fd, selectors.EVENT_READ, (req, lines))
+            if stop_fd is not None:
+                sel.register(stop_fd, selectors.EVENT_READ, None)
+
+            # pin name -> (last_seen_level, monotonic deadline)
+            pending: Dict[str, Tuple[int, float]] = {}
+            # pin name -> last level we actually yielded
+            last_emitted: Dict[str, int] = {}
+
+            rising = gpiod.EdgeEvent.Type.RISING_EDGE
+
+            while True:
+                # Block until the next deadline (or forever if nothing pending)
+                now = time.monotonic()
+                if pending:
+                    timeout = max(
+                        0.0,
+                        min(d for _, d in pending.values()) - now,
+                    )
+                else:
+                    timeout = None
+
+                events = sel.select(timeout=timeout)
+
+                # 1. drain kernel-debounced edges into the pending map
+                for key, _ in events:
+                    if key.data is None:
+                        return  # stop_fd fired
+                    req, lines = key.data
+                    for ev in req.read_edge_events():
+                        name = lines[ev.line_offset]
+                        level = 1 if ev.event_type == rising else 0
+                        if not coalesce and last_emitted.get(name) != level:
+                            last_emitted[name] = level
+                            yield name, level, ev.timestamp_ns
+                        deadline = (
+                            time.monotonic()
+                            + eff_settle_ms[name] / 1000.0
+                        )
+                        pending[name] = (level, deadline)
+
+                # 2. flush any pin whose quiet window has elapsed
+                now = time.monotonic()
+                expired = [n for n, (_, d) in pending.items() if d <= now]
+                for name in expired:
+                    level, _ = pending.pop(name)
+                    if last_emitted.get(name) != level:
+                        last_emitted[name] = level
+                        yield name, level, time.monotonic_ns()
+        finally:
+            for req, _ in requests:
+                try:
+                    req.release()
+                except Exception:
+                    pass
