@@ -217,6 +217,9 @@ def geoip_update(firewall=None, policy=None):
 
         if firewall:
             for codes, path in dict_search_recursive(firewall, 'country_code'):
+                if path[0] == 'policy':
+                    continue
+
                 version = 6 if path[0] == 'ipv6' else 4
                 vprefix = '6' if version == 6 else ''
                 set_name = f'GEOIP_CC{vprefix}_{path[1]}_{path[2]}_{path[4]}'
@@ -224,6 +227,9 @@ def geoip_update(firewall=None, policy=None):
 
         if policy:
             for codes, path in dict_search_recursive(policy, 'country_code'):
+                if path[0] == 'firewall':
+                    continue
+
                 version = 6 if path[0] == 'route6' else 4
                 vprefix = '6' if version == 6 else ''
                 set_name = f'GEOIP_CC{vprefix}_{path[0]}_{path[1]}_{path[3]}'
