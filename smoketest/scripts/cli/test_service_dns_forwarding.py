@@ -131,6 +131,28 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('local-port')
         self.assertEqual(tmp, '53')
 
+    # PowerDNS cache-related recursor options
+    def test_recursor_cache_options(self):
+        refresh_on_ttl_perc = '10'
+        nothing_below_nxdomain = 'yes'
+        minimum_ttl_override = '30'
+
+        self.cli_set(base_path + ['refresh-on-ttl-perc', refresh_on_ttl_perc])
+        self.cli_set(base_path + ['nothing-below-nxdomain', nothing_below_nxdomain])
+        self.cli_set(base_path + ['minimum-ttl-override', minimum_ttl_override])
+
+        self.cli_commit()
+
+        self.assertEqual(get_config_value('refresh-on-ttl-perc'), refresh_on_ttl_perc)
+        self.assertEqual(get_config_value('nothing-below-nxdomain'), nothing_below_nxdomain)
+        self.assertEqual(get_config_value('minimum-ttl-override'), minimum_ttl_override)
+
+    def test_nothing_below_nxdomain(self):
+        for option in ['no', 'dnssec', 'yes']:
+            self.cli_set(base_path + ['nothing-below-nxdomain', option])
+            self.cli_commit()
+            self.assertEqual(get_config_value('nothing-below-nxdomain'), option)
+
     def test_dnssec(self):
         # DNSSEC option testing
         options = ['off', 'process-no-validate', 'process', 'log-fail', 'validate']
