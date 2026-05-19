@@ -9,6 +9,9 @@
 -->
 <interfaceDefinition>
   <node name="test">
+    <properties>
+      <help>Run diagnostic tests</help>
+    </properties>
     <children>
       <node name="hardware">
         <properties>
