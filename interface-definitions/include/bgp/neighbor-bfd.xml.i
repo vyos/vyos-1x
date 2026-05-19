@@ -11,6 +11,25 @@
         <valueless/>
       </properties>
     </leafNode>
+    <node name="strict">
+      <properties>
+        <help>Strict mode</help>
+      </properties>
+      <children>
+        <leafNode name="hold-time">
+          <properties>
+            <help>BFD hold time</help>
+            <valueHelp>
+              <format>u32:1-4294967295</format>
+              <description>BFD hold time in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-4294967295"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </node>
 <!-- include end -->
