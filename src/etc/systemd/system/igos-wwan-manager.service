@@ -1,8 +1,13 @@
 [Unit]
 Description=iGOS WWAN Interface Manager
 Documentation=man:igos-wwan-manager(8)
-After=dbus.service ModemManager.service vyos-router.service
-Wants=dbus.service ModemManager.service
+# systemd-udev-settle gates us on coldplug completion so MM's initial
+# device enumeration sees ID_MM_PHYSDEV_UID already stamped by
+# 76-igos-modem-uid.rules / 60-Perle-usb-modem.rules.  Without this,
+# Wants=ModemManager.service below can pull MM up before the slot rules
+# have run on slow boards, losing the topology-pinned UID.
+After=systemd-udev-settle.service dbus.service ModemManager.service vyos-router.service
+Wants=systemd-udev-settle.service dbus.service ModemManager.service
 # Note: Optional service - does not block VyOS boot if it fails
 
 [Service]
