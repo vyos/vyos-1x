@@ -21,6 +21,15 @@
               <constraintErrorMessage>Registration code must be exactly 6 digits</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="override-device-url">
+            <properties>
+              <help>Override the default PerleCloud device URL</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Custom URL for PerleCloud device endpoint</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
