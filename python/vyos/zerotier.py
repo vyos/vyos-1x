@@ -49,9 +49,8 @@ def write_identity(secret: str) -> None:
 
 
 def network_settings(interface: dict) -> dict:
-    manual_address = bool(interface.get('address', []))
     return {
-        'allowManaged': not manual_address,
+        'allowManaged': interface.get('allow_managed', 'true') == 'true',
         'allowGlobal': 'allow_global' in interface,
         'allowDefault': 'allow_default_route' in interface,
         'allowDNS': False,

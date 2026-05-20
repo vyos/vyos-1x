@@ -4,9 +4,6 @@ import unittest
 from pathlib import Path
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.configsession import ConfigSessionError
-
-
 base_path = ['interfaces', 'zerotier']
 service_path = ['service', 'zerotier']
 config_dir = Path('/run/vyos-zerotier')
@@ -41,22 +38,29 @@ class TestZeroTier(VyOSUnitTestSHIM.TestCase):
         self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.conf').exists())
         self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.local.conf').exists())
 
-    def test_manual_address_disables_managed_addressing(self):
+    def test_allow_managed_defaults_to_true(self):
         self.configure_identity()
         self.cli_set(base_path + ['zt0', 'network-id', '0123456789abcdef'])
-        self.cli_set(base_path + ['zt0', 'address', '192.0.2.1/24'])
         self.cli_commit()
 
         self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.local.conf').exists())
 
-    def test_manual_address_rejects_allow_managed(self):
+    def test_allow_managed_accepts_false(self):
+        self.configure_identity()
+        self.cli_set(base_path + ['zt0', 'network-id', '0123456789abcdef'])
+        self.cli_set(base_path + ['zt0', 'allow-managed', 'false'])
+        self.cli_commit()
+
+        self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.local.conf').exists())
+
+    def test_manual_address_keeps_explicit_managed_policy(self):
         self.configure_identity()
         self.cli_set(base_path + ['zt0', 'network-id', '0123456789abcdef'])
         self.cli_set(base_path + ['zt0', 'address', '192.0.2.1/24'])
-        self.cli_set(base_path + ['zt0', 'allow-managed'])
+        self.cli_set(base_path + ['zt0', 'allow-managed', 'true'])
+        self.cli_commit()
 
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
+        self.assertFalse((config_dir / 'networks.d' / '0123456789abcdef.local.conf').exists())
 
     def test_duplicate_network_id_rejected(self):
         self.configure_identity()

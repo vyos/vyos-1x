@@ -28,8 +28,23 @@
           <leafNode name="allow-managed">
             <properties>
               <help>Allow ZeroTier managed addresses and routes</help>
-              <valueless/>
+              <completionHelp>
+                <list>true false</list>
+              </completionHelp>
+              <valueHelp>
+                <format>true</format>
+                <description>Allow controller-managed addresses and routes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>false</format>
+                <description>Ignore controller-managed addresses and routes</description>
+              </valueHelp>
+              <constraint>
+                <regex>(true|false)</regex>
+              </constraint>
+              <constraintErrorMessage>allow-managed must be true or false</constraintErrorMessage>
             </properties>
+            <defaultValue>true</defaultValue>
           </leafNode>
           <leafNode name="allow-default-route">
             <properties>

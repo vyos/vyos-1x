@@ -82,10 +82,6 @@ def verify(zerotier):
     if 'identity' not in service or 'secret' not in service.get('identity', {}):
         raise ConfigError('service zerotier identity secret is required when ZeroTier interfaces are configured')
 
-    address = zerotier.get('address', [])
-    if address and 'allow_managed' in zerotier:
-        raise ConfigError('ZeroTier allow-managed cannot be used together with manual interface addresses')
-
     seen = {}
     for ifname, config in zerotier.get('interfaces', {}).items():
         if 'disable' in config or 'network_id' not in config:
