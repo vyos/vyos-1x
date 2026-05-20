@@ -20,6 +20,7 @@ from json import loads
 from vyos.utils.network import interface_exists
 from vyos.utils.process import popen
 from vyos.netlink import coalesce
+from vyos.netlink import timestamp
 
 # These drivers do not support using ethtool to change the speed, duplex, or
 # flow control settings
@@ -68,6 +69,7 @@ class Ethtool:
     _flow_control = None
     _channels = ''
     _coalesce = None
+    _hw_timestamp_filters = None
 
     def __init__(self, ifname):
         # Get driver used for interface
@@ -128,6 +130,10 @@ class Ethtool:
         # Get information about NIC coalesce settings
         with contextlib.suppress(coalesce.CoalesceError, coalesce.GeneralNetlinkError):
             self._coalesce = coalesce.get_coalesce(ifname)
+
+        # Get supported hardware timestamp receive filters
+        with contextlib.suppress(timestamp.TsInfoError, timestamp.GeneralNetlinkError):
+            self._hw_timestamp_filters = timestamp.get_hw_timestamp_filters(ifname)
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
@@ -255,3 +261,7 @@ class Ethtool:
         """Get all 'coalesce' parameters for the interface"""
 
         return self._coalesce.copy() if self._coalesce else {}
+
+    def get_hw_timestamp_filters(self):
+        """Get supported hardware timestamp receive filter names"""
+        return self._hw_timestamp_filters or set()

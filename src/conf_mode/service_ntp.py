@@ -21,6 +21,7 @@ from vyos.config import config_dict_merge
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
+from vyos.netlink import timestamp
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_750
 from vyos.utils.network import get_interface_config
@@ -104,6 +105,35 @@ def verify(ntp):
                                       f'before it can be used for server "{host}"')
                 else:
                     break
+
+    if 'timestamp' in ntp:
+        for iface, iface_config in ntp['timestamp'].get('interface', {}).items():
+            rx_filter = iface_config.get('receive_filter')
+            if iface != 'all':
+                verify_interface_exists(ntp, iface)
+            if rx_filter and rx_filter != 'none':
+                if iface == 'all':
+                    any_supported = False
+                    for real_iface in os.listdir('/sys/class/net'):
+                        supported = timestamp.get_hw_timestamp_filters(real_iface)
+                        if rx_filter in supported or 'all' in supported:
+                            any_supported = True
+                            break
+                    if not any_supported:
+                        raise ConfigError(
+                            f'No interface supports hardware timestamp receive-filter "{rx_filter}"'
+                        )
+                else:
+                    supported = timestamp.get_hw_timestamp_filters(iface)
+                    if not supported:
+                        raise ConfigError(
+                            f'Interface "{iface}" does not support hardware timestamping'
+                        )
+                    if rx_filter not in supported and 'all' not in supported:
+                        raise ConfigError(
+                            f'Interface "{iface}" does not support hardware timestamp '
+                            f'receive-filter "{rx_filter}", supported: {", ".join(sorted(supported))}'
+                        )
 
     return None
 
