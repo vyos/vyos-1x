@@ -356,27 +356,53 @@ def check_port_availability(address: str=None, port: int=0, protocol: str='tcp')
     return False
 
 
-def is_listen_port_bind_service(port: int, service: str) -> bool:
+def is_listen_port_bind_service(port: int, service: str, address: str = None) -> bool:
     """Check if listen port bound to expected program name
     :param port: Bind port
     :param service: Program name
+    :param address: IP address - if None, not consider this IP for filtering
     :return: bool
 
     Example:
         % is_listen_port_bind_service(443, 'nginx')
         True
+        % is_listen_port_bind_service(443, 'nginx', address='10.10.0.1')
+        False
         % is_listen_port_bind_service(443, 'ocserv-main')
         False
     """
     from psutil import net_connections as connections
     from psutil import Process as process
+    from ipaddress import ip_address
+
+    has_address = bool(address)
+
+    if has_address:
+        try:
+            # Normalize address before comparison to handle IPv6 format variations:
+            #   0:0:0:0:0:0:0:1 vs ::1
+            address = ip_address(address).compressed
+        except ValueError:
+            raise ValueError(f'{address} is not a valid IPv4 or IPv6 address')
+
     for connection in connections():
         addr = connection.laddr
         pid = connection.pid
+
+        # The PID of the process that opened the socket may not be retrievable
+        if pid is None:
+            continue
+
         pid_name = process(pid).name()
         pid_port = addr.port
-        if service == pid_name and port == pid_port:
-            return True
+
+        if has_address:
+            if address == addr.ip and port == pid_port and service == pid_name:
+                return True
+        else:
+            if service == pid_name and port == pid_port:
+                return True
+
     return False
 
 def is_ipv6_link_local(addr):

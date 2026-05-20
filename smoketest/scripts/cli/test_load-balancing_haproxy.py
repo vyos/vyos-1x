@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import time
 import textwrap
 import unittest
 
@@ -22,6 +23,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import get_default_port
+from vyos.utils.process import call
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -679,6 +681,53 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(backend_name, config.keys())
         port = get_default_port('certbot_haproxy')
         self.assertIn(f'server localhost 127.0.0.1:{port}', config[backend_name])
+
+    def test_reverse_proxy_listen_address_no_port_conflict(self):
+        # HAProxy port conflict check must consider listen-address (T7928)
+
+        frontend = 'svc-1'
+        backend = 'bk-1'
+        shared_port = '993'
+        addr_listen = '::1'  # HAProxy listen-address
+        addr_busy = '127.0.0.1'  # IP address kept busy by nc (different from the first)
+
+        # Run the netcat command to bind to the specified address and port
+        call(f'sudo nc -lk -s {addr_busy} -p {shared_port} &')
+
+        # Give nc a moment to bind before we commit
+        time.sleep(0.5)
+
+        try:
+            backend_path = base_path + ['backend', backend]
+            self.cli_set(backend_path + ['mode', 'tcp'])
+            self.cli_set(backend_path + ['server', 'srv-m', 'address', '192.0.2.14'])
+            self.cli_set(backend_path + ['server', 'srv-m', 'port', shared_port])
+
+            # Configure HAProxy frontend with listen-address
+            service_path = base_path + ['service', frontend]
+            self.cli_set(service_path + ['mode', 'tcp'])
+            self.cli_set(service_path + ['port', shared_port])
+            self.cli_set(service_path + ['listen-address', addr_listen])
+            self.cli_set(service_path + ['backend', backend])
+
+            # Must commit without raising "TCP port N is used by another service"
+            self.cli_commit()
+
+            # Commit with raising "TCP port N is used by another service"
+            self.cli_set(service_path + ['listen-address', addr_busy])
+            with self.assertRaises(ConfigSessionError) as e:
+                self.cli_commit()
+        finally:
+            # Always clean up nc regardless of test outcome
+            call('sudo pkill nc')
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        config = read_file(HAPROXY_CONF)
+
+        # The busy address must NOT appear as a HAProxy bind
+        self.assertNotIn(f'bind {addr_busy}:{shared_port}', config)
+        self.assertIn(f'bind [{addr_listen}]:{shared_port}', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
