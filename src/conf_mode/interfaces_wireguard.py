@@ -34,6 +34,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WireGuardIf
 from vyos.utils.kernel import check_kmod
 from vyos.utils.network import check_port_availability
+from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_wireguard_key_pair
 from vyos.utils.process import call
 from vyos import ConfigError
@@ -74,6 +75,16 @@ def get_config(config=None):
             set_dependents('vxlan', conf, tmp)
         else:
             wireguard['is_source_interface'] = tmp
+
+    if is_node_changed(conf, base + [ifname, 'fwmark']) or is_node_changed(
+        conf, base + [ifname, 'vrf']
+    ):
+        wireguard['fwmark_vrf_changed'] = {}
+        prev = conf.get_config_dict(
+            base + [ifname], effective=True, key_mangling=('-', '_'), get_first_key=True
+        )
+        wireguard['prev_fwmark'] = prev.get('fwmark')
+        wireguard['prev_vrf'] = prev.get('vrf')
 
     return wireguard
 
@@ -153,6 +164,29 @@ def apply(wireguard):
         wg.remove()
     else:
         wg.update(wireguard)
+
+    # delete old fwmark-based ip rule if fwmark or VRF was changed
+    if 'fwmark_vrf_changed' in wireguard or 'deleted' in wireguard:
+        prev_fwmark = wireguard.get('prev_fwmark')
+        prev_vrf = wireguard.get('prev_vrf')
+        if prev_fwmark is not None and prev_vrf is not None:
+            table_id = get_vrf_tableid(prev_vrf)
+            if table_id is not None:
+                for afi in ['-4', '-6']:
+                    call(
+                        f'ip {afi} rule del pref 1998 fwmark {prev_fwmark} table {table_id}'
+                    )
+
+    # Add ip rule to route fwmark-marked WireGuard tunnel packets into the
+    # correct VRF routing table. This is required for VRF-bound WireGuard
+    # interfaces with fwmark set, so that outgoing encapsulated packets use the
+    # proper VRF routes (otherwise, they may be unroutable or use the main table).
+    if wireguard.get('fwmark', '0') != '0' and 'vrf' in wireguard:
+        table_id = get_vrf_tableid(wireguard['vrf'])
+        for afi in ['-4', '-6']:
+            call(
+                f'ip {afi} rule add pref 1998 fwmark {wireguard["fwmark"]} table {table_id}'
+            )
 
     domain_resolver_usage = '/run/use-vyos-domain-resolver-interfaces-wireguard-' + wireguard['ifname']
 

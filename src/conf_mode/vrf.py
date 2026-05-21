@@ -265,6 +265,12 @@ def apply(vrf):
                 # Remove map element
                 cmd(f'nft {nft_del_element}')
 
+            # Remove all ip rules pointing to this VRF table
+            table_id = get_vrf_tableid(tmp)
+            for afi in ['-4', '-6']:
+                while call(f'ip {afi} rule del table {table_id}') == 0:
+                    pass
+
             # Delete the VRF Kernel interface
             call(f'ip link delete dev {tmp}')
 
