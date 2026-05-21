@@ -82,17 +82,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         cls.cli_set(cls, wifi_cc_path + [country])
 
-    def tearDown(self):
-        # Remove mt7915e module configuration file after each test
-        mt7915e_conf = f'/etc/modprobe.d/mt7915e.conf'
-        if os.path.isfile(mt7915e_conf):
-            tmp = call(f'sudo rm -f {mt7915e_conf}')
-            # Fail the test if file cannot be removed
-            if tmp != 0:
-                self.fail(f'Failed to remove {mt7915e_conf}')
-        # Call tearDown method from super class...
-        super().tearDown()
-
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
         super().test_add_single_ip_address()
@@ -229,9 +218,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         for key in vht_opt:
             self.cli_set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
 
-        # Load mt7915e to test module config generation
-        check_kmod('mt7915e')
-
         self.cli_commit()
 
         #
@@ -255,11 +241,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         tmp = get_config_value(interface, 'vht_capab')
         for key, value in vht_opt.items():
             self.assertIn(value, tmp)
-
-        # mt7916 card configuration
-        tmp = read_file(f'/etc/modprobe.d/mt7915e.conf')
-        self.assertIsNotNone(tmp)
-        self.assertEqual('options mt7915e enable_6ghz=0', tmp)
 
     def test_wireless_hostapd_vht_su_beamformer_config(self):
         # Single-User-Beamformer
@@ -306,9 +287,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         for key in vht_opt:
             self.cli_set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
 
-        # Load mt7915e to test module config generation
-        check_kmod('mt7915e')
-
         self.cli_commit()
 
         #
@@ -332,11 +310,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         tmp = get_config_value(interface, 'vht_capab')
         for key, value in vht_opt.items():
             self.assertIn(value, tmp)
-
-        # mt7916 card configuration
-        tmp = read_file(f'/etc/modprobe.d/mt7915e.conf')
-        self.assertIsNotNone(tmp)
-        self.assertEqual('options mt7915e enable_6ghz=0', tmp)
 
     def test_wireless_hostapd_he_2ghz_config(self):
         # Only set the hostapd (access-point) options - HE mode for 802.11ax at 2.4GHz
@@ -447,9 +420,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'multi-user-beamformer'])
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'single-user-beamformer'])
 
-        # Load mt7915e to test module config generation
-        check_kmod('mt7915e')
-
         self.cli_commit()
 
         #
@@ -508,11 +478,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
-
-        # mt7916 card configuration
-        tmp = read_file(f'/etc/modprobe.d/mt7915e.conf')
-        self.assertIsNotNone(tmp)
-        self.assertEqual('options mt7915e enable_6ghz=1', tmp)
 
     def test_wireless_hostapd_wpa_config(self):
         # Only set the hostapd (access-point) options
