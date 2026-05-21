@@ -420,6 +420,37 @@
               </leafNode>
             </children>
           </node>
+          <node name="script">
+            <properties>
+              <help>Execute script on client connect/disconnect</help>
+            </properties>
+            <children>
+              <leafNode name="connect">
+                <properties>
+                  <help>Script to execute upon client connecting</help>
+                  <valueHelp>
+                    <format>filename</format>
+                    <description>Client connect script, must be under /config/scripts</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-path" argument="--file --parent-dir /config/scripts --strict"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="disconnect">
+                <properties>
+                  <help>Script to execute upon client disconnecting</help>
+                  <valueHelp>
+                    <format>filename</format>
+                    <description>Client disconnect script, must be under /config/scripts</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-path" argument="--file --parent-dir /config/scripts --strict"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
       </children>
     </node>
   </children>
