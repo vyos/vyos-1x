@@ -20,16 +20,21 @@ import xmltodict
 
 from tabulate import tabulate
 from vyos.utils.process import cmd
+from vyos.utils.network import get_vrf_tableid
 
 import vyos.opmode
 
 ArgFamily = typing.Literal['inet', 'inet6']
 
-def _get_xml_data(family):
+def _get_xml_data(family, orig_zone=None):
     """
     Get conntrack XML output
     """
-    return cmd(f'sudo conntrack --dump --family {family} --output xml')
+    args = ['--dump', '--family', family, '--output', 'xml']
+    if orig_zone is not None:
+        args.extend(['--orig-zone', str(orig_zone)])
+
+    return cmd(['sudo', 'conntrack'] + args)
 
 
 def _xml_to_dict(xml):
@@ -44,11 +49,11 @@ def _xml_to_dict(xml):
     return parse
 
 
-def _get_raw_data(family):
+def _get_raw_data(family, orig_zone=None):
     """
     Return: dictionary
     """
-    xml = _get_xml_data(family)
+    xml = _get_xml_data(family, orig_zone=orig_zone)
     if len(xml) == 0:
         output = {'conntrack':
             {
@@ -103,6 +108,8 @@ def get_formatted_output(dict_data):
     for entry in dict_data['conntrack']['flow']:
         orig_src, orig_dst, orig_sport, orig_dport = {}, {}, {}, {}
         reply_src, reply_dst, reply_sport, reply_dport = {}, {}, {}, {}
+        orig_packets = orig_bytes = reply_packets = reply_bytes = '0'
+        zone = ''
         proto = {}
         for meta in entry['meta']:
             direction = meta['direction']
@@ -116,6 +123,11 @@ def get_formatted_output(dict_data):
                     if meta.get('layer4').get('dport'):
                         orig_dport = meta['layer4']['dport']
                     proto = meta['layer4']['protoname']
+                if 'counters' in meta:
+                    orig_packets = meta['counters']['packets']
+                    orig_bytes = meta['counters']['bytes']
+                if 'zone' in meta:
+                    zone = meta['zone']
             if direction in ['reply']:
                 if 'layer3' in meta:
                     reply_src = meta['layer3']['src']
@@ -126,6 +138,9 @@ def get_formatted_output(dict_data):
                     if meta.get('layer4').get('dport'):
                         reply_dport = meta['layer4']['dport']
                     proto = meta['layer4']['protoname']
+                if 'counters' in meta:
+                    reply_packets = meta['counters']['packets']
+                    reply_bytes = meta['counters']['bytes']
             if direction == 'independent':
                 # T6138 flowtable offload conntrack entries without 'timeout'
                 timeout = meta.get('timeout', 'n/a')
@@ -135,12 +150,17 @@ def get_formatted_output(dict_data):
                 reply_dst = f'{reply_dst}:{reply_dport}' if reply_dport else reply_dst
                 state = meta['state'] if 'state' in meta else ''
                 mark = meta['mark'] if 'mark' in meta else ''
-                zone = meta['zone'] if 'zone' in meta else ''
+                if 'zone' in meta:
+                    zone = meta['zone']
                 data_entry = [
                     orig_src,
                     orig_dst,
+                    orig_packets,
+                    orig_bytes,
                     reply_src,
                     reply_dst,
+                    reply_packets,
+                    reply_bytes,
                     proto,
                     state,
                     timeout,
@@ -151,8 +171,12 @@ def get_formatted_output(dict_data):
     headers = [
         "Original src",
         "Original dst",
+        "Original packets",
+        "Original bytes",
         "Reply src",
         "Reply dst",
+        "Reply packets",
+        "Reply bytes",
         "Protocol",
         "State",
         "Timeout",
@@ -163,9 +187,14 @@ def get_formatted_output(dict_data):
     return output
 
 
-def show(raw: bool, family: ArgFamily):
+def show(raw: bool, family: ArgFamily, vrf: typing.Optional[str]):
     family = 'ipv6' if family == 'inet6' else 'ipv4'
-    conntrack_data = _get_raw_data(family)
+
+    orig_zone = get_vrf_tableid(vrf) if vrf else None
+    if vrf and orig_zone is None:  # VRF is specified, but tableid is not found
+        raise vyos.opmode.IncorrectValue(f'VRF \'{vrf}\' not found or has no table ID')
+
+    conntrack_data = _get_raw_data(family, orig_zone=orig_zone)
     if raw:
         return conntrack_data
     else:
