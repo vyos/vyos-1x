@@ -149,29 +149,32 @@ the other node at startup.
 
 ## Operation
 
-```{opcmd} show conntrack table ipv4
+```{opcmd} show conntrack table \<ipv4|ipv6\>
 
 Make sure conntrack is enabled by running and show connection tracking table.
 
 :::{code-block} none
 vyos@vyos:~$ show conntrack table ipv4
-TCP state codes: SS - SYN SENT, SR - SYN RECEIVED, ES - ESTABLISHED,
-FW - FIN WAIT, CW - CLOSE WAIT, LA - LAST ACK,
-TW - TIME WAIT, CL - CLOSE, LI - LISTEN
-
-CONN ID    Source                 Destination            Protocol         TIMEOUT
-1015736576 10.35.100.87:58172     172.31.20.12:22        tcp [6] ES       430279
-1006235648 10.35.101.221:57483    172.31.120.21:22       tcp [6] ES       413310
-1006237088 10.100.68.100          172.31.120.21          icmp [1]         29
-1015734848 10.35.100.87:56282     172.31.20.12:22        tcp [6] ES       300
-1015734272 172.31.20.12:60286     239.10.10.14:694       udp [17]         29
-1006239392 10.35.101.221          172.31.120.21          icmp [1]         29
+Id          Original src    Original dst    Original packets    Original bytes    Reply src     Reply dst       Reply packets    Reply bytes    Protocol    State        Timeout    Mark    Zone
+----------  --------------  --------------  ------------------  ----------------  ------------  --------------  ---------------  -------------  ----------  -----------  ---------  ------  ------
+282920088   10.0.2.2:41724  10.0.2.15:22    79                  8741              10.0.2.15:22  10.0.2.2:41724  52               8495           tcp         TIME_WAIT    3          0
+102466872   192.168.50.1    192.168.50.4    31953               2684052           192.168.50.4  192.168.50.1    31953            2684052        icmp                     29         0       110
+1445684978  10.0.2.2:37762  10.0.2.15:22    111                 9969              10.0.2.15:22  10.0.2.2:37762  86               13323          tcp         ESTABLISHED  431999     0
+3302843234  10.0.2.2:37758  10.0.2.15:22    2612                3845685           10.0.2.15:22  10.0.2.2:37758  254              17447          tcp         TIME_WAIT    11         0
 :::
 :::{note}
 If the table is empty and you have a warning message, it means
 conntrack is not enabled. To enable conntrack, just create a NAT or a firewall
-rule. {cfgcmd}`set firewall state-policy established action accept`
+rule.
+{cfgcmd}`set firewall global-options state-policy established action accept`
 :::
+```
+
+
+```{opcmd} show conntrack table \<ipv4|ipv6\> vrf \<vrf-name\>
+
+Show connection tracking table filtered by VRF name. Only entries originating
+from the specified VRF are displayed.
 ```
 
 
