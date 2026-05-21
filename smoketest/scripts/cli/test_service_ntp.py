@@ -19,6 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
@@ -64,7 +65,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         # Check generated configuration
         # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         self.assertIn('driftfile /run/chrony/drift', config)
         self.assertIn('dumpdir /run/chrony', config)
         self.assertIn('ntsdumpdir /run/chrony', config)
@@ -87,7 +88,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['allow-client', 'address', network])
         self.cli_commit()
 
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         self.assertIn(f'local stratum {stratum}', config)
         self.assertIn(f'allow {network}', config)
 
@@ -104,8 +105,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated client address configuration
-        # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         for network in networks:
             self.assertIn(f'allow {network}', config)
 
@@ -125,8 +125,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated client address configuration
-        # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         for interface in interfaces:
             self.assertIn(f'binddevice {interface}', config)
 
@@ -156,14 +155,13 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated client address configuration
-        # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         self.assertIn('leapsectz right/UTC', config) # CLI default
 
         for mode in ['ignore', 'system', 'smear']:
             self.cli_set(base_path + ['leap-second', mode])
             self.cli_commit()
-            config = cmd(f'sudo cat {NTP_CONF}')
+            config = read_file(NTP_CONF, sudo=True)
             if mode != 'smear':
                 self.assertIn(f'leapsecmode {mode}', config)
             else:
@@ -186,8 +184,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated configuration
-        # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         self.assertIn('driftfile /run/chrony/drift', config)
         self.assertIn('dumpdir /run/chrony', config)
         self.assertIn('ntsdumpdir /run/chrony', config)
@@ -214,8 +211,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated configuration
-        # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         self.assertIn('driftfile /run/chrony/drift', config)
         self.assertIn('dumpdir /run/chrony', config)
         self.assertIn('ntsdumpdir /run/chrony', config)
@@ -250,8 +246,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated configuration
-        # this file must be read with higher permissions
-        config = cmd(f'sudo cat {NTP_CONF}')
+        config = read_file(NTP_CONF, sudo=True)
         self.assertIn('driftfile /run/chrony/drift', config)
         self.assertIn('dumpdir /run/chrony', config)
         self.assertIn('ntsdumpdir /run/chrony', config)
