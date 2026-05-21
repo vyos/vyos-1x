@@ -34,6 +34,9 @@
 {%     if config.bfd.profile is vyos_defined %}
  neighbor {{ neighbor }} bfd profile {{ config.bfd.profile }}
 {%     endif %}
+{%     if config.bfd.strict is vyos_defined %}
+ neighbor {{ neighbor }} bfd strict {{ 'hold-time ' ~ config.bfd.strict.hold_time if config.bfd.strict.hold_time is vyos_defined else '' }}
+{%     endif %}
 {% endif %}
 {% if config.capability.dynamic is vyos_defined %}
  neighbor {{ neighbor }} capability dynamic

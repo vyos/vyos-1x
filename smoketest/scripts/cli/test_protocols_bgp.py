@@ -1707,6 +1707,19 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
             self.cli_commit()
 
+    def test_bgp_32_bfd_strict(self):
+        neighbor = '192.0.2.22'
+        bfd_hold_time = '23'
+
+        self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', ASN])
+        self.cli_set(base_path + ['neighbor', neighbor, 'bfd', 'strict', 'hold-time', bfd_hold_time])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {neighbor} bfd strict hold-time {bfd_hold_time}', frrconfig)
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
