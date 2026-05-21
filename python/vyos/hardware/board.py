@@ -588,8 +588,13 @@ class IgosBoard(Board):
             raise RuntimeError(
                 f"{self.NAME}: modem {name!r} has no power pin in pinmap"
             )
-        # power pin (e.g. CELL_SHUTDOWN_N) is active-low; physical 1 = run.
-        self.set_pin(pin, 1 if on else 0)  # type: ignore[arg-type]
+        # power pin (e.g. MODEM0_SHUTDOWN_N) is active-low; physical 1 = run.
+        # Board pull-up parks the line at "run" with no consumer, so the
+        # "off" state needs an explicit holder to fight the pull, while
+        # the "on" state simply releases any prior holder and lets the
+        # board hardware do the work. ``hold_pin`` chooses the right
+        # behaviour based on ``Pin.bias``.
+        self.hold_pin(pin, 1 if on else 0)  # type: ignore[arg-type]
 
     def sim_select(self, slot: int, modem: Optional[str] = None) -> None:
         if slot not in (1, 2):
@@ -601,8 +606,10 @@ class IgosBoard(Board):
             raise RuntimeError(
                 f"{self.NAME}: modem {name!r} has no sim_select pin in pinmap"
             )
-        # sim_select low → SIM1, high → SIM2
-        self.set_pin(pin, 0 if slot == 1 else 1)  # type: ignore[arg-type]
+        # sim_select low → SIM1, high → SIM2. The selected slot must stay
+        # stable while the modem is using it, so use hold_pin — it forks
+        # a holder only when the requested level fights the board pull.
+        self.hold_pin(pin, 0 if slot == 1 else 1)  # type: ignore[arg-type]
 
     def serial_protocol(self, port: str, proto: str,
                         term: Optional[bool] = None,
@@ -666,6 +673,8 @@ class _NoPinmapBoard(Board):
 
     def set_pin(self, name, value):              self._fail()
     def get_pin(self, name):                     self._fail()
+    def hold_pin(self, name, value):             self._fail()
+    def release_pin(self, name):                 self._fail()
     def pulse(self, name, ms=200, asserted=1):   self._fail()
     def apply_defaults(self, names=None):        return None
     def modem_reset(self, modem=None):           self._fail()

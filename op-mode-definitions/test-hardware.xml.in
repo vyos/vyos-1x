@@ -47,7 +47,7 @@
                     <properties>
                       <help>Show a single pin by name</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/test_hardware.py show_pin --name="$5"</command>
+                    <command>${vyos_op_scripts_dir}/test_hardware.py show_pin --name="$6"</command>
                   </tagNode>
                 </children>
               </node>
@@ -70,7 +70,7 @@
                     <list>isolate rs232 rs485h rs485f rs422</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5"</command>
+                <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$4" --protocol="$6"</command>
                 <children>
                   <tagNode name="termination">
                     <properties>
@@ -79,7 +79,7 @@
                         <list>on off</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5" --termination="$7"</command>
+                    <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$4" --protocol="$6" --termination="$8"</command>
                     <children>
                       <tagNode name="slew-rate">
                         <properties>
@@ -88,7 +88,7 @@
                             <list>on off</list>
                           </completionHelp>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5" --termination="$7" --slew-rate="$9"</command>
+                        <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$4" --protocol="$6" --termination="$8" --slew-rate="$10"</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -99,7 +99,7 @@
                         <list>on off</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$3" --protocol="$5" --slew-rate="$7"</command>
+                    <command>${vyos_op_scripts_dir}/test_hardware.py serial_protocol --port="$4" --protocol="$6" --slew-rate="$8"</command>
                   </tagNode>
                 </children>
               </tagNode>
@@ -119,7 +119,7 @@
                 <properties>
                   <help>Issue an unconditional reset pulse</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py modem_reset --modem="$3"</command>
+                <command>${vyos_op_scripts_dir}/test_hardware.py modem_reset --modem="$4"</command>
               </leafNode>
               <tagNode name="power">
                 <properties>
@@ -128,7 +128,7 @@
                     <list>on off</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py modem_power --modem="$3" --state="$5"</command>
+                <command>${vyos_op_scripts_dir}/test_hardware.py modem_power --modem="$4" --state="$6"</command>
               </tagNode>
               <tagNode name="sim">
                 <properties>
@@ -137,7 +137,7 @@
                     <list>1 2</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py modem_sim --modem="$3" --slot="$5"</command>
+                <command>${vyos_op_scripts_dir}/test_hardware.py modem_sim --modem="$4" --slot="$6"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -153,18 +153,33 @@
             <children>
               <tagNode name="set">
                 <properties>
-                  <help>Set pin value (0 or 1)</help>
+                  <help>Set pin value (0 or 1) momentarily; board pull retakes the line on release</help>
                   <completionHelp>
                     <list>0 1</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py pin_set --name="$3" --value="$5"</command>
+                <command>${vyos_op_scripts_dir}/test_hardware.py pin_set --name="$4" --value="$6"</command>
               </tagNode>
+              <tagNode name="hold">
+                <properties>
+                  <help>Hold pin at value (0 or 1) persistently; spawns a holder if value fights the board pull</help>
+                  <completionHelp>
+                    <list>0 1</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py pin_hold --name="$4" --value="$6"</command>
+              </tagNode>
+              <leafNode name="release">
+                <properties>
+                  <help>Release any active holder so the board pull retakes the line</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/test_hardware.py pin_release --name="$4"</command>
+              </leafNode>
               <leafNode name="pulse">
                 <properties>
                   <help>Pulse pin (default 200 ms, asserted=1)</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py pin_pulse --name="$3"</command>
+                <command>${vyos_op_scripts_dir}/test_hardware.py pin_pulse --name="$4"</command>
               </leafNode>
             </children>
           </tagNode>

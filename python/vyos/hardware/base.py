@@ -23,9 +23,18 @@ from __future__ import annotations
 
 import datetime
 import os
+import signal
 import time
 from dataclasses import dataclass
 from typing import Dict, Iterable, Iterator, Optional, Tuple
+
+
+# Where hold_pin() stashes the PID of each per-pin holder process so a
+# subsequent hold_pin() / release_pin() can find and replace it. A holder
+# is only spawned when the requested value FIGHTS the board pull declared
+# in ``Pin.bias`` — values matching the pull are just released and the
+# board hardware keeps the line where we want.
+_PIN_HOLD_DIR = "/run/vyos/hw/pins"
 
 
 @dataclass(frozen=True)
@@ -113,7 +122,184 @@ class Board:
                 output_value=v,
             )},
         ):
-            pass  # request → set → release leaves the line latched
+            pass  # momentary drive; board pull retains the value on release
+
+    @staticmethod
+    def _pull_value(pin: "Pin") -> Optional[int]:
+        """
+        Return the physical level the line settles to with no consumer,
+        derived from the board pull documented in ``Pin.bias``. Returns
+        ``None`` if the bias is ``as-is`` (we can't know — caller must
+        treat as "unknown, always hold").
+        """
+        if pin.bias == "pull-up":
+            return 1
+        if pin.bias == "pull-down":
+            return 0
+        return None
+
+    def hold_pin(self, name: str, value: int) -> None:
+        """
+        Drive ``name`` to ``value`` and KEEP it there.
+
+        If ``value`` matches the board pull declared in ``Pin.bias`` the
+        line will hold itself with no consumer, so we simply drop any
+        prior holder and return — zero long-lived processes.
+
+        If ``value`` fights the board pull, a small detached holder
+        process is forked. It claims the gpiod line at ``value`` and
+        blocks on a signal. A subsequent ``hold_pin`` / ``release_pin``
+        for the same pin sends SIGTERM to retire the prior holder before
+        the new one (if any) takes over.
+        """
+        pin = self._require(name)
+        # Always retire any prior holder so the new value (or release)
+        # takes effect even if the old holder was driving the opposite.
+        self._release_pin(name)
+        pull = self._pull_value(pin)
+        if pull == value:
+            # Board pull already produces the requested level; touching
+            # the line at all is unnecessary. Be quiet.
+            return
+        # Either pull fights us, or bias is "as-is" (unknown). Either
+        # way we need a long-lived consumer to hold the line.
+        self._spawn_pin_holder(name, pin, value)
+
+    def release_pin(self, name: str) -> bool:
+        """
+        Public entry point: stop holding ``name`` so the board pull
+        re-takes the line. Returns True if a holder was retired, False
+        if no holder was active.
+        """
+        # Validate the name so callers get a clear error for typos.
+        self._require(name)
+        return self._release_pin(name)
+
+    def _release_pin(self, name: str) -> bool:
+        pidfile = os.path.join(_PIN_HOLD_DIR, f"{name}.pid")
+        try:
+            with open(pidfile) as f:
+                pid = int(f.read().strip())
+        except (FileNotFoundError, ValueError):
+            return False
+        alive = True
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            alive = False
+        if alive:
+            # Wait briefly for the holder to drop its gpiod claim.
+            for _ in range(100):
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(0.01)
+        try:
+            os.unlink(pidfile)
+        except FileNotFoundError:
+            pass
+        return True
+
+    def _spawn_pin_holder(self, name: str, pin: "Pin", value: int) -> None:
+        try:
+            os.makedirs(_PIN_HOLD_DIR, exist_ok=True)
+        except PermissionError as exc:
+            raise PermissionError(
+                f"{self.NAME}: cannot create {_PIN_HOLD_DIR} "
+                f"(run as root): {exc}"
+            ) from exc
+
+        # Child writes 1 (claim succeeded) or 0 (failed) before parent
+        # returns — guarantees the new value is observable immediately.
+        r_fd, w_fd = os.pipe()
+        pid = os.fork()
+        if pid > 0:
+            # ---- parent ----
+            os.close(w_fd)
+            try:
+                ready = os.read(r_fd, 1)
+            finally:
+                os.close(r_fd)
+            if ready != b"1":
+                try:
+                    os.waitpid(pid, os.WNOHANG)
+                except ChildProcessError:
+                    pass
+                raise RuntimeError(
+                    f"{self.NAME}: failed to hold {name!r} at {value}"
+                )
+            return
+
+        # ---- child ----
+        os.close(r_fd)
+        try:
+            os.setsid()
+        except OSError:
+            pass
+        try:
+            devnull = os.open(os.devnull, os.O_RDWR)
+            for fd in (0, 1, 2):
+                os.dup2(devnull, fd)
+            if devnull > 2:
+                os.close(devnull)
+        except OSError:
+            pass
+
+        pidfile = os.path.join(_PIN_HOLD_DIR, f"{name}.pid")
+        try:
+            with open(pidfile, "w") as f:
+                f.write(f"{os.getpid()}\n")
+        except OSError:
+            try:
+                os.write(w_fd, b"0")
+            finally:
+                os._exit(1)
+
+        gpiod = self._gpiod()
+        v = gpiod.line.Value.ACTIVE if value else gpiod.line.Value.INACTIVE
+        consumer = f"vyos-hw/{name}"[:31]  # libgpiod v2 caps at 31 bytes
+        try:
+            req = gpiod.request_lines(
+                self._resolve_bank(pin.bank),
+                consumer=consumer,
+                config={pin.line: self._line_settings(
+                    direction=gpiod.line.Direction.OUTPUT,
+                    output_value=v,
+                )},
+            )
+        except BaseException:
+            try:
+                os.unlink(pidfile)
+            except FileNotFoundError:
+                pass
+            try:
+                os.write(w_fd, b"0")
+            finally:
+                pass
+            os._exit(1)
+
+        def _stop(*_a):
+            try:
+                req.release()
+            except Exception:
+                pass
+            try:
+                os.unlink(pidfile)
+            except FileNotFoundError:
+                pass
+            os._exit(0)
+
+        signal.signal(signal.SIGTERM, _stop)
+        signal.signal(signal.SIGINT, _stop)
+
+        try:
+            os.write(w_fd, b"1")
+        finally:
+            os.close(w_fd)
+
+        while True:
+            signal.pause()
 
     def get_pin(self, name: str) -> int:
         pin = self._require(name)

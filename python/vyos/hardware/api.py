@@ -117,6 +117,26 @@ def get_pin(name: str) -> int:
     return _b.get_pin(name)
 
 
+def hold_pin(name: str, value: int) -> None:
+    """
+    Drive ``name`` to ``value`` and keep it there.
+
+    When ``value`` matches the board pull declared in ``Pin.bias`` this
+    is a no-op after dropping any prior holder. Otherwise a small
+    detached daemon is forked to keep the gpiod claim open so the line
+    cannot snap back to its bias. Use this for any line whose desired
+    state differs from the board hardware's resting state and must
+    persist (SIM-select, modem shutdown, flight mode, ...).
+    """
+    _b.hold_pin(name, value)
+
+
+def release_pin(name: str) -> bool:
+    """Retire any holder process for ``name`` so the board pull retakes
+    the line. Returns True if a holder was retired."""
+    return _b.release_pin(name)
+
+
 def pulse(name: str, ms: int = 200, asserted: int = 1) -> None:
     _b.pulse(name, ms, asserted)
 

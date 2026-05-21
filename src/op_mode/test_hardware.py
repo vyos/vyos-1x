@@ -155,6 +155,23 @@ def pin_pulse(args) -> None:
     print(f'OK: pulsed {args.name} for {args.ms} ms')
 
 
+def pin_hold(args) -> None:
+    try:
+        hw.hold_pin(args.name, int(args.value))
+    except (ValueError, RuntimeError, PermissionError) as exc:
+        _die(str(exc))
+    print(f'OK: holding {args.name} at {args.value}')
+
+
+def pin_release(args) -> None:
+    try:
+        released = hw.release_pin(args.name)
+    except (ValueError, RuntimeError, KeyError) as exc:
+        _die(str(exc))
+    print(f'OK: {args.name} released' if released
+          else f'{args.name}: no holder active')
+
+
 # --- arg dispatch -----------------------------------------------------------
 
 def main() -> None:
@@ -205,6 +222,15 @@ def main() -> None:
     s.add_argument('--name', required=True)
     s.add_argument('--ms', default='200')
     s.add_argument('--asserted', default='1')
+
+    s = sub.add_parser('pin_hold')
+    s.set_defaults(fn=pin_hold)
+    s.add_argument('--name', required=True)
+    s.add_argument('--value', required=True)
+
+    s = sub.add_parser('pin_release')
+    s.set_defaults(fn=pin_release)
+    s.add_argument('--name', required=True)
 
     args = p.parse_args()
     args.fn(args)
