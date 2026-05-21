@@ -66,9 +66,6 @@ def verify(ntp):
     if not ntp:
         return None
 
-    if 'server' not in ntp:
-        raise ConfigError('NTP server not configured')
-
     verify_vrf(ntp)
 
     if 'interface' in ntp:
