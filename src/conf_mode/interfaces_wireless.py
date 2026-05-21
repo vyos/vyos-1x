@@ -54,6 +54,8 @@ hostapd_conf = '/run/hostapd/{ifname}.conf'
 hostapd_accept_station_conf = '/run/hostapd/{ifname}_station_accept.conf'
 hostapd_deny_station_conf = '/run/hostapd/{ifname}_station_deny.conf'
 
+mt7915e_conf = f'/etc/modprobe.d/mt7915e.conf'
+
 country_code_path = ['system', 'wireless', 'country-code']
 
 def find_other_stations(conf, base, ifname):
@@ -335,49 +337,44 @@ def apply(wifi):
     # the 2.4GHz phy is configured last, which would overwrite the module
     # parameter definition. Only the Wi-Fi configuration for the 5/6GHz phy
     # must write the file!
-    # op_modes as configured in interfaces_wireless.xml.in
-    five_ghz_op_modes_vht = ['0', '1', '2', '3']
-    six_ghz_op_modes_he = ['131', '132', '133', '134', '135']
-    # Make sure to act only when VHT or HE modes are used
-    module_options = None
-    if 'capabilities' in wifi:
-        if 'he' in wifi['capabilities']:
-            if 'channel_set_width' in wifi['capabilities']['he']:
-                if wifi['capabilities']['he']['channel_set_width'] in six_ghz_op_modes_he:
-                    # 6GHz band required (802.11ax, WiFi-6e)
-                    module_options = 'options mt7915e enable_6ghz=1'
-        if 'vht' in wifi['capabilities']:
-            if 'channel_set_width' in wifi['capabilities']['vht']:
-                if wifi['capabilities']['vht']['channel_set_width'] in five_ghz_op_modes_vht:
-                    # 5GHz band required...
-                    module_options = 'options mt7915e enable_6ghz=0'
-        if module_options:
-            # Only if the mt7915e module is loaded (card present)...
-            if is_module_loaded('mt7915e'):
-                tmp = None
-                try:
-                    tmp = read_file(f'/etc/modprobe.d/mt7915e.conf')
-                except FileNotFoundError:
-                    # Module config does not exist yet.
-                    # Fail silently as it is written later in any case.
-                    pass
-                finally:
-                    # Write the module config in any case, so that there always is a
-                    # valid module config which is mandatory to load the mt7916 firmware.
-                    write_file(
-                        f'/etc/modprobe.d/mt7915e.conf',
-                        module_options,
-                        user='root',
-                        group='root',
-                        mode=0o644
-                    )
-                    # Issue a warning if module options have changed.
-                    # A warning is necessary even if this is the first time
-                    # this module is configured. The firmware must be reloaded.
-                    if tmp != module_options:
-                        Warning(
-                            'Change to firmware 5GHz/6GHz configuration detected. The system must be rebooted to correctly reload the mt7916 firmware. The card will not work otherwise!'
-                        )
+    #
+    # Only if the mt7915e module is loaded (card present)...
+    if is_module_loaded('mt7915e'):
+        # op_modes as configured in interfaces_wireless.xml.in
+        five_ghz_op_modes_vht = ['0', '1', '2', '3']
+        six_ghz_op_modes_he = ['131', '132', '133', '134', '135']
+        # Make sure to act only when VHT or HE modes are used
+        module_options = ''
+        if 'capabilities' in wifi:
+            mt7915e_options_string = 'options mt7915e'
+            if 'he' in wifi['capabilities']:
+                if 'channel_set_width' in wifi['capabilities']['he']:
+                    if wifi['capabilities']['he']['channel_set_width'] in six_ghz_op_modes_he:
+                        # 6GHz band required (802.11ax, WiFi-6e)
+                        module_options = f'{mt7915e_options_string} enable_6ghz=1'
+            if 'vht' in wifi['capabilities']:
+                if 'channel_set_width' in wifi['capabilities']['vht']:
+                    if wifi['capabilities']['vht']['channel_set_width'] in five_ghz_op_modes_vht:
+                        # 5GHz band required...
+                        module_options = f'{mt7915e_options_string} enable_6ghz=0'
+
+            tmp = None
+            if os.path.isfile(mt7915e_conf):
+                tmp = read_file(mt7915e_conf)
+
+            # Write the module config, so that there always is a valid module
+            # config which is mandatory to load the mt7916 firmware.
+            write_file(mt7915e_conf, module_options, mode=0o644)
+            # Issue warning if module options have changed. Warning is necessary
+            # even if this is the first time this module is configured,
+            # firmware must be reloaded.
+            if tmp != module_options:
+                Warning('Change to firmware 5GHz/6GHz configuration detected. '\
+                        'The system must be rebooted to correctly reload the ' \
+                        'mt7916 firmware. The card will not work otherwise!')
+                # Instead of reboot - can we unload and re-load the driver?
+    elif os.path.isfile(mt7915e_conf):
+        os.remove(mt7915e_conf)
 
     # Enable/Disable interface - interface is always placed in
     # administrative down state in WiFiIf class
