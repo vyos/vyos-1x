@@ -124,7 +124,7 @@ def get_config(config=None):
         is_node_changed(conf, base + ['client-ip-pool']),
         is_node_changed(conf, base + ['client-ipv6-pool']),
         is_node_changed(conf, base + ['interface']),
-        is_node_changed(conf, base + ['authentication', 'radius', 'dynamic-author']),
+        is_node_changed(conf, base + ['authentication', 'radius']),
         is_node_changed(conf, base + ['authentication', 'mode']),
         any(
             base_ifname(iface) in all_changed_vpp_ifaces
