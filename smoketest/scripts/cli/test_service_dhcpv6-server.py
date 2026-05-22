@@ -138,12 +138,16 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         for client_suffix in range(1, 4):
             duid = f'00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{client_suffix:02}'
-            ip = inc_ip(subnet, client_suffix)
-            prefix = inc_ip(subnet, client_suffix << 64) + '/64'
+            ip1 = inc_ip(subnet, client_suffix * 2 - 1)
+            ip2 = inc_ip(subnet, client_suffix * 2)
+            prefix1 = inc_ip(subnet, (client_suffix * 2 - 1) << 64) + '/64'
+            prefix2 = inc_ip(subnet, (client_suffix * 2) << 64) + '/64'
 
             self.cli_set(mapping + [f'client{client_suffix}', 'duid', duid])
-            self.cli_set(mapping + [f'client{client_suffix}', 'ipv6-address', ip])
-            self.cli_set(mapping + [f'client{client_suffix}', 'ipv6-prefix', prefix])
+            self.cli_set(mapping + [f'client{client_suffix}', 'ipv6-address', ip1])
+            self.cli_set(mapping + [f'client{client_suffix}', 'ipv6-address', ip2])
+            self.cli_set(mapping + [f'client{client_suffix}', 'ipv6-prefix', prefix1])
+            self.cli_set(mapping + [f'client{client_suffix}', 'ipv6-prefix', prefix2])
 
         # cannot have both mac-address and duid set
         with self.assertRaises(ConfigSessionError):
@@ -250,8 +254,10 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         for client_suffix in range(1, 4):
             duid = f'00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{client_suffix:02}'
-            ip = inc_ip(subnet, client_suffix)
-            prefix = inc_ip(subnet, client_suffix << 64) + '/64'
+            ip1 = inc_ip(subnet, client_suffix * 2 - 1)
+            ip2 = inc_ip(subnet, client_suffix * 2)
+            prefix1 = inc_ip(subnet, (client_suffix * 2 - 1) << 64) + '/64'
+            prefix2 = inc_ip(subnet, (client_suffix * 2) << 64) + '/64'
 
             self.verify_config_object(
                 obj,
@@ -259,8 +265,8 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
                 {
                     'hostname': f'client{client_suffix}',
                     'duid': duid,
-                    'ip-addresses': [ip],
-                    'prefixes': [prefix],
+                    'ip-addresses': [ip1, ip2],
+                    'prefixes': [prefix1, prefix2],
                 },
             )
 

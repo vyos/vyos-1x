@@ -226,13 +226,18 @@ def verify(dhcpv6):
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
                     if 'ipv6_address' in mapping_config:
                         # Static address must be in subnet
-                        if ip_address(mapping_config['ipv6_address']) not in ip_network(subnet):
-                            raise ConfigError(f'static-mapping address for mapping "{mapping}" is not in subnet "{subnet}"!')
+                        for address in mapping_config['ipv6_address']:
+                            if ip_address(address) not in ip_network(subnet):
+                                raise ConfigError(f'static-mapping address for mapping "{mapping}" is not in subnet "{subnet}"!')
 
-                        if ('mac' not in mapping_config and 'duid' not in mapping_config) or \
-                            ('mac' in mapping_config and 'duid' in mapping_config):
-                            raise ConfigError(f'Either MAC address or Client identifier (DUID) is required for '
-                                              f'static mapping "{mapping}" within shared-network "{network}, {subnet}"!')
+                    if ('ipv6_address' not in mapping_config and 'ipv6_prefix' not in mapping_config):
+                        raise ConfigError('Either IPv6 address or IPv6 prefix must be set for static mapping '
+                                          f'"{mapping}" within shared-network "{network}, {subnet}"!')
+
+                    if ('mac' not in mapping_config and 'duid' not in mapping_config) or \
+                        ('mac' in mapping_config and 'duid' in mapping_config):
+                        raise ConfigError('Either MAC address or Client identifier (DUID) is required for '
+                                            f'static mapping "{mapping}" within shared-network "{network}, {subnet}"!')
 
             if 'option' in subnet_config:
                 if 'vendor_option' in subnet_config['option']:
