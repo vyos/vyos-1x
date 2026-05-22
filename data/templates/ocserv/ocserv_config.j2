@@ -50,6 +50,14 @@ default-user-config = {{ authentication.identity_based_config.default_config }}
 {%     endif %}
 {% endif %}
 
+{% if script.connect is vyos_defined %}
+connect-script = {{ script.connect }}
+{% endif %}
+
+{% if script.disconnect is vyos_defined %}
+disconnect-script = {{ script.disconnect }}
+{% endif %}
+
 {% if ssl.certificate is vyos_defined %}
 server-cert = /run/ocserv/cert.pem
 server-key = /run/ocserv/cert.key
