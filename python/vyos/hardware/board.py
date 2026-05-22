@@ -72,7 +72,9 @@ _PORT_PIN_SUFFIXES = {
 # stable by-path symlink, friendly alias and a human label — so an app dev
 # only ever sees a path like /dev/ttyS1 or /dev/igos/uartc2 and never the
 # underlying GPIO pin names.
-_PORT_META_KEYS = frozenset({"type", "tty", "by_path", "alias", "label"})
+_PORT_META_KEYS = frozenset({
+    "type", "tty", "by_path", "alias", "label", "dt_node",
+})
 
 
 # -----------------------------------------------------------------------------
@@ -542,6 +544,74 @@ class IgosBoard(Board):
             f"declared: {self.list_serial_ports() or '<none>'}"
         )
 
+    # -------- runtime tty <-> port verification --------
+    def verify_serial_bindings(self, *, strict: bool = True) -> Dict[str, str]:
+        """
+        Assert that every port whose pinmap entry declares a ``dt_node``
+        actually resolves to that device-tree node via ``/sys/class/tty``.
+
+        This is the missing link between the GPIO-controlled transceiver
+        (mode/shut pins) and the kernel's ``/dev/ttySN`` numbering — without
+        it, a typo in the pinmap's ``tty`` value would silently re-wire the
+        wrong UART to the wrong transceiver.
+
+        Returns ``{port: realpath_of_node}`` for every port that was
+        successfully verified. Ports without ``dt_node`` are skipped.
+
+        ``strict=True`` (default) raises ``RuntimeError`` on the first
+        mismatch. ``strict=False`` collects and returns
+        ``{port: 'ERROR: ...'}`` entries instead so callers can log
+        everything at startup.
+
+        Soft-skips silently when:
+          * ``/sys/class/tty/<name>`` is absent (e.g. running this code
+            on a build host or in CI),
+          * the tty's ``device/of_node`` symlink is absent
+            (non-DT system).
+        """
+        import os
+        result: Dict[str, str] = {}
+        for port, meta in self._serial_meta.items():
+            dt_node = meta.get("dt_node")
+            tty = meta.get("tty") or meta.get("by_path")
+            if not dt_node or not tty:
+                continue
+            # Resolve the tty to a /sys/class/tty/<name> entry.
+            try:
+                tty_real = os.path.realpath(tty)
+            except OSError:
+                continue
+            tty_name = os.path.basename(tty_real)
+            sys_of = f"/sys/class/tty/{tty_name}/device/of_node"
+            if not os.path.exists(sys_of):
+                continue  # not a DT system, or tty not yet present
+            try:
+                of_real = os.path.realpath(sys_of)
+            except OSError as exc:
+                msg = f"{port}: cannot resolve {sys_of}: {exc}"
+                if strict:
+                    raise RuntimeError(msg) from exc
+                result[port] = f"ERROR: {msg}"
+                continue
+            # dt_node is declared as the leaf path (e.g.
+            # '/bus@f4000/serial@2810000'); accept either an exact tail
+            # match against /sys/firmware/devicetree/base/... or against
+            # the of_node symlink target itself.
+            wanted = dt_node.rstrip("/")
+            if of_real.endswith(wanted):
+                result[port] = of_real
+                continue
+            msg = (
+                f"{port}: pinmap claims tty={tty!r} is at dt_node={dt_node!r}, "
+                f"but {tty_name} resolves to {of_real!r}. "
+                "Pinmap and device tree disagree — fix the pinmap or "
+                "the .dts before continuing."
+            )
+            if strict:
+                raise RuntimeError(msg)
+            result[port] = f"ERROR: {msg}"
+        return result
+
     # -------- modems --------
     def list_modems(self) -> List[str]:
         """Return every modem name declared by the active pinmap."""
@@ -589,12 +659,11 @@ class IgosBoard(Board):
                 f"{self.NAME}: modem {name!r} has no power pin in pinmap"
             )
         # power pin (e.g. MODEM0_SHUTDOWN_N) is active-low; physical 1 = run.
-        # Board pull-up parks the line at "run" with no consumer, so the
-        # "off" state needs an explicit holder to fight the pull, while
-        # the "on" state simply releases any prior holder and lets the
-        # board hardware do the work. ``hold_pin`` chooses the right
-        # behaviour based on ``Pin.bias``.
-        self.hold_pin(pin, 1 if on else 0)  # type: ignore[arg-type]
+        # The kernel controller register holds direction+value after our
+        # libgpiod request is released, so a single set_pin() is enough —
+        # the line stays driven at the chosen level until something else
+        # reprograms it.
+        self.set_pin(pin, 1 if on else 0)  # type: ignore[arg-type]
 
     def sim_select(self, slot: int, modem: Optional[str] = None) -> None:
         if slot not in (1, 2):
@@ -606,10 +675,10 @@ class IgosBoard(Board):
             raise RuntimeError(
                 f"{self.NAME}: modem {name!r} has no sim_select pin in pinmap"
             )
-        # sim_select low → SIM1, high → SIM2. The selected slot must stay
-        # stable while the modem is using it, so use hold_pin — it forks
-        # a holder only when the requested level fights the board pull.
-        self.hold_pin(pin, 0 if slot == 1 else 1)  # type: ignore[arg-type]
+        # sim_select low → SIM1, high → SIM2. The kernel GPIO controller
+        # retains the level after release, so the slot stays selected with
+        # no long-lived process required.
+        self.set_pin(pin, 0 if slot == 1 else 1)  # type: ignore[arg-type]
 
     def serial_protocol(self, port: str, proto: str,
                         term: Optional[bool] = None,
@@ -673,8 +742,6 @@ class _NoPinmapBoard(Board):
 
     def set_pin(self, name, value):              self._fail()
     def get_pin(self, name):                     self._fail()
-    def hold_pin(self, name, value):             self._fail()
-    def release_pin(self, name):                 self._fail()
     def pulse(self, name, ms=200, asserted=1):   self._fail()
     def apply_defaults(self, names=None):        return None
     def modem_reset(self, modem=None):           self._fail()
@@ -691,6 +758,9 @@ class _NoPinmapBoard(Board):
     def serial_port_for_tty(self, path):    self._fail()
     def serial_port_type(self, port):       self._fail()
     def serial_port_supported_protocols(self, port):  return []
+
+    def verify_serial_bindings(self, *, strict=True):
+        return {}
 
     def list_modems(self) -> list:
         return []

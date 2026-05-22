@@ -454,10 +454,15 @@ set interfaces wwan wwan0 ipv6 management-address host-id '::cafe'
 >
 > 1. **Kernel sysctls** (saved on apply, restored on remove):
 >    - `net.ipv6.conf.all.forwarding = 1`
->    - `net.ipv6.conf.<wwan>.accept_ra = 2`  (keep honoring carrier RA
->      while forwarding is on)
 >    - `net.ipv6.conf.<wwan>.proxy_ndp = 1`
 >    - `net.ipv6.conf.<lan>.forwarding = 1`
+>
+>    Note: `accept_ra`/`autoconf` on `<wwan>` are independently forced to
+>    `0` at bearer-up time (in both bridging and non-bridging modes) by
+>    the FSM's RA-isolation hardening — the modem hands us full IPv6
+>    config via `Ip6Config`, so any RA the carrier emits must be ignored
+>    by the kernel to avoid duplicate /64 SLAAC addresses, competing
+>    default routes, RDNSS pollution and MTU clobber.
 > 2. **Dynamic proxy-NDP** — an asyncio task watches `RTM_NEWNEIGH`/
 >    `RTM_DELNEIGH` on the LAN interface.  Every LAN neighbor with an
 >    address inside the carrier prefix gets a matching
@@ -1524,4 +1529,3 @@ set interfaces wwan wwan0 ipv6 adjust-mss 'clamp-mss-to-pmtu'
 > The `ip source-validation` and `adjust-mss` lines duplicate examples shown
 > earlier under "IPv4 Options" / "IPv6 Options" — they're repeated here so
 > the full-site recipe is self-contained.
-

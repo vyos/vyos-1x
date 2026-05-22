@@ -11154,11 +11154,16 @@ class ModemStateMachine:
     #
     # End-to-end IPv6 reachability through a bridging router needs:
     #   - all.forwarding=1            (allow forwarding at all)
-    #   - <wwan>.accept_ra=2          (keep honoring carrier RA even while
-    #                                  forwarding=1; default of 1 stops
-    #                                  accepting once forwarding is on)
     #   - <wwan>.proxy_ndp=1          (answer NS for hosts on the LAN side)
     #   - <lan>.forwarding=1          (forward replies back to wwan)
+    #
+    # NOTE on RA: in this FSM-native design the modem hands us the full
+    # IPv6 config via the bearer's Ip6Config D-Bus property. The kernel
+    # must NEVER autoconfigure from a carrier RA — that would race the
+    # FSM (duplicate /64 SLAAC address, competing default route, RDNSS
+    # pollution, MTU clobber). accept_ra/autoconf are forced to 0 on
+    # wwan by _harden_wwan_ipv6_sysctls() at bearer-up time, in both
+    # bridging and non-bridging modes.
     # We snapshot prior values so removal restores the system to its
     # exact previous state.
 
@@ -11167,7 +11172,6 @@ class ModemStateMachine:
         lan = self._bridging_target_interface()
         targets = {
             f"/proc/sys/net/ipv6/conf/all/forwarding": "1",
-            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra": "2",
             f"/proc/sys/net/ipv6/conf/{wwan}/proxy_ndp": "1",
         }
         if lan:
@@ -11212,6 +11216,61 @@ class ModemStateMachine:
                             path, e,
                             extra={'interface_number': self.interface_number})
         self._bridging_saved_sysctls.clear()
+
+    # ── carrier-RA isolation on wwan ───────────────────────────────────
+    #
+    # The modem hands us full IPv6 configuration (address, prefix, gateway,
+    # DNS, MTU) via the bearer's Ip6Config D-Bus property. Any RA the
+    # carrier emits on the bearer must therefore be IGNORED by the kernel
+    # — otherwise we get a competing /64 SLAAC address, a competing
+    # default route via fe80::, RDNSS pollution and possibly MTU clobber.
+    #
+    # This must be applied BEFORE any address is installed on wwan, and
+    # in BOTH bridging and non-bridging modes. accept_ra=2 (the previous
+    # bridging-mode value) was wrong — it told the kernel to keep
+    # honoring carrier RAs even while forwarding=1, which is the exact
+    # behavior we do NOT want in an FSM-as-sole-authority design.
+
+    def _wwan_ra_isolation_targets(self):
+        wwan = f"wwan{self.interface_number}"
+        return {
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra":         "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/autoconf":          "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra_defrtr":  "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra_pinfo":   "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra_rtr_pref": "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra_rt_info": "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_ra_rdnss":   "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/accept_redirects":  "0",
+            f"/proc/sys/net/ipv6/conf/{wwan}/use_tempaddr":      "0",
+        }
+
+    async def _harden_wwan_ipv6_sysctls(self):
+        """Force the kernel to ignore carrier RAs on wwan.
+
+        Idempotent. Logs at debug level for missing files (interface
+        gone) and at warning for unexpected errors. Does NOT snapshot
+        prior values — these knobs are wwan-specific and the wwan
+        netdev is owned by this FSM for its whole lifetime.
+        """
+        for path, desired in self._wwan_ra_isolation_targets().items():
+            try:
+                with open(path, 'r') as fh:
+                    current = fh.read().strip()
+                if current != desired:
+                    with open(path, 'w') as fh:
+                        fh.write(desired + '\n')
+                    logger.debug("wwan RA-isolation sysctl: %s %s → %s",
+                                 path, current, desired,
+                                 extra={'interface_number': self.interface_number})
+            except FileNotFoundError:
+                logger.debug("wwan RA-isolation sysctl skipped (missing): %s",
+                             path,
+                             extra={'interface_number': self.interface_number})
+            except Exception as e:
+                logger.warning("wwan RA-isolation sysctl %s failed: %s",
+                               path, e,
+                               extra={'interface_number': self.interface_number})
 
     # ── radvd reload + LAN address deprecation on prefix change ────────
 
@@ -11649,6 +11708,12 @@ class ModemStateMachine:
             else:
                 logger.info(f"Interface {interface_name} set UP for IP configuration",
                            extra={'interface_number': self.interface_number})
+
+            # Force-disable kernel RA/SLAAC autoconfiguration on wwan
+            # before any address is installed. The modem already gave us
+            # full IPv6 config via Ip6Config — a carrier RA on the bearer
+            # must NOT race the FSM's address/route/DNS plumbing.
+            await self._harden_wwan_ipv6_sysctls()
 
             # ── Source address enforcement: capture old IPs before clearing ──
             old_ipv4 = self._current_bearer_ipv4

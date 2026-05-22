@@ -21,6 +21,12 @@
 #   test hardware modem MODEM0 sim 2
 #   test hardware pin UARTC2_MODE0 set 1
 #   test hardware pin UARTC2_SHUT_N pulse
+#
+# Note on persistence: under libgpiod v2 the kernel GPIO controller keeps
+# the configured direction and value after our request is released. A
+# single ``pin ... set N`` therefore holds the line at N until something
+# else (another consumer / driver reprobe / reboot) reprograms it. There
+# is no separate ``hold`` / ``release`` verb — ``set`` is persistent.
 
 import sys
 
@@ -155,23 +161,6 @@ def pin_pulse(args) -> None:
     print(f'OK: pulsed {args.name} for {args.ms} ms')
 
 
-def pin_hold(args) -> None:
-    try:
-        hw.hold_pin(args.name, int(args.value))
-    except (ValueError, RuntimeError, PermissionError) as exc:
-        _die(str(exc))
-    print(f'OK: holding {args.name} at {args.value}')
-
-
-def pin_release(args) -> None:
-    try:
-        released = hw.release_pin(args.name)
-    except (ValueError, RuntimeError, KeyError) as exc:
-        _die(str(exc))
-    print(f'OK: {args.name} released' if released
-          else f'{args.name}: no holder active')
-
-
 # --- arg dispatch -----------------------------------------------------------
 
 def main() -> None:
@@ -222,15 +211,6 @@ def main() -> None:
     s.add_argument('--name', required=True)
     s.add_argument('--ms', default='200')
     s.add_argument('--asserted', default='1')
-
-    s = sub.add_parser('pin_hold')
-    s.set_defaults(fn=pin_hold)
-    s.add_argument('--name', required=True)
-    s.add_argument('--value', required=True)
-
-    s = sub.add_parser('pin_release')
-    s.set_defaults(fn=pin_release)
-    s.add_argument('--name', required=True)
 
     args = p.parse_args()
     args.fn(args)

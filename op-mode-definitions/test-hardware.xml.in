@@ -153,28 +153,13 @@
             <children>
               <tagNode name="set">
                 <properties>
-                  <help>Set pin value (0 or 1) momentarily; board pull retakes the line on release</help>
+                  <help>Set pin value (0 or 1); the kernel GPIO controller retains it until reprogrammed</help>
                   <completionHelp>
                     <list>0 1</list>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/test_hardware.py pin_set --name="$4" --value="$6"</command>
               </tagNode>
-              <tagNode name="hold">
-                <properties>
-                  <help>Hold pin at value (0 or 1) persistently; spawns a holder if value fights the board pull</help>
-                  <completionHelp>
-                    <list>0 1</list>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py pin_hold --name="$4" --value="$6"</command>
-              </tagNode>
-              <leafNode name="release">
-                <properties>
-                  <help>Release any active holder so the board pull retakes the line</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/test_hardware.py pin_release --name="$4"</command>
-              </leafNode>
               <leafNode name="pulse">
                 <properties>
                   <help>Pulse pin (default 200 ms, asserted=1)</help>

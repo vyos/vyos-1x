@@ -117,26 +117,6 @@ def get_pin(name: str) -> int:
     return _b.get_pin(name)
 
 
-def hold_pin(name: str, value: int) -> None:
-    """
-    Drive ``name`` to ``value`` and keep it there.
-
-    When ``value`` matches the board pull declared in ``Pin.bias`` this
-    is a no-op after dropping any prior holder. Otherwise a small
-    detached daemon is forked to keep the gpiod claim open so the line
-    cannot snap back to its bias. Use this for any line whose desired
-    state differs from the board hardware's resting state and must
-    persist (SIM-select, modem shutdown, flight mode, ...).
-    """
-    _b.hold_pin(name, value)
-
-
-def release_pin(name: str) -> bool:
-    """Retire any holder process for ``name`` so the board pull retakes
-    the line. Returns True if a holder was retired."""
-    return _b.release_pin(name)
-
-
 def pulse(name: str, ms: int = 200, asserted: int = 1) -> None:
     _b.pulse(name, ms, asserted)
 
@@ -171,6 +151,89 @@ def sim_detect_pins(modem: Optional[str] = None) -> List[str]:
     insert/remove events without polling.
     """
     return _b.sim_detect_pins(modem=modem)
+
+
+def watch_pins(
+    names,
+    *,
+    stop_fd: Optional[int] = None,
+    debounce_us: Optional[int] = 20_000,
+    settle_ms: Optional[int] = 750,
+    coalesce: bool = True,
+):
+    """
+    Yield ``(name, level, timestamp_ns)`` tuples for edge events on the
+    listed input pins. Blocks; run from a dedicated thread.
+
+    Two layers of debounce, both per-pin overridable on :class:`Pin`:
+
+    * ``debounce_us`` \u2014 kernel hardware debounce (libgpiod
+      ``LineSettings.debounce_period``). Suppresses contact bounce in
+      the \u00b5s\u2013ms range; defaults to 20\u202fms.
+    * ``settle_ms`` \u2014 userspace quiet period. After any edge the
+      watcher waits this long for the line to stop changing before
+      emitting; with ``coalesce=True`` (default) only the final stable
+      level is emitted. Default 750\u202fms \u2014 well above typical SIM-tray
+      bounce.
+
+    ``stop_fd`` is one end of an :func:`os.pipe` you can write to from
+    a shutdown handler; the iterator returns cleanly and releases the
+    GPIO requests when it becomes readable.
+
+    Pass ``settle_ms=0, coalesce=False`` for fire-fast mode (every
+    kernel-debounced edge is emitted immediately).
+    """
+    return _b.watch_pins(
+        names,
+        stop_fd=stop_fd,
+        debounce_us=debounce_us,
+        settle_ms=settle_ms,
+        coalesce=coalesce,
+    )
+
+
+def watch_sim_detect(
+    modem: Optional[str] = None,
+    *,
+    stop_fd: Optional[int] = None,
+    debounce_us: Optional[int] = 20_000,
+    settle_ms: Optional[int] = 750,
+):
+    """
+    Convenience wrapper around :func:`watch_pins` for SIM-detect events.
+
+    Yields ``(pin_name, event, timestamp_ns)`` where ``event`` is the
+    string ``"INSERTED"`` or ``"REMOVED"`` \u2014 mapped from the line level
+    according to ``Pin.active_low`` so the FSM never has to reason about
+    raw polarity.
+
+    Tray-bounce on insertion can last tens to a few hundred ms; the
+    default 750\u202fms userspace settle window comfortably coalesces those
+    into a single event per physical action.
+    """
+    pins = _b.sim_detect_pins(modem=modem)
+    if not pins:
+        return
+    # Resolve active_low once so the inner loop is O(1).
+    pin_table = getattr(_b, "PINS", {}) or {}
+    active_low = {n: bool(getattr(pin_table.get(n), "active_low", False))
+                  for n in pins}
+    for name, level, ts in _b.watch_pins(
+        pins,
+        stop_fd=stop_fd,
+        debounce_us=debounce_us,
+        settle_ms=settle_ms,
+        coalesce=True,
+    ):
+        # libgpiod already inverts the raw electrical level when
+        # active_low=True, so ``level`` here is the *logical* state.
+        # Logical 1 on a SIM-detect line conventionally means
+        # "card present"; map that to INSERTED.
+        event = "INSERTED" if level else "REMOVED"
+        # active_low is retained in the dict for diagnostics only; the
+        # libgpiod-applied inversion already took care of polarity.
+        _ = active_low  # noqa: F841 \u2014 reserved for future per-pin overrides
+        yield name, event, ts
 
 
 def serial_protocol(port: str, proto: str,
@@ -241,3 +304,23 @@ def serial_port_supported_protocols(port: str) -> list:
     calling :func:`serial_protocol`.
     """
     return _b.serial_port_supported_protocols(port)
+
+
+def verify_serial_bindings(*, strict: bool = True) -> dict:
+    """
+    Assert that every port whose pinmap entry declares a ``dt_node``
+    resolves to that device-tree node via ``/sys/class/tty/<N>/device/of_node``.
+
+    This is the bridge between the pinmap (which controls the
+    transceiver) and the kernel's ``/dev/ttySN`` numbering (which the
+    application opens). Without this check a typo in the pinmap's
+    ``tty`` value would silently re-wire the wrong UART to the wrong
+    transceiver.
+
+    Call once at FSM/daemon startup. ``strict=True`` (default) raises
+    ``RuntimeError`` on the first mismatch; ``strict=False`` returns a
+    ``{port: 'ERROR: ...'}`` dict so callers can log every problem at
+    once. Soft-skips on build hosts / CI where ``/sys/class/tty`` is
+    absent.
+    """
+    return _b.verify_serial_bindings(strict=strict)
