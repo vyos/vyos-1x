@@ -31,6 +31,26 @@ from vyos import airbag
 airbag.enable()
 
 service_name = 'ModemManager.service'
+manager_unit = 'igos-wwan-manager.service'
+
+
+def _ensure_manager_running():
+    """Idempotently start the WWAN manager service.
+
+    The manager unit has NO [Install] section -- it is never started by
+    systemd at boot.  conf_mode is the sole start path:
+      - At boot, vyos-router.service replays the saved config, which
+        runs this conf_mode, which starts the manager.
+      - On a live `commit`, this same path starts it.
+    `systemctl start` is a no-op if the unit is already active.
+
+    Once running, the manager owns its own lifecycle and the graceful
+    teardown sequence on interface deletion -- we never stop it from
+    conf_mode (stopping mid-teardown would skip bearer release / modem
+    unmanage steps).  On a reboot with no wwan configured, conf_mode
+    simply does not start the manager, so MM also stays down.
+    """
+    call(f'systemctl start {manager_unit}')
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -786,6 +806,15 @@ def apply(wwan):
         # the FSM side: shut the state machine down, unexport the D-Bus
         # object, and delete the persisted config cache so a later
         # service restart will NOT replay a stale configuration.
+        #
+        # NOTE: we intentionally do NOT stop the manager service or
+        # ModemManager here, even when this is the last wwan interface.
+        # The manager owns the graceful teardown sequence (drop bearer,
+        # release session, unmanage the modem) and stopping it mid-flight
+        # would skip that.  At next boot, with no wwan configured, the
+        # conf_mode replay simply will not start the manager -- so the
+        # "no config => no MM running" goal is met on reboot, while a
+        # live `delete` still gets a clean teardown.
         asyncio.run(_remove_via_dbus(interface_number))
 
         if interface_exists(ifname):
@@ -804,6 +833,7 @@ def apply(wwan):
         # drop the bearer and suppress activity.  Persisted config is
         # retained so re-enable picks up the previous configuration.
         config = {'interface_disabled': True}
+        _ensure_manager_running()
         asyncio.run(_apply_via_dbus(interface_number, config))
 
         if interface_exists(ifname):
@@ -817,6 +847,13 @@ def apply(wwan):
         return None
 
     config = build_fsm_config(wwan)
+
+    # Ensure the WWAN manager service is running -- it owns the D-Bus
+    # endpoint we are about to call and is responsible for starting
+    # ModemManager.  The unit has no [Install] section, so conf_mode is
+    # the only thing that ever starts it.  Idempotent: a no-op if
+    # already active.
+    _ensure_manager_running()
 
     # Send config via D-Bus
     asyncio.run(_apply_via_dbus(interface_number, config))

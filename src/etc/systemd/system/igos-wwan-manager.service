@@ -1,36 +1,52 @@
 [Unit]
 Description=iGOS WWAN Interface Manager
 Documentation=man:igos-wwan-manager(8)
-# IMPORTANT: do NOT Wants=/Requires= ModemManager.service.
 #
-# Pulling MM in alongside us starts it in parallel with our After=
-# systemd-udev-settle gate, which races: MM enumerates the modem's
-# usb_device (e.g. /sys/bus/usb/devices/1-1) BEFORE 60-Perle-usb-modem
-# .rules has stamped ID_MM_PHYSDEV_UID on it, then caches the modem
-# object with no UID forever (it does not re-read the udev db).
+# Lifecycle (read this before touching the unit):
 #
-# Symptoms when racing: `mmcli -m 0` shows no `modem.generic.device.uid`
-# line, and only restarting MM by hand (after udev has long since
-# settled) makes the UID appear.
+#   This service is intentionally NOT started at boot by systemd. There
+#   is no [Install] section and no WantedBy=.  The service is started
+#   on-demand by the VyOS conf_mode script
+#   (src/conf_mode/interfaces_wwan.py) when the first `interfaces wwan`
+#   node is committed -- and at boot only via the same path when
+#   vyos-router.service replays the saved configuration.
 #
-# We talk to MM over D-Bus, so dbus-daemon will auto-activate MM on the
-# first call from our manager -- by then systemd-udev-settle.service
-# (which WE wait on) has long completed, so coldplug rules have run and
-# the UID is already in the udev db when MM enumerates.
+#   Rationale:
+#     - With no wwan configuration there is nothing for this service to
+#       do, so it must not run.
+#     - This service is what starts ModemManager (it dbus-calls MM on
+#       startup).  Starting it unconditionally at boot would mean MM
+#       runs on every device whether or not there is a modem
+#       configured.
 #
-# After=ModemManager.service is harmless and only orders us *if* MM is
-# already up; it does not pull MM in.
-After=systemd-udev-settle.service dbus.service ModemManager.service vyos-router.service
-Wants=systemd-udev-settle.service dbus.service
-# Note: Optional service - does not block VyOS boot if it fails
+# IMPORTANT: do NOT add Wants=/Requires=ModemManager.service.
+#
+#   Pulling MM in alongside us starts it in parallel with our After=
+#   ordering gates, which races udev coldplug.  If MM enumerates the
+#   modem's usb_device before 60-Perle-usb-modem.rules has stamped
+#   ID_MM_PHYSDEV_UID on it, MM caches the modem with no UID forever
+#   (it does not re-read the udev db).  We talk to MM over D-Bus, so by
+#   the time we call it udev coldplug has long since completed.
+#
+# After= below provides ordering only -- it does NOT pull these units
+# in.  We rely on dbus.service being up (it always is by multi-user),
+# and on ModemManager.service: we don't pull MM in, but if it does
+# happen to be activating, ordering ourselves after it avoids a startup
+# race with MM's D-Bus name acquisition.
+#
+# NOTE: do NOT add After=vyos-router.service.  This service is started
+# *by* the conf_mode script that runs inside vyos-router, so adding it
+# here would either deadlock or be silently ignored (systemd cannot
+# order a unit after a unit that is starting it).
+StartLimitBurst=3
+StartLimitIntervalSec=300
+After=dbus.service ModemManager.service
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 /usr/lib/python3/dist-packages/vyos/utils/wwan/interfaces_wwan_main.py
 Restart=on-failure
 RestartSec=30
-StartLimitBurst=3
-StartLimitIntervalSec=300
 User=root
 Group=vyattacfg
 
@@ -60,5 +76,11 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=igos-wwan-manager
 
-[Install]
-WantedBy=multi-user.target
+# NOTE: NO [Install] SECTION ON PURPOSE.
+#
+# This unit must not be enabled (systemctl enable) and must not have a
+# WantedBy=multi-user.target.  It is started exclusively by the VyOS
+# conf_mode script src/conf_mode/interfaces_wwan.py on the first
+# wwan-interface commit -- and at boot only when vyos-router.service
+# replays a saved wwan configuration through that same path.  See the
+# extended lifecycle comment in [Unit] above.
