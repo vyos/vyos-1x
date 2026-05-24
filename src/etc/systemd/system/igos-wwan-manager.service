@@ -1,13 +1,27 @@
 [Unit]
 Description=iGOS WWAN Interface Manager
 Documentation=man:igos-wwan-manager(8)
-# systemd-udev-settle gates us on coldplug completion so MM's initial
-# device enumeration sees ID_MM_PHYSDEV_UID already stamped by
-# 76-igos-modem-uid.rules / 60-Perle-usb-modem.rules.  Without this,
-# Wants=ModemManager.service below can pull MM up before the slot rules
-# have run on slow boards, losing the topology-pinned UID.
+# IMPORTANT: do NOT Wants=/Requires= ModemManager.service.
+#
+# Pulling MM in alongside us starts it in parallel with our After=
+# systemd-udev-settle gate, which races: MM enumerates the modem's
+# usb_device (e.g. /sys/bus/usb/devices/1-1) BEFORE 60-Perle-usb-modem
+# .rules has stamped ID_MM_PHYSDEV_UID on it, then caches the modem
+# object with no UID forever (it does not re-read the udev db).
+#
+# Symptoms when racing: `mmcli -m 0` shows no `modem.generic.device.uid`
+# line, and only restarting MM by hand (after udev has long since
+# settled) makes the UID appear.
+#
+# We talk to MM over D-Bus, so dbus-daemon will auto-activate MM on the
+# first call from our manager -- by then systemd-udev-settle.service
+# (which WE wait on) has long completed, so coldplug rules have run and
+# the UID is already in the udev db when MM enumerates.
+#
+# After=ModemManager.service is harmless and only orders us *if* MM is
+# already up; it does not pull MM in.
 After=systemd-udev-settle.service dbus.service ModemManager.service vyos-router.service
-Wants=systemd-udev-settle.service dbus.service ModemManager.service
+Wants=systemd-udev-settle.service dbus.service
 # Note: Optional service - does not block VyOS boot if it fails
 
 [Service]
