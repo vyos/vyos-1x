@@ -497,6 +497,7 @@ let subtree_from_partial r_ptr c_ptr i_ptr path =
     let input = Root.get i_ptr in
     let path = split_on_whitespace path in
     try
+        error_message := "";
         let ct_ret = (CD.subtree_from_partial[@alert "-exn"]) rt ct input path in
         Ctypes.Root.create ct_ret
     with
