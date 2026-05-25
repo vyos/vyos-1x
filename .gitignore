@@ -126,8 +126,6 @@ debian/*.prerm.debhelper
 debian/*.postrm.debhelper
 debian/*.substvars
 
-# Sonar Cloud
-.scannerwork
 /.vs
 
 # SlickEdit

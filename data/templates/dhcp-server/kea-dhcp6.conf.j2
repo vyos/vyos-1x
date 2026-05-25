@@ -59,8 +59,20 @@
 {% endif %}
         ],
 {% if shared_network_name is vyos_defined %}
-        "shared-networks": {{ shared_network_name | kea6_shared_network_json }}
+        "shared-networks": {{ shared_network_name | kea6_shared_network_json }},
 {% endif %}
-
+        "loggers": [
+            {
+                "name": "kea-dhcp6",
+                "output_options": [
+                    {
+                        "output": "stdout",
+                        "pattern": "%-5p %m\n"
+                    }
+                ],
+                "severity": "{{ log_level | upper }}",
+                "debuglevel": 0
+            }
+        ]
     }
 }

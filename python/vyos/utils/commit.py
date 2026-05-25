@@ -18,6 +18,63 @@
 from typing import IO
 
 
+def _commit_lock_busy(lock_path: str) -> bool:
+    """Return True if another process holds a POSIX advisory lock on lock_path.
+
+    Uses libc lockf(F_TEST): never acquires or releases a lock (no observer window
+    where this code holds LOCK_EX). Compatible with locks taken via fcntl.lockf /
+    fcntl F_SETLK on Linux.
+    """
+    import ctypes
+    import errno
+    import os
+
+    libc = ctypes.CDLL('libc.so.6', use_errno=True)
+    lockf_fn = libc.lockf
+    lockf_fn.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_long]
+    lockf_fn.restype = ctypes.c_int
+
+    # Defined in glibc <unistd.h> / <fcntl.h> as F_TEST.
+    _F_TEST = 3
+
+    try:
+        fd = os.open(lock_path, os.O_RDONLY)
+    except FileNotFoundError:
+        # Lost a race with unlink or commit teardown.
+        return False
+    try:
+        os.lseek(fd, 0, os.SEEK_SET)
+        ctypes.set_errno(0)
+        ret = lockf_fn(fd, _F_TEST, 0)
+        err = ctypes.get_errno()
+        if ret == 0:
+            return False
+        if err in (errno.EACCES, errno.EAGAIN):
+            return True
+        raise OSError(err, os.strerror(err), lock_path)
+    finally:
+        os.close(fd)
+
+def commit_in_progress2():
+    """
+    Modern implementation of commit_in_progress() which is O(1) instead of O(n)
+
+    The reason not everything is moved to this new implementation yet is to
+    give it heavy testing in vyos-netlinkd first.
+    """
+    # Query advisory locks without acquiring them (see _commit_lock_busy).
+    # Requires read access to the lock file.
+    # If there is no read access otherwise os.open raises PermissionError.
+
+    from pathlib import Path
+    from vyos.defaults import commit_lock
+
+    lock_path = Path(commit_lock)
+    if not lock_path.exists():
+        return False
+
+    return _commit_lock_busy(str(lock_path))
+
 def commit_in_progress():
     """Not to be used in normal op mode scripts!"""
 

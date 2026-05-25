@@ -228,6 +228,7 @@
     <valueless/>
   </properties>
 </leafNode>
+#include <include/dhcp/log-level.xml.i>
 #include <include/listen-address-ipv4.xml.i>
 #include <include/listen-interface-multi-broadcast.xml.i>
 <tagNode name="shared-network-name">

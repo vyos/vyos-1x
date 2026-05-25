@@ -51,7 +51,7 @@ jobs:
       vyos_build_ref: ${{ steps.determine-ref.outputs.vyos_build_ref }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set branch-specific configuration
         id: config
@@ -134,14 +134,14 @@ jobs:
       build_version: ${{ steps.version.outputs.build_version }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - name: Clone vyos-1x source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: packages/vyos-1x
           fetch-depth: 0
@@ -178,7 +178,7 @@ jobs:
           --vyos-mirror ${{ needs.set_config.outputs.vyos_mirror }} \
           generic
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           retention-days: 2
           name: vyos-${{ steps.version.outputs.build_version }}
@@ -200,13 +200,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
@@ -234,13 +234,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
@@ -267,13 +267,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
@@ -300,13 +300,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
@@ -334,13 +334,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
@@ -367,13 +367,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
@@ -401,13 +401,13 @@ jobs:
       exit_code: ${{ steps.test.outputs.exit_code }}
     steps:
       - name: Clone vyos-build source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build

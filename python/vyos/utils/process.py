@@ -15,12 +15,12 @@
 
 import os
 import shlex
+import time
 
 from subprocess import Popen
 from subprocess import PIPE
 from subprocess import STDOUT
 from subprocess import DEVNULL
-
 
 def get_wrapper(vrf, netns):
     wrapper = None
@@ -90,9 +90,8 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     wrapper = get_wrapper(vrf, netns)
     if vrf or netns:
         if os.getuid() != 0:
-            raise OSError(
-                'Permission denied: cannot execute commands in VRF and netns contexts as an unprivileged user'
-            )
+            raise OSError('Permission denied: cannot execute commands in VRF ' \
+                          'and netns contexts as an unprivileged user')
 
         if use_shell:
             command = f'{shlex.join(wrapper)} {command}'
@@ -109,7 +108,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
         input = input.encode() if type(input) is str else input
 
     text = None
-    bufsize = -1 # default: means the system default of io.DEFAULT_BUFFER_SIZE will be used
+    bufsize = -1 # default: system default of io.DEFAULT_BUFFER_SIZE is used
     if not buffered:
         text = True # Treat output as strings (not bytes)
         bufsize = 1 # Enable line buffering
@@ -279,7 +278,6 @@ def process_named_running(name: str, cmdline: str=None, timeout: int=0):
                 return p.info['pid']
         return None
     if timeout:
-        import time
         time_expire = time.time() + timeout
         while True:
             tmp = check_process(name, cmdline)
@@ -293,12 +291,48 @@ def process_named_running(name: str, cmdline: str=None, timeout: int=0):
         return check_process(name, cmdline)
     return None
 
-def is_systemd_service_active(service):
+def is_systemd_service_active(service: str, vrf=None, netns=None) -> bool:
     """ Test is a specified systemd service is activated.
     Returns True if service is active, false otherwise.
     Copied from: https://unix.stackexchange.com/a/435317 """
-    tmp = cmd(f'systemctl show --value -p ActiveState {service}')
+    tmp = cmd(f'systemctl show --value -p ActiveState {service}',
+              vrf=vrf, netns=netns)
     return bool((tmp == 'active'))
+
+def stop_systemd_unit(service: str, retries: int=3, delay_s: float=0.250,
+                      raise_on_failure: bool=True, vrf=None, netns=None) -> None:
+    """
+    Stop systemd unit used during interface teardown (e.g. DHCP clients).
+
+    Retries transient "systemctl stop| failures and verifies ActiveState is no
+    longer "active". Escalate to systemctl kill if stop attempts fail while
+    unit remains active.
+    """
+
+    if not is_systemd_service_active(service, vrf=vrf, netns=netns):
+        return None
+
+    for _ in range(retries):
+        rc_cmd(f'systemctl stop {service}', vrf=vrf, netns=netns)
+        if not is_systemd_service_active(service, vrf=vrf, netns=netns):
+            # Service properly stopped - return early, this should be the default
+            return None
+        time.sleep(delay_s)
+
+    rc_cmd(f'systemctl kill {service}', vrf=vrf, netns=netns)
+    time.sleep(delay_s)
+    if not is_systemd_service_active(service, vrf=vrf, netns=netns):
+        return None
+
+    # This should not happen
+    if raise_on_failure:
+        code, out = rc_cmd(f'systemctl show --value -p ActiveState {service}',
+                           vrf=vrf, netns=netns)
+        disp_state = out.strip() if code == 0 and out.strip() else 'unknown'
+
+        raise RuntimeError(f'systemd unit {service} still has ActiveState={disp_state} ' \
+                           f'after {retries} stop attempts and systemctl kill')
+    return None
 
 def is_systemd_service_running(service):
     """ Test is a specified systemd service is actually running.

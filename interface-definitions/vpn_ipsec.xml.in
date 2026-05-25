@@ -129,7 +129,7 @@
                 <properties>
                   <help>Security Association byte count to expire</help>
                   <valueHelp>
-                    <format>u32:1024-26843545600000</format>
+                    <format>u64:1024-26843545600000</format>
                     <description>SA life in bytes</description>
                   </valueHelp>
                   <constraint>
@@ -141,7 +141,7 @@
                 <properties>
                   <help>Security Association packet count to expire</help>
                   <valueHelp>
-                    <format>u32:1000-26843545600000</format>
+                    <format>u64:1000-26843545600000</format>
                     <description>SA life in packets</description>
                   </valueHelp>
                   <constraint>

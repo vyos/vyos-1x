@@ -669,6 +669,9 @@ bgp route-reflector allow-outbound-policy
 {% if parameters.tcp_keepalive.idle is vyos_defined and parameters.tcp_keepalive.interval is vyos_defined and parameters.tcp_keepalive.probes is vyos_defined %}
  bgp tcp-keepalive {{ parameters.tcp_keepalive.idle }} {{ parameters.tcp_keepalive.interval }} {{ parameters.tcp_keepalive.probes }}
 {% endif %}
+{% if parameters.update_delay.max_delay is vyos_defined %}
+ update-delay {{ parameters.update_delay.max_delay }}{{ ' ' ~ parameters.update_delay.establish_wait if parameters.update_delay.establish_wait is vyos_defined }}
+{% endif %}
 {% if srv6.locator is vyos_defined %}
  segment-routing srv6
   locator {{ srv6.locator }}

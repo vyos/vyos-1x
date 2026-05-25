@@ -102,6 +102,17 @@
       </constraint>
       </properties>
     </leafNode>
+    <leafNode name="time-zone">
+      <properties>
+        <help>Time zone to send to clients. Uses RFC4833 options 41 and 42</help>
+        <completionHelp>
+          <script>timedatectl list-timezones</script>
+        </completionHelp>
+        <constraint>
+          <validator name="timezone" argument="--validate"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <node name="vendor-option">
       <properties>
         <help>Vendor Specific Options</help>

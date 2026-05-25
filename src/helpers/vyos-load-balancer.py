@@ -272,8 +272,8 @@ if __name__ == '__main__':
         run('ip route flush cache')
 
         if 'flush_connections' in lb:
-            run('conntrack --delete')
-            run('conntrack -F expect')
+            for _state in lb['health_state'].values():
+                run(f'conntrack --delete --mark {_state["table_number"]}')
 
         with open(wlb_status_file, 'w') as f:
             f.write(json.dumps(lb['health_state']))
@@ -360,8 +360,8 @@ if __name__ == '__main__':
                 run('ip route flush cache')
 
                 if 'flush_connections' in lb:
-                    run('conntrack --delete')
-                    run('conntrack -F expect')
+                    for _state in lb['health_state'].values():
+                        run(f'conntrack --delete --mark {_state["table_number"]}')
 
                 with open(wlb_status_file, 'w') as f:
                     f.write(json.dumps(lb['health_state']))
