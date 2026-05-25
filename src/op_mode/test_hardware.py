@@ -72,19 +72,84 @@ def show_pin(args) -> None:
     if not all_names:
         print('No pins declared by the active pinmap.')
         return
+
+    # Build a pin -> "owner" reverse map so each row can show which
+    # logical device the pin belongs to (e.g. UARTC2/ttyS2, MODEM0).
+    owner = _build_pin_owner_map(BOARD)
+
     if name:
         if name not in all_names:
             _die(f'unknown pin {name!r}; try `show pin` for the full list')
-        print(f'{name} = {hw.get_pin(name)}')
+        own = owner.get(name, '')
+        suffix = f'  [{own}]' if own else ''
+        print(f'{name} = {hw.get_pin(name)}{suffix}')
         return
-    fmt = '{:<28} {:>5}'
-    print(fmt.format('PIN', 'VALUE'))
+
+    fmt = '{:<28} {:>5}  {}'
+    print(fmt.format('PIN', 'VALUE', 'OWNER'))
     for n in all_names:
         try:
             v = hw.get_pin(n)
         except Exception as exc:  # noqa: BLE001 -- diagnostic tool
             v = f'err:{exc}'
-        print(fmt.format(n, v))
+        print(fmt.format(n, v, owner.get(n, '')))
+
+
+def _build_pin_owner_map(board) -> dict:
+    """
+    Return ``{pin_name: 'owner_label'}`` so every pin can be cross-
+    referenced with the logical device it belongs to:
+
+      * Serial-port pins  -> ``UARTC2 (/dev/ttyS2)`` (tty path appended
+        when the pinmap declares one).
+      * Modem pins        -> ``MODEM0``.
+
+    Pins that don't belong to any discovered serial port or modem get
+    no owner label.
+    """
+    owner: dict = {}
+
+    # Serial ports: roles map {role -> pin_name}; metadata has the tty.
+    serial_ports = getattr(board, '_serial_ports', {}) or {}
+    serial_meta  = getattr(board, '_serial_meta',  {}) or {}
+    for port, roles in serial_ports.items():
+        meta = serial_meta.get(port, {})
+        tty = meta.get('tty') or meta.get('by_path') or ''
+        label = f'{port} ({tty})' if tty else port
+        for pin_name in roles.values():
+            if pin_name:
+                owner[pin_name] = label
+
+    # Modems: roles map {role -> pin_name | [pin_names]}.
+    modems = getattr(board, '_modems', {}) or {}
+    for modem, roles in modems.items():
+        for v in roles.values():
+            if isinstance(v, (list, tuple, set)):
+                for pin_name in v:
+                    owner.setdefault(pin_name, modem)
+            elif v:
+                owner.setdefault(v, modem)
+
+    # Generic per-device grouping for pins not already owned by a
+    # serial port or modem. Any pin whose name begins with a known
+    # device prefix followed by an instance index is attributed to
+    # that device. Pinmap convention is ``<FAMILY><N>_…`` mirroring
+    # how modems are named (MODEM0_…, MODEM1_…), so WiFi appears as
+    # WIFI0_PDN_N, WIFI1_RESET_N, etc. Adding another peripheral
+    # family is a one-line change to ``device_prefixes``.
+    import re
+    device_prefixes = ('WIFI',)
+    pattern = re.compile(
+        r'^(' + '|'.join(device_prefixes) + r')(\d+)_'
+    )
+    for pin_name in board.PINS:
+        if pin_name in owner:
+            continue
+        m = pattern.match(pin_name)
+        if m:
+            owner[pin_name] = f'{m.group(1)}{m.group(2)}'
+
+    return owner
 
 
 # --- serial -----------------------------------------------------------------

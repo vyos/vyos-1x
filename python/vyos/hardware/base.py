@@ -208,13 +208,16 @@ class Board:
         """
         pin = self._require(name)
         gpiod = self._gpiod()
+        # Read without reprogramming the line: direction=AS_IS keeps
+        # whatever the kernel currently has configured (the pin may be
+        # an output we just drove, or an input). Bias is NOT passed
+        # here — gpiolib rejects bias with AS_IS as EINVAL.
         with gpiod.request_lines(
             self._resolve_bank(pin.bank),
             consumer=f"vyos-hw/{self.NAME}",
             config={pin.line: self._line_settings(
                 direction=gpiod.line.Direction.AS_IS,
                 active_low=pin.active_low,
-                bias=self._bias_for(pin),
             )},
         ) as req:
             return 1 if req.get_value(pin.line) == gpiod.line.Value.ACTIVE else 0
