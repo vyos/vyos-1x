@@ -4,14 +4,10 @@
 ACTION!="add", 				GOTO="vyos_net_end"
 SUBSYSTEM!="net",			GOTO="vyos_net_end"
 
-# Skip vyos_net_name (and the rescan hint it would drop, which causes
-# vyos-interface-rescan.py to write hw-id into config.boot) for any
-# interface 61-igos-eth-pin.rules has confirmed is pinned.  Note this
-# CANNOT key on ID_NET_LINK_FILE: that is set by net_setup_link at
-# priority 80, after this rule runs.  IGOS_ETH_PINNED is set by rule
-# 61 (priority 61) so it is visible here.  Unpinned interfaces run the
-# normal vyos_net_name + hw-id flow unchanged.
-ENV{IGOS_ETH_PINNED}=="1", GOTO="vyos_net_end"
+# NOTE: do NOT short-circuit this rule for pinned interfaces.  vyos_net_name
+# has boot-time side effects (lock, biosdevname lookup, hint accounting) that
+# VyOS configd depends on.  We instead suppress only the rescan-hint write
+# inside vyos_net_name itself when IGOS_ETH_PINNED=1 (set by rule 61).
 
 # Do name change for ethernet and wireless devices only
 KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"
