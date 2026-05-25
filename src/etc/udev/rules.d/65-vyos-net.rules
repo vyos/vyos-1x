@@ -4,8 +4,12 @@
 ACTION!="add", 				GOTO="vyos_net_end"
 SUBSYSTEM!="net",			GOTO="vyos_net_end"
 
-# A .link file already pinned this device deterministically; trust it.
-ENV{ID_NET_LINK_FILE}!="", GOTO="vyos_net_end"
+# If 80-net-setup-link applied one of OUR pinning .link files, skip
+# vyos_net_name so no rescan hint is written and no hw-id is added to
+# config.boot for this interface.  Any other device (no .link matched,
+# or only the default 99-default.link applied) runs the normal
+# vyos_net_name + hw-id flow as before.
+ENV{ID_NET_LINK_FILE}=="/etc/systemd/network/10-igos-*.link", GOTO="vyos_net_end"
 
 # Do name change for ethernet and wireless devices only
 KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"

@@ -1,3 +1,8 @@
-ENV{ID_NET_LINK_FILE}!="", GOTO="end_temp_rename"
+# Skip the temp rename for any device whose physical-socket key has
+# been resolved by 61-igos-eth-pin.rules.  These devices must reach
+# 80-net-setup-link with NAME=="" so the matching .link's Name= can
+# apply.  Devices the helper could not key (IGOS_ETH_PORT unset) fall
+# through to the original temp-rename path unchanged.
+ENV{IGOS_ETH_PORT}!="", GOTO="end_temp_rename"
 SUBSYSTEM=="net", ACTION=="add", KERNEL=="eth*", DRIVERS=="?*", NAME="e$env{IFINDEX}"
 LABEL="end_temp_rename"

@@ -1,0 +1,31 @@
+# Generic ethN pinning entry point.
+#
+# For every ethN "add" event, asks the helper for a stable physical-
+# socket key ("<parent-devpath>#<dev_port>") and exports it as the
+# IGOS_ETH_PORT property.  A matching [Match] Property=IGOS_ETH_PORT=...
+# block in /etc/systemd/network/10-igos-*.link then assigns the final
+# Name= at 80-net-setup-link.rules.
+#
+# Fallback behaviour (no per-controller code anywhere):
+#   - Helper exits non-zero / prints nothing  -> IGOS_ETH_PORT stays
+#     unset.  Rules 62 and 65 see no pinning marker and behave exactly
+#     as they did before this rule existed.
+#   - Helper succeeds but no .link's Property= matches -> rule 80
+#     applies 99-default.link, ID_NET_LINK_FILE is NOT one of ours,
+#     rule 65 falls through and vyos_net_name + hw-id runs as today.
+#   - Helper succeeds AND a 10-igos-*.link matches -> rule 80 applies
+#     our .link, ID_NET_LINK_FILE points at /etc/systemd/network/
+#     10-igos-*.link, and rule 65 then skips vyos_net_name so no
+#     hw-id is written to config.boot for the pinned interface.
+#
+# This file must run before 62-temporary-interface-rename.rules so the
+# IGOS_ETH_PORT property is visible when 62 decides whether to skip the
+# temp rename.
+
+ACTION!="add",            GOTO="igos_eth_pin_end"
+SUBSYSTEM!="net",         GOTO="igos_eth_pin_end"
+KERNEL!="eth*",           GOTO="igos_eth_pin_end"
+
+IMPORT{program}="/usr/lib/udev/igos-eth-port-id %p"
+
+LABEL="igos_eth_pin_end"

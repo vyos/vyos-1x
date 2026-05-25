@@ -1,0 +1,50 @@
+#!/bin/sh
+# Generic per-physical-port id for any ethN netdev.
+#
+# Emits a line of the form:
+#   IGOS_ETH_PORT=<parent-devpath>#<dev_port>
+# on stdout when a stable physical-socket identifier can be derived,
+# and exits 0.  On any failure prints nothing and exits non-zero, so
+# the device falls through to 62-temporary-interface-rename.rules and
+# 65-vyos-net.rules (today's hw-id based behaviour) untouched.
+#
+# Key components:
+#   parent-devpath : sysfs path of the netdev's parent device
+#                    (devpath with the trailing "/net/<ifname>"
+#                    stripped).  Stable per physical socket on PCI,
+#                    USB, and platform buses -- the same socket on the
+#                    same board yields the same path every boot.
+#   dev_port       : the kernel's universal multi-port discriminator
+#                    exported by every netdev as
+#                    /sys/class/net/<if>/dev_port.  0 for single-port
+#                    controllers, the port index for multi-port ones
+#                    (CPSW, dual-port PCIe NICs, mlx5, bnxt, etc.).
+#
+# Why this works for every controller without per-driver code:
+#   The two values above are populated by the core netdev / device
+#   model, not by any individual driver's discovery logic.  No MAC
+#   addresses, no DT walks, no driver name checks -- which means this
+#   helper does not need to be edited when new hardware appears, and
+#   the build-time .link-file generator can compute the same key from
+#   a target board's sysfs snapshot.
+#
+# Input:
+#   $1 : udev devpath (use "%p" in the rule's IMPORT{program}=).
+
+set -eu
+
+devpath="${1:-}"
+case "$devpath" in
+    */net/*) ;;
+    *) exit 1 ;;
+esac
+
+parent=${devpath%/net/*}
+[ -n "$parent" ] || exit 1
+
+dev_port=$(cat "/sys${devpath}/dev_port" 2>/dev/null || echo 0)
+case "$dev_port" in
+    ''|*[!0-9]*) dev_port=0 ;;
+esac
+
+printf 'IGOS_ETH_PORT=%s#%s\n' "$parent" "$dev_port"

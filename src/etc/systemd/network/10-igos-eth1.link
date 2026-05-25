@@ -1,6 +1,5 @@
 [Match]
-Path=platform-8000000.ethernet
-Property=IGOS_CPSW_PORT=2
+Property=IGOS_ETH_PORT=/devices/platform/bus@f4000/8000000.ethernet#2
 
 [Link]
 Name=eth1
