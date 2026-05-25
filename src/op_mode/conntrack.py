@@ -127,7 +127,6 @@ def get_formatted_output(dict_data):
                         reply_dport = meta['layer4']['dport']
                     proto = meta['layer4']['protoname']
             if direction == 'independent':
-                conn_id = meta['id']
                 # T6138 flowtable offload conntrack entries without 'timeout'
                 timeout = meta.get('timeout', 'n/a')
                 orig_src = f'{orig_src}:{orig_sport}' if orig_sport else orig_src
@@ -137,10 +136,29 @@ def get_formatted_output(dict_data):
                 state = meta['state'] if 'state' in meta else ''
                 mark = meta['mark'] if 'mark' in meta else ''
                 zone = meta['zone'] if 'zone' in meta else ''
-                data_entries.append(
-                    [conn_id, orig_src, orig_dst, reply_src, reply_dst, proto, state, timeout, mark, zone])
-    headers = ["Id", "Original src", "Original dst", "Reply src", "Reply dst", "Protocol", "State", "Timeout", "Mark",
-               "Zone"]
+                data_entry = [
+                    orig_src,
+                    orig_dst,
+                    reply_src,
+                    reply_dst,
+                    proto,
+                    state,
+                    timeout,
+                    mark,
+                    zone,
+                ]
+                data_entries.append(data_entry)
+    headers = [
+        "Original src",
+        "Original dst",
+        "Reply src",
+        "Reply dst",
+        "Protocol",
+        "State",
+        "Timeout",
+        "Mark",
+        "Zone",
+    ]
     output = tabulate(data_entries, headers, numalign="left")
     return output
 
