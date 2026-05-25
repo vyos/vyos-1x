@@ -2,31 +2,30 @@
 # Generic per-physical-port id for any ethN netdev.
 #
 # Emits a line of the form:
-#   IGOS_ETH_PORT=<parent-devpath>#<dev_port>
+#   IGOS_ETH_PORT=<parent-devpath>#<port-number>
 # on stdout when a stable physical-socket identifier can be derived,
 # and exits 0.  On any failure prints nothing and exits non-zero, so
 # the device falls through to 62-temporary-interface-rename.rules and
 # 65-vyos-net.rules (today's hw-id based behaviour) untouched.
 #
-# Key components:
-#   parent-devpath : sysfs path of the netdev's parent device
-#                    (devpath with the trailing "/net/<ifname>"
-#                    stripped).  Stable per physical socket on PCI,
-#                    USB, and platform buses -- the same socket on the
-#                    same board yields the same path every boot.
-#   dev_port       : the kernel's universal multi-port discriminator
-#                    exported by every netdev as
-#                    /sys/class/net/<if>/dev_port.  0 for single-port
-#                    controllers, the port index for multi-port ones
-#                    (CPSW, dual-port PCIe NICs, mlx5, bnxt, etc.).
+# port-number resolution order (first hit wins):
+#   1. Device-tree match: walk the parent device's of_node/ethernet-ports/
+#      port@N nodes and find the one whose local-mac-address equals the
+#      netdev's MAC.  This covers multi-port controllers that share a
+#      single parent platform device and do NOT populate dev_port -- the
+#      TI am65-cpsw-nuss family being the motivating example.  The MAC
+#      values in each port@N node are fixed up by u-boot from per-unit
+#      EEPROM, so the same physical socket on every board still yields
+#      the same DT port index.
+#   2. /sys/class/net/<if>/dev_port: the kernel's universal multi-port
+#      discriminator for controllers that do populate it (mlx5, bnxt,
+#      dual-port igc/ixgbe, etc.).  Defaults to 0 for single-port NICs.
 #
-# Why this works for every controller without per-driver code:
-#   The two values above are populated by the core netdev / device
-#   model, not by any individual driver's discovery logic.  No MAC
-#   addresses, no DT walks, no driver name checks -- which means this
-#   helper does not need to be edited when new hardware appears, and
-#   the build-time .link-file generator can compute the same key from
-#   a target board's sysfs snapshot.
+# parent-devpath is the netdev's devpath with the trailing "/net/<if>"
+# stripped -- stable per physical socket on PCI, USB, and platform
+# buses.  Combined with the resolved port number it uniquely identifies
+# a physical socket without referencing MAC addresses or driver names
+# in the consumer (.link) files.
 #
 # Input:
 #   $1 : udev devpath (use "%p" in the rule's IMPORT{program}=).
@@ -39,12 +38,40 @@ case "$devpath" in
     *) exit 1 ;;
 esac
 
+ifname=${devpath##*/net/}
 parent=${devpath%/net/*}
-[ -n "$parent" ] || exit 1
+[ -n "$parent" ] && [ -n "$ifname" ] || exit 1
 
-dev_port=$(cat "/sys${devpath}/dev_port" 2>/dev/null || echo 0)
-case "$dev_port" in
-    ''|*[!0-9]*) dev_port=0 ;;
-esac
+port=""
 
-printf 'IGOS_ETH_PORT=%s#%s\n' "$parent" "$dev_port"
+# ---------- 1. device-tree local-mac-address match -------------------
+mac=$(cat "/sys/class/net/${ifname}/address" 2>/dev/null || true)
+if [ -n "$mac" ]; then
+    mac_hex=$(printf '%s' "$mac" | tr -d :: | tr 'A-F' 'a-f')
+    ports_dir="/sys/class/net/${ifname}/device/of_node/ethernet-ports"
+    if [ -d "$ports_dir" ]; then
+        for p in "$ports_dir"/port@*; do
+            [ -d "$p" ] || continue
+            macfile="$p/local-mac-address"
+            [ -r "$macfile" ] || continue
+            p_hex=$(od -An -tx1 -N6 "$macfile" 2>/dev/null \
+                    | tr -d ' \n\t' | tr 'A-F' 'a-f')
+            if [ "$p_hex" = "$mac_hex" ]; then
+                # strip "port@" prefix; reg is hex per DT spec
+                hex=${p##*port@}
+                port=$(printf '%d' "0x${hex}" 2>/dev/null || echo "")
+                break
+            fi
+        done
+    fi
+fi
+
+# ---------- 2. fall back to kernel dev_port --------------------------
+if [ -z "$port" ]; then
+    port=$(cat "/sys${devpath}/dev_port" 2>/dev/null || echo 0)
+    case "$port" in
+        ''|*[!0-9]*) port=0 ;;
+    esac
+fi
+
+printf 'IGOS_ETH_PORT=%s#%s\n' "$parent" "$port"
