@@ -44,11 +44,16 @@ def _ensure_manager_running():
       - On a live `commit`, this same path starts it.
     `systemctl start` is a no-op if the unit is already active.
 
+    NOTE: `systemctl start` returns as soon as the unit is *activating*,
+    not when the python service has finished initialising and claimed
+    its well-known D-Bus name (com.igos.IgosModemManager).  Callers
+    therefore must tolerate the bus name not being on the bus yet --
+    that retry is implemented in `_apply_via_dbus`.
+
     Once running, the manager owns its own lifecycle and the graceful
     teardown sequence on interface deletion -- we never stop it from
-    conf_mode (stopping mid-teardown would skip bearer release / modem
-    unmanage steps).  On a reboot with no wwan configured, conf_mode
-    simply does not start the manager, so MM also stays down.
+    conf_mode.  On a reboot with no wwan configured, conf_mode simply
+    does not start the manager, so MM also stays down.
     """
     call(f'systemctl start {manager_unit}')
 
@@ -874,23 +879,60 @@ def apply(wwan):
     return None
 
 
-async def _apply_via_dbus(interface_number, config):
-    """Push configuration to the FSM D-Bus service."""
+async def _apply_via_dbus(interface_number, config, connect_timeout=20.0):
+    """Push configuration to the FSM D-Bus service.
+
+    Retries the initial connect for up to *connect_timeout* seconds.
+    The manager service is started just before this call by
+    `_ensure_manager_running()`, but `systemctl start` returns while the
+    python process is still booting and has not yet claimed its D-Bus
+    well-known name (`com.igos.IgosModemManager`).  Without a retry the
+    very first `commit` after a fresh boot fails with
+    "name was not provided by any .service files".
+    """
     # Import here to avoid hard dependency at module level
     from vyos.utils.wwan.wwan_client import WWANClient, WWANError
+    import time
 
-    try:
-        async with WWANClient() as client:
-            await client.add_interface(interface_number)
-            await asyncio.sleep(0.5)
-            result = await client.set_configuration(interface_number, config)
-            print(f'WWAN interface {interface_number}: {result}')
-    except WWANError as exc:
-        raise ConfigError(f'WWAN D-Bus configuration failed: {exc}') from exc
-    except Exception as exc:
-        raise ConfigError(
-            f'Failed to communicate with WWAN service: {exc}'
-        ) from exc
+    deadline = time.monotonic() + connect_timeout
+    last_exc = None
+    while True:
+        try:
+            async with WWANClient() as client:
+                await client.add_interface(interface_number)
+                await asyncio.sleep(0.5)
+                result = await client.set_configuration(
+                    interface_number, config)
+                print(f'WWAN interface {interface_number}: {result}')
+            return
+        except WWANError as exc:
+            # WWANError covers both "bus name not on the bus" and
+            # genuine method errors.  Treat name-not-found as transient
+            # only while we are still within the connect timeout; any
+            # other WWANError is a real configuration failure.
+            msg = str(exc)
+            transient = (
+                'was not provided by any .service files' in msg
+                or 'NameHasNoOwner' in msg
+                or 'ServiceUnknown' in msg
+            )
+            last_exc = exc
+            if transient and time.monotonic() < deadline:
+                await asyncio.sleep(0.5)
+                continue
+            raise ConfigError(
+                f'WWAN D-Bus configuration failed: {exc}') from exc
+        except Exception as exc:
+            last_exc = exc
+            if time.monotonic() < deadline:
+                # Treat unexpected connect-time errors as transient
+                # until the timeout expires (covers DBus transport-level
+                # races during service start).
+                await asyncio.sleep(0.5)
+                continue
+            raise ConfigError(
+                f'Failed to communicate with WWAN service: {exc}'
+            ) from exc
 
 
 async def _remove_via_dbus(interface_number):
