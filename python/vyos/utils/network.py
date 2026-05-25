@@ -238,7 +238,11 @@ def is_wwan_connected(interface):
 
     modem = interface.lstrip('wwan')
 
-    tmp = cmd(f'mmcli --modem {modem} --output-json')
+    try:
+        tmp = cmd(f'mmcli --modem {modem} --output-json')
+    except OSError:
+        return False
+
     tmp = loads(tmp)
 
     # return True/False if interface is in connected state

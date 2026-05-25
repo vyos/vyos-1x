@@ -149,9 +149,15 @@ def apply(wwan):
         modem = wwan['ifname'].lstrip('wwan')
         base_cmd = f'mmcli --modem {modem}'
         # Number of bearers is limited - always disconnect first
-        cmd(f'{base_cmd} --simple-disconnect')
+        call(f'{base_cmd} --simple-disconnect')
 
     w = WWANIf(wwan['ifname'])
+
+    # We cannot proceed with the configuration if the modem is not detected - so we bail out
+    # and wait for the next cronjob run to re-apply the configuration.
+    if not w.exists(wwan['ifname']):
+        return None
+
     if 'deleted' in wwan or 'disable' in wwan:
         w.remove()
 
