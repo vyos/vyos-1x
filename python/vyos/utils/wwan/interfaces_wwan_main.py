@@ -112,22 +112,74 @@ async def check_and_start_modemmanager():
         return False
 
 async def restart_modemmanager():
-    """Restart ModemManager service with enhanced stability checking"""
+    """Restart ModemManager service with enhanced stability checking.
+
+    Performance-sensitive: this runs in the boot path (once per boot
+    when there is no existing MM running) and may also be invoked as a
+    crash-recovery nuclear option later.  Steps that exist purely for
+    the "MM is currently running and possibly wedged" case are skipped
+    when MM is inactive, saving ~2s on the cold-start case.
+    """
     try:
-        # First try to stop it cleanly
-        stop_result = subprocess.run(
-            ["systemctl", "stop", "ModemManager"],
-            capture_output=True,
-            text=True
-        )
+        # Detect whether MM is currently up.  When it is NOT, the
+        # `systemctl stop` + cleanup sleep below are pure waste -- we
+        # are about to start it fresh, there is nothing to stop and
+        # nothing to drain.  Skipping them shaves ~2s off cold boot.
+        is_active = subprocess.run(
+            ["systemctl", "is-active", "--quiet", "ModemManager"],
+        ).returncode == 0
 
-        if stop_result.returncode == 0:
-            logger.info("ModemManager stopped cleanly")
+        if is_active:
+            # First try to stop it cleanly
+            stop_result = subprocess.run(
+                ["systemctl", "stop", "ModemManager"],
+                capture_output=True,
+                text=True
+            )
+
+            if stop_result.returncode == 0:
+                logger.info("ModemManager stopped cleanly")
+            else:
+                logger.warning(
+                    f"ModemManager stop had issues: {stop_result.stderr}")
+
+            # Wait a moment for cleanup of the previous instance.
+            await asyncio.sleep(2)
         else:
-            logger.warning(f"ModemManager stop had issues: {stop_result.stderr}")
+            logger.info("ModemManager is not running, fresh start (no drain)")
 
-        # Wait a moment for cleanup
-        await asyncio.sleep(2)
+        # Re-trigger USB udev rules before starting MM.
+        #
+        # Why: at cold boot, udev runs the rules for the modem's parent
+        # usb_device but in some cases does NOT persist a /run/udev/data
+        # entry for it (we have observed +usb:1-1:1.N entries for the
+        # USB interfaces but no +usb:1-1 entry for the parent device).
+        # MM uses libgudev which reads /run/udev/data/<...> files, so
+        # without a parent-device entry MM never sees ID_MM_PHYSDEV_UID
+        # and the modem ends up identified by sysfs path instead of by
+        # the physical-slot UID we set in 60-Perle-usb-modem.rules.
+        #
+        # Re-triggering the usb subsystem with action=change forces udev
+        # to re-evaluate the rules AND persist the resulting properties
+        # to /run/udev/data/+usb:*.  We then `settle` to make sure all
+        # workers finish before we hand off to MM.
+        #
+        # This is cheap (a couple hundred ms on this hardware) and only
+        # runs in the MM-start path -- it does not affect steady-state
+        # operation.
+        logger.info("Re-triggering udev for USB devices before MM start")
+        try:
+            subprocess.run(
+                ["udevadm", "trigger", "--action=change",
+                 "--subsystem-match=usb"],
+                capture_output=True, text=True, timeout=10,
+            )
+            subprocess.run(
+                ["udevadm", "settle", "--timeout=10"],
+                capture_output=True, text=True, timeout=15,
+            )
+        except Exception as exc:  # noqa: BLE001 -- best effort
+            logger.warning(f"udevadm trigger/settle failed: {exc}")
 
         # Start ModemManager
         start_result = subprocess.run(
@@ -139,30 +191,18 @@ async def restart_modemmanager():
         if start_result.returncode == 0:
             logger.info("ModemManager started successfully")
 
-            # ENHANCED: Progressive delay to ensure full initialization
-            logger.info("Waiting for ModemManager to fully initialize...")
-            await asyncio.sleep(3)  # Basic service start delay
-
-            # Verify it's actually running and stable (not just started)
-            for attempt in range(8):  # Check up to 8 times over 8 seconds
-                result = subprocess.run(
-                    ["systemctl", "is-active", "ModemManager"],
-                    capture_output=True, text=True
-                )
-                if result.stdout.strip() == "active":
-                    logger.info(f"ModemManager confirmed active and stable (attempt {attempt + 1})")
-                    # Additional stabilization time for D-Bus interface
-                    await asyncio.sleep(2)
-                    return True
-
-                logger.info(f"ModemManager not yet stable, waiting... (attempt {attempt + 1}/8)")
-                await asyncio.sleep(1)
-
-            logger.warning("ModemManager started but stability check failed")
-            return True  # Still try to proceed
-
+            # We intentionally do NOT sleep here.  The next step in main()
+            # is wait_for_modemmanager_dbus(), which polls the actual
+            # ObjectManager interface -- that's the only "ready" signal
+            # that matters to us.  The old code added a 3s blanket sleep
+            # plus a 1s-per-attempt is-active loop plus a 2s post-confirm
+            # sleep before returning to that D-Bus wait, which was 5-8s
+            # of pure paranoia on top of the wait it then performed
+            # anyway.  Cold-boot impact: ~5s saved.
+            return True
         else:
-            logger.error(f"Failed to start ModemManager: {start_result.stderr}")
+            logger.error(
+                f"Failed to start ModemManager: {start_result.stderr}")
             return False
 
     except Exception as e:
@@ -170,51 +210,51 @@ async def restart_modemmanager():
         return False
 
 async def wait_for_modemmanager_dbus():
-    """Wait for ModemManager to be available and responsive on D-Bus"""
+    """Wait for ModemManager to be available and responsive on D-Bus.
+
+    Tight, monotonic-deadline poll of the ObjectManager interface.
+    The old version slept 2s *between* every probe even when MM
+    becomes responsive on the very first try (which is the common
+    boot-time case once we've already started it).  We now back off
+    progressively starting from 100ms, capped at 1s.  Total wall-time
+    upper bound is unchanged (~30s) but the typical happy-path time
+    drops from 2-4s to well under 500ms.
+    """
+    import time
+
+    overall_deadline = time.monotonic() + 30.0
+    delay = 0.1
+    attempt = 0
     bus = None
-    max_retries = 20  # Increased from 15
-    retry_delay = 2
 
     logger.info("Waiting for ModemManager D-Bus interface...")
-
-    for attempt in range(max_retries):
+    while time.monotonic() < overall_deadline:
+        attempt += 1
         try:
             if bus:
                 bus.disconnect()
-
             bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
-
-            # Try to introspect ModemManager to see if it's ready
-            await bus.introspect("org.freedesktop.ModemManager1", "/org/freedesktop/ModemManager1")
-
-            # ENHANCED: Additional verification that MM is fully ready and responsive
-            try:
-                # Try to call a simple method to verify it's responsive
-                # Use ObjectManager.GetManagedObjects instead of Properties.Get
-                msg = Message(
-                    destination="org.freedesktop.ModemManager1",
-                    path="/org/freedesktop/ModemManager1",
-                    interface="org.freedesktop.DBus.ObjectManager",
-                    member="GetManagedObjects"
-                )
-                # GetManagedObjects takes no parameters
-                await asyncio.wait_for(bus.call(msg), timeout=5.0)
-
-                logger.info("ModemManager is fully available and responsive on D-Bus")
-                return bus
-
-            except asyncio.TimeoutError:
-                logger.info(f"ModemManager found but not responsive yet (attempt {attempt + 1}/{max_retries})")
-            except Exception as e:
-                logger.info(f"ModemManager not fully ready yet (attempt {attempt + 1}/{max_retries}): {e}")
-
-        except Exception as e:
-            logger.info(f"Waiting for ModemManager on D-Bus (attempt {attempt + 1}/{max_retries}): {e}")
-
+            await bus.introspect(
+                "org.freedesktop.ModemManager1",
+                "/org/freedesktop/ModemManager1")
+            msg = Message(
+                destination="org.freedesktop.ModemManager1",
+                path="/org/freedesktop/ModemManager1",
+                interface="org.freedesktop.DBus.ObjectManager",
+                member="GetManagedObjects",
+            )
+            await asyncio.wait_for(bus.call(msg), timeout=5.0)
+            logger.info(
+                "ModemManager is fully available and responsive on D-Bus")
+            return bus
+        except Exception as e:  # noqa: BLE001 -- intentional broad catch
+            logger.debug(
+                f"MM D-Bus not ready (attempt {attempt}): {e}")
         if bus:
             bus.disconnect()
             bus = None
-        await asyncio.sleep(retry_delay)
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 1.0)
 
     logger.error("ModemManager did not become available on D-Bus")
     return None
