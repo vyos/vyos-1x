@@ -54,12 +54,12 @@
             </children>
           </node>
 
-          <!-- ===== serial &lt;port&gt; protocol &lt;proto&gt; [...] ===== -->
+          <!-- ===== serial &lt;port|/dev/ttyN&gt; protocol &lt;proto&gt; [...] ===== -->
           <tagNode name="serial">
             <properties>
-              <help>Switch a serial port transceiver to a protocol (out-of-band)</help>
+              <help>Switch a serial port transceiver to a protocol (out-of-band). Accepts a pinmap port name (UARTC2) or any tty path that resolves to one (/dev/ttyS2, /dev/igos/uartc2, ...)</help>
               <completionHelp>
-                <script>${vyos_op_scripts_dir}/test_hardware.py show_serial | awk 'NR>1 {print $1}'</script>
+                <script>${vyos_op_scripts_dir}/test_hardware.py show_serial | awk 'NR>1 {print $1; if ($3 != "-") print $3}'</script>
               </completionHelp>
             </properties>
             <children>

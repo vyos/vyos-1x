@@ -89,15 +89,38 @@ def show_pin(args) -> None:
 
 # --- serial -----------------------------------------------------------------
 
+def _resolve_port(arg: str) -> str:
+    """
+    Accept either a pinmap port name (``UARTC2``) or any device path
+    that resolves to a declared port's tty (``/dev/ttyS2``,
+    ``/dev/igos/uartc2``, an app-installed alias symlink, …) and return
+    the canonical pinmap port name.
+    """
+    s = arg.strip()
+    # Path-like: hand to the reverse lookup so any symlink chain works.
+    if s.startswith('/'):
+        try:
+            return hw.serial_port_for_tty(s)
+        except (ValueError, RuntimeError) as exc:
+            _die(str(exc))
+    # Bare name: uppercase and validate against the declared ports.
+    name = s.upper()
+    if name not in hw.list_serial_ports():
+        _die(f'unknown serial port {arg!r}; '
+             f'declared: {", ".join(sorted(hw.list_serial_ports())) or "<none>"}')
+    return name
+
+
 def serial_protocol(args) -> None:
     term = _tristate(args.termination)
     slr  = _tristate(args.slew_rate)
-    port = args.port.upper()
+    port = _resolve_port(args.port)
     try:
         hw.serial_protocol(port, args.protocol, term=term, slr=slr)
     except (ValueError, RuntimeError) as exc:
         _die(str(exc))
-    print(f'OK: {port} -> {args.protocol}'
+    tty = hw.serial_port_tty(port)
+    print(f'OK: {port} ({tty}) -> {args.protocol}'
           + (f' term={"on" if term else "off"}' if term is not None else '')
           + (f' slr={"on" if slr else "off"}'   if slr  is not None else ''))
 
