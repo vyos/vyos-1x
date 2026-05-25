@@ -74,4 +74,20 @@ if [ -z "$port" ]; then
     esac
 fi
 
-printf 'IGOS_ETH_PORT=%s#%s\n' "$parent" "$port"
+key="${parent}#${port}"
+printf 'IGOS_ETH_PORT=%s\n' "$key"
+
+# ---------- 3. mark interface as pinned iff a .link matches ----------
+# Only set IGOS_ETH_PINNED=1 when an installed .link file declares
+# Property=IGOS_ETH_PORT=<key>.  This is the signal rules 62 and 65 use
+# to skip temp-rename and vyos_net_name (which otherwise drops a hint
+# that causes vyos-interface-rescan.py to write hw-id into config.boot).
+# Interfaces with no matching .link fall through to the legacy hw-id
+# path unchanged.
+for lf in /etc/systemd/network/10-igos-*.link; do
+    [ -r "$lf" ] || continue
+    if grep -qxF "Property=IGOS_ETH_PORT=${key}" "$lf"; then
+        printf 'IGOS_ETH_PINNED=1\n'
+        break
+    fi
+done
