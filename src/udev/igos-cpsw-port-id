@@ -1,0 +1,29 @@
+#!/bin/sh
+# Print the AM64x CPSW port number for the netdev whose kernel devpath
+# is passed as $1 (use %p from udev).
+#
+# The CPSW driver sets each port netdev's of_node to its per-port DT node
+# (.../ethernet-ports/port@N).  The `reg` property in that node is the
+# physical port index baked into the DTB by the board author -- it does
+# NOT depend on probe order, MAC, USB enumeration, or kernel naming.
+#
+# Reads /sys$1/of_node/reg as a 4-byte big-endian integer and prints the
+# decimal value with no trailing newline (udev consumes %c verbatim).
+#
+# Exits non-zero (printing nothing) for any netdev that has no of_node or
+# no reg -- such devices simply don't get IGOS_CPSW_PORT set, so the
+# .link match falls through and existing behaviour is preserved.
+
+set -eu
+
+devpath="${1:-}"
+[ -n "$devpath" ] || exit 1
+
+reg="/sys${devpath}/of_node/reg"
+[ -r "$reg" ] || exit 1
+
+# Read 4 bytes as hex, no spaces, prepend 0x, print as decimal.
+hex=$(od -An -tx1 -N4 "$reg" | tr -d ' \n')
+[ -n "$hex" ] || exit 1
+
+printf '%d' "0x${hex}"

@@ -1,0 +1,8 @@
+[Match]
+Path=platform-8000000.ethernet
+Property=IGOS_CPSW_PORT=2
+
+[Link]
+Name=eth1
+NamePolicy=
+MACAddressPolicy=none

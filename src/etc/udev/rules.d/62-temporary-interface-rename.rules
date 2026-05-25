@@ -1,1 +1,3 @@
+ENV{ID_NET_LINK_FILE}!="", GOTO="end_temp_rename"
 SUBSYSTEM=="net", ACTION=="add", KERNEL=="eth*", DRIVERS=="?*", NAME="e$env{IFINDEX}"
+LABEL="end_temp_rename"
