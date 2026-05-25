@@ -38,6 +38,9 @@ level={{ log.level }}
 
 [ipoe]
 verbose=1
+{% if idle_timeout is vyos_defined %}
+idle-timeout={{ idle_timeout }}
+{% endif %}
 {% if lua_file is vyos_defined %}
 lua-file={{ lua_file }}
 {% endif %}

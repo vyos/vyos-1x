@@ -233,6 +233,7 @@
           #include <include/accel-ppp/default-ipv6-pool.xml.i>
           #include <include/accel-ppp/extended-scripts.xml.i>
           #include <include/accel-ppp/gateway-address-multi.xml.i>
+          #include <include/accel-ppp/idle-timeout.xml.i>
           #include <include/accel-ppp/limits.xml.i>
           #include <include/accel-ppp/max-concurrent-sessions.xml.i>
           #include <include/accel-ppp/shaper.xml.i>

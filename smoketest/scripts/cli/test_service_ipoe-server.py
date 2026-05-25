@@ -319,6 +319,25 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         conf.read(self._config_file)
         self.assertIn(f'start={start_session}', conf['ipoe']['interface'])
 
+    def test_ipoe_server_idle_timeout(self):
+        idle_timeout = '300'
+
+        self.basic_config()
+        self.cli_commit()
+
+        # Default: no idle-timeout emitted
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        self.assertNotIn('idle-timeout', conf['ipoe'])
+
+        # Configure idle-timeout
+        self.set(['idle-timeout', idle_timeout])
+        self.cli_commit()
+
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        self.assertEqual(conf['ipoe']['idle-timeout'], idle_timeout)
+
     @unittest.skip("PPP is not a part of IPoE")
     def test_accel_ppp_options(self):
         pass
