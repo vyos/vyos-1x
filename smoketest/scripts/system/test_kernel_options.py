@@ -52,7 +52,7 @@ class TestKernelModules(unittest.TestCase):
 
     def test_bridge_interface(self):
         # The bridge interface must be enabled in the OS Kernel
-        for option in ['CONFIG_BRIDGE',
+        for option in ['CONFIG_STP', 'CONFIG_BRIDGE',
                        'CONFIG_BRIDGE_IGMP_SNOOPING',
                        'CONFIG_BRIDGE_VLAN_FILTERING']:
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
@@ -87,11 +87,6 @@ class TestKernelModules(unittest.TestCase):
             'CONFIG_X86_PLATFORM_DEVICES'
             ]
         for option in options_to_check:
-            tmp = re.findall(f'{option}=(y|m)', self._config_data)
-            self.assertTrue(tmp)
-
-    def test_vmware_support(self):
-        for option in ['CONFIG_VMXNET3']:
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
@@ -146,7 +141,7 @@ class TestKernelModules(unittest.TestCase):
             self.assertTrue(tmp)
 
     def test_inotify_stackfs(self):
-        for option in ['CONFIG_INOTIFY_USER', 'CONFIG_INOTIFY_STACKFS']:
+        for option in ['CONFIG_INOTIFY_USER']:
             tmp = re.findall(f'{option}=y', self._config_data)
             self.assertTrue(tmp)
 
@@ -171,6 +166,36 @@ class TestKernelModules(unittest.TestCase):
     def test_kexec(self):
         for option in ['CONFIG_KEXEC', 'CONFIG_KEXEC_FILE', 'CONFIG_KEXEC_SIG']:
             tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_openvpn_dco(self):
+        options_to_check = ['CONFIG_OVPN']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_wireguard(self):
+        options_to_check = ['CONFIG_WIREGUARD']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_vxlan(self):
+        options_to_check = ['CONFIG_VXLAN']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_macvlan(self):
+        options_to_check = ['CONFIG_MACVLAN', 'CONFIG_MACVTAP']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_dummy(self):
+        options_to_check = ['CONFIG_DUMMY']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
     def test_arm64(self):
@@ -199,6 +224,47 @@ class TestKernelModules(unittest.TestCase):
                     tmp, msg=f'{option} must be enabled (=y or =m) on arm64'
                 )
 
+    def test_hypervisor_hyperv(self):
+        if IS_ARM64:
+            self.skipTest('Hyper-V only available on X86 platform')
+
+        options_to_check = ['CONFIG_HYPERV_VSOCKETS', 'CONFIG_HYPERV_STORAGE',
+                            'CONFIG_HYPERV_NET', 'CONFIG_HYPERV_KEYBOARD',
+                            'CONFIG_HYPERV_VTL_MODE', 'CONFIG_HYPERV_TIMER',
+                            'CONFIG_HYPERV_UTILS', 'CONFIG_HYPERV_BALLOON',
+                            'CONFIG_HYPERV_VMBUS', 'CONFIG_HYPERV_IOMMU']
+
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_hypervisor_vmware(self):
+        if IS_ARM64:
+            self.skipTest('VMware only available on X86 platform')
+
+        options_to_check = ['CONFIG_VMWARE_VMCI_VSOCKETS', 'CONFIG_VMXNET3',
+                            'CONFIG_VMWARE_BALLOON', 'CONFIG_VMWARE_VMCI',
+                            'CONFIG_VMWARE_PVSCSI']
+
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_hypervisor_virtio(self):
+        options_to_check = ['CONFIG_VIRTIO_BLK', 'CONFIG_VIRTIO_NET',
+                            'CONFIG_VIRTIO_CONSOLE', 'CONFIG_VIRTIO_ANCHOR',
+                            'CONFIG_VIRTIO_PCI_LIB',
+                            'CONFIG_VIRTIO_PCI_LIB_LEGACY',
+                            'CONFIG_VIRTIO_MENU', 'CONFIG_VIRTIO_PCI',
+                            'CONFIG_VIRTIO_PCI_LEGACY', 'CONFIG_VIRTIO_VDPA',
+                            'CONFIG_VIRTIO_BALLOON', 'CONFIG_VIRTIO_INPUT',
+                            'CONFIG_VIRTIO_MMIO',
+                            'CONFIG_VIRTIO_MMIO_CMDLINE_DEVICES',
+                            'CONFIG_VIRTIO_IOMMU']
+
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import list_diff
@@ -35,7 +36,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    return get_frrender_dict(conf)
+    return get_frrender_dict(conf, argv)
 
 def verify(config_dict):
     if not has_frr_protocol_in_dict(config_dict, 'segment_routing'):
@@ -45,13 +46,68 @@ def verify(config_dict):
 
     if 'srv6' in sr:
         srv6_enable = False
-        if 'interface' in sr:
-            for interface, interface_config in sr['interface'].items():
-                if 'srv6' in interface_config:
-                    srv6_enable = True
-                    break
+        for _, interface_config in dict_search('interface', sr, {}).items():
+            if 'srv6' in interface_config:
+                srv6_enable = True
+                break
         if not srv6_enable:
             raise ConfigError('SRv6 should be enabled on at least one interface!')
+
+    # Check for database import having more than one protocol
+    if tmp := dict_search('traffic_engineering.database_import_protocol', sr):
+        if {'isis', 'ospf'} <= set(tmp.keys()):
+            raise ConfigError('SR-TE database import: IS-IS and OSPF are mutually exclusive!')
+
+    for segment_list in dict_search('traffic_engineering.segment_list', sr, []):
+        sl_data = dict_search(f'traffic_engineering.segment_list.{segment_list}', sr)
+        indices = sl_data.get('index') if sl_data else None
+
+        if indices is None:
+            raise ConfigError(f'SR-TE segment list "{segment_list}": '\
+                               'at least one index is required!')
+
+        for index, index_data in indices.items():
+            error_msg = f'SR-TE segment list "{segment_list}", index "{index}"'
+            nai = index_data.get('nai')
+            mpls = index_data.get('mpls')
+            if not nai and not mpls:
+                raise ConfigError(f'{error_msg}: "mpls" or "nai" is required!')
+
+            if nai:
+                if 'adjacency' in nai and 'prefix' in nai:
+                    raise ConfigError(f'{error_msg}: "prefix" and "adjacency" are mutually exclusive!')
+
+                for nai_type in ('adjacency', 'prefix'):
+                    nai_data = nai.get(nai_type)
+                    if not nai_data:
+                        continue
+
+                    if 'ipv4' in nai_data and 'ipv6' in nai_data:
+                        raise ConfigError(f'{error_msg}, nai {nai_type}: "ipv4" and "ipv6" are '
+                                           'mutually exclusive!')
+
+                    for af, af_config in nai_data.items():
+                        af_ctx = f'{error_msg}, nai {nai_type} {af}'
+                        if nai_type == 'adjacency':
+                            has_src = 'source_identifier' in af_config
+                            has_dst = 'destination_identifier' in af_config
+                            if has_src != has_dst:
+                                missing = 'destination-identifier' if has_src else 'source-identifier'
+                                raise ConfigError(f'{af_ctx}: "{missing}" is required!')
+                        else:
+                            if 'prefix_identifier' not in af_config:
+                                raise ConfigError(f'{af_ctx}: "prefix-identifier" is required!')
+
+                            for pfx, pfx_data in af_config['prefix_identifier'].items():
+                                pfx_ctx = f'{af_ctx}, prefix "{pfx}"'
+                                if 'algorithm' not in pfx_data:
+                                    raise ConfigError(f'{pfx_ctx}: "algorithm" is required!')
+
+                                if alg := pfx_data.get('algorithm'):
+                                    if {'spf', 'strict_spf'} <= set(alg.keys()):
+                                        raise ConfigError(f'{pfx_ctx}: "spf" and "strict-spf" '
+                                                           'are mutually exclusive!')
+
     return None
 
 def generate(config_dict):

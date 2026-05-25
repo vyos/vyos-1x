@@ -89,6 +89,14 @@ def _find_list_of_dict_index(lst, key='ip', value=''):
     return idx
 
 
+def _read_posix_timezone(tz_name):
+    try:
+        with open(f'/usr/share/zoneinfo/{tz_name}', 'rb') as f:
+            return f.read().split(b'\n')[-2].decode('utf-8').replace(',', '\\,')
+    except (FileNotFoundError, IOError, IndexError) as e:
+        raise ConfigError(f'Failed to read timezone data for: {tz_name}') from e
+
+
 def kea_test_config(process: str, config_path: str) -> tuple[bool, str]:
     result, output = rc_cmd(f'{process} -t {config_path}')
 
@@ -143,9 +151,7 @@ def kea_parse_options(config):
         )
 
     if 'time_zone' in config:
-        with open('/usr/share/zoneinfo/' + config['time_zone'], 'rb') as f:
-            tz_string = f.read().split(b'\n')[-2].decode('utf-8')
-
+        tz_string = _read_posix_timezone(config['time_zone'])
         options.append({'name': 'pcode', 'data': tz_string})
         options.append({'name': 'tcode', 'data': config['time_zone']})
 
@@ -153,8 +159,13 @@ def kea_parse_options(config):
         config, 'vendor_option', 'ubiquiti', 'unifi_controller'
     )
     if unifi_controller:
+        options.append({'name': 'vendor-encapsulated-options'})
         options.append(
-            {'name': 'unifi-controller', 'data': unifi_controller, 'space': 'ubnt'}
+            {
+                'name': 'ubnt',
+                'data': unifi_controller,
+                'space': 'vendor-encapsulated-options-space',
+            }
         )
 
     return options
@@ -283,6 +294,11 @@ def kea6_parse_options(config):
 
         if hosts:
             options.append({'name': 'sip-server-dns', 'data': ', '.join(hosts)})
+
+    if 'time_zone' in config:
+        tz_string = _read_posix_timezone(config['time_zone'])
+        options.append({'name': 'new-posix-timezone', 'data': tz_string})
+        options.append({'name': 'new-tzdb-timezone', 'data': config['time_zone']})
 
     cisco_tftp = dict_search_args(config, 'vendor_option', 'cisco', 'tftp-server')
     if cisco_tftp:

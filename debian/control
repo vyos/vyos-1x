@@ -172,7 +172,6 @@ Depends:
   openvpn-auth-ldap,
   openvpn-auth-radius,
   openvpn-otp,
-  openvpn-dco,
   libpam-google-authenticator,
 # End "interfaces openvpn"
 # For "interfaces wireguard"

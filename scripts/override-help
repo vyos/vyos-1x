@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+# Use lxml xpath capability to find multiple elements with tag help
+# relative to path; copy and replace to override the initial value.
+
+import sys
+import glob
+import logging
+from copy import deepcopy
+from lxml import etree
+
+debug = False
+
+logger = logging.getLogger(__name__)
+logs_handler = logging.StreamHandler()
+logger.addHandler(logs_handler)
+
+if debug:
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+
+
+def override_element(lst: list):
+    """
+    Allow multiple override elements; use the final one (in document order).
+    """
+    if len(lst) < 2:
+        logger.debug('passing list of single element to override_element')
+        return
+
+    # replace element with final override
+    first_element = lst[0]
+    # lxml will remove on replace, hence make a copy to avoid cleaning up
+    # empty elements
+    final_element = deepcopy(lst[-1])
+    parent = first_element.getparent()
+    parent.replace(first_element, final_element)
+
+
+def collect_and_override(dir_name):
+    # pylint: disable=too-many-locals,c-extension-no-member
+    """
+    Collect elements with help tag into dictionary indexed by name
+    attributes of ancestor path.
+    """
+    for fname in glob.glob(f'{dir_name}/*.xml'):
+        tree = etree.parse(fname)
+        root = tree.getroot()
+        defv = {}
+
+        xpath_str = '//help'
+        xp = tree.xpath(xpath_str)
+
+        for element in xp:
+            ap = element.xpath('ancestor::*[@name]')
+            ap_name = [el.get('name') for el in ap]
+            ap_path_str = ' '.join(ap_name)
+            defv.setdefault(ap_path_str, []).append(element)
+
+        trivial = []
+        for k, v in defv.items():
+            if len(v) < 2:
+                trivial.append(k)
+        for i in trivial:
+            del defv[i]
+
+        for k, v in defv.items():
+            text_set = set()
+            for e in v:
+                text_set.add(e.text)
+            if len(text_set) > 1:
+                logger.debug(f'Inconsistent help elements in file {fname}:')
+                for e in v:
+                    logger.debug(
+                        f'Element is {e.tag} with content {e.text} at {e.sourceline}'
+                    )
+
+                logger.info(f"overriding help in path '{k}'")
+                override_element(v)
+
+        revised_str = etree.tostring(root, encoding='unicode', pretty_print=True)
+
+        with open(f'{fname}', 'w') as f:
+            f.write(revised_str)
+
+
+def main():
+    if len(sys.argv) < 2:
+        logger.critical('Must specify XML directory!')
+        sys.exit(1)
+
+    dir_name = sys.argv[1]
+
+    collect_and_override(dir_name)
+
+
+if __name__ == '__main__':
+    main()

@@ -22,16 +22,18 @@ import select
 
 from pyroute2 import IPRoute # pylint: disable = no-name-in-module
 from pyroute2 import NetlinkError # pylint: disable = no-name-in-module
+from pyroute2.netlink.rtnl import RTMGRP_LINK
 from time import sleep
 from typing import Optional
 
 from vyos.configquery import op_mode_config_dict
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
-from vyos.utils.commit import commit_in_progress
+from vyos.utils.commit import commit_in_progress2
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import stop_systemd_unit
 
 running = True
 
@@ -62,10 +64,10 @@ def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
         # Interface moved state to down
         if is_systemd_service_active(systemdV4_service):
             syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV4_service}...')
-            cmd(f'systemctl stop {systemdV4_service}')
+            stop_systemd_unit(systemdV4_service, raise_on_failure=False)
         if is_systemd_service_active(systemdV6_service):
             syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV6_service}...')
-            cmd(f'systemctl stop {systemdV6_service}')
+            stop_systemd_unit(systemdV6_service, raise_on_failure=False)
 
     elif operstate == 'UP':
         v6_restart = False
@@ -104,8 +106,18 @@ def main():
                    facility=syslog.LOG_DAEMON)
     syslog.syslog(syslog.LOG_INFO, "VyOS Netlink listener daemon started.")
 
+    # Subscribe to link notifications only (not routes/rules/neigh/addr/...).
     ipr = IPRoute()
-    ipr.bind()
+    try:
+        # newer pyroute2 versions support bind group in IPRoute() constructor
+        ipr.bind(groups=RTMGRP_LINK)
+        syslog.syslog(syslog.LOG_INFO,
+            'IPRoute.bind() using groups=RTMGRP_LINK RTNL subscription')
+    except TypeError:
+        syslog.syslog(syslog.LOG_WARNING,
+            'IPRoute.bind() has no groups= support; using default RTNL subscriptions',
+        )
+        ipr.bind()
     fd = ipr.fileno()
 
     global running
@@ -122,12 +134,17 @@ def main():
                 # timeout - retry
                 continue
 
+            # Check if a config commit is in progress before processing any
+            # messages. This avoids blocking per-message and reduces unnecessary
+            # calls to commit_in_progress2()
+            if commit_in_progress2():
+                syslog.syslog(syslog.LOG_DEBUG,
+                              'Config commit in progress, skipping netlink events')
+                sleep(1)
+                continue
+
             # Receive and process any messages
             for message in ipr.get():
-                # Wait for commit to complete
-                while commit_in_progress():
-                    sleep(0.250)
-
                 # Parse NETLINK message
                 match message['event']:
                     # Message received during interface creation or modification
@@ -151,6 +168,8 @@ def main():
 
                     # Deletion of a network link which has been previously added to the kernel
                     case 'RTM_DELLINK':
+                        pass
+                    case _:
                         pass
 
         except NetlinkError as e:

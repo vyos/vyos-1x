@@ -70,10 +70,12 @@ def verify(console):
             # If the device name still starts with usbXXX no matching tty was found
             # and it can not be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
-                raise ConfigError(f'Device {device} does not support being used as tty')
+                raise ConfigError(f'Device "{device}" does not support being used as tty')
         if not is_tty(device, warning=True):
             Warning(f'Device "{device}" used for console is not a TTY!')
         if 'kernel' in device_config:
+            if not (device.startswith('ttyS') or device.startswith('ttyAMA')):
+                raise ConfigError(f'Device "{device}" unsupported for Kernel boot console')
             kernel_consoles.append(device)
 
     if len(kernel_consoles) > 1:

@@ -196,5 +196,29 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
         daemons_config = read_file(config_file)
         self.assertIn(f'MAX_FDS={default_descriptors}', daemons_config)
 
+    def test_frr_watchfrr_timeout(self):
+        default_watchfrr_timeout = default_value(base_path + ['watchfrr-timeout'])
+        watchfrr_timeout = '120'
+
+        self.cli_set(base_path + ['watchfrr-timeout', watchfrr_timeout])
+        self.cli_commit()
+
+        # read the config file and check content
+        daemons_config = read_file(config_file)
+        self.assertIn(
+            f'watchfrr_options="--timeout={watchfrr_timeout}"', daemons_config
+        )
+
+        # test remove of watchfrr-timeout
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # read the config file and check content
+        daemons_config = read_file(config_file)
+        self.assertIn(
+            f'watchfrr_options="--timeout={default_watchfrr_timeout}"', daemons_config
+        )
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

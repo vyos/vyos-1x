@@ -65,16 +65,19 @@ class VyOSUnitTestSHIM:
 
         @classmethod
         def tearDownClass(cls):
-            # discard any pending changes which might caused a messed up config
-            cls._session.discard()
-            # ... and restore the initial state
-            cls._session.migrate_and_load_config(save_config)
-
             try:
+                # commit pending changes done by derived tearDownClass()
+                # implementations like CLI cleanup
                 cls._session.commit()
             except (ConfigError, ConfigSessionError):
+                # discard any pending changes which might have failed, causing a
+                # messed up config
                 cls._session.discard()
                 cls.fail(cls)
+            finally:
+                # restore previous configuration before the test
+                cls._session.migrate_and_load_config(save_config)
+                cls._session.commit()
 
         def setUp(self):
             pass

@@ -19,12 +19,11 @@ from vyos.utils.process import cmd
 
 modules = {
     "intel": ["e1000", "e1000e", "igb", "ixgbe", "ixgbevf", "i40e",
-              "i40evf", "iavf"],
+              "iavf", "ice"],
     "intel_qat": ["qat_200xx", "qat_200xxvf", "qat_c3xxx", "qat_c3xxxvf",
                   "qat_c62x", "qat_c62xvf", "qat_d15xx", "qat_d15xxvf",
                   "qat_dh895xcc", "qat_dh895xccvf"],
     "accel_ppp": ["ipoe", "vlan_mon"],
-    "openvpn": ["ovpn-dco-v2"]
 }
 
 class TestKernelModules(unittest.TestCase):

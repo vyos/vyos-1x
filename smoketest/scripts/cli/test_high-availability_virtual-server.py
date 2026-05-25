@@ -83,6 +83,13 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'{proto.upper()}_CHECK', config)
             self.assertIn(f'connect_timeout {connection_timeout}', config)
 
+        # Verify persistence_timeout is not set when value is 0
+        self.cli_set(vserver_base + [vs, 'persistence-timeout', '0'])
+        self.cli_commit()
+
+        config = read_file(KEEPALIVED_CONF)
+        self.assertNotIn('persistence_timeout', config)
+
     def test_02_ha_virtual_server_and_vrrp(self):
         algo = 'least-connection'
         delay = '15'
