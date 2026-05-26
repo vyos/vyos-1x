@@ -1,7 +1,0 @@
-[Match]
-Property=IGOS_ETH_PORT=/devices/platform/bus@f4000/8000000.ethernet#1
-
-[Link]
-Name=eth0
-NamePolicy=
-MACAddressPolicy=none
