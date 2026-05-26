@@ -709,6 +709,57 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         for rule in test_range:
             tmp = f'ip prefix-list {prefix_list} seq {rule} permit {prefix} le {rule}'
             self.assertIn(tmp, config)
+
+    def test_prefix_list_ge_le_validation(self):
+        # FRR requires mask_length <= ge <= le for prefix-list rules
+        base = base_path + ['prefix-list', 'getest', 'rule', '10']
+        base6 = base_path + ['prefix-list6', 'getest6', 'rule', '10']
+
+        # ge < mask_length should be rejected
+        self.cli_set(base + ['action', 'permit'])
+        self.cli_set(base + ['prefix', '192.0.2.0/24'])
+        self.cli_set(base + ['ge', '16'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base + ['ge'])
+
+        # le < mask_length should be rejected
+        self.cli_set(base + ['le', '16'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base + ['le'])
+
+        # ge > le should be rejected
+        self.cli_set(base + ['ge', '28'])
+        self.cli_set(base + ['le', '26'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base + ['ge'])
+        self.cli_delete(base + ['le'])
+
+        # valid ge <= le >= mask_length should commit
+        self.cli_set(base + ['ge', '25'])
+        self.cli_set(base + ['le', '28'])
+        self.cli_commit()
+        self.cli_delete(base_path + ['prefix-list', 'getest'])
+
+        # same checks for prefix-list6
+        self.cli_set(base6 + ['action', 'permit'])
+        self.cli_set(base6 + ['prefix', '2a06:9801:2c0::/44'])
+        self.cli_set(base6 + ['ge', '48'])
+        self.cli_set(base6 + ['le', '44'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base6 + ['ge'])
+        self.cli_delete(base6 + ['le'])
+
+        # valid IPv6 ge/le
+        self.cli_set(base6 + ['ge', '48'])
+        self.cli_set(base6 + ['le', '64'])
+        self.cli_commit()
+        self.cli_delete(base_path + ['prefix-list6', 'getest6'])
+        self.cli_commit()
+
     def test_route_map_community_set(self):
         test_data = {
             "community-configuration": {
