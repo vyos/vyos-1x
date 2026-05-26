@@ -210,6 +210,14 @@ class ModemStateMachine:
         self.last_known_sim_info = None     # Store SIM info from last successful connection
         self.sim_changed = False            # Flag to indicate SIM card change detected
         self.connected_apn = None           # Last successful APN config dict (for reconnection & status)
+        self.current_sim_path = None        # Last observed Modem.Sim object path
+        # Debounce noisy Sim path churn during modem reboot/re-enumeration.
+        # This is intentionally narrow: it only suppresses rapid duplicate
+        # or immediate flip-flop A→B→A events in a short window.
+        self._sim_path_change_last_ts = 0.0
+        self._sim_path_change_last_from = None
+        self._sim_path_change_last_to = None
+        self._sim_path_change_debounce_seconds = 5.0
 
         # Since-boot operational counters for bearer / recovery visibility.
         self.bearer_disconnect_count = 0    # Number of bearer-down events since boot
@@ -1511,6 +1519,52 @@ class ModemStateMachine:
                                          'new_sim': new_sim,
                                          'config_sim': self.config_active_sim,
                                          'sim_switch_reason': self.sim_switch_reason})
+
+        # Handle runtime active-SIM object changes (can happen when an
+        # operator flips SIM mux + modem reset out-of-band, without using
+        # ModemManager SetPrimarySimSlot). In that scenario PrimarySimSlot
+        # may remain unchanged while the actual SIM identity changes.
+        if 'Sim' in changed_properties:
+            new_sim_path = changed_properties['Sim'].value
+            old_sim_path = getattr(self, 'current_sim_path', None)
+            self.current_sim_path = new_sim_path
+
+            if old_sim_path and old_sim_path != new_sim_path:
+                now_ts = time.time()
+                debounce_window = getattr(
+                    self, '_sim_path_change_debounce_seconds', 5.0)
+                last_ts = getattr(self, '_sim_path_change_last_ts', 0.0)
+                last_from = getattr(self, '_sim_path_change_last_from', None)
+                last_to = getattr(self, '_sim_path_change_last_to', None)
+
+                same_edge = (last_from == old_sim_path and last_to == new_sim_path)
+                flip_flop_edge = (last_from == new_sim_path and last_to == old_sim_path)
+                in_window = (now_ts - last_ts) < debounce_window
+
+                if in_window and (same_edge or flip_flop_edge):
+                    logger.debug(
+                        "Ignoring noisy rapid Sim path churn during debounce window",
+                        extra={'interface_number': self.interface_number,
+                               'old_sim_path': old_sim_path,
+                               'new_sim_path': new_sim_path,
+                               'debounce_seconds': debounce_window,
+                               'age_seconds': round(now_ts - last_ts, 3)})
+                    return
+
+                self._sim_path_change_last_ts = now_ts
+                self._sim_path_change_last_from = old_sim_path
+                self._sim_path_change_last_to = new_sim_path
+
+                logger.warning("Active SIM object changed at runtime — invalidating SIM/APN cache",
+                              extra={'interface_number': self.interface_number,
+                                     'old_sim_path': old_sim_path,
+                                     'new_sim_path': new_sim_path,
+                                     'active_slot': self.current_active_sim})
+
+                # Force fresh SIM/APN discovery on next connection attempt.
+                self.last_known_sim_info = {}
+                self.connected_apn = None
+                self.sim_changed = True
 
     def handle_3gpp_properties(self, interface_name, changed_properties, invalidated_properties):
         """Handle 3GPP network property changes"""
@@ -5948,6 +6002,24 @@ class ModemStateMachine:
                 if self.machine.current_state != ModemState.CONNECTED.value:
                     self.transition(ModemEvent.CONNECTED)
                 return
+
+            # Detect runtime SIM identity changes before choosing APN
+            # strategy. This catches out-of-band SIM mux + modem reset
+            # sequences where PrimarySimSlot stays constant but IMSI/ICCID
+            # changed underneath us.
+            sim_changed = False
+            sim_info = await self._get_sim_information()
+            if sim_info:
+                sim_changed = await self._check_sim_change(sim_info)
+                if sim_changed:
+                    logger.warning("Runtime SIM identity change detected — forcing fresh APN discovery",
+                                  extra={'interface_number': self.interface_number,
+                                         'active_sim_slot': self.current_active_sim,
+                                         'operator': sim_info.get('operator_name', ''),
+                                         'mcc_mnc': sim_info.get('mcc_mnc', '')})
+                    # Ensure we do not reuse APN assumptions from the old SIM.
+                    self.connected_apn = None
+
             # Get active SIM configuration
             primary_sim_slot = self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
@@ -5957,7 +6029,7 @@ class ModemStateMachine:
             apn_config = self._normalize_apn_config(active_sim_config.get('apn', ''))
 
             # 🎯 NEW: Check if user configured an APN
-            if apn_config['name']:
+            if apn_config['name'] and not sim_changed:
                 logger.info("Using user-configured APN",
                            extra={'interface_number': self.interface_number,
                                   'apn_name': apn_config['name'],
@@ -5971,6 +6043,10 @@ class ModemStateMachine:
                     logger.warning("User-configured APN failed, falling back to auto-discovery",
                                   extra={'interface_number': self.interface_number,
                                          'failed_apn': apn_config['name']})
+            elif apn_config['name'] and sim_changed:
+                logger.info("Skipping configured APN after SIM identity change; using fresh discovery",
+                           extra={'interface_number': self.interface_number,
+                                  'configured_apn': apn_config['name']})
 
             # 🎯 NEW: Auto-discovery flow
             logger.info("Starting APN auto-discovery",
@@ -5979,7 +6055,8 @@ class ModemStateMachine:
                               'library_available': APN_LOOKUP_AVAILABLE})
 
             # Get SIM information for lookup
-            sim_info = await self._get_sim_information()
+            if not sim_info:
+                sim_info = await self._get_sim_information()
             if not sim_info:
                 logger.error("Could not get SIM information for APN discovery",
                             extra={'interface_number': self.interface_number})

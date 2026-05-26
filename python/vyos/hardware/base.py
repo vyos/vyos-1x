@@ -80,16 +80,62 @@ class Board:
             if c.startswith("gpiochip")
         )
 
+    # Per-board override for resolving ``Pin.bank`` to a kernel gpiochip.
+    # Subclasses may set this to a dict mapping bank-index → kernel chip
+    # label (the string reported in ``/sys/class/gpio/gpiochipN/label`` /
+    # ``gpiod.Chip.get_info().label``). When set, this is consulted first;
+    # otherwise we fall back to /dev/gpiochipN ordering (bank N → chips[N]).
+    BANK_LABELS: Dict[int, str] = {}
+
     def _resolve_bank(self, bank: int) -> str:
         if bank in self._bank_paths:
             return self._bank_paths[bank]
         chips = self._list_chips()
         if not chips:
             raise RuntimeError("vyos.hardware: no /dev/gpiochip* present")
-        # Match the original Perle convention: bank 0 → chips[1], etc.
-        path = chips[bank + 1] if len(chips) > bank + 1 else chips[-1]
+
+        # Preferred path: match by kernel label. /dev/gpiochipN ordering
+        # is not ABI-stable across kernels / probe orders, so when the
+        # board declares BANK_LABELS we resolve by label.
+        wanted = self.BANK_LABELS.get(bank)
+        if wanted:
+            gpiod = self._gpiod()
+            for c in chips:
+                try:
+                    with gpiod.Chip(c) as ch:
+                        label = ch.get_info().label
+                except Exception:  # noqa: BLE001 -- diagnostic resolution
+                    continue
+                if label == wanted:
+                    self._bank_paths[bank] = c
+                    return c
+            raise RuntimeError(
+                f"vyos.hardware: no gpiochip with label {wanted!r} "
+                f"(bank {bank}); have: "
+                + ", ".join(self._chip_labels(chips))
+            )
+
+        # Fallback: positional. bank N → chips[N]. No "+1" shim — there is
+        # no GPIO expander on AM64x; gpiochip0 IS main_gpio0.
+        if bank >= len(chips):
+            raise RuntimeError(
+                f"vyos.hardware: bank {bank} requested but only "
+                f"{len(chips)} /dev/gpiochip* present"
+            )
+        path = chips[bank]
         self._bank_paths[bank] = path
         return path
+
+    def _chip_labels(self, chips: Iterable[str]) -> list[str]:
+        gpiod = self._gpiod()
+        out = []
+        for c in chips:
+            try:
+                with gpiod.Chip(c) as ch:
+                    out.append(f"{c}={ch.get_info().label}")
+            except Exception:  # noqa: BLE001
+                out.append(f"{c}=?")
+        return out
 
     @staticmethod
     def _gpiod():
@@ -113,14 +159,31 @@ class Board:
                 f"{self.NAME}: unknown GPIO {name!r}"
             ) from exc
 
+    # Map ``Pin.bias`` strings to gpiod Bias values. Unknown / unset →
+    # AS_IS so the line keeps whatever pinctrl/DT bias the kernel
+    # already programmed.
+    @classmethod
+    def _bias_for(cls, pin: Pin):
+        gpiod = cls._gpiod()
+        return {
+            "pull-up":   gpiod.line.Bias.PULL_UP,
+            "pull-down": gpiod.line.Bias.PULL_DOWN,
+            "as-is":     gpiod.line.Bias.AS_IS,
+            "none":      gpiod.line.Bias.AS_IS,
+            "":          gpiod.line.Bias.AS_IS,
+        }.get(pin.bias, gpiod.line.Bias.AS_IS)
+
     def set_pin(self, name: str, value: int) -> None:
         """
-        Drive ``name`` to ``value`` and exit.
+        Drive ``name`` to ``value`` (logical level) and exit.
 
-        The kernel GPIO controller retains the configured direction and
-        output value after our libgpiod request is released, so the line
-        stays at ``value`` indefinitely — until some other consumer
-        reprograms it. There is no "hold" vs "set" distinction needed.
+        ``value`` is the *logical* level: for ``active_low=True`` pins,
+        ``value=1`` means "asserted/active" and drives the physical
+        line low. The kernel GPIO controller retains direction and
+        output level after our libgpiod request is released, so the
+        line stays at ``value`` indefinitely — until some other
+        consumer reprograms it. There is no "hold" vs "set" distinction
+        needed.
         """
         pin = self._require(name)
         gpiod = self._gpiod()
@@ -131,18 +194,30 @@ class Board:
             config={pin.line: self._line_settings(
                 direction=gpiod.line.Direction.OUTPUT,
                 output_value=v,
+                active_low=pin.active_low,
+                bias=self._bias_for(pin),
             )},
         ):
             pass  # controller register keeps direction+value after release
 
     def get_pin(self, name: str) -> int:
+        """
+        Return the *logical* level of ``name`` (1 = asserted, 0 = not).
+        For ``active_low=True`` pins this is the inverse of the
+        physical line level.
+        """
         pin = self._require(name)
         gpiod = self._gpiod()
+        # Read without reprogramming the line: direction=AS_IS keeps
+        # whatever the kernel currently has configured (the pin may be
+        # an output we just drove, or an input). Bias is NOT passed
+        # here — gpiolib rejects bias with AS_IS as EINVAL.
         with gpiod.request_lines(
             self._resolve_bank(pin.bank),
             consumer=f"vyos-hw/{self.NAME}",
             config={pin.line: self._line_settings(
                 direction=gpiod.line.Direction.AS_IS,
+                active_low=pin.active_low,
             )},
         ) as req:
             return 1 if req.get_value(pin.line) == gpiod.line.Value.ACTIVE else 0
@@ -232,12 +307,6 @@ class Board:
                 p.settle_ms if p.settle_ms is not None else (settle_ms or 0)
             )
 
-        bias_map = {
-            "pull-up": gpiod.line.Bias.PULL_UP,
-            "pull-down": gpiod.line.Bias.PULL_DOWN,
-            "as-is": gpiod.line.Bias.AS_IS,
-        }
-
         requests = []  # list[(req, {line: name})]
         try:
             for bank, lines in by_bank.items():
@@ -252,7 +321,7 @@ class Board:
                     cfg[line] = self._line_settings(
                         direction=gpiod.line.Direction.INPUT,
                         edge_detection=gpiod.line.Edge.BOTH,
-                        bias=bias_map.get(p.bias, gpiod.line.Bias.AS_IS),
+                        bias=self._bias_for(p),
                         active_low=p.active_low,
                         debounce_period=datetime.timedelta(microseconds=eff_db),
                     )

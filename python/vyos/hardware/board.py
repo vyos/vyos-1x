@@ -48,7 +48,7 @@ _SHUT_SETTLE_MS: int = 2
 _MODEM_PIN_SUFFIXES = {
     "reset":      "_UNCOND_RESET",
     "power":      "_SHUTDOWN_N",      # active-low; 1 = run
-    "sim_select": "_SIM_SELECT",      # 0 = slot 1, 1 = slot 2
+    "sim_select": "_SIM_SELECT_1N_OR_2",  # 0 = slot 1, 1 = slot 2
 }
 _MODEM_SIM_DETECT_PREFIX = "_SIM_DETECT"
 
@@ -430,6 +430,19 @@ class IgosBoard(Board):
     PINS: dict = {}
     NAME: str = "igos_unknown"
 
+    # AM64x SoC GPIO controllers — match by the kernel label rather than
+    # /dev/gpiochipN index ordering (which is not stable across kernels).
+    # Pinmap ``bank=0`` → main_gpio0 (87 lines), ``bank=1`` → main_gpio1
+    # (89 lines). Labels come from k3-am64-main.dtsi:
+    #     gpio0: gpio@600000 ;
+    #     gpio1: gpio@601000 ;
+    # The pinmap overlay may override this by setting ``BANK_LABELS`` on
+    # the ``pinmap`` module itself (handled in _build_board()).
+    BANK_LABELS = {
+        0: "600000.gpio",
+        1: "601000.gpio",
+    }
+
     def __init__(self) -> None:
         super().__init__()
         # Port table populated by _build_board() after PINS is assigned.
@@ -658,7 +671,11 @@ class IgosBoard(Board):
             raise RuntimeError(
                 f"{self.NAME}: modem {name!r} has no power pin in pinmap"
             )
-        # power pin (e.g. MODEM0_SHUTDOWN_N) is active-low; physical 1 = run.
+        # Power pin (e.g. MODEM0_SHUTDOWN_N) follows the standard ``_N``
+        # active-low hardware naming: physical line high = run, low =
+        # shutdown. vyos.hardware passes physical levels through (no
+        # software inversion), so 1 = run / 0 = off matches what a scope
+        # would show on the line.
         # The kernel controller register holds direction+value after our
         # libgpiod request is released, so a single set_pin() is enough —
         # the line stays driven at the chosen level until something else
@@ -783,6 +800,11 @@ def _build_board() -> Board:
     board = IgosBoard()
     board.PINS = pins
     board.NAME = f"igos_{variant}"
+    # Pinmap may optionally override the bank-label table (e.g. a board
+    # with a different SoC). Default to IgosBoard.BANK_LABELS (AM64x).
+    bank_labels = getattr(pinmap, "BANK_LABELS", None)
+    if bank_labels:
+        board.BANK_LABELS = dict(bank_labels)
     # Pinmap may optionally declare ports explicitly (non-standard suffixes,
     # tty/by_path metadata, friendly aliases, transceiver type).
     explicit_ports = getattr(pinmap, "SERIAL_PORTS", None)
