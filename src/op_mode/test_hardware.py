@@ -133,12 +133,16 @@ def _build_pin_owner_map(board) -> dict:
     # Generic per-device grouping for pins not already owned by a
     # serial port or modem. Any pin whose name begins with a known
     # device prefix followed by an instance index is attributed to
-    # that device. Pinmap convention is ``<FAMILY><N>_…`` mirroring
-    # how modems are named (MODEM0_…, MODEM1_…), so WiFi appears as
-    # WIFI0_PDN_N, WIFI1_RESET_N, etc. Adding another peripheral
-    # family is a one-line change to ``device_prefixes``.
+    # that device. Pinmap convention is ``<FAMILY><N>_…`` so WiFi
+    # appears as WIFI0_PD_N, WIFI1_RESET_N, etc. ``MODEM`` is also
+    # listed here so that modem pins which don't match one of the
+    # known modem role suffixes (reset / power / sim_select /
+    # sim_detect) — e.g. MODEM0_PWR_IND, MODEM0_WAKE — still get
+    # attributed to their modem rather than showing a blank OWNER.
+    # Adding another peripheral family is a one-line change to
+    # ``device_prefixes``.
     import re
-    device_prefixes = ('WIFI',)
+    device_prefixes = ('WIFI', 'MODEM')
     pattern = re.compile(
         r'^(' + '|'.join(device_prefixes) + r')(\d+)_'
     )
