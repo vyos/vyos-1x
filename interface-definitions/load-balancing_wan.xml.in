@@ -29,6 +29,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="only-default-route">
+            <properties>
+              <help>Prefer specific routes in the main routing table over WAN load balancing</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="hook">
             <properties>
               <help>Script to be executed on interface status change</help>

@@ -138,6 +138,23 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         tmp = cmd('sudo ip route show table 202')
         self.assertEqual(tmp, original)
 
+        tmp = cmd('sudo ip rule show')
+        self.assertIn('from all fwmark 0xc9 lookup 201', tmp)
+        self.assertIn('from all fwmark 0xca lookup 202', tmp)
+        self.assertNotIn('fwmark 0xc9 lookup main suppress_prefixlength 0', tmp)
+        self.assertNotIn('fwmark 0xca lookup main suppress_prefixlength 0', tmp)
+
+        self.cli_set(base_path + ['wan', 'only-default-route'])
+        self.cli_commit()
+
+        time.sleep(5)
+
+        tmp = cmd('sudo ip rule show')
+        self.assertIn('from all fwmark 0xc9 lookup main suppress_prefixlength 0', tmp)
+        self.assertIn('from all fwmark 0xc9 lookup 201', tmp)
+        self.assertIn('from all fwmark 0xca lookup main suppress_prefixlength 0', tmp)
+        self.assertIn('from all fwmark 0xca lookup 202', tmp)
+
         # Delete veth interfaces and netns
         for iface in [iface1, iface2, iface3]:
             call(f'sudo ip link del dev {iface}')

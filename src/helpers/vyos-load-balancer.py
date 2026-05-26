@@ -204,7 +204,17 @@ def cleanup(lb):
         index = 1
         for ifname, health_conf in lb['interface_health'].items():
             table_num = lb['mark_offset'] + index
+            suppress_prio = lb['mark_offset'] + index
+            table_prio = suppress_prio + 100
             run(f'ip route del table {table_num} default')
+            run(
+                f'ip rule del fwmark {hex(table_num)} table main '
+                f'suppress_prefixlength 0 priority {suppress_prio}'
+            )
+            run(
+                f'ip rule del fwmark {hex(table_num)} table {table_num} '
+                f'priority {table_prio}'
+            )
             run(f'ip rule del fwmark {hex(table_num)} table {table_num}')
             index += 1
 
@@ -263,7 +273,19 @@ if __name__ == '__main__':
             else:
                 run(f'ip route replace table {table_num} default dev {ifname} via {health_conf["nexthop"]}')
 
-            run(f'ip rule add fwmark {hex(table_num)} table {table_num}')
+            suppress_prio = lb['mark_offset'] + index
+            table_prio = suppress_prio + 100
+            if 'only_default_route' in lb:
+                run(
+                    f'ip rule add fwmark {hex(table_num)} table main '
+                    f'suppress_prefixlength 0 priority {suppress_prio}'
+                )
+                run(
+                    f'ip rule add fwmark {hex(table_num)} table {table_num} '
+                    f'priority {table_prio}'
+                )
+            else:
+                run(f'ip rule add fwmark {hex(table_num)} table {table_num}')
 
             index += 1
 
