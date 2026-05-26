@@ -820,7 +820,14 @@ def apply(wwan):
         # conf_mode replay simply will not start the manager -- so the
         # "no config => no MM running" goal is met on reboot, while a
         # live `delete` still gets a clean teardown.
-        asyncio.run(_remove_via_dbus(interface_number))
+        # Ensure the manager is available so RemoveInterface can succeed even
+        # if this commit path is the first WWAN action after a service crash.
+        _ensure_manager_running()
+        removed = asyncio.run(_remove_via_dbus(interface_number))
+        if not removed:
+            # Do not block commit, but ensure stale persisted state does not
+            # resurrect when the interface is recreated later.
+            _remove_local_wwan_cache(interface_number)
 
         if interface_exists(ifname):
             w = WWANIf(ifname)
@@ -949,15 +956,50 @@ async def _remove_via_dbus(interface_number):
     deleting state (the on-disk cache will be cleaned up on next start).
     """
     from vyos.utils.wwan.wwan_client import WWANClient, WWANError
+    import time
 
-    try:
-        async with WWANClient() as client:
-            result = await client.remove_interface(interface_number)
-            print(f'WWAN interface {interface_number}: {result}')
-    except WWANError as exc:
-        print(f'Warning: WWAN RemoveInterface failed: {exc}')
-    except Exception as exc:
-        print(f'Warning: failed to communicate with WWAN service: {exc}')
+    deadline = time.monotonic() + 20.0
+    while True:
+        try:
+            async with WWANClient() as client:
+                result = await client.remove_interface(interface_number)
+                print(f'WWAN interface {interface_number}: {result}')
+                return True
+        except WWANError as exc:
+            msg = str(exc)
+            transient = (
+                'was not provided by any .service files' in msg
+                or 'NameHasNoOwner' in msg
+                or 'ServiceUnknown' in msg
+            )
+            if transient and time.monotonic() < deadline:
+                await asyncio.sleep(0.5)
+                continue
+            print(f'Warning: WWAN RemoveInterface failed: {exc}')
+            return False
+        except Exception as exc:
+            if time.monotonic() < deadline:
+                await asyncio.sleep(0.5)
+                continue
+            print(f'Warning: failed to communicate with WWAN service: {exc}')
+            return False
+
+
+def _remove_local_wwan_cache(interface_number):
+    """Best-effort cleanup for per-interface runtime cache files.
+
+    This is a fallback when D-Bus RemoveInterface cannot be reached.
+    Prevents deleted interfaces from replaying stale state when recreated.
+    """
+    base = f'/run/wwan/interface{interface_number}.conf'
+    for path in (base, base + '.bad'):
+        try:
+            os.unlink(path)
+            print(f'WWAN interface {interface_number}: removed stale cache {path}')
+        except FileNotFoundError:
+            pass
+        except Exception as exc:
+            print(f'Warning: failed to remove WWAN cache {path}: {exc}')
 
 
 # ---------------------------------------------------------------------------

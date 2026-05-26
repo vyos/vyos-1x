@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import os
 import uuid
 from dbus_next import Variant  # pylint: disable=import-error
 from dbus_next.service import ServiceInterface, method, signal  # pylint: disable=import-error
@@ -375,6 +376,15 @@ class ConfigServiceManager:
     async def add_interface(self, interface_number: int):
         object_path = f"/com/igos/IgosModemManager/Interface{interface_number}"
 
+        # Idempotency: AddInterface is called on every config apply. If the
+        # interface object is already exported, do not recreate InterfaceConfig
+        # (which would re-run restore logic and can race with SetConfiguration).
+        if interface_number in self.interface_objects:
+            logger.info("Interface already exists, reusing exported object",
+                       extra={'interface_number': interface_number,
+                              'object_path': object_path})
+            return
+
         fsm = self.modem_state_machines.get(interface_number)
         if fsm is None:
             logger.info("Creating new state machine",
@@ -407,6 +417,21 @@ class ConfigServiceManager:
             except Exception as e:
                 logger.error(f"Error removing configuration file during removal: {e}",
                            extra={'interface_number': interface_number})
+
+        # Fallback cache cleanup if InterfaceConfig object is already gone.
+        # Keeps delete semantics strong even after partial service failures.
+        cache_file = f"/run/wwan/interface{interface_number}.conf"
+        for path in (cache_file, cache_file + '.bad'):
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+                    logger.info("Removed interface cache file",
+                               extra={'interface_number': interface_number,
+                                      'cache_file': path})
+            except Exception as e:
+                logger.error(f"Error removing cache file during removal: {e}",
+                           extra={'interface_number': interface_number,
+                                  'cache_file': path})
 
         # Shutdown FSM gracefully
         fsm = self.modem_state_machines.get(interface_number)
