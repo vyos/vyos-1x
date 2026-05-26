@@ -48,7 +48,7 @@ _SHUT_SETTLE_MS: int = 2
 _MODEM_PIN_SUFFIXES = {
     "reset":      "_UNCOND_RESET",
     "power":      "_SHUTDOWN_N",      # active-low; 1 = run
-    "sim_select": "_SIM_SELECT",      # 0 = slot 1, 1 = slot 2
+    "sim_select": "_SIM_SELECT_1N_OR_2",  # 0 = slot 1, 1 = slot 2
 }
 _MODEM_SIM_DETECT_PREFIX = "_SIM_DETECT"
 
