@@ -541,6 +541,22 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --fingerprint "$6"</command>
               </tagNode>
+              <node name="private">
+                <properties>
+                  <help>Show x509 certificate private key</help>
+                  <completionHelp>
+                    <list>pem</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="pem">
+                    <properties>
+                      <help>Show x509 certificate private key in PEM format</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --private --pem</command>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </tagNode>
           <tagNode name="crl">
