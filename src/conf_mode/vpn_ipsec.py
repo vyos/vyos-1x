@@ -710,6 +710,22 @@ def verify(ipsec):
                         f'Childless IKE SAs be used with IKEv2! Please configure IKEv2 key-exchange in ike-group "{ike}".'
                     )
 
+            # Get the referenced IKE group config
+            ike_group_name = peer_conf.get('ike_group')
+            ike_group = ipsec['ike_group'].get(ike_group_name, {})
+
+            # 'ikev2-reauth' only valid for IKEv2
+            peer_reauth = peer_conf.get('ikev2_reauth')
+            reauth_ike_group_configured = (
+                peer_reauth == 'inherit' and 'ikev2_reauth' in ike_group
+            )
+            if peer_reauth == 'yes' or reauth_ike_group_configured:
+                if ike_group.get('key_exchange') != 'ikev2':
+                    raise ConfigError(
+                        'ikev2-reauth requires key-exchange ikev2 in IKE group! '
+                        f'Please configure IKEv2 key-exchange in ike-group "{ike_group_name}".'
+                    )
+
 
 def cleanup_pki_files():
     for path in [CERT_PATH, CA_PATH, CRL_PATH, KEY_PATH, PUBKEY_PATH]:

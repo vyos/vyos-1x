@@ -961,6 +961,77 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # Disable PKI
         self.tearDownPKI()
 
+    def test_site_to_site_ikev2_reauth(self):
+        # T7555: Verify ikev2-reauth is correctly written to swanctl.conf
+        # and that invalid combinations are rejected by validation
+
+        local_address = '192.0.2.10'
+        ike_lifetime = '1800'
+
+        # Base PSK auth used across all sub-tests
+        psk_base_path = base_path + ['authentication', 'psk', connection_name]
+        self.cli_set(psk_base_path + ['id', local_id])
+        self.cli_set(psk_base_path + ['id', remote_id])
+        self.cli_set(psk_base_path + ['id', local_address])
+        self.cli_set(psk_base_path + ['id', peer_ip])
+        self.cli_set(psk_base_path + ['secret', secret])
+
+        peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
+        self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_base_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_base_path + ['local-address', local_address])
+        self.cli_set(peer_base_path + ['remote-address', peer_ip])
+        self.cli_set(
+            peer_base_path + ['tunnel', '1', 'local', 'prefix', '10.0.0.0/24'],
+        )
+        self.cli_set(
+            peer_base_path + ['tunnel', '1', 'remote', 'prefix', '10.1.0.0/24'],
+        )
+
+        # ikev2-reauth on an IKEv1-only ike-group must be rejected
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev1'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', ike_lifetime])
+        self.cli_set(peer_base_path + ['ike-group', ike_group])
+        self.cli_set(peer_base_path + ['ikev2-reauth', 'yes'])
+
+        err_msg = 'ikev2-reauth requires key-exchange ikev2 in IKE group'
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # Switch to IKEv2, enable reauth on the ike-group (valueless flag)
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'ikev2-reauth'])
+        self.cli_set(peer_base_path + ['ikev2-reauth', 'inherit'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertIn(f'reauth_time = {ike_lifetime}s', swanctl_conf)
+
+        # ikev2-reauth = yes on peer overrides group
+        self.cli_delete(base_path + ['ike-group', ike_group, 'ikev2-reauth'])
+        self.cli_set(peer_base_path + ['ikev2-reauth', 'yes'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertIn(f'reauth_time = {ike_lifetime}s', swanctl_conf)
+
+        # ikev2-reauth = no suppresses group flag
+        self.cli_set(base_path + ['ike-group', ike_group, 'ikev2-reauth'])
+        self.cli_set(peer_base_path + ['ikev2-reauth', 'no'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertNotIn(f'reauth_time = {ike_lifetime}s', swanctl_conf)
+
+        # connection-type trap: reauth must be suppressed
+        self.cli_set(peer_base_path + ['connection-type', 'trap'])
+        self.cli_set(peer_base_path + ['ikev2-reauth', 'yes'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertNotIn(f'reauth_time = {ike_lifetime}s', swanctl_conf)
+        self.assertIn('keyingtries = 1', swanctl_conf)
+
 
     def test_flex_vpn_vips(self):
         local_address = '192.0.2.5'
