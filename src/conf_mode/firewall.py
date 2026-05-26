@@ -22,8 +22,8 @@ from glob import glob
 from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import is_node_changed, node_changed
-from vyos.configdiff import Diff
+from vyos.configdict import is_node_changed
+from vyos.configdiff import Diff, get_config_diff
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
 from vyos.ethtool import Ethtool
@@ -92,17 +92,12 @@ def geoip_sets(firewall):
     return out
 
 def geoip_updated(conf):
-    changes = node_changed(conf, ['firewall'],
-                                 key_mangling=('-', '_'),
-                                 recursive=True,
-                                 expand_nodes=Diff.ADD | Diff.DELETE)
-    updated = False
-
-    for _, path in dict_search_recursive(changes, 'geoip'):
-        updated = True
-        break
-
-    return updated
+    D = get_config_diff(conf, key_mangling=('-', '_'))
+    diff = D.get_child_nodes_diff(['firewall'],
+                                  expand_nodes=Diff.ADD | Diff.DELETE,
+                                  recursive=True)
+    return any(any(dict_search_recursive(diff.get(section, {}), 'geoip'))
+               for section in ('add', 'delete'))
 
 def get_config(config=None):
     if config:
@@ -124,6 +119,9 @@ def get_config(config=None):
 
     firewall['geoip_sets'] = geoip_sets(firewall)
     firewall['geoip_updated'] = geoip_updated(conf)
+    firewall['policy'] = conf.get_config_dict(
+        ['policy'], key_mangling=('-', '_'),
+        get_first_key=True, no_tag_node_value_mangle=True)
 
     fqdn_config_parse(firewall, 'firewall')
 
@@ -739,12 +737,10 @@ def apply(firewall):
             domain_action = 'stop'
     call(f'systemctl {domain_action} vyos-domain-resolver.service')
 
-    if firewall['geoip_sets']:
-        # Call helper script to Update set contents
-        if 'name' in firewall['geoip_sets'] or 'ipv6_name' in firewall['geoip_sets']:
-            if firewall['geoip_updated'] or not geoip_refresh():
-                print('Updating GeoIP. Please wait...')
-                geoip_update(firewall)
+    if firewall['geoip_sets']['name'] or firewall['geoip_sets']['ipv6_name']:
+        if firewall['geoip_updated'] or not geoip_refresh():
+            print('Updating GeoIP. Please wait...')
+            geoip_update(firewall=firewall, policy=firewall['policy'])
 
     return None
 
