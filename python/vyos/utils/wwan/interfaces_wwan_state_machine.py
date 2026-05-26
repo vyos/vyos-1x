@@ -1682,6 +1682,46 @@ class ModemStateMachine:
                     # Trigger connection configuration
                     self._safe_create_task(self.apply_modem_configuration())
 
+            elif current_fsm_state == ModemState.WAITING_FOR_SIM.value:
+                # Some platforms don't expose a SIM-eject hardware signal.
+                # After out-of-band power-cycle + SIM replacement we may jump
+                # directly to REGISTERED; treat that as SIM-ready and restart
+                # full initial configuration flow.
+                logger.info("Modem registered while waiting for SIM - resuming initial configuration",
+                           extra={'interface_number': self.interface_number,
+                                  'fsm_state': current_fsm_state})
+                self.transition(ModemEvent.SIM_READY)
+                self._safe_create_task(self._configure_modem_initial())
+
+            elif current_fsm_state in [ModemState.DISCONNECTED.value,
+                                       ModemState.REGISTERED_IDLE.value,
+                                       ModemState.FAILED.value]:
+                # Out-of-band modem power cycles / SIM mux changes can land us in
+                # REGISTERED while FSM is stale (DISCONNECTED/IDLE/FAILED).
+                # Re-enter APN flow unless policy says to stay idle.
+                if self.connection_mode == 'connect-on-demand':
+                    if current_fsm_state == ModemState.DISCONNECTED.value:
+                        logger.info("Modem registered in connect-on-demand mode - entering REGISTERED_IDLE",
+                                   extra={'interface_number': self.interface_number,
+                                          'fsm_state': current_fsm_state,
+                                          'connection_mode': self.connection_mode})
+                        self.transition(ModemEvent.RECONFIGURE)
+                        self.transition(ModemEvent.ENTER_IDLE)
+                elif self.user_disconnected:
+                    logger.info("Modem registered but user requested disconnect - not auto-connecting",
+                               extra={'interface_number': self.interface_number,
+                                      'fsm_state': current_fsm_state,
+                                      'connection_mode': self.connection_mode})
+                else:
+                    logger.info("Modem registered with stale FSM state - restarting APN connection cascade",
+                               extra={'interface_number': self.interface_number,
+                                      'fsm_state': current_fsm_state,
+                                      'connection_mode': self.connection_mode})
+                    if current_fsm_state == ModemState.FAILED.value:
+                        self.transition(ModemEvent.RECONFIGURE)
+                    self.transition(ModemEvent.CONNECT)
+                    self._safe_create_task(self.apply_modem_configuration())
+
             elif current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Modem dropped from CONNECTED to REGISTERED without going through
                 # DISCONNECTING (state 9).  This can happen with "Regular deactivation"
@@ -2449,9 +2489,12 @@ class ModemStateMachine:
             else:
                 sim_changed = await self._check_sim_change(sim_info)
 
-            # PRIORITY 1: Try configured APN first (highest priority) - unless SIM changed
+            # PRIORITY 1: Try configured APN first (highest priority).
+            # Even after a SIM identity change, explicit user-configured APN
+            # remains a strong intent signal and should be attempted before
+            # discovery/automatic fallback paths.
             apn_config = None
-            if not sim_changed and self.config and 'sim_slots' in self.config:
+            if self.config and 'sim_slots' in self.config:
                 active_sim = None
                 for slot in self.config['sim_slots']:
                     if slot['slot'] == active_slot:
@@ -2467,6 +2510,11 @@ class ModemStateMachine:
                         apn_config = None  # Force fall-through to discovery
 
                 if apn_config and apn_config.get('name'):
+                    if sim_changed:
+                        logger.info("SIM changed, but still trying configured APN first",
+                                   extra={'interface_number': self.interface_number,
+                                          'configured_apn': apn_config['name'],
+                                          'active_slot': active_slot})
                     logger.info("Attempting connection with configured APN (highest priority)",
                                extra={'interface_number': self.interface_number,
                                       'configured_apn': apn_config['name']})
@@ -6028,8 +6076,15 @@ class ModemStateMachine:
             # Get normalized APN configuration
             apn_config = self._normalize_apn_config(active_sim_config.get('apn', ''))
 
-            # 🎯 NEW: Check if user configured an APN
-            if apn_config['name'] and not sim_changed:
+            # 🎯 NEW: Check if user configured an APN. Even after SIM
+            # identity changes, explicit configured APN should be tried
+            # first; only stale in-memory APN cache is suppressed.
+            if apn_config['name']:
+                if sim_changed:
+                    logger.info("SIM changed, but still trying user-configured APN first",
+                               extra={'interface_number': self.interface_number,
+                                      'apn_name': apn_config['name'],
+                                      'active_sim_slot': self.current_active_sim})
                 logger.info("Using user-configured APN",
                            extra={'interface_number': self.interface_number,
                                   'apn_name': apn_config['name'],
@@ -6043,10 +6098,6 @@ class ModemStateMachine:
                     logger.warning("User-configured APN failed, falling back to auto-discovery",
                                   extra={'interface_number': self.interface_number,
                                          'failed_apn': apn_config['name']})
-            elif apn_config['name'] and sim_changed:
-                logger.info("Skipping configured APN after SIM identity change; using fresh discovery",
-                           extra={'interface_number': self.interface_number,
-                                  'configured_apn': apn_config['name']})
 
             # 🎯 NEW: Auto-discovery flow
             logger.info("Starting APN auto-discovery",
