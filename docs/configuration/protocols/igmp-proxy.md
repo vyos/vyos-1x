@@ -1,75 +1,142 @@
 ---
-lastproofread: '2023-11-13'
+myst:
+  html_meta:
+    description: |
+      The IGMP proxy enables routers to forward multicast traffic, such as
+      IPTV or video streams, between different networks like home networks
+      and ISPs.
+    keywords: igmp, igmp-proxy, multicast, iptv, quickleave, alt-subnet
 ---
 
 (igmp-proxy)=
 
-# IGMP Proxy
+# IGMP proxy
 
-{abbr}`IGMP (Internet Group Management Protocol)` proxy sends IGMP host messages
-on behalf of a connected client. The configuration must define one, and only one
-upstream interface, and one or more downstream interfaces.
+The {abbr}`IGMP (Internet Group Management Protocol)` proxy enables routers to
+forward multicast traffic, such as IPTV or video streams, between different
+networks, such as home networks and ISPs. The IGMP proxy relies on an upstream
+interface that faces upstream multicast sources, and one or more downstream
+interfaces that face local networks or hosts and forward traffic to requesting
+clients.
+
+IGMP proxy configuration requires exactly one upstream interface and at least
+one downstream interface.
 
 ## Configuration
 
 ```{cfgcmd} set protocols igmp-proxy interface \<interface\> role \<upstream | downstream\>
 
-* **upstream:** The upstream network interface is the outgoing interface
-which is responsible for communicating to available multicast data sources.
-There can only be one upstream interface.
+**Configure the operational role for the specified IGMP proxy interface.**
 
-* **downstream:** Downstream network interfaces are the distribution
-interfaces to the destination networks, where multicast clients can join
-groups and receive multicast data. One or more downstream interfaces must
-be configured.
+- ``upstream``: Communicates with upstream multicast sources to retrieve the
+  multicast traffic. A valid configuration requires exactly one upstream
+  interface.
+- ``downstream``: Communicates with downstream local subnets or hosts to
+  distribute the requested traffic. A valid configuration requires at least
+  one downstream interface.
+```
+
+Example:
+
+```none
+set protocols igmp-proxy interface eth0 role upstream
+set protocols igmp-proxy interface eth1 role downstream
 ```
 
 ```{cfgcmd} set protocols igmp-proxy interface \<interface\> alt-subnet \<network\>
 
-Defines alternate sources for multicasting and IGMP data. The network address
-must be on the following format 'a.b.c.d/n'. By default, the router will
-accept data from sources on the same network as configured on an interface.
-If the multicast source lies on a remote network, one must define from where
-traffic should be accepted.
+**Configure an allowed remote subnet for incoming multicast traffic
+on the specified IGMP proxy interface**
 
-This is especially useful for the upstream interface, since the source for
-multicast traffic is often from a remote location.
+By default, the IGMP proxy accepts multicast traffic only from directly
+connected subnets. If a multicast source resides on a remote network, you
+must explicitly define the allowed remote subnet to permit the traffic.
 
-This option can be supplied multiple times.
+You can configure multiple remote subnets for an **upstream** IGMP proxy
+interface.
+
+Upstream interfaces frequently require this configuration because multicast
+sources typically reside on external subnets.
+```
+
+Example:
+
+```none
+set protocols igmp-proxy interface eth0 alt-subnet 10.0.0.0/8
+```
+
+```{cfgcmd} set protocols igmp-proxy interface \<interface\> whitelist \<network\>
+
+**Configure a permitted destination network for multicast traffic requests
+on the specified IGMP proxy interface.**
+
+By default, the IGMP proxy accepts requests for all multicast destination
+networks. When you define a whitelist, the IGMP proxy forwards requests only
+for the specified multicast networks.
+
+You can configure multiple whitelist entries per **downstream** IGMP proxy
+interface.
+```
+
+Example:
+
+```none
+set protocols igmp-proxy interface eth1 whitelist 239.0.0.0/8
+```
+
+```{cfgcmd} set protocols igmp-proxy interface \<interface\> threshold \<1-255\>
+
+**Configure the Time-to-Live (TTL) threshold for the specified IGMP proxy
+interface.**
+
+The IGMP proxy drops any multicast packet with a TTL value lower than the
+configured threshold.
+```
+
+Example:
+
+```none
+set protocols igmp-proxy interface eth0 threshold 5
 ```
 
 ```{cfgcmd} set protocols igmp-proxy disable-quickleave
 
-Disables quickleave mode. In this mode the daemon will not send a Leave IGMP
-message upstream as soon as it receives a Leave message for any downstream
-interface. The daemon will not ask for Membership reports on the downstream
-interfaces, and if a report is received the group is not joined again the
-upstream.
+**Disable quickleave mode for the IGMP proxy.**
 
-If it's vital that the daemon should act exactly like a real multicast client
-on the upstream interface, this function should be enabled.
+If disabled, the IGMP proxy does not send an upstream Leave message upon
+receiving a downstream Leave message, preventing the immediate termination
+of upstream multicast traffic. The IGMP proxy also stops querying downstream
+interfaces for membership reports. If a downstream client submits a new
+report, the IGMP proxy discards the message and does not resume the delivery
+of requested traffic.
+```
 
-Enabling this function increases the risk of bandwidth saturation.
+```{note}
+Disabling quickleave mode forces the IGMP proxy to act exactly like a
+standard multicast client on the upstream interface.
+```
+
+```{note}
+Disabling quickleave mode increases the risk of network bandwidth
+saturation.
+```
+
+Example:
+
+```none
+set protocols igmp-proxy disable-quickleave
 ```
 
 ```{cfgcmd} set protocols igmp-proxy disable
 
-Disable this service.
+**Disable the IGMP proxy on the router.**
 ```
 
-(igmp-proxy-example)=
-
-### Example
-
-Interface eth1 LAN is behind NAT. In order to subscribe 10.0.0.0/23 subnet
-multicast which is in eth0 WAN we need to configure igmp-proxy.
+Example:
 
 ```none
-set protocols igmp-proxy interface eth0 role upstream
-set protocols igmp-proxy interface eth0 alt-subnet 10.0.0.0/23
-set protocols igmp-proxy interface eth1 role downstream
+set protocols igmp-proxy disable
 ```
-
 
 ## Operation
 
@@ -77,3 +144,17 @@ set protocols igmp-proxy interface eth1 role downstream
 
 Restart the IGMP proxy process.
 ```
+
+## Example
+
+In this example, the local LAN on interface eth1 operates behind NAT. To allow
+local clients to receive multicast traffic originating from the 198.51.100.0/24
+source network on the WAN interface (eth0), configure the IGMP proxy as
+follows:
+
+```none
+set protocols igmp-proxy interface eth0 role upstream
+set protocols igmp-proxy interface eth0 alt-subnet 198.51.100.0/24
+set protocols igmp-proxy interface eth1 role downstream
+```
+
