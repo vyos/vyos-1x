@@ -226,6 +226,7 @@ vrf {
                                 }
                             }
                         }
+                        advertise-all-vni
                     }
                 }
                 local-as 100
@@ -251,6 +252,7 @@ vrf {
                                 }
                             }
                         }
+                        advertise-all-vni
                     }
                 }
                 local-as 100
