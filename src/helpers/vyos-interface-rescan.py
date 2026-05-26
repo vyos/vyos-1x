@@ -39,32 +39,69 @@ formatter = logging.Formatter('%(levelname)s: %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+igos_link_dir = '/etc/systemd/network'
+igos_link_glob = '10-igos-*.link'
+
+
+def is_pinned_interface(intf: str) -> bool:
+    """Return True if a 10-igos-*.link file pins this netdev name.
+
+    A pinned interface has its physical-socket -> name mapping enforced
+    by systemd-networkd via a .link file; recording a hw-id in
+    config.boot for it would be redundant and would re-introduce
+    MAC-based naming on hardware swaps.  We still want the
+    'interfaces ethernet ethN' node to exist so commit-time hooks find
+    a config entry for the live NIC -- just without the hw-id child.
+    """
+    import glob
+
+    try:
+        for lf in glob.glob(os.path.join(igos_link_dir, igos_link_glob)):
+            try:
+                with open(lf) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith('#'):
+                            continue
+                        if line.replace(' ', '') == f'Name={intf}':
+                            return True
+            except OSError:
+                continue
+    except Exception as e:
+        logger.warning(f"is_pinned_interface({intf}) error: {e}")
+    return False
+
+
 passlist = {
-    '02:07:01' : 'Interlan',
-    '02:60:60' : '3Com',
-    '02:60:8c' : '3Com',
-    '02:a0:c9' : 'Intel',
-    '02:aa:3c' : 'Olivetti',
-    '02:cf:1f' : 'CMC',
-    '02:e0:3b' : 'Prominet',
-    '02:e6:d3' : 'BTI',
-    '52:54:00' : 'Realtek',
-    '52:54:4c' : 'Novell 2000',
-    '52:54:ab' : 'Realtec',
-    'e2:0c:0f' : 'Kingston Technologies'
+    '02:07:01': 'Interlan',
+    '02:60:60': '3Com',
+    '02:60:8c': '3Com',
+    '02:a0:c9': 'Intel',
+    '02:aa:3c': 'Olivetti',
+    '02:cf:1f': 'CMC',
+    '02:e0:3b': 'Prominet',
+    '02:e6:d3': 'BTI',
+    '52:54:00': 'Realtek',
+    '52:54:4c': 'Novell 2000',
+    '52:54:ab': 'Realtec',
+    'e2:0c:0f': 'Kingston Technologies',
 }
+
 
 def is_multicast(addr: netaddr.eui.EUI) -> bool:
     return bool(addr.words[0] & 0b1)
 
+
 def is_locally_administered(addr: netaddr.eui.EUI) -> bool:
     return bool(addr.words[0] & 0b10)
+
 
 def is_on_passlist(hwid: str) -> bool:
     top = hwid.rsplit(':', 3)[0]
     if top in list(passlist):
         return True
     return False
+
 
 def is_persistent(hwid: str) -> bool:
     addr = netaddr.EUI(hwid)
@@ -73,6 +110,7 @@ def is_persistent(hwid: str) -> bool:
     if is_locally_administered(addr) and not is_on_passlist(hwid):
         return False
     return True
+
 
 def get_wireless_physical_device(intf: str) -> str:
     if 'wlan' not in intf:
@@ -86,6 +124,7 @@ def get_wireless_physical_device(intf: str) -> str:
     logger.info(f"wireless phy is {phy}")
     return phy
 
+
 def get_interface_type(intf: str) -> str:
     if 'eth' in intf:
         intf_type = 'ethernet'
@@ -96,9 +135,9 @@ def get_interface_type(intf: str) -> str:
         intf_type = ''
     return intf_type
 
+
 def get_new_interfaces() -> dict:
-    """ Read any new interface data left in /run/udev/vyos by vyos_net_name
-    """
+    """Read any new interface data left in /run/udev/vyos by vyos_net_name"""
     interfaces = {}
 
     for intf in os.listdir(vyos_udev_dir):
@@ -112,13 +151,12 @@ def get_new_interfaces() -> dict:
         interfaces[intf] = hwid
 
     # reverse sort to simplify insertion in config
-    interfaces = {key: value for key, value in sorted(interfaces.items(),
-                                                      reverse=True)}
+    interfaces = {key: value for key, value in sorted(interfaces.items(), reverse=True)}
     return interfaces
 
+
 def filter_interfaces(intfs: dict) -> dict:
-    """ Ignore no longer existing interfaces or non-persistent mac addresses
-    """
+    """Ignore no longer existing interfaces or non-persistent mac addresses"""
     filtered = {}
 
     for intf, hwid in intfs.items():
@@ -130,9 +168,9 @@ def filter_interfaces(intfs: dict) -> dict:
 
     return filtered
 
+
 def interface_rescan(config_path: str):
-    """ Read new data and update config file
-    """
+    """Read new data and update config file"""
     interfaces = get_new_interfaces()
 
     logger.debug(f"interfaces from udev: {interfaces}")
@@ -151,21 +189,29 @@ def interface_rescan(config_path: str):
     config = ConfigTree(config_file)
 
     for intf, hwid in interfaces.items():
-        logger.info(f"Writing '{intf}' '{hwid}' to config file")
         intf_type = get_interface_type(intf)
         if not intf_type:
             continue
         if not config.exists(['interfaces', intf_type]):
             config.set(['interfaces', intf_type])
             config.set_tag(['interfaces', intf_type])
-        config.set(['interfaces', intf_type, intf, 'hw-id'], value=hwid)
+
+        # Ethernet interfaces pinned by a /etc/systemd/network/10-igos-*.link
+        # file get their name from the .link's Property=IGOS_ETH_PORT match,
+        # not from MAC.  Create the node so commit-time hooks see the
+        # interface, but omit hw-id to keep MAC out of config.boot.
+        if intf_type == 'ethernet' and is_pinned_interface(intf):
+            logger.info(f"Writing '{intf}' to config file (pinned; no hw-id)")
+            config.set(['interfaces', intf_type, intf])
+        else:
+            logger.info(f"Writing '{intf}' '{hwid}' to config file")
+            config.set(['interfaces', intf_type, intf, 'hw-id'], value=hwid)
 
         if intf_type == 'wireless':
             phy = get_wireless_physical_device(intf)
             if not phy:
                 continue
-            config.set(['interfaces', intf_type, intf, 'physical-device'],
-                       value=phy)
+            config.set(['interfaces', intf_type, intf, 'physical-device'], value=phy)
 
     try:
         with open(config_path, 'w') as f:
@@ -173,11 +219,11 @@ def interface_rescan(config_path: str):
     except OSError as e:
         logger.critical(f"OSError {e}")
 
+
 def main():
     global debug
 
-    argparser = argparse.ArgumentParser(
-        formatter_class=argparse.RawTextHelpFormatter)
+    argparser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     argparser.add_argument('configfile', type=str)
     argparser.add_argument('--debug', action='store_true')
     args = argparser.parse_args()
@@ -197,10 +243,13 @@ def main():
     # log file perms are not automatic; this could be cleaner by moving to a
     # logging config file
     os.chown(vyos_log_file, 0, get_cfg_group_id())
-    os.chmod(vyos_log_file,
-             stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)
+    os.chmod(
+        vyos_log_file,
+        stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH,
+    )
 
     interface_rescan(configfile)
+
 
 if __name__ == '__main__':
     main()

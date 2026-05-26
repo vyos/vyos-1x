@@ -234,15 +234,12 @@ def on_boot_event(intf_name: str, hwid: str, predefined: str = '') -> str:
 
     logger.info(f"new name for '{intf_name}' is '{newname}'")
 
-    # Suppress the rescan hint for interfaces that 61-igos-eth-pin.rules
-    # has flagged as pinned via a matching 10-igos-*.link file.  Without
-    # this, vyos-interface-rescan.py would write hw-id back into
-    # config.boot for these interfaces on every boot.  Unpinned
-    # interfaces retain the original behaviour.
-    if os.environ.get('IGOS_ETH_PINNED') == '1':
-        logger.info(f"'{newname}' is pinned via .link file; skipping rescan hint")
-    else:
-        leave_rescan_hint(newname, hwid)
+    # Always leave the rescan hint.  vyos-interface-rescan.py is the
+    # component that decides whether to write a hw-id node for the
+    # interface; for pinned interfaces it will create the
+    # 'interfaces ethernet ethN' node without hw-id, so commit-time
+    # hooks still find a config entry for every live NIC.
+    leave_rescan_hint(newname, hwid)
 
     return newname
 
