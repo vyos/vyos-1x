@@ -335,6 +335,34 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
 
+    def test_reverse_proxy_backend_websocket(self):
+        t_tunnel = '3600'
+        opt_server_close = 'http-server-close'
+
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # Set minimal backend websocket configuration
+        self.cli_set(base_path + ['backend', haproxy_backend_name, opt_server_close])
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'timeout', 'tunnel', t_tunnel])
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'ssl', 'no-verify'])
+
+        self.cli_commit()
+
+        # Ensure 'http-server-close' is not used in tcp mode, to test config validation
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'mode', 'tcp'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'option {opt_server_close}', config)
+        self.assertIn(f'timeout tunnel {t_tunnel}s', config)
+        self.assertIn('option forwardfor', config)
+        self.assertIn(' http-request set-header X-Forwarded-Port %[dst_port]', config)
+        self.assertIn('http-request add-header X-Forwarded-Proto https if { ssl_fc }', config)
+        self.assertIn(f'server {haproxy_backend_name} 192.0.2.11:9090 send-proxy ssl verify none', config)
+
     def test_reverse_proxy_backend_http_check(self):
         # Setup base
         self.base_config()
