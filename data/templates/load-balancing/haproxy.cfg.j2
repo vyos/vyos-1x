@@ -206,6 +206,9 @@ backend {{ back }}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+{%             if back_config.http_server_close is vyos_defined %}
+    option http-server-close
+{%             endif %}
 {%         endif %}
 {%         if back_config.logging is vyos_defined %}
 {%             for facility, facility_config in back_config.logging.facility.items() %}

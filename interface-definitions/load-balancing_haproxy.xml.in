@@ -225,6 +225,12 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="http-server-close">
+                <properties>
+                  <help>Enable HTTP/1.x connection closing on the server side</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               #include <include/haproxy/rule-backend.xml.i>
               <tagNode name="server">
                 <properties>
