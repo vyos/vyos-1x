@@ -2564,13 +2564,22 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number,
                                       'configured_apn': apn_config['name']})
 
-                    try:
-                        success = await self._try_connection_with_apn(apn_config, sim_config)
-                        if success:
-                            connection_successful = True
-                    except Exception as e:
-                        logger.warning(f"Configured APN failed: {e}",
-                                     extra={'interface_number': self.interface_number})
+                    success, reason = await self._try_connection_with_apn(apn_config, sim_config)
+                    if success:
+                        connection_successful = True
+                    elif reason == 'connection_failed':
+                        logger.warning(
+                            "Configured APN attempt failed for non-APN reason; restarting full connection flow",
+                            extra={'interface_number': self.interface_number,
+                                   'apn_name': apn_config.get('name', 'unknown'),
+                                   'failure_reason': reason})
+                        self.last_failure_reason = (
+                            "Non-APN modem/network failure occurred during configured APN attempt; "
+                            "restarting connection workflow from the beginning."
+                        )
+                        self.last_failure_time = time.time()
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                        return
 
             # PRIORITY 1.5: Try in-memory last-connected APN (fastest reconnection)
             # Skipped when SIM changed — stale APN for old SIM
@@ -2582,16 +2591,25 @@ class ModemStateMachine:
                     logger.info("Trying last-connected APN for fast reconnection",
                                extra={'interface_number': self.interface_number,
                                       'apn_name': last_apn_name})
-                    try:
-                        success = await self._try_connection_with_apn(self.connected_apn, sim_config)
-                        if success:
-                            connection_successful = True
-                            logger.info("Last-connected APN reconnection successful",
-                                       extra={'interface_number': self.interface_number,
-                                              'apn_name': last_apn_name})
-                    except Exception as e:
-                        logger.warning(f"Last-connected APN failed: {e}",
-                                      extra={'interface_number': self.interface_number})
+                    success, reason = await self._try_connection_with_apn(self.connected_apn, sim_config)
+                    if success:
+                        connection_successful = True
+                        logger.info("Last-connected APN reconnection successful",
+                                   extra={'interface_number': self.interface_number,
+                                          'apn_name': last_apn_name})
+                    elif reason == 'connection_failed':
+                        logger.warning(
+                            "Last-known APN failed for non-APN reason; restarting full connection flow",
+                            extra={'interface_number': self.interface_number,
+                                   'apn_name': last_apn_name,
+                                   'failure_reason': reason})
+                        self.last_failure_reason = (
+                            "Non-APN modem/network failure occurred during last-known APN attempt; "
+                            "restarting connection workflow from the beginning."
+                        )
+                        self.last_failure_time = time.time()
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                        return
 
             # PRIORITY 3: Try APNs from discovery service
             if not connection_successful and (not self.config or self.config.get('android_apn_discovery', 'enabled') == 'enabled'):
@@ -2599,9 +2617,21 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
                 try:
                     # This will try discovered APNs in order
-                    success = await self._try_apn_candidates_from_discovery(sim_config)
+                    success, discovery_reason = await self._try_apn_candidates_from_discovery(sim_config)
                     if success:
                         connection_successful = True
+                    elif discovery_reason == 'restart_required':
+                        logger.warning(
+                            "Discovery phase reported non-APN MM failure; restarting full connection flow",
+                            extra={'interface_number': self.interface_number,
+                                   'failure_reason': discovery_reason})
+                        self.last_failure_reason = (
+                            "Non-APN modem/network failure occurred during APN discovery; "
+                            "restarting connection workflow from the beginning."
+                        )
+                        self.last_failure_time = time.time()
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                        return
                 except Exception as e:
                     logger.warning(f"APN discovery service failed: {e}",
                                  extra={'interface_number': self.interface_number})
@@ -6243,7 +6273,7 @@ class ModemStateMachine:
                                   'has_auth': apn_config['auth_type'] != 'none'})
 
                 # Try user APN directly
-                success = await self._try_connection_with_apn(apn_config, active_sim_config)
+                success, reason = await self._try_connection_with_apn(apn_config, active_sim_config)
                 if success:
                     return
                 else:
@@ -6430,13 +6460,13 @@ class ModemStateMachine:
         sim_config_with_timeout['connection_timeout'] = self._get_connection_timeout()
 
         # Use the extracted connection manager
-        success = await self.connection_manager.try_connection_with_apn(apn_config, sim_config_with_timeout)
+        success, reason = await self.connection_manager.try_connection_with_apn(apn_config, sim_config_with_timeout)
 
         if success:
             # Update bearer path for backward compatibility
             self.bearer_path = self.connection_manager.get_current_bearer_path()
 
-        return success
+        return (success, reason)
 
     async def _try_automatic_apn_assignment(self, sim_config):
         """Try automatic APN assignment as last resort"""
@@ -6649,53 +6679,193 @@ class ModemStateMachine:
             if not sim_info:
                 logger.warning("No SIM info available for APN discovery",
                               extra={'interface_number': self.interface_number})
-                return False
+                return (False, 'no_sim_info')
 
             # Discover APN candidates using Android library
             apn_candidates = await self._discover_apn_candidates(sim_info, sim_config)
             if not apn_candidates:
                 logger.warning("No APN candidates discovered",
                               extra={'interface_number': self.interface_number})
-                return False
+                return (False, 'no_candidates')
 
             logger.info(f"Discovered {len(apn_candidates)} APN candidates, attempting connections",
                        extra={'interface_number': self.interface_number})
 
             # Try each discovered APN
             for apn_data in apn_candidates:
+                logger.info(f"Trying discovered APN: {apn_data.get('name', 'unknown')}",
+                           extra={'interface_number': self.interface_number})
+
+                # Create APN config for connection attempt
+                apn_config = {
+                    'name': apn_data.get('name', ''),
+                    'username': apn_data.get('username', ''),
+                    'password': apn_data.get('password', ''),
+                    'auth_type': apn_data.get('auth_type', 'none'),
+                    'pdp_type': apn_data.get('pdp_type', 'ipv4v6')
+                }
+
+                # Attempt connection with this APN
+                # (returns bool, does not throw exceptions)
+                success, reason = await self._try_connection_with_apn(apn_config, sim_config)
+                if success:
+                    logger.info(f"Successfully connected with discovered APN: {apn_config['name']}",
+                               extra={'interface_number': self.interface_number})
+                    return (True, 'success')
+
+                # Connection failed. Check modem state to determine next action:
+                # - If MM still CONNECTING: it's legitimately trying → wait longer
+                # - If MM in error/failed: APN was rejected → move to next APN
+                # - If MM unresponsive: escalate recovery
+
+                # If MM explicitly rejected the APN, move to next one immediately
+                if reason == "apn_rejected":
+                    logger.info(f"MM rejected APN, moving to next candidate",
+                               extra={'interface_number': self.interface_number,
+                                      'apn_name': apn_config.get('name', 'unknown'),
+                                      'failure_reason': reason})
+                    # Clean up any bearers before next attempt
+                    try:
+                        if self.proxy:
+                            simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                            await asyncio.wait_for(
+                                simple_iface.call_disconnect('/'),
+                                timeout=5.0
+                            )
+                            await asyncio.sleep(1)
+                    except Exception as cleanup_err:
+                        logger.debug(f"Cleanup after rejection (non-fatal): {cleanup_err}",
+                                   extra={'interface_number': self.interface_number})
+                    continue
+
+                # Non-APN failure from MM: restart the whole connection process.
+                if reason == "connection_failed":
+                    logger.warning(
+                        "Non-APN ModemManager failure while testing APN; requesting full restart",
+                        extra={'interface_number': self.interface_number,
+                               'apn_name': apn_config.get('name', 'unknown'),
+                               'failure_reason': reason})
+                    try:
+                        if self.proxy:
+                            simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                            await asyncio.wait_for(
+                                simple_iface.call_disconnect('/'),
+                                timeout=5.0
+                            )
+                            await asyncio.sleep(1)
+                    except Exception as cleanup_err:
+                        logger.debug(f"Cleanup before restart (non-fatal): {cleanup_err}",
+                                   extra={'interface_number': self.interface_number})
+                    return (False, 'restart_required')
+
+                # If non-timeout failure, clean up and move to next APN
+                if reason != "timeout":
+                    # verification_failed, error, or other non-timeout failure
+                    logger.info(f"APN attempt failed: {reason}, moving to next candidate",
+                               extra={'interface_number': self.interface_number,
+                                      'apn_name': apn_config.get('name', 'unknown')})
+                    try:
+                        if self.proxy:
+                            simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                            await asyncio.wait_for(
+                                simple_iface.call_disconnect('/'),
+                                timeout=5.0
+                            )
+                            await asyncio.sleep(1)
+                    except Exception as cleanup_err:
+                        logger.debug(f"Cleanup between attempts (non-fatal): {cleanup_err}",
+                                   extra={'interface_number': self.interface_number})
+                    continue
+
+                # Timeout case: check modem state to see if MM is stuck or just slow
+                modem_state = None
                 try:
-                    logger.info(f"Trying discovered APN: {apn_data.get('name', 'unknown')}",
+                    if self.proxy:
+                        props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                        state_v = await props.call_get(MODEM_INTERFACE, "State")
+                        modem_state = state_v.value if hasattr(state_v, 'value') else state_v
+                except Exception as state_err:
+                    logger.debug(f"Could not read modem state after APN failure: {state_err}",
                                extra={'interface_number': self.interface_number})
 
-                    # Create APN config for connection attempt
-                    apn_config = {
-                        'name': apn_data.get('name', ''),
-                        'username': apn_data.get('username', ''),
-                        'password': apn_data.get('password', ''),
-                        'auth_type': apn_data.get('auth_type', 'none'),
-                        'pdp_type': apn_data.get('pdp_type', 'ipv4v6')
-                    }
+                # Map state code to name for logging
+                state_name = {-1: "FAILED", 2: "LOCKED", 3: "DISABLED", 6: "ENABLED",
+                              7: "SEARCHING", 8: "REGISTERED", 10: "CONNECTING", 11: "CONNECTED"}.get(
+                    modem_state, f"UNKNOWN({modem_state})")
+                logger.info(
+                    f"Connection timeout — modem state: {state_name}",
+                    extra={'interface_number': self.interface_number,
+                           'modem_state': modem_state,
+                           'apn_name': apn_config.get('name', 'unknown')})
 
-                    # Attempt connection with this APN
-                    success = await self._try_connection_with_apn(apn_config, sim_config)
-                    if success:
-                        logger.info(f"Successfully connected with discovered APN: {apn_config['name']}",
+                # If modem is CONNECTING, MM may still be legitimately trying
+                # (PDP negotiation, auth retry, bearer setup can take >60s)
+                # Give MM more time to finish before moving to next APN
+                if modem_state == 10:  # CONNECTING
+                    logger.info(
+                        "Modem still CONNECTING after timeout; MM may still be trying this APN",
+                        extra={'interface_number': self.interface_number,
+                               'apn_name': apn_config.get('name', 'unknown')})
+
+                    # Poll MM state for up to 60 more seconds waiting for terminal decision
+                    poll_deadline = time.monotonic() + 60
+                    poll_interval = 5
+
+                    while time.monotonic() < poll_deadline:
+                        await asyncio.sleep(poll_interval)
+                        try:
+                            if self.proxy:
+                                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                                state_v = await props.call_get(MODEM_INTERFACE, "State")
+                                current_state = state_v.value if hasattr(state_v, 'value') else state_v
+
+                                # Check if MM has decided on this APN
+                                if current_state != 10:  # Left CONNECTING state
+                                    state_name_now = {-1: "FAILED", 2: "LOCKED", 3: "DISABLED", 6: "ENABLED",
+                                                      7: "SEARCHING", 8: "REGISTERED", 10: "CONNECTING", 11: "CONNECTED"}.get(
+                                        current_state, f"UNKNOWN({current_state})")
+                                    logger.info(
+                                        f"MM reached decision on APN: {state_name_now}",
+                                        extra={'interface_number': self.interface_number,
+                                               'modem_state': current_state,
+                                               'apn_name': apn_config.get('name', 'unknown')})
+                                    modem_state = current_state
+                                    break
+                        except Exception as poll_err:
+                            logger.debug(f"Poll error reading modem state (non-fatal): {poll_err}",
+                                       extra={'interface_number': self.interface_number})
+                    else:
+                        # Poll deadline exceeded while still CONNECTING
+                        # MM may be hung or network very slow
+                        logger.warning(
+                            "MM still CONNECTING after 60s wait; assuming MM is processing this APN",
+                            extra={'interface_number': self.interface_number,
+                                   'apn_name': apn_config.get('name', 'unknown')})
+
+                # Clean up bearers before moving to next APN
+                # (prevents "operation already in progress" if MM had created a bearer)
+                try:
+                    if self.proxy:
+                        simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                        await asyncio.wait_for(
+                            simple_iface.call_disconnect('/'),
+                            timeout=5.0
+                        )
+                        logger.debug("Disconnected bearers before trying next APN",
                                    extra={'interface_number': self.interface_number})
-                        return True
-
-                except Exception as e:
-                    logger.warning(f"Failed to connect with discovered APN {apn_data.get('apn', 'unknown')}: {e}",
-                                  extra={'interface_number': self.interface_number})
-                    continue
+                        await asyncio.sleep(1)  # Let MM process the disconnect
+                except Exception as cleanup_err:
+                    logger.debug(f"Cleanup disconnect (non-fatal): {cleanup_err}",
+                               extra={'interface_number': self.interface_number})
 
             logger.warning("All discovered APNs failed",
                           extra={'interface_number': self.interface_number})
-            return False
+            return (False, 'all_apn_failed')
 
         except Exception as e:
             logger.error(f"APN discovery service failed: {e}",
                         extra={'interface_number': self.interface_number})
-            return False
+            return (False, 'discovery_error')
 
     def _convert_pdp_type(self, pdp_type):
         """Convert PDP type to ModemManager IP family constant"""
