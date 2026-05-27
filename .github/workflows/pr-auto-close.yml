@@ -16,6 +16,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+    if: github.repository_owner == 'vyos'
     steps:
     - uses: superbrothers/close-pull-request@v3
       with:
