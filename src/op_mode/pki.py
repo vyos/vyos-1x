@@ -33,6 +33,7 @@ from vyos.pki import encode_certificate
 from vyos.pki import encode_public_key
 from vyos.pki import encode_private_key
 from vyos.pki import encode_dh_parameters
+from vyos.pki import find_chain
 from vyos.pki import get_certificate_fingerprint
 from vyos.pki import create_certificate
 from vyos.pki import create_certificate_request
@@ -82,6 +83,23 @@ def _verify(target):
         return _wrapper
 
     return _verify_target
+
+
+def _encode_certificate_chain(cert, ca_certs):
+    """Encode a certificate together with its parent CA hierarchy into a single
+    PEM-encoded buffer ordered beginning with the end entity (leaf) certificate,
+    followed by the issuer certificates.
+    """
+    loaded_ca_certs = []
+    if ca_certs:
+        for ca_dict in ca_certs.values():
+            if 'certificate' not in ca_dict:
+                continue
+            ca_cert = load_certificate(ca_dict['certificate'])
+            if ca_cert:
+                loaded_ca_certs.append(ca_cert)
+
+    return ''.join(encode_certificate(c) for c in find_chain(cert, loaded_ca_certs))
 
 
 def get_default_values():
@@ -1192,7 +1210,10 @@ def import_pki(
 
 @_verify('ca')
 def show_certificate_authority(
-    raw: bool, name: typing.Optional[str] = None, pem: typing.Optional[bool] = False
+    raw: bool,
+    name: typing.Optional[str] = None,
+    pem: typing.Optional[bool] = False,
+    full_chain: typing.Optional[bool] = False,
 ):
     headers = [
         'Name',
@@ -1214,8 +1235,14 @@ def show_certificate_authority(
 
             cert = load_certificate(cert_dict['certificate'])
 
+            if not cert:
+                continue
+
             if name and pem:
-                print(encode_certificate(cert))
+                if full_chain:
+                    print(_encode_certificate_chain(cert, certs))
+                else:
+                    print(encode_certificate(cert))
                 return
 
             parent_ca_name = get_certificate_ca(cert, certs)
@@ -1223,9 +1250,6 @@ def show_certificate_authority(
 
             if not parent_ca_name or parent_ca_name == cert_name:
                 parent_ca_name = 'N/A'
-
-            if not cert:
-                continue
 
             have_private = (
                 'Yes'
@@ -1254,6 +1278,7 @@ def show_certificate(
     name: typing.Optional[str] = None,
     private: typing.Optional[bool] = False,
     pem: typing.Optional[bool] = False,
+    full_chain: typing.Optional[bool] = False,
     fingerprint: typing.Optional[ArgsFingerprint] = None,
 ):
     headers = [
@@ -1284,7 +1309,10 @@ def show_certificate(
                 continue
 
             if name and pem and not (private or fingerprint):
-                print(encode_certificate(cert))
+                if full_chain:
+                    print(_encode_certificate_chain(cert, ca_certs))
+                else:
+                    print(encode_certificate(cert))
                 return
             elif name and fingerprint and not private:
                 print(get_certificate_fingerprint(cert, fingerprint))
@@ -1298,13 +1326,19 @@ def show_certificate(
                         wrap_tags=True,
                     )
                     if private_key:
-                        print(encode_private_key(private_key, passphrase=None))
+                        priv_pem = encode_private_key(private_key, passphrase=None)
+                        if pem and full_chain:
+                            print(_encode_certificate_chain(cert, ca_certs) + priv_pem)
+                        else:
+                            print(priv_pem)
+                        return
                     else:
                         if protected:
                             print(f'Private key for certificate "{cert_name}" is '
                                   'password-protected and cannot be displayed')
                         else:
-                            print(f'Failed to load private key for certificate "{cert_name}"')
+                            print('Failed to load private key for certificate '
+                                  f'"{cert_name}"')
                 else:
                     print(f'No private key found for certificate "{cert_name}"')
                 return
@@ -1394,6 +1428,7 @@ def show_all(raw: bool):
     print('\n')
     show_crl(raw)
 
+
 def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
     from vyos.defaults import directories
 
@@ -1406,7 +1441,7 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
         # Re-run CLI PKI helper to initially request certificates via ACME
         # again. This should never be the case - but sometimes the universe has
         # a bad time
-        Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI ' \
+        Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI '
                 'subsystem...\n\n')
         out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py"')
     elif force:
@@ -1415,6 +1450,7 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
         out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew"')
 
     print(out)
+
 
 if __name__ == '__main__':
     try:
