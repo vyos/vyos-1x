@@ -399,6 +399,10 @@
               <leafNode name="server">
                 <defaultValue>50</defaultValue>
               </leafNode>
+              #include <include/haproxy/timeout-tunnel.xml.i>
+              <leafNode name="tunnel">
+                <defaultValue>300</defaultValue>
+              </leafNode>
             </children>
           </node>
           #include <include/interface/vrf.xml.i>

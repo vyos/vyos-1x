@@ -7,6 +7,7 @@
     #include <include/haproxy/timeout-check.xml.i>
     #include <include/haproxy/timeout-connect.xml.i>
     #include <include/haproxy/timeout-server.xml.i>
+    #include <include/haproxy/timeout-tunnel.xml.i>
   </children>
 </node>
 <!-- include end -->

@@ -42,6 +42,7 @@ defaults
     timeout connect {{ timeout.connect }}s
     timeout client {{ timeout.client }}s
     timeout server {{ timeout.server }}s
+    timeout tunnel {{ timeout.tunnel }}s
     errorfile 400 /etc/haproxy/errors/400.http
     errorfile 403 /etc/haproxy/errors/403.http
     errorfile 408 /etc/haproxy/errors/408.http
@@ -284,6 +285,9 @@ backend {{ back }}
 {%         endif %}
 {%         if back_config.timeout.server is vyos_defined %}
     timeout server {{ back_config.timeout.server }}s
+{%         endif %}
+{%         if back_config.timeout.tunnel is vyos_defined %}
+    timeout tunnel {{ back_config.timeout.tunnel }}s
 {%         endif %}
 {%     endfor %}
 {% endif %}

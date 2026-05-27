@@ -619,10 +619,12 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         t_default_client = '50'
         t_default_connect = '10'
         t_default_server ='50'
+        t_default_tunnel ='300'
         t_check = '4'
         t_client = '300'
         t_connect = '12'
         t_server ='120'
+        t_tunnel ='600'
         t_front_client = '600'
 
         self.base_config()
@@ -633,6 +635,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
             f'timeout connect {t_default_connect}s',
             f'timeout client {t_default_client}s',
             f'timeout server {t_default_server}s',
+            f'timeout tunnel {t_default_tunnel}s'
         )
         # Check default timeout options
         config = read_file(HAPROXY_CONF)
@@ -644,6 +647,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['timeout', 'client', t_client])
         self.cli_set(base_path + ['timeout', 'connect', t_connect])
         self.cli_set(base_path + ['timeout', 'server', t_server])
+        self.cli_set(base_path + ['timeout', 'tunnel', t_tunnel])
         self.cli_set(base_path + ['service', haproxy_service_name, 'timeout', 'client', t_front_client])
 
         self.cli_commit()
@@ -654,6 +658,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
             f'timeout connect {t_connect}s',
             f'timeout client {t_client}s',
             f'timeout server {t_server}s',
+            f'timeout tunnel {t_tunnel}s',
             f'timeout client {t_front_client}s',
         )
 
