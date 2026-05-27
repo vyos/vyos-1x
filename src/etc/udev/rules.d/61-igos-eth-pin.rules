@@ -24,7 +24,7 @@
 
 ACTION!="add",            GOTO="igos_eth_pin_end"
 SUBSYSTEM!="net",         GOTO="igos_eth_pin_end"
-KERNEL!="eth*",           GOTO="igos_eth_pin_end"
+KERNEL!="eth*|en*",       GOTO="igos_eth_pin_end"
 
 IMPORT{program}="/usr/lib/udev/igos-eth-port-id %p"
 
