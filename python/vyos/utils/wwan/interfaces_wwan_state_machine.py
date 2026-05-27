@@ -54,6 +54,11 @@ SMS_INTERFACE = "org.freedesktop.ModemManager1.Sms"
 SMS_STORAGE_DIR = "/var/lib/wwan/sms"
 SMS_MAX_MESSAGES = 100
 
+# ── APN state persistence ────────────────────────────────────────────────────
+# Survives service restarts and reboots so the last-connected APN is retried
+# first on the next boot without re-running the full discovery cascade.
+APN_STATE_DIR = "/var/lib/wwan/apn"
+
 # ── Central defaults ────────────────────────────────────────────────────────
 # Single source of truth for configuration defaults.  Every code path that
 # needs a fallback value should reference these dicts rather than hard-coding
@@ -180,6 +185,10 @@ class ModemStateMachine:
         self.target_sim_slot = None         # Track target SIM during switch
         self.previous_sim_slot = None        # Track original SIM for rollback on switch failure
 
+        # Track consecutive APN cascade failures on the current SIM before allowing
+        # failover — honours sim_failover_connect_retries config
+        self.initial_connection_failure_count = 0
+
         # SIM failover cooldown tracking to prevent ping-pong
         self.last_failover_time = 0          # Timestamp of last SIM failover
         self.failover_count = 0              # Number of failovers since last stable connection
@@ -209,7 +218,7 @@ class ModemStateMachine:
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
         self.sim_changed = False            # Flag to indicate SIM card change detected
-        self.connected_apn = None           # Last successful APN config dict (for reconnection & status)
+        self.connected_apn = self._restore_connected_apn()   # Last successful APN (persisted across reboots)
         self.current_sim_path = None        # Last observed Modem.Sim object path
         # Debounce noisy Sim path churn during modem reboot/re-enumeration.
         # This is intentionally narrow: it only suppresses rapid duplicate
@@ -244,6 +253,9 @@ class ModemStateMachine:
         # Reset cooldown tracking to prevent cascading failures
         self.last_reset_time = 0            # Timestamp of last hardware reset
         self.reset_cooldown_seconds = 300   # 5 minute cooldown between resets
+        self.hardware_reset_enabled = True
+        self.max_hardware_resets = 3
+        self.hardware_reset_attempts = 0
 
         # Service-initiated modem operations tracking (improved reset-aware)
         self.service_initiated_disable = False  # Flag to prevent false SIM missing detection
@@ -455,6 +467,18 @@ class ModemStateMachine:
 
     def _is_reset_allowed(self) -> bool:
         """Check if hardware reset is allowed (not in cooldown period)"""
+        if not self.hardware_reset_enabled:
+            logger.warning("Hardware reset blocked - feature disabled by configuration",
+                          extra={'interface_number': self.interface_number})
+            return False
+
+        if self.hardware_reset_attempts >= self.max_hardware_resets:
+            logger.warning("Hardware reset blocked - max attempts reached",
+                          extra={'interface_number': self.interface_number,
+                                 'attempts': self.hardware_reset_attempts,
+                                 'max_attempts': self.max_hardware_resets})
+            return False
+
         current_time = time.time()
         time_since_last_reset = current_time - self.last_reset_time
 
@@ -470,13 +494,16 @@ class ModemStateMachine:
     def _record_reset(self):
         """Record that a hardware reset was performed"""
         self.last_reset_time = time.time()
+        self.hardware_reset_attempts += 1
         # Start reset grace period to prevent false SIM missing detection
         self.reset_operation_in_progress = True
         self.reset_grace_period_end = time.time() + 60  # 60 second grace period after reset
         logger.info(f"Hardware reset recorded, next reset allowed after {self.reset_cooldown_seconds}s cooldown",
                    extra={'interface_number': self.interface_number,
                           'reset_time': self.last_reset_time,
-                          'grace_period_end': self.reset_grace_period_end})
+                          'grace_period_end': self.reset_grace_period_end,
+                          'hardware_reset_attempts': self.hardware_reset_attempts,
+                          'max_hardware_resets': self.max_hardware_resets})
 
     def _is_in_reset_grace_period(self) -> bool:
         """Check if we're still in the grace period after a reset operation"""
@@ -1564,6 +1591,7 @@ class ModemStateMachine:
                 # Force fresh SIM/APN discovery on next connection attempt.
                 self.last_known_sim_info = {}
                 self.connected_apn = None
+                self._clear_persisted_apn()
                 self.sim_changed = True
 
     def handle_3gpp_properties(self, interface_name, changed_properties, invalidated_properties):
@@ -2221,6 +2249,23 @@ class ModemStateMachine:
         # Connection mode: always-on | connect-on-demand | dial-on-demand
         self.connection_mode = self.parsed_config.raw_config.get('connection_mode', 'always-on')
 
+        # Connection and registration timers
+        self.connection_timeout = float(self.parsed_config.raw_config.get('connection_timeout', 120))
+        self.registration_timeout = float(self.parsed_config.raw_config.get('registration_timeout', 180))
+
+        # Hardware reset controls
+        self.hardware_reset_enabled = bool(self.parsed_config.raw_config.get('hardware_reset_enabled', True))
+        self.max_hardware_resets = int(self.parsed_config.raw_config.get('max_hardware_resets', 3))
+        self.reset_cooldown_seconds = int(self.parsed_config.raw_config.get('hardware_reset_cooldown', 300))
+
+        logger.info("Applied timeout/reset runtime configuration",
+               extra={'interface_number': self.interface_number,
+                  'connection_timeout': self.connection_timeout,
+                  'registration_timeout': self.registration_timeout,
+                  'hardware_reset_enabled': self.hardware_reset_enabled,
+                  'max_hardware_resets': self.max_hardware_resets,
+                  'hardware_reset_cooldown': self.reset_cooldown_seconds})
+
         # Failed-state periodic retry configuration
         self._failed_retry_enabled = self.parsed_config.failed_retry.enabled
         self._failed_retry_intervals = list(self.parsed_config.failed_retry.intervals)
@@ -2582,11 +2627,13 @@ class ModemStateMachine:
                 self.last_failure_time = 0
                 self.last_failed_apn = ''
                 self.configured_apn_rejected = False
+                self.initial_connection_failure_count = 0
 
                 # Store the connected APN for fast reconnection and status reporting
                 cm_apn = getattr(self.connection_manager, 'connected_apn', None)
                 if cm_apn:
                     self.connected_apn = cm_apn.copy()
+                    self._persist_connected_apn(cm_apn)
                     logger.info("Stored connected APN for fast reconnection",
                                extra={'interface_number': self.interface_number,
                                       'apn_name': cm_apn.get('name', '')})
@@ -2667,11 +2714,29 @@ class ModemStateMachine:
                         "for your carrier and SIM card."
                     )
 
+                self.initial_connection_failure_count += 1
+
                 logger.error("All APN connection methods failed",
                            extra={'interface_number': self.interface_number,
                                   'configured_apn_rejected': self.configured_apn_rejected,
                                   'failed_apn': self.last_failed_apn,
-                                  'failure_reason': self.last_failure_reason})
+                                  'failure_reason': self.last_failure_reason,
+                                  'initial_connection_failure_count': self.initial_connection_failure_count})
+
+                # Respect sim_failover_connect_retries: must exhaust the full APN
+                # cascade this many times before switching SIMs.  The cascade
+                # already covers last-connected → Android DB → blank/automatic,
+                # so each count represents a genuine attempt with all methods.
+                retries_required = self.config.get('sim_failover_connect_retries', 3) if self.config else 3
+                if self.initial_connection_failure_count < retries_required:
+                    logger.warning(
+                        f"APN cascade failed (attempt {self.initial_connection_failure_count}/{retries_required}) — "
+                        "scheduling failed-state retry before considering SIM failover",
+                        extra={'interface_number': self.interface_number,
+                               'failures_so_far': self.initial_connection_failure_count,
+                               'retries_required': retries_required})
+                    self.transition(ModemEvent.CONNECTION_FAILED)
+                    return
 
                 # For dual-SIM: attempt failover to the other SIM if enabled
                 if (self._is_sim_failover_enabled()
@@ -3166,7 +3231,7 @@ class ModemStateMachine:
                                       'operator_code': preferred_carrier})
                     try:
                         await gpp_iface.call_register(preferred_carrier)
-                        await asyncio.sleep(10)
+                        await self._wait_for_registered()
                         logger.info("Direct registration completed",
                                    extra={'interface_number': self.interface_number})
                         # Still do a diagnostic scan if enabled
@@ -3350,10 +3415,41 @@ class ModemStateMachine:
                               'operator_name': target_name,
                               'operator_code': target_code})
             await gpp_iface.call_register(target_code)
-            await asyncio.sleep(15)
+            await self._wait_for_registered()
         elif preferred_carrier:
             logger.warning("Preferred carrier not found in scan, using automatic",
                           extra={'interface_number': self.interface_number})
+
+    def _get_connection_timeout(self) -> float:
+        """Get configured APN connection timeout in seconds."""
+        timeout = float(getattr(self, 'connection_timeout', 120.0))
+        return max(5.0, timeout)
+
+    def _get_registration_timeout(self) -> float:
+        """Get configured registration timeout in seconds."""
+        timeout = float(getattr(self, 'registration_timeout', 180.0))
+        return max(30.0, timeout)
+
+    async def _wait_for_registered(self):
+        """Wait until ModemManager reaches REGISTERED/CONNECTING/CONNECTED."""
+        timeout = self._get_registration_timeout()
+        deadline = time.time() + timeout
+
+        while time.time() < deadline:
+            try:
+                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                state_variant = await props.call_get(MODEM_INTERFACE, "State")
+                mm_state = state_variant.value
+                if mm_state in (8, 10, 11):
+                    return True
+            except Exception:
+                pass
+            await asyncio.sleep(2)
+
+        logger.warning("Registration wait timed out",
+                      extra={'interface_number': self.interface_number,
+                             'timeout_seconds': timeout})
+        return False
 
     async def _ensure_modem_disabled_for_config(self):
         """Ensure modem is disabled for SIM/band configuration"""
@@ -3867,6 +3963,53 @@ class ModemStateMachine:
                               'previous_recovery_attempts': self.connectivity_recovery_attempts})
         self.failover_count = 0
         self.connectivity_recovery_attempts = 0
+        self.initial_connection_failure_count = 0
+        self.hardware_reset_attempts = 0
+
+    # ── APN state persistence ──────────────────────────────────────────────
+
+    def _apn_state_path(self) -> str:
+        """Return the path of the per-interface APN state file."""
+        return os.path.join(APN_STATE_DIR, f"wwan{self.interface_number}.json")
+
+    def _persist_connected_apn(self, apn: dict) -> None:
+        """Write the last-connected APN to disk so it survives reboots."""
+        try:
+            os.makedirs(APN_STATE_DIR, exist_ok=True)
+            with open(self._apn_state_path(), 'w') as f:
+                json.dump(apn, f)
+        except Exception as e:
+            logger.warning(f"Could not persist connected APN: {e}",
+                          extra={'interface_number': self.interface_number})
+
+    def _restore_connected_apn(self) -> dict | None:
+        """Load the last-connected APN from disk (called once at startup)."""
+        path = self._apn_state_path()
+        try:
+            if os.path.exists(path):
+                with open(path) as f:
+                    apn = json.load(f)
+                if apn and apn.get('name'):
+                    logger.info("Restored last-connected APN from disk",
+                               extra={'interface_number': self.interface_number,
+                                      'apn_name': apn.get('name', '')})
+                    return apn
+        except Exception as e:
+            logger.warning(f"Could not restore persisted APN: {e}",
+                          extra={'interface_number': self.interface_number})
+        return None
+
+    def _clear_persisted_apn(self) -> None:
+        """Remove the persisted APN state file (called on SIM change)."""
+        try:
+            path = self._apn_state_path()
+            if os.path.exists(path):
+                os.remove(path)
+                logger.debug("Cleared persisted APN after SIM change",
+                            extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.warning(f"Could not clear persisted APN: {e}",
+                          extra={'interface_number': self.interface_number})
 
     # ── SIM failback mechanism ───────────────────────────────────────────────
 
@@ -4689,16 +4832,18 @@ class ModemStateMachine:
         """Step 2: Disable modem for SIM switch - with enhanced recovery"""
         max_attempts = 2
 
+        # --- retry loop covers ONLY the disable step ---
+        # SIM_DISABLED and _sim_switch_hardware() are fired ONCE outside the
+        # loop.  Keeping hardware-switch inside the retry caused SIM_DISABLED
+        # to be fired a second time on attempt 1 while the FSM was already in
+        # SIM_ENABLING (advanced by attempt 0's SIM_SWITCHED transition),
+        # which has no sim_disabled handler → "Can not transition" error.
         for attempt in range(max_attempts):
             try:
                 # Use escalating timeouts: 30s, 60s
                 timeout = 30 + (30 * attempt)
                 await self._try_disable_modem_once(timeout)
-
-                # Transition to next step
-                self.transition(ModemEvent.SIM_DISABLED)
-                await self._sim_switch_hardware()
-                return  # Success!
+                break  # disable succeeded — exit retry loop
 
             except Exception as e:
                 logger.warning(f"Modem disable attempt {attempt + 1} failed: {e}",
@@ -4730,8 +4875,11 @@ class ModemStateMachine:
                     # All attempts failed
                     logger.error("All modem disable attempts failed",
                                 extra={'interface_number': self.interface_number})
-
                     raise
+
+        # Transition and hardware switch happen exactly once, after disable succeeds
+        self.transition(ModemEvent.SIM_DISABLED)
+        await self._sim_switch_hardware()
 
     async def _handle_sim_missing_failover(self):
         """Handle SIM missing by attempting failover to available SIM.
@@ -5369,6 +5517,9 @@ class ModemStateMachine:
 
             # SIM switch complete - transition back to normal configuration
             self.transition(ModemEvent.SIM_SWITCH_COMPLETE)
+
+            # New SIM = fresh attempt counter — don't carry over failures from old SIM
+            self.initial_connection_failure_count = 0
 
             logger.info("SIM switch process completed — now establishing connection on new SIM",
                        extra={'interface_number': self.interface_number,
@@ -6067,6 +6218,7 @@ class ModemStateMachine:
                                          'mcc_mnc': sim_info.get('mcc_mnc', '')})
                     # Ensure we do not reuse APN assumptions from the old SIM.
                     self.connected_apn = None
+                    self._clear_persisted_apn()
 
             # Get active SIM configuration
             primary_sim_slot = self.config.get('primary_sim_slot', 1)
@@ -6272,8 +6424,13 @@ class ModemStateMachine:
         # Set proxy for connection manager
         self.connection_manager.set_proxy(self.proxy)
 
+        # Inject runtime connection timeout so ConnectionManager enforces
+        # the configured MM Simple.Connect() wait.
+        sim_config_with_timeout = dict(sim_config or {})
+        sim_config_with_timeout['connection_timeout'] = self._get_connection_timeout()
+
         # Use the extracted connection manager
-        success = await self.connection_manager.try_connection_with_apn(apn_config, sim_config)
+        success = await self.connection_manager.try_connection_with_apn(apn_config, sim_config_with_timeout)
 
         if success:
             # Update bearer path for backward compatibility
@@ -6304,7 +6461,11 @@ class ModemStateMachine:
 
             # Let ModemManager/network handle APN assignment
             simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
-            bearer_path = await simple_iface.call_connect(connect_params)
+            connection_timeout = self._get_connection_timeout()
+            bearer_path = await asyncio.wait_for(
+                simple_iface.call_connect(connect_params),
+                timeout=connection_timeout,
+            )
             self.bearer_path = bearer_path
 
             # Verify connection
@@ -6455,6 +6616,7 @@ class ModemStateMachine:
                 self.last_known_sim_info = current_sim_info.copy()
                 self.sim_changed = True
                 self.connected_apn = None  # Invalidate — new SIM needs fresh discovery
+                self._clear_persisted_apn()  # Don't reuse stale APN after SIM swap
                 # Cache per-slot identity for the new SIM
                 slot = self.current_active_sim or 1
                 self.sim_slot_info_cache[slot] = {
@@ -8771,6 +8933,8 @@ class ModemStateMachine:
                     # (handle_modem_event states 7→8→10→11) works.
                     if self.machine.current_state == ModemState.DISCONNECTING.value:
                         self.transition(ModemEvent.CONFIG_UPDATE)
+                    elif self.machine.current_state == ModemState.DISCONNECTED.value:
+                        self.transition(ModemEvent.RECONFIGURE)
                     if self.enhanced_reconnection:
                         success = await (
                             self._enhanced_reconnection_attempt())
@@ -8793,6 +8957,8 @@ class ModemStateMachine:
                     # (handle_modem_event states 7→8→10→11) works.
                     if self.machine.current_state == ModemState.DISCONNECTING.value:
                         self.transition(ModemEvent.CONFIG_UPDATE)
+                    elif self.machine.current_state == ModemState.DISCONNECTED.value:
+                        self.transition(ModemEvent.RECONFIGURE)
                     if escalate:
                         # Retry loop with SIM failover escalation
                         for attempt in range(1, self.max_recovery_before_sim_switch + 1):
@@ -8911,9 +9077,104 @@ class ModemStateMachine:
                             await self.apply_modem_configuration()
 
                 elif mm_state in [6, 7]:  # ENABLED or SEARCHING
-                    logger.info("Modem searching for network, will use enhanced reconnection when ready",
-                               extra={'interface_number': self.interface_number})
-                    # Wait for automatic registration, then enhanced reconnection will take over
+                    # Previously this branch only logged and returned, which could
+                    # leave the FSM stuck in DISCONNECTING forever if no follow-up
+                    # state transition arrived. Actively wait for registration and
+                    # then retry recovery, otherwise escalate.
+                    if self.machine.current_state == ModemState.DISCONNECTING.value:
+                        # Teardown already happened; don't expose prolonged
+                        # registration wait as DISCONNECTING.
+                        self.transition(ModemEvent.DISCONNECTED)
+
+                    registration_wait = self._get_registration_timeout()
+                    poll_interval = 5
+                    deadline = time.monotonic() + registration_wait
+
+                    logger.info(
+                        "Modem searching for network during disconnection recovery; "
+                        "waiting for registration before reconnect",
+                        extra={'interface_number': self.interface_number,
+                               'modem_state': mm_state,
+                               'registration_wait_seconds': registration_wait,
+                               'poll_interval_seconds': poll_interval})
+
+                    while time.monotonic() < deadline:
+                        await asyncio.sleep(poll_interval)
+
+                        if self.user_disconnected:
+                            logger.info(
+                                "User disconnected while waiting for registration; "
+                                "aborting automatic recovery",
+                                extra={'interface_number': self.interface_number})
+                            return
+
+                        try:
+                            mm_state_variant = await props.call_get(MODEM_INTERFACE, "State")
+                            mm_state_now = mm_state_variant.value
+                        except Exception as state_err:
+                            logger.debug(
+                                f"Could not read modem state while waiting for registration: {state_err}",
+                                extra={'interface_number': self.interface_number})
+                            continue
+
+                        if mm_state_now in [6, 7]:
+                            continue
+
+                        if mm_state_now in [8, 11]:
+                            logger.info(
+                                "Modem left searching state; retrying disconnection recovery",
+                                extra={'interface_number': self.interface_number,
+                                       'modem_state': mm_state_now})
+                            await self.handle_disconnection_recovery(
+                                escalate=escalate,
+                                connectivity_triggered=connectivity_triggered,
+                            )
+                            return
+
+                        logger.warning(
+                            "Modem left searching state without registration; "
+                            "escalating disconnection recovery",
+                            extra={'interface_number': self.interface_number,
+                                   'modem_state': mm_state_now})
+                        break
+                    else:
+                        logger.warning(
+                            "Timed out waiting for modem registration during disconnection recovery",
+                            extra={'interface_number': self.interface_number,
+                                   'timeout_seconds': registration_wait})
+
+                    # Escalate to SIM failover (when enabled) before declaring failure.
+                    if (escalate and self._is_sim_failover_enabled()
+                            and self._is_failover_allowed()):
+                        fallback_sim = 2 if self.current_active_sim == 1 else 1
+                        if self._is_target_sim_enabled(fallback_sim):
+                            logger.warning(
+                                "Escalating to SIM failover after registration wait timeout",
+                                extra={'interface_number': self.interface_number,
+                                       'from_sim': self.current_active_sim,
+                                       'to_sim': fallback_sim,
+                                       'reason': 'registration_recovery_timeout'})
+                            self.disconnection_recovery_attempts = 0
+                            self.sim_switch_reason = 'registration_recovery_timeout'
+                            self.target_sim_slot = fallback_sim
+                            self._record_failover()
+                            self._emit_failover_event(
+                                event_type='failover',
+                                from_sim=self.current_active_sim,
+                                to_sim=fallback_sim,
+                                reason='registration_recovery_timeout',
+                                trigger='handle_disconnection_recovery',
+                                extra_data={'registration_timeout_seconds': registration_wait},
+                            )
+                            self.transition(ModemEvent.SWITCH_SIM)
+                            await self._execute_sim_switch()
+                            return
+                        logger.warning(
+                            f"SIM failover skipped — target slot {fallback_sim} disabled in config",
+                            extra={'interface_number': self.interface_number,
+                                   'target_sim': fallback_sim})
+
+                    self.transition(ModemEvent.CONNECTION_FAILED)
 
                 elif mm_state in [2, 3]:  # LOCKED or DISABLED - potential SIM issue
                     logger.warning("Modem in locked/disabled state, checking for SIM issues",
@@ -10008,11 +10269,12 @@ class ModemStateMachine:
                         self._safe_create_task(self._set_interface_down())
                     else:
                         # Registration lost but bearer still connected - start conservative timer
+                        registration_timeout = self._get_registration_timeout()
                         logger.warning("📡⚠️ Network registration lost but bearer still connected - starting registration recovery timer",
                                      extra={'interface_number': self.interface_number,
                                             'registration_state': f"{reg_state} ({reg_state_name})",
                                             'bearer_connected': bearer_connected,
-                                            'recovery_timer_seconds': 30,
+                                            'recovery_timer_seconds': registration_timeout,
                                             'action': 'interface_down_if_no_recovery'})
                         self._safe_create_task(self._handle_registration_loss_with_bearer())
             except Exception as e:
@@ -10031,8 +10293,9 @@ class ModemStateMachine:
     async def _handle_registration_loss_with_bearer(self):
         """Handle registration loss when bearer is still connected - give time for recovery"""
         try:
-            # Wait 30 seconds for registration to recover
-            await asyncio.sleep(30)
+            # Wait configured registration timeout for registration to recover
+            registration_timeout = self._get_registration_timeout()
+            await asyncio.sleep(registration_timeout)
 
             # Check if registration has recovered
             current_reg_state = getattr(self, '_last_registration_state', None)
@@ -10040,6 +10303,7 @@ class ModemStateMachine:
                 logger.warning("📡⏰ Registration recovery timeout - bringing interface DOWN",
                              extra={'interface_number': self.interface_number,
                                     'final_registration_state': current_reg_state,
+                             'registration_timeout_seconds': registration_timeout,
                                     'action': 'interface_down_timeout'})
                 self._safe_create_task(self._set_interface_down())
             else:

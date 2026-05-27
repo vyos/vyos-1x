@@ -92,11 +92,16 @@ class ConnectionManager:
         """Try to establish connection with specific APN configuration"""
         try:
             apn_config = self._normalize_apn_config(apn_config)
+            connection_timeout = float(sim_config.get('connection_timeout', 60.0))
+            # Keep a sane lower bound for non-VyOS callers/tests.
+            if connection_timeout < 5.0:
+                connection_timeout = 5.0
 
             self.logger.info("Attempting connection with APN",
                            extra={'interface_number': self.interface_number,
                                   'apn_name': apn_config['name'],
-                                  'has_auth': apn_config['auth_type'] != 'none'})
+                                  'has_auth': apn_config['auth_type'] != 'none',
+                                  'timeout_seconds': connection_timeout})
 
             # Build connection parameters
             connect_params = {}
@@ -124,7 +129,7 @@ class ConnectionManager:
             try:
                 bearer_path = await asyncio.wait_for(
                     simple_iface.call_connect(connect_params),
-                    timeout=60.0  # 60 second timeout per APN attempt
+                    timeout=connection_timeout
                 )
 
                 self.bearer_path = bearer_path
@@ -153,7 +158,7 @@ class ConnectionManager:
                 self.logger.warning("APN connection attempt timed out",
                                   extra={'interface_number': self.interface_number,
                                          'apn_name': apn_config['name'],
-                                         'timeout_seconds': 60})
+                                         'timeout_seconds': connection_timeout})
                 # A bearer may have been partially created before the timeout.
                 # Attempt cleanup to avoid leaked bearers on the modem.
                 await self._cleanup_failed_bearer()

@@ -264,13 +264,10 @@ def build_config(raw_cfg):
 
         # Monitoring intervals
         'normal_monitoring_interval': raw_cfg.get('normal_monitoring_interval', 30),
-        'system_health_check_interval': raw_cfg.get('system_health_check_interval', 300),
 
-        # Logging and monitoring settings
+        # Logging settings
         'verbose_logging': raw_cfg.get('verbose_logging', True),
         'log_level': raw_cfg.get('log_level', 'info'),
-        'snmp_monitoring': raw_cfg.get('snmp_monitoring', True),
-        'detailed_status': raw_cfg.get('detailed_status', True),
 
         # SIM slots, connectivity monitoring, and interface management
         'sim_slots': sim_slots,
