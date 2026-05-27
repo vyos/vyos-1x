@@ -41,6 +41,17 @@ airbag.enable()
 
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
+iid_secret_min_len = 16
+iid_secret_max_len = 128
+
+
+def _is_safe_ascii_secret(value):
+    # Restrict to ASCII printable non-whitespace characters.
+    return value.isascii() and all(ch.isprintable() and not ch.isspace() for ch in value)
+
+
+def _is_valid_iid_secret(value):
+    return iid_secret_min_len <= len(value) <= iid_secret_max_len and _is_safe_ascii_secret(value)
 
 
 def base_ifname(ifname):
@@ -127,6 +138,11 @@ def get_config(config=None):
         is_node_changed(conf, base + ['authentication', 'radius']),
         is_node_changed(conf, base + ['authentication', 'mode']),
         is_node_changed(conf, base + ['authentication', 'protocols']),
+
+        # IPv6 peer IID mode/secret affect negotiated session state.
+        # Restart is required to force existing sessions to re-negotiate.
+        is_node_changed(conf, base + ['ppp-options', 'ipv6-peer-interface-id']),
+        is_node_changed(conf, base + ['ppp-options', 'ipv6-peer-interface-id-secret']),
         any(
             base_ifname(iface) in all_changed_vpp_ifaces
             for iface in pppoe.get('interface', {})
@@ -174,6 +190,17 @@ def verify(pppoe):
     verify_accel_ppp_name_servers(pppoe)
     verify_accel_ppp_wins_servers(pppoe)
     verify_pado_delay(pppoe)
+
+    peer_id_mode = dict_search('ppp_options.ipv6_peer_interface_id', pppoe)
+    peer_id_secret = dict_search('ppp_options.ipv6_peer_interface_id_secret', pppoe)
+    if peer_id_mode == 'calling-sid':
+        if not peer_id_secret:
+            raise ConfigError('ppp-options ipv6-peer-interface-id calling-sid requires ipv6-peer-interface-id-secret')
+        if not _is_valid_iid_secret(peer_id_secret):
+            raise ConfigError(
+                f'ppp-options ipv6-peer-interface-id-secret must be {iid_secret_min_len} to '
+                f'{iid_secret_max_len} printable non-whitespace ASCII characters'
+            )
 
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')

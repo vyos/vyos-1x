@@ -30,6 +30,9 @@ ipv6-peer-intf-id=ipv4
 ipv6-peer-intf-id={{ ppp_options.ipv6_peer_interface_id }}
 {%         endif %}
 {%     endif %}
+{%     if ppp_options.ipv6_peer_interface_id_secret is vyos_defined %}
+ipv6-peer-intf-id-secret={{ ppp_options.ipv6_peer_interface_id_secret }}
+{%     endif %}
 ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_interface_id is vyos_defined else "0" }}
 {% endif %}
 {# MTU #}
