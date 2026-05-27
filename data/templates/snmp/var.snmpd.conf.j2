@@ -14,3 +14,5 @@ createUser {{ vyos_user }} MD5 "{{ vyos_user_pass }}" DES
 oldEngineID 0x{{ v3.engineid }}
 {%     endif %}
 {% endif %}
+
+engineBoots {{ engine_boots }}
