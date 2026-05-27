@@ -627,7 +627,7 @@
                     <validator name="numeric" argument="--range 0-2"/>
                   </constraint>
                 </properties>
-                <defaultValue>0</defaultValue>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <leafNode name="subsystem">
                 <properties>

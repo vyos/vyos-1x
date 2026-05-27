@@ -66,6 +66,7 @@ charon_conf        = '/etc/strongswan.d/charon.conf'
 charon_dhcp_conf   = '/etc/strongswan.d/charon/dhcp.conf'
 charon_radius_conf = '/etc/strongswan.d/charon/eap-radius.conf'
 charon_systemd_conf = '/etc/strongswan.d/charon-systemd.conf'
+charon_logging_conf = '/etc/strongswan.d/charon-logging.conf'
 interface_conf     = '/etc/strongswan.d/interfaces_use.conf'
 swanctl_conf       = f'{swanctl_dir}/swanctl.conf'
 
@@ -783,7 +784,15 @@ def generate(ipsec):
     cleanup_pki_files()
 
     if not ipsec or 'deleted' in ipsec:
-        for config_file in [charon_dhcp_conf, charon_radius_conf, interface_conf, swanctl_conf]:
+        delete_files = (
+            charon_dhcp_conf,
+            charon_radius_conf,
+            charon_systemd_conf,
+            charon_logging_conf,
+            interface_conf,
+            swanctl_conf,
+        )
+        for config_file in delete_files:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
         render(charon_conf, 'ipsec/charon.j2', {'install_routes': default_install_routes})
@@ -882,6 +891,7 @@ def generate(ipsec):
     render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.j2', ipsec)
     render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.j2', ipsec)
     render(charon_systemd_conf, 'ipsec/charon_systemd.conf.j2', ipsec)
+    render(charon_logging_conf, 'ipsec/charon_logging.conf.j2', ipsec)
     render(interface_conf, 'ipsec/interfaces_use.conf.j2', ipsec)
     render(swanctl_conf, 'ipsec/swanctl.conf.j2', ipsec)
 
