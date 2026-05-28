@@ -199,7 +199,7 @@ def verify(config):
         mac = config['mac']
         try:
             assert_mac(mac, test_all_zero=False)
-        except:
+        except Exception:
             raise ConfigError(
                 f'Cannot use {mac}: it is a multicast MAC address. Please provide a unicast MAC address.'
             )

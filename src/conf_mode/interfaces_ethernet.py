@@ -159,7 +159,7 @@ def get_config(config=None):
             max_mtu = EthernetIf(ifname).get_max_mtu()
             if max_mtu < int(ethernet['mtu']):
                 ethernet['mtu'] = str(max_mtu)
-        except:
+        except Exception:
             pass
 
     if 'is_bond_member' in ethernet:
