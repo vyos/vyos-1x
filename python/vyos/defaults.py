@@ -110,3 +110,8 @@ activation_hint = os.path.join(directories['data'], '.activation_hint')
 config_sync_exclusion_list = os.path.join(
     directories['data'], 'config-sync-exclude.json'
 )
+
+# IP rule priority for WireGuard fwmark-based VRF routing rules.
+# Sits between the l3mdev rule (1000) and the l3mdev unreachable rule (2000),
+# ensuring fwmark-tagged tunnel packets are routed into the correct VRF table.
+wireguard_fwmark_pref = '1998'

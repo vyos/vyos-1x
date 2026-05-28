@@ -21,6 +21,7 @@ from base_interfaces_test import BasicInterfaceTest
 from base_interfaces_test import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.defaults import wireguard_fwmark_pref
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
@@ -282,29 +283,29 @@ class WireGuardInterfaceTest(BasicInterfaceTest.TestCase):
 
         hex_fwmark = hex(int(mark))
 
-        # Verify ip rule at priority 1998 routes fwmark-tagged packets into the VRF
-        tmp = cmd(f'ip rule show priority 1998')
+        # Verify WireGuard fwmark routing rule is created at wireguard_fwmark_pref priority
+        tmp = cmd(f'ip rule show priority {wireguard_fwmark_pref}')
         self.assertIn(f'fwmark {hex_fwmark} lookup {vrf}', tmp)
 
         # Remove VRF from the interface — ip rule must be cleaned up
         self.cli_delete(base_interface_path + ['vrf'])
         self.cli_commit()
 
-        tmp = cmd(f'ip rule show priority 1998')
+        tmp = cmd(f'ip rule show priority {wireguard_fwmark_pref}')
         self.assertNotIn(f'fwmark {hex_fwmark}', tmp)
 
         # Re-add VRF — ip rule must be re-created
         self.cli_set(base_interface_path + ['vrf', vrf])
         self.cli_commit()
 
-        tmp = cmd(f'ip rule show priority 1998')
+        tmp = cmd(f'ip rule show priority {wireguard_fwmark_pref}')
         self.assertIn(f'fwmark {hex_fwmark} lookup {vrf}', tmp)
 
         # Delete the interface entirely — ip rule must be removed
         self.cli_delete(base_interface_path)
         self.cli_commit()
 
-        tmp = cmd(f'ip rule show priority 1998')
+        tmp = cmd(f'ip rule show priority {wireguard_fwmark_pref}')
         self.assertNotIn(f'fwmark {hex_fwmark}', tmp)
 
         self.cli_delete(['vrf', 'name', vrf])
