@@ -110,11 +110,13 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         destination_address = 'fc00::1'
         translation_address = 'fc01::1'
         source_address = 'fc02::1'
-        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
+        in_interface = 'eth1'
+
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', in_interface])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'address', destination_address])
         self.cli_set(dst_path + ['rule', '1', 'translation', 'address', translation_address])
 
-        self.cli_set(dst_path + ['rule', '2', 'inbound-interface', 'name', 'eth1'])
+        self.cli_set(dst_path + ['rule', '2', 'inbound-interface', 'name', in_interface])
         self.cli_set(dst_path + ['rule', '2', 'destination', 'address', destination_address])
         self.cli_set(dst_path + ['rule', '2', 'source', 'address', source_address])
         self.cli_set(dst_path + ['rule', '2', 'exclude'])
@@ -123,10 +125,19 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth1"', 'ip6 daddr fc00::1', 'dnat to fc01::1'],
-            ['iifname "eth1"', 'ip6 saddr fc02::1', 'ip6 daddr fc00::1', 'return']
+            [f'iifname "{in_interface}"', 'ip6 daddr fc00::1', 'dnat to fc01::1'],
+            [f'iifname "{in_interface}"', 'ip6 saddr fc02::1', 'ip6 daddr fc00::1', 'return']
         ]
+        self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
+        # T8939 - remove inbound-interface name
+        self.cli_delete(dst_path + ['rule', '2', 'inbound-interface', 'name'])
+        self.cli_commit()
+
+        nftables_search = [
+            [f'iifname "{in_interface}"', 'ip6 daddr fc00::1', 'dnat to fc01::1'],
+            ['ip6 saddr fc02::1', 'ip6 daddr fc00::1', 'return']
+        ]
         self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
     def test_destination_nat66_protocol(self):
