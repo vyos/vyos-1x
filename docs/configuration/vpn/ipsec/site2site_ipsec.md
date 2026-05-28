@@ -352,6 +352,24 @@ allows passing plain ESP packets between them.
 Name of IKE group to use for key exchanges.
 ```
 
+```{cfgcmd} set vpn ipsec site-to-site peer \<name\> ikev2-reauth \<yes|no|inherit\>
+
+**Configure IKEv2 reauthentication behavior for the specified IPsec
+site-to-site peer.**
+
+The following options are available:
+
+* ``yes``: The active IKE SA channel between the two peers is terminated and
+  re-established at each rekeying interval, explicitly re-verifying each
+  peer's identity.
+* ``no`` (default): Reauthentication (identity re-verification) is disabled
+  for this peer. The active IKE SA channel is seamlessly renewed at each
+  rekeying interval without termination.
+* ``inherit``: The peer inherits reauthentication behavior from the assigned
+  IKE group. Reauthentication is applied only if it is explicitly enabled in
+  that group's configuration.
+```
+
 ```{cfgcmd} set vpn ipsec site-to-site peer \<name\> local-address \<address\>
 
 Local IP address for IPsec connection with this peer.
