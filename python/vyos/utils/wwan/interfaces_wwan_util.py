@@ -12,6 +12,8 @@ import logging
 import time
 from pathlib import Path
 
+from vyos.hardware import api as hw_api
+
 logger = logging.getLogger(__name__)
 
 
@@ -131,22 +133,15 @@ async def modem_reset(interface_number: int) -> bool:
             logger.info(f"ModemManager reset successful for interface {interface_number}")
             return True
 
-        # Method 2: Try USB device reset via sysfs
-        if await _try_usb_reset(interface_number):
-            logger.info(f"USB reset successful for interface {interface_number}")
+        # Method 2: Try board hardware API reset using the modem naming
+        # convention (modem0 -> wwan0, modem1 -> wwan1, etc.). This is the
+        # unconditional hardware reset path that the board implementation
+        # owns, so WWAN does not need to guess at GPIO details itself.
+        if await _try_board_modem_reset(interface_number):
+            logger.info(f"Board hardware reset successful for interface {interface_number}")
             return True
 
-        # Method 3: Try GPIO-based reset (if available)
-        if await _try_gpio_reset(interface_number):
-            logger.info(f"GPIO reset successful for interface {interface_number}")
-            return True
-
-        # Method 4: Try power cycle via USB hub control
-        if await _try_usb_power_cycle(interface_number):
-            logger.info(f"USB power cycle successful for interface {interface_number}")
-            return True
-
-        # Method 5: Nuclear option - restart ModemManager
+        # Method 3: Nuclear option - restart ModemManager
         logger.warning(f"All standard reset methods failed for interface {interface_number}, trying nuclear option...")
         if await modem_reset_nuclear(interface_number):
             logger.info(f"Nuclear reset (ModemManager restart) successful for interface {interface_number}")
@@ -229,11 +224,39 @@ async def _try_modemmanager_reset(interface_number: int) -> bool:
         else:
             logger.error(f"Modem reset failed: {stderr.decode().strip()}")
 
-        return result.returncode == 0
+        if result.returncode != 0:
+            return False
+
+        return await _wait_for_modemmanager_reenumeration(interface_number)
 
     except Exception as e:
         logger.debug(f"ModemManager reset failed: {e}")
         return False
+
+
+async def _try_board_modem_reset(interface_number: int) -> bool:
+    """Try to reset the modem through the board hardware API.
+
+    The board implementation owns the actual GPIO/pulse details. WWAN only
+    maps its interface number to the board modem naming convention
+    (modem0 -> wwan0, modem1 -> wwan1, ...).
+    """
+    modem_name = f"modem{interface_number}"
+
+    try:
+        logger.info(f"Performing board hardware reset for {modem_name}")
+        await asyncio.to_thread(hw_api.modem_reset, modem=modem_name)
+    except Exception as e:
+        logger.debug(f"Board hardware reset failed for {modem_name}: {e}")
+        return False
+
+    # A reset pulse alone is not enough — wait until the modem is back in a
+    # state that ModemManager can see again.
+    if await _wait_for_modemmanager_reenumeration(interface_number):
+        return True
+
+    logger.warning(f"Board hardware reset completed but modem did not re-enumerate in ModemManager for interface {interface_number}")
+    return False
 
 
 async def _try_usb_reset(interface_number: int) -> bool:
@@ -448,6 +471,36 @@ async def wait_for_interface_ready(interface_number: int, timeout: int = 30) -> 
     return False
 
 
+async def _wait_for_modemmanager_reenumeration(interface_number: int, timeout: int = 60) -> bool:
+    """Wait until ModemManager sees the modem again after a hardware reset."""
+    deadline = time.time() + timeout
+    modem_name = f"modem{interface_number}"
+
+    while time.time() < deadline:
+        # Check that the underlying device node has come back first.
+        if not await wait_for_interface_ready(interface_number, timeout=1):
+            await asyncio.sleep(1)
+            continue
+
+        # Then verify ModemManager can enumerate at least one modem again.
+        try:
+            result = await asyncio.create_subprocess_exec(
+                "mmcli", "-L",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await result.communicate()
+            if result.returncode == 0 and "/Modem/" in stdout.decode():
+                logger.info(f"ModemManager re-detected modem after reset for {modem_name}")
+                return True
+        except Exception as e:
+            logger.debug(f"ModemManager re-enumeration check failed for {modem_name}: {e}")
+
+        await asyncio.sleep(1)
+
+    return False
+
+
 # Legacy function for backwards compatibility
 def modem_reset_sync(interface_number: int) -> bool:
     """
@@ -522,8 +575,12 @@ async def modem_reset_nuclear(interface_number: int) -> bool:
         logger.info("Waiting for modem re-detection...")
         await asyncio.sleep(10)
 
-        logger.info(f"Nuclear reset completed for interface {interface_number}")
-        return True
+        if await _wait_for_modemmanager_reenumeration(interface_number):
+            logger.info(f"Nuclear reset completed for interface {interface_number}")
+            return True
+
+        logger.warning(f"Modem did not re-enumerate after ModemManager restart for interface {interface_number}")
+        return False
 
     except Exception as e:
         logger.error(f"Nuclear reset failed for interface {interface_number}: {e}")

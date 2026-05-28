@@ -138,6 +138,11 @@ def sim_select(slot: int, modem: Optional[str] = None) -> None:
     _b.sim_select(slot, modem=modem)
 
 
+def modem_signal_level(level: int, modem: Optional[str] = None) -> None:
+    """Map signal level (0..7) to board modem STAT LED display."""
+    _b.modem_signal_level(level=level, modem=modem)
+
+
 def list_modems() -> List[str]:
     """Return every modem name declared by the active pinmap."""
     return _b.list_modems()
