@@ -16,6 +16,7 @@
 import os
 import re
 import sys
+import json
 import weakref
 import subprocess
 from tempfile import NamedTemporaryFile
@@ -31,6 +32,9 @@ from vyos.vyconf_session import VyconfSession
 from vyos.base import Warning as Warn
 from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 from vyos.configtree import ConfigTree
+from vyos.configtree import ConfigTreeError
+from vyos.configtree import delete_dict_from_masks
+from vyos.derivedtree import subtree_from_list_of_partial_paths
 
 # type of config file path or configtree
 ConfigObj: TypeAlias = Union[str, ConfigTree]
@@ -302,15 +306,33 @@ class ConfigSession(object):
         except (ValueError, ConfigSessionError) as e:
             raise ConfigSessionError(e)
 
-    def load_section_tree(self, mask: dict, d: dict):
+    def load_section_tree(
+        self, config_tree: ConfigTree, mask_dict: dict, config_dict: dict
+    ):
+        if (
+            not mask_dict
+            or 'inclusive' not in mask_dict
+            or 'exclusive' not in mask_dict
+        ):
+            raise ConfigSessionError(
+                "Missing mask data can damage the config: expected keys 'inclusive' and 'exclusive'"
+            )
         try:
-            if mask:
-                for p in dict_to_paths(mask):
+            mask_in = ConfigTree(internal_string=mask_dict['inclusive'])
+
+            mask_ex_list = json.loads(mask_dict['exclusive'])
+            mask_ex = subtree_from_list_of_partial_paths(config_tree, mask_ex_list)
+
+            delete_dict = delete_dict_from_masks(config_tree, mask_in, mask_ex)
+
+            if delete_dict:
+                for p in dict_to_paths(delete_dict):
                     self.delete(p)
-            if d:
-                for p in dict_to_paths(d):
+
+            if config_dict:
+                for p in dict_to_paths(config_dict):
                     self.set(p)
-        except (ValueError, ConfigSessionError) as e:
+        except (ValueError, ConfigSessionError, ConfigTreeError) as e:
             raise ConfigSessionError(e)
 
     def comment(self, path, value=None):

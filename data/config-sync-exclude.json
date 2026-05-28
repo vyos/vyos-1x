@@ -1,0 +1,17 @@
+[
+ [
+  "interfaces",
+  "ethernet",
+  "hw-id"
+ ],
+ [
+  "interfaces",
+  "ethernet",
+  "address"
+ ],
+ [
+  "interfaces",
+  "ethernet",
+  "offload"
+ ]
+]

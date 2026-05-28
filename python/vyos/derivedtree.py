@@ -25,7 +25,10 @@ class DerivedTreeError(Exception):
 
 
 def subtree_from_list_of_partial_paths(
-    ctree: ConfigTree, paths: list[list[str]], accumulator: ConfigTree = None
+    ctree: ConfigTree,
+    paths: list[list[str]],
+    accumulator: ConfigTree = None,
+    reference_tree: ReferenceTree = None,
 ):
     """Return the union of subtrees of the ConfigTree argument matching each
     of the 'partial' paths. A partial path is one that may or may not
@@ -33,19 +36,23 @@ def subtree_from_list_of_partial_paths(
     values that apply.
 
     An existing subtree may be passed as the initial value of accumulator.
+
+    For testing or use outside of the canonical environment, an instance of
+    the ReferenceTree may be passed from an alternative cache location.
     """
-    if accumulator:
+    if reference_tree is None:
+        reference_tree = ReferenceTree()
+
+    if accumulator is not None:
         if not isinstance(accumulator, ConfigTree):
             raise TypeError("Argument 'accumulator' must be an instance of ConfigTree")
     else:
         accumulator = ConfigTree('')
 
-    rtree = ReferenceTree()
-
     errors = []
     for path in paths:
         try:
-            accumulator = subtree_from_partial(ctree, path, rtree, accumulator)
+            accumulator = subtree_from_partial(ctree, path, reference_tree, accumulator)
         except ConfigTreeError as e:
             errors.append(str(e))
             continue

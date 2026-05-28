@@ -667,6 +667,28 @@ def mask_exclusive(left, right, libpath=LIBPATH):
     return tree
 
 
+def delete_tree_from_masks(
+    config_tree: ConfigTree, include_mask: ConfigTree, exclude_mask: ConfigTree
+):
+    masked_inc = mask_inclusive(config_tree, include_mask)
+    # Here we want the reversed stand-alone exclusion/inclusion.
+    # This simplifies definition of delete paths as (delete)
+    # difference between the two trees of config data.
+    masked_upper_bound = mask_exclusive(config_tree, include_mask)
+    masked_lower_bound = mask_inclusive(config_tree, exclude_mask)
+    masked_exc = union(masked_upper_bound, masked_lower_bound)
+
+    ret = DiffTree(masked_inc, masked_exc)
+    return ret.delete
+
+
+def delete_dict_from_masks(
+    config_tree: ConfigTree, include_mask: ConfigTree, exclude_mask: ConfigTree
+):
+    ret = delete_tree_from_masks(config_tree, include_mask, exclude_mask)
+    return json.loads(ret.to_json())
+
+
 def subtree_from_partial(
     config_tree: ConfigTree,
     path: list[str],
