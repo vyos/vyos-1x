@@ -5266,10 +5266,8 @@ class ModemStateMachine:
                                               'sim_slot': config_sim_slot,
                                               'imsi': imsi[:6] + '...'})  # Partial IMSI for privacy
 
-                            # SIM is back! Resume configuration
-                            self.transition(ModemEvent.SIM_READY)
-                            await self._configure_modem_initial()
-                            return True
+                            # SIM is back! Resume the normal configuration/connection lane.
+                            return await self._resume_after_sim_available()
 
                     except Exception as e:
                         logger.debug(f"SIM slot {config_sim_slot} not ready: {e}",
@@ -5279,6 +5277,59 @@ class ModemStateMachine:
 
         except Exception as e:
             logger.error(f"Error checking SIM insertion: {e}",
+                        extra={'interface_number': self.interface_number})
+            return False
+
+    async def _resume_after_sim_available(self):
+        """Resume the normal configuration flow once a SIM becomes available.
+
+        This is the explicit recovery path for the boot-with-no-SIM case.
+        It re-enters the CONFIGURING lane using the same FSM events used by
+        startup/recovery, then hands control back to _configure_modem_initial()
+        so the existing connection cascade can complete normally.
+        """
+        try:
+            if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                logger.debug("SIM resume skipped — SIM switch/failover in progress",
+                            extra={'interface_number': self.interface_number})
+                return False
+
+            if not self.proxy or not self.config:
+                logger.warning("Cannot resume configuration after SIM availability — missing proxy or config",
+                              extra={'interface_number': self.interface_number,
+                                     'has_proxy': bool(self.proxy),
+                                     'has_config': bool(self.config)})
+                return False
+
+            # SIM appearance supersedes any stale retry / failover loops.
+            self._cancel_failed_retry()
+
+            current_state = self.machine.current_state
+            logger.info("Resuming configuration after SIM availability",
+                       extra={'interface_number': self.interface_number,
+                              'current_state': current_state})
+
+            # The FSM rules already map WAITING_FOR_SIM → CONFIGURING on SIM_READY,
+            # and FAILED → CONFIGURING on SIM_READY. Use that explicit event so the
+            # later connection flow re-enters the normal configuration lane.
+            if current_state in (ModemState.WAITING_FOR_SIM.value,
+                                 ModemState.FAILED.value):
+                self.transition(ModemEvent.SIM_READY)
+
+            # If the state machine did not land in CONFIGURING, do not force the
+            # connection cascade — log and let the caller retry on the next poll.
+            if self.machine.current_state != ModemState.CONFIGURING.value:
+                logger.warning("SIM resume did not reach CONFIGURING state",
+                              extra={'interface_number': self.interface_number,
+                                     'current_state': self.machine.current_state,
+                                     'previous_state': current_state})
+                return False
+
+            await self._configure_modem_initial()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error resuming after SIM availability: {e}",
                         extra={'interface_number': self.interface_number})
             return False
 
