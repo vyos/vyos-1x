@@ -18,11 +18,11 @@
 #     10-igos-*.link, and rule 65 then skips vyos_net_name so no
 #     hw-id is written to config.boot for the pinned interface.
 #
-# This file must run before 62-temporary-interface-rename.rules so the
-# IGOS_ETH_PORT property is visible when 62 decides whether to skip the
-# temp rename.
+# This file runs after 62-temporary-interface-rename.rules.  It fires on
+# both "add" and "move" events so that IGOS_ETH_PORT persists in the udev
+# database after rule 80's .link-driven rename generates a MOVE uevent.
 
-ACTION!="add",            GOTO="igos_eth_pin_end"
+ACTION!="add|move",       GOTO="igos_eth_pin_end"
 SUBSYSTEM!="net",         GOTO="igos_eth_pin_end"
 KERNEL!="eth*|en*|e*",    GOTO="igos_eth_pin_end"
 

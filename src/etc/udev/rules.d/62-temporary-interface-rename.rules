@@ -1,9 +1,5 @@
-# Skip the temp rename only for interfaces that 61-igos-eth-pin.rules
-# has confirmed are pinned (a matching 10-igos-*.link file exists).
-# These must reach 80-net-setup-link with NAME=="" so the .link's Name=
-# can apply.  Unpinned interfaces -- including those for which the
-# helper merely emitted IGOS_ETH_PORT but no .link matches -- fall
-# through to the original temp-rename path unchanged.
-ENV{IGOS_ETH_PINNED}=="1", GOTO="end_temp_rename"
+# Temporarily rename eth* interfaces to avoid naming collisions when
+# 80-net-setup-link.rules applies the final Name= from .link files.
+# On live-boot coldplug the device is already temp-named (e2/e3) from
+# initramfs, so KERNEL=="eth*" naturally skips it here.
 SUBSYSTEM=="net", ACTION=="add", KERNEL=="eth*", DRIVERS=="?*", NAME="e$env{IFINDEX}"
-LABEL="end_temp_rename"
