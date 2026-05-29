@@ -566,6 +566,41 @@ jobs:
           # source / vyos-1x checkouts above, and has no write access
           # on vyos/vyos-documentation PRs.
           github_token: ${{ github.token }}
+          # Bypass the upstream action's actor write-permission check. The
+          # check (src/github/validation/permissions.ts in claude-code-action)
+          # calls getCollaboratorPermissionLevel on github.actor and fails
+          # with `Actor does not have write permissions to the repository`
+          # when an external contributor opens a PR, because the actor on
+          # pull_request_target is the PR author and forks resolve to
+          # `read`. That kills validation on every fork PR before any of
+          # our own skip logic runs — defeating the workflow's entire
+          # purpose (catching CLI/default-value drift in contributions
+          # from non-maintainers). Failure mode reproduced on run
+          # 26541079685 (PR #2061 from LiudmylaNad); same pattern hit
+          # every external contributor PR in the prior 4 weeks.
+          #
+          # Setting '*' is safe in THIS workflow specifically because the
+          # surrounding defense-in-depth bounds what Pass 2 can do with
+          # untrusted PR content:
+          #   - allowedTools is restricted to inline-comment + read-only
+          #     surfaces (no Bash arbitrary, no Write, no Edit — see the
+          #     claude_args block below)
+          #   - github_token is the workflow's PR-scoped default token
+          #     (pull-requests:write + issues:write + contents:read) —
+          #     NOT the broader VYOS_APP_ID token, which is only used for
+          #     the vyos-1x / reviewer-source checkouts
+          #   - the prompt explicitly marks PR content as untrusted with
+          #     <UNTRUSTED-PR-CONTENT> markers and tells Claude to treat
+          #     it as data, not instructions
+          #   - the workspace-wipe step removes CLAUDE.md / .claude/
+          #     before this step runs, so fork-controlled session
+          #     instructions can't be auto-loaded
+          #   - prepare bundles MD files via `git show HEAD:<path>` (blob
+          #     extraction, not `cp`) — symlinks resolve to their target
+          #     paths, not their content
+          #   - the action auto-scrubs Anthropic / cloud / GHA secrets
+          #     from subprocess envs when this input is set
+          allowed_non_write_users: '*'
           # claude-code-action@v1 removed the top-level `model` input; CLI
           # flags including --model now travel via `claude_args` (see the
           # claude_args: block at the bottom of this step).
