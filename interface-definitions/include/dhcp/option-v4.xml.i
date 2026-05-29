@@ -237,6 +237,70 @@
         <help>Vendor Specific Options</help>
       </properties>
       <children>
+        <tagNode name="custom-option">
+          <properties>
+            <help>Custom vendor encapsulated option</help>
+            <constraint>
+              #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+            </constraint>
+            <constraintErrorMessage>Custom vendor option name may only contain letters, numbers, dots, underscores, and hyphens</constraintErrorMessage>
+          </properties>
+          <children>
+            <leafNode name="array">
+              <properties>
+                <help>Encode multiple data values in one vendor option</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            <leafNode name="code">
+              <properties>
+                <help>Vendor encapsulated sub-option code</help>
+                <valueHelp>
+                  <format>1-254</format>
+                  <description>Vendor encapsulated sub-option code</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-254"/>
+                </constraint>
+                <constraintErrorMessage>Vendor encapsulated sub-option code must be in range 1 to 254</constraintErrorMessage>
+              </properties>
+            </leafNode>
+            <leafNode name="data">
+              <properties>
+                <help>Vendor encapsulated sub-option data</help>
+                <valueHelp>
+                  <format>value</format>
+                  <description>Data formatted according to the selected type</description>
+                </valueHelp>
+                <multi/>
+              </properties>
+            </leafNode>
+            <leafNode name="type">
+              <properties>
+                <help>Vendor encapsulated sub-option data type</help>
+                <completionHelp>
+                  <list>binary boolean fqdn ipv4-address ipv6-address string uint8 uint16 uint32 int8 int16 int32</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>binary</format>
+                  <description>Raw hexadecimal data</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>ipv4-address</format>
+                  <description>IPv4 address</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>string</format>
+                  <description>Text string</description>
+                </valueHelp>
+                <constraint>
+                  <regex>(binary|boolean|fqdn|ipv4-address|ipv6-address|string|uint8|uint16|uint32|int8|int16|int32)</regex>
+                </constraint>
+                <constraintErrorMessage>Invalid vendor encapsulated sub-option data type</constraintErrorMessage>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
         <node name="ubiquiti">
           <properties>
             <help>Ubiquiti specific parameters</help>

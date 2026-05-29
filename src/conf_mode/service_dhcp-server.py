@@ -27,6 +27,7 @@ from netaddr import IPRange
 
 from vyos.config import Config
 from vyos.kea import kea_test_config
+from vyos.kea import verify_kea_vendor_options
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
@@ -229,6 +230,8 @@ def get_config(config=None):
 
     if bool(list(dict_search_recursive(dhcp, 'ping_check'))):
         dhcp['any_ping_check'] = True
+
+    verify_kea_vendor_options(dhcp)
 
     return dhcp
 
