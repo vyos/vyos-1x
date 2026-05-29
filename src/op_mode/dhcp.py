@@ -64,6 +64,7 @@ sort_valid_inet = [
 sort_valid_inet6 = [
     'end',
     'duid',
+    'hostname',
     'ip',
     'last_communication',
     'pool',
@@ -71,7 +72,7 @@ sort_valid_inet6 = [
     'state',
     'type',
 ]
-mapping_sort_valid = ['mac', 'ip', 'pool', 'duid']
+mapping_sort_valid = ['mac', 'hostname', 'ip', 'pool', 'duid']
 
 stale_warn_msg = 'DHCP server is configured but not started. Data may be stale.'
 
