@@ -22,7 +22,7 @@
 # both "add" and "move" events so that IGOS_ETH_PORT persists in the udev
 # database after rule 80's .link-driven rename generates a MOVE uevent.
 
-ACTION!="add|move",       GOTO="igos_eth_pin_end"
+ACTION!="add|change|move", GOTO="igos_eth_pin_end"
 SUBSYSTEM!="net",         GOTO="igos_eth_pin_end"
 KERNEL!="eth*|en*|e*",    GOTO="igos_eth_pin_end"
 
