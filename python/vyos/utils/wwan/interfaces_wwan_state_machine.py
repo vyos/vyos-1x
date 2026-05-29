@@ -2066,6 +2066,17 @@ class ModemStateMachine:
                               'current_state': new_state,
                               'previous_state': old_state})
 
+            # Policy: clear LED (OFF) in no-connection states so stale bars
+            # from previous bearer sessions are not shown.
+            if new_state in [
+                ModemState.WAITING_FOR_SIM.value,
+                ModemState.DISCONNECTED.value,
+                ModemState.FAILED.value,
+            ]:
+                self._safe_create_task(
+                    self._clear_signal_led(reason=f"fsm_state:{new_state}")
+                )
+
             # Log detailed failure info when entering FAILED state
             if new_state == ModemState.FAILED.value and old_state != ModemState.FAILED.value:
                 logger.error("Modem entered FAILED state",
@@ -7959,6 +7970,32 @@ class ModemStateMachine:
                                 'level': level,
                                 'modem_name': modem_name})
 
+    async def _clear_signal_led(self, reason: str = "") -> None:
+        """Clear modem STAT LED to OFF (level 0) and reset rolling signal history.
+
+        Called when there is no active bearer / interface is down so the UI
+        doesn't display stale signal bars from a previous connected session.
+        """
+        modem_name = f"MODEM{self.interface_number}"
+        try:
+            if self.signal_tracker:
+                self.signal_tracker.reset()
+
+            import vyos.hardware.api as hw_api
+            hw_api.modem_signal_level(level=0, modem=modem_name)
+
+            logger.info("[LED UPDATE] Signal cleared (OFF)",
+                       extra={'interface_number': self.interface_number,
+                              'level': 0,
+                              'modem_name': modem_name,
+                              'reason': reason or 'unspecified'})
+        except Exception as e:
+            logger.debug("Signal LED clear skipped (non-fatal): %s",
+                        e,
+                        extra={'interface_number': self.interface_number,
+                               'modem_name': modem_name,
+                               'reason': reason or 'unspecified'})
+
     def get_sim_status_summary(self):
         """Get quick SIM status summary"""
         return {
@@ -10789,6 +10826,9 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"Error setting interface DOWN: {e}",
                         extra={'interface_number': self.interface_number})
+
+        # Clear LED when interface is down so stale signal strength is not shown.
+        await self._clear_signal_led(reason='interface_down')
 
         # Remove carrier DNS from VyOS hostsd so resolv.conf is not left with stale entries
         interface_name = f"wwan{self.interface_number}"
