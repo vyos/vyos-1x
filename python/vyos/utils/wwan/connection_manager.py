@@ -37,8 +37,17 @@ class ConnectionManager:
         """Set the D-Bus proxy for modem operations"""
         self.proxy = proxy
 
-    async def try_apn_candidates(self, candidates: List[Dict[str, Any]], sim_config: Dict[str, Any], sim_info: Dict[str, Any]) -> bool:
-        """Try APN candidates in priority order"""
+    async def try_apn_candidates(self, candidates: List[Dict[str, Any]], sim_config: Dict[str, Any], sim_info: Dict[str, Any]) -> tuple[bool, str]:
+        """Try APN candidates in priority order.
+
+        Returns:
+            (success: bool, reason: str) — reason is 'success', 'all_apn_failed',
+            'restart_required' (non-APN modem failure), or 'connection_failed'.
+
+        Note: The state machine drives APN iteration via its own canonical loop
+        (_try_apn_candidates).  This method is retained for external / test callers
+        that still invoke ConnectionManager directly.
+        """
         self.logger.info("Trying APN candidates in priority order",
                        extra={'interface_number': self.interface_number,
                               'candidate_count': len(candidates)})
@@ -59,7 +68,7 @@ class ConnectionManager:
                     'auth_type': candidate.get('auth_type', 'none')
                 }
 
-                success = await self.try_connection_with_apn(apn_config, sim_config)
+                success, reason = await self.try_connection_with_apn(apn_config, sim_config)
 
                 if success:
                     self.logger.info("APN candidate connection successful",
@@ -67,14 +76,21 @@ class ConnectionManager:
                                           'successful_apn': candidate['name'],
                                           'attempt_number': i+1,
                                           'total_attempts': len(candidates)})
+                    return (True, 'success')
 
-                    return True
+                # Non-APN modem/network failure: stop immediately and ask caller
+                # to restart the connection workflow rather than burning remaining APNs.
+                if reason == 'connection_failed':
+                    self.logger.warning("Non-APN failure while testing candidate; aborting cascade",
+                                       extra={'interface_number': self.interface_number,
+                                              'failed_apn': candidate['name'],
+                                              'failure_reason': reason})
+                    return (False, 'restart_required')
 
-                else:
-                    self.logger.info(f"APN candidate {i+1} failed, trying next",
-                                   extra={'interface_number': self.interface_number,
-                                          'failed_apn': candidate['name'],
-                                          'remaining_candidates': len(candidates) - i - 1})
+                self.logger.info(f"APN candidate {i+1} failed ({reason}), trying next",
+                               extra={'interface_number': self.interface_number,
+                                      'failed_apn': candidate['name'],
+                                      'remaining_candidates': len(candidates) - i - 1})
 
             except Exception as e:
                 self.logger.warning(f"Error trying APN candidate: {e}",
@@ -82,21 +98,36 @@ class ConnectionManager:
                                          'apn_name': candidate['name']})
                 continue
 
-        # All candidates failed
+        # All candidates exhausted without a terminal modem failure.
         self.logger.warning("All APN candidates failed",
                           extra={'interface_number': self.interface_number,
                                  'total_candidates_tried': len(candidates)})
-        return False
+        return (False, 'all_apn_failed')
 
-    async def try_connection_with_apn(self, apn_config: Dict[str, Any], sim_config: Dict[str, Any]) -> bool:
-        """Try to establish connection with specific APN configuration"""
+    async def try_connection_with_apn(self, apn_config: Dict[str, Any], sim_config: Dict[str, Any]) -> tuple[bool, str]:
+        """Try to establish connection with specific APN configuration.
+
+        Returns:
+            (success: bool, reason: str) where reason is one of:
+            - "success": connection established and verified
+            - "apn_rejected": ModemManager explicitly rejected this APN (move to next APN)
+            - "connection_failed": connect failed for non-APN reason (restart connection process)
+            - "timeout": ModemManager didn't respond in time (check state to see if hung)
+            - "verification_failed": bearer created but not actually connected
+            - "error": unexpected error during attempt
+        """
         try:
             apn_config = self._normalize_apn_config(apn_config)
+            connection_timeout = float(sim_config.get('connection_timeout', 60.0))
+            # Keep a sane lower bound for non-VyOS callers/tests.
+            if connection_timeout < 5.0:
+                connection_timeout = 5.0
 
             self.logger.info("Attempting connection with APN",
                            extra={'interface_number': self.interface_number,
                                   'apn_name': apn_config['name'],
-                                  'has_auth': apn_config['auth_type'] != 'none'})
+                                  'has_auth': apn_config['auth_type'] != 'none',
+                                  'timeout_seconds': connection_timeout})
 
             # Build connection parameters
             connect_params = {}
@@ -124,7 +155,7 @@ class ConnectionManager:
             try:
                 bearer_path = await asyncio.wait_for(
                     simple_iface.call_connect(connect_params),
-                    timeout=60.0  # 60 second timeout per APN attempt
+                    timeout=connection_timeout
                 )
 
                 self.bearer_path = bearer_path
@@ -139,7 +170,7 @@ class ConnectionManager:
                                           'apn_name': apn_config['name'],
                                           'bearer_path': bearer_path})
                     self.connected_apn = apn_config.copy()
-                    return True
+                    return (True, "success")
                 else:
                     self.logger.warning("APN connection created but verification failed",
                                       extra={'interface_number': self.interface_number,
@@ -147,23 +178,89 @@ class ConnectionManager:
 
                     # Cleanup failed connection
                     await self._cleanup_failed_bearer()
-                    return False
+                    return (False, "verification_failed")
 
             except asyncio.TimeoutError:
-                self.logger.warning("APN connection attempt timed out",
+                self.logger.warning("APN connection attempt timed out (MM may still be trying)",
                                   extra={'interface_number': self.interface_number,
                                          'apn_name': apn_config['name'],
-                                         'timeout_seconds': 60})
+                                         'timeout_seconds': connection_timeout})
+                # Timeout does NOT mean APN was rejected — MM may still be negotiating.
+                # Caller should check MM state to see if it's still CONNECTING.
                 # A bearer may have been partially created before the timeout.
                 # Attempt cleanup to avoid leaked bearers on the modem.
                 await self._cleanup_failed_bearer()
-                return False
+                return (False, "timeout")
+
+            except Exception as e:
+                rejection_class = self._classify_connect_failure(e)
+                if rejection_class == 'apn_rejected':
+                    self.logger.error(f"ModemManager rejected APN: {e}",
+                                    extra={'interface_number': self.interface_number,
+                                           'apn_name': apn_config.get('name', 'unknown'),
+                                           'failure_class': rejection_class})
+                else:
+                    self.logger.error(f"ModemManager connect failed (non-APN): {e}",
+                                    extra={'interface_number': self.interface_number,
+                                           'apn_name': apn_config.get('name', 'unknown'),
+                                           'failure_class': rejection_class})
+                # Clean up any partial bearer from MM's attempt
+                await self._cleanup_failed_bearer()
+                return (False, rejection_class)
 
         except Exception as e:
-            self.logger.error(f"APN connection attempt failed: {e}",
+            self.logger.error(f"Unexpected error during APN connection: {e}",
                             extra={'interface_number': self.interface_number,
                                    'apn_name': apn_config.get('name', 'unknown')})
-            return False
+            return (False, "error")
+
+    @staticmethod
+    def _classify_connect_failure(exc: Exception) -> str:
+        """Classify ModemManager connect failure into APN vs non-APN causes.
+
+        Returns one of:
+          - "apn_rejected": likely APN/auth/profile specific rejection
+          - "connection_failed": modem/network/MM state failure (restart flow)
+        """
+        text = str(exc).lower()
+
+        # APN/profile-specific failures should advance to next APN candidate.
+        apn_related_markers = [
+            'apn',
+            'authentication',
+            'auth',
+            'username',
+            'password',
+            'pdp',
+            'pdn',
+            'user authentication',
+        ]
+
+        # Non-APN failures should restart the whole connection process.
+        non_apn_markers = [
+            'roaming',
+            'not allowed',
+            'no service',
+            'no network',
+            'network timeout',
+            'sim',
+            'modem',
+            'busy',
+            'in progress',
+            'operation not allowed',
+            'wrong state',
+            'powered off',
+            'disabled',
+            'not registered',
+        ]
+
+        if any(marker in text for marker in non_apn_markers):
+            return 'connection_failed'
+        if any(marker in text for marker in apn_related_markers):
+            return 'apn_rejected'
+
+        # Unknown MM errors are safer to treat as non-APN infrastructure failures.
+        return 'connection_failed'
 
     def _normalize_apn_config(self, apn_config: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize APN config and flatten legacy/nested config structures."""

@@ -1379,32 +1379,6 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="disable-snmp-monitoring">
-                <properties>
-                  <help>Disable SNMP monitoring output (enabled by default)</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="disable-detailed-status">
-                <properties>
-                  <help>Disable detailed status in logs (enabled by default)</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="health-check-interval">
-                <properties>
-                  <help>Periodic self-diagnostic cycle interval</help>
-                  <valueHelp>
-                    <format>u32:60-3600</format>
-                    <description>Interval in seconds</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 60-3600"/>
-                  </constraint>
-                  <constraintErrorMessage>Health check interval must be 60-3600 seconds</constraintErrorMessage>
-                </properties>
-                <defaultValue>300</defaultValue>
-              </leafNode>
             </children>
           </node>
         </children>

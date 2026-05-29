@@ -31,6 +31,7 @@ from typing import Dict, List, Optional
 import os
 import threading
 import time
+import re
 
 from vyos.hardware.base import Board, Pin
 
@@ -697,6 +698,78 @@ class IgosBoard(Board):
         # no long-lived process required.
         self.set_pin(pin, 0 if slot == 1 else 1)  # type: ignore[arg-type]
 
+    def _resolve_modem_stat_prefix(self, modem: Optional[str] = None) -> str:
+        """Resolve the pin prefix for RGB modem status LEDs.
+
+        Supports either per-modem naming (e.g. ``MODEM0_STAT_RED``) or
+        shared naming (e.g. ``MODEM_STAT_RED``).
+        """
+        prefixes = []
+        for pin_name in self.PINS:
+            if not pin_name.endswith("_STAT_RED"):
+                continue
+            prefix = pin_name[:-len("_STAT_RED")]
+            if (f"{prefix}_STAT_GREEN" in self.PINS and
+                    f"{prefix}_STAT_BLUE" in self.PINS):
+                prefixes.append(prefix)
+
+        if not prefixes:
+            raise RuntimeError(
+                f"{self.NAME}: no *_STAT_(RED|GREEN|BLUE) modem LED pins declared"
+            )
+
+        if modem:
+            if modem in prefixes:
+                return modem
+            base = re.sub(r"\d+$", "", modem)
+            if base and base in prefixes:
+                return base
+            if len(prefixes) == 1:
+                return prefixes[0]
+            raise RuntimeError(
+                f"{self.NAME}: cannot resolve STAT LED prefix for modem {modem!r}; "
+                f"available prefixes: {sorted(prefixes)}"
+            )
+
+        if len(prefixes) == 1:
+            return prefixes[0]
+        if "MODEM" in prefixes:
+            return "MODEM"
+        raise RuntimeError(
+            f"{self.NAME}: multiple modem STAT LED prefixes present "
+            f"({sorted(prefixes)}); pass modem=<name>"
+        )
+
+    def modem_signal_level(self, level: int, modem: Optional[str] = None) -> None:
+        """Display modem signal level on RGB STAT LEDs.
+
+        ``level`` is clamped to 0..7 and converted to RGB output by policy:
+        - 0: all off (no signal)
+        - 1..7: progressively more vivid combinations
+        - red-only is intentionally never used (commonly interpreted as fault)
+        """
+        level = max(0, min(7, int(level)))
+
+        # NOTE: with simple GPIO on/off RGB channels there are only 7 non-off
+        # combinations total; levels 6 and 7 intentionally share white as the
+        # "max strength" state unless board-specific PWM is added later.
+        palette = {
+            0: (0, 0, 0),  # off
+            1: (0, 0, 1),  # blue
+            2: (0, 1, 0),  # green
+            3: (0, 1, 1),  # cyan
+            4: (1, 0, 1),  # magenta (avoid red-only)
+            5: (1, 1, 0),  # yellow/amber
+            6: (1, 1, 1),  # white
+            7: (1, 1, 1),  # white (max)
+        }
+
+        prefix = self._resolve_modem_stat_prefix(modem)
+        red_v, green_v, blue_v = palette[level]
+        self.set_pin(f"{prefix}_STAT_RED", red_v)
+        self.set_pin(f"{prefix}_STAT_GREEN", green_v)
+        self.set_pin(f"{prefix}_STAT_BLUE", blue_v)
+
     def serial_protocol(self, port: str, proto: str,
                         term: Optional[bool] = None,
                         slr: Optional[bool] = None) -> None:
@@ -764,6 +837,7 @@ class _NoPinmapBoard(Board):
     def modem_reset(self, modem=None):           self._fail()
     def modem_power(self, on, modem=None):       self._fail()
     def sim_select(self, slot, modem=None):      self._fail()
+    def modem_signal_level(self, level, modem=None): self._fail()
     def serial_protocol(self, port, proto, term=None, slr=None):
         self._fail()
 

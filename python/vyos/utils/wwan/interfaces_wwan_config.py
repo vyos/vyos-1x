@@ -91,14 +91,11 @@ class InterfaceConfig(ServiceInterface):
 
         # Monitoring intervals
         "normal_monitoring_interval": 30,
-        "system_health_check_interval": 300,
 
-        # Logging and monitoring settings
+        # Logging settings
         "verbose_logging": True,
         "log_level": "info",
         "log_sink": "both",
-        "snmp_monitoring": True,
-        "detailed_status": True,
 
         # Enhanced reconnection settings
         "enhanced_reconnection": {
@@ -1396,14 +1393,6 @@ class InterfaceConfig(ServiceInterface):
                                      'validation_field': 'normal_monitoring_interval'})
                 raise ValueError("normal_monitoring_interval must be between 10 and 3600 seconds")
 
-        if 'system_health_check_interval' in config:
-            interval = config['system_health_check_interval']
-            if not isinstance(interval, int) or interval < 60 or interval > 7200:
-                logger.warning("Invalid system_health_check_interval",
-                              extra={'interface_number': self.interface_number,
-                                     'validation_field': 'system_health_check_interval'})
-                raise ValueError("system_health_check_interval must be between 60 and 7200 seconds")
-
         if 'data_usage_monitoring_interval' in config:
             interval = config['data_usage_monitoring_interval']
             if not isinstance(interval, int) or interval < 10 or interval > 3600:
@@ -1430,18 +1419,6 @@ class InterfaceConfig(ServiceInterface):
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'log_sink'})
             raise ValueError("log_sink must be 'both', 'journal', or 'syslog'")
-
-        if 'snmp_monitoring' in config and not isinstance(config['snmp_monitoring'], bool):
-            logger.warning("Invalid snmp_monitoring",
-                          extra={'interface_number': self.interface_number,
-                                 'validation_field': 'snmp_monitoring'})
-            raise ValueError("snmp_monitoring must be true or false")
-
-        if 'detailed_status' in config and not isinstance(config['detailed_status'], bool):
-            logger.warning("Invalid detailed_status",
-                          extra={'interface_number': self.interface_number,
-                                 'validation_field': 'detailed_status'})
-            raise ValueError("detailed_status must be true or false")
 
     def _normalize_connectivity_monitoring(self, config_data):
         """Normalize connectivity monitoring configuration"""

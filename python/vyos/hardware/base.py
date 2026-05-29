@@ -247,6 +247,12 @@ class Board:
     def sim_select(self, slot: int) -> None:
         raise NotImplementedError(f"{self.NAME}: sim_select not supported")
 
+    def modem_signal_level(self, level: int,
+                           modem: Optional[str] = None) -> None:
+        raise NotImplementedError(
+            f"{self.NAME}: modem_signal_level not supported"
+        )
+
     def serial_protocol(self, port: str, proto: str,
                         term: Optional[bool] = None,
                         slr: Optional[bool] = None) -> None:
