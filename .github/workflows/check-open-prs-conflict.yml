@@ -13,5 +13,5 @@ permissions:
 
 jobs:
   check-pr-conflict-call:
-    uses: vyos/.github/.github/workflows/check-pr-conflict.yml@current
+    uses: vyos/.github/.github/workflows/check-pr-conflict.yml@production
     secrets: inherit
