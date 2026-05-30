@@ -10,5 +10,5 @@ permissions:
 
 jobs:
   darker-ruff-lint:
-    uses: vyos/.github/.github/workflows/lint-with-darker-ruff.yml@current
+    uses: vyos/.github/.github/workflows/lint-with-darker-ruff.yml@production
     secrets: inherit
