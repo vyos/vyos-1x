@@ -2,7 +2,7 @@ name: Python Lint (Darker + Ruff)
 on:
   pull_request_target:
     branches:
-      - current
+      - rolling
 
 permissions:
   pull-requests: write
