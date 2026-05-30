@@ -1780,11 +1780,18 @@ class ModemStateMachine:
         elif mm_state == 6:  # ENABLED - Could indicate SIM insertion
             if current_fsm_state in [ModemState.WAITING_FOR_SIM.value,
                                      ModemState.FAILED.value]:
-                # SIM might have been inserted (or re-inserted after eject/insert cycle)
+                # SIM might have been inserted (or re-inserted after eject/insert cycle).
+                # NOTE: Do NOT cancel the failed-retry here. A bare
+                # `searching -> enabled` MM transition happens on every
+                # carrier-search loop iteration when registration is
+                # impossible (e.g. SIM requires a band the modem does not
+                # support). The insertion gate in `_check_sim_insertion`
+                # compares the current SIM identifier to the last-known
+                # one and only cancels the retry / resumes configuration
+                # when the SIM identity actually changed.
                 logger.info("Modem enabled while in %s - checking for SIM insertion",
                            current_fsm_state,
                            extra={'interface_number': self.interface_number})
-                self._cancel_failed_retry()  # SIM event supersedes retry
                 self._safe_create_task(self._handle_potential_sim_insertion())
             elif current_fsm_state == ModemState.CONFIGURING.value:
                 # Modem enabled successfully during configuration - can proceed
@@ -2444,6 +2451,26 @@ class ModemStateMachine:
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
             state_variant = await props.call_get(MODEM_INTERFACE, "State")
             state = state_variant.value
+
+            # Step 0a: If the modem is already in FAILED state at attach
+            # time, do NOT walk the configure → enable → connect cascade.
+            # On a FAILED modem the Modem.Simple D-Bus interface is not
+            # exposed, so any later Simple.Connect() call dies with
+            # `interface not found … Modem.Simple` and the FSM then
+            # enters FAILED for the wrong reason. Route through the
+            # existing FAILED-state investigator which reads
+            # StateFailedReason and triggers SIM failover for
+            # sim-missing / sim-error, or schedules the failed-retry
+            # backoff for other reasons.
+            if state == -1:  # MM_MODEM_STATE_FAILED
+                logger.warning(
+                    "Modem already in FAILED state at initial configuration — "
+                    "skipping configuration cascade and investigating reason",
+                    extra={'interface_number': self.interface_number,
+                           'modem_state': state})
+                self.initial_configuration_in_progress = False
+                await self._handle_failed_state_event(state)
+                return
 
             # Only reset if modem is actually connected (abnormal startup condition)
             # States: 4=DISABLED, 6=ENABLING, 7=ENABLED, 8=SEARCHING, 9=REGISTERED, 11=CONNECTING, 12=CONNECTED
@@ -5272,10 +5299,38 @@ class ModemStateMachine:
                         imsi = imsi_variant.value
 
                         if imsi:  # SIM is present and readable
+                            # Only treat this as a real SIM insertion event
+                            # when the SIM identity has actually changed
+                            # since the last time we observed it. Without
+                            # this gate, MM's normal `searching -> enabled`
+                            # carrier-search oscillation (which happens
+                            # continuously when registration is impossible,
+                            # e.g. SIM requires an unsupported band) is
+                            # repeatedly misread as a hot-swap, tearing
+                            # down a perfectly fine modem and cancelling
+                            # the carrier-friendly failed-retry backoff.
+                            last_imsi = ''
+                            if isinstance(self.last_known_sim_info, dict):
+                                last_imsi = self.last_known_sim_info.get('imsi', '') or ''
+
+                            if last_imsi and last_imsi == imsi:
+                                logger.debug(
+                                    "Modem enabled but SIM identity unchanged "
+                                    "- not a hot-swap, leaving failed-retry intact",
+                                    extra={'interface_number': self.interface_number,
+                                           'sim_slot': config_sim_slot})
+                                return False
+
                             logger.info("SIM insertion detected in configured slot",
                                        extra={'interface_number': self.interface_number,
                                               'sim_slot': config_sim_slot,
-                                              'imsi': imsi[:6] + '...'})  # Partial IMSI for privacy
+                                              'imsi': imsi[:6] + '...',  # Partial IMSI for privacy
+                                              'previous_imsi_known': bool(last_imsi)})
+
+                            # Confirmed SIM identity change — now it is
+                            # safe to supersede the failed-retry backoff
+                            # and resume the configuration lane.
+                            self._cancel_failed_retry()
 
                             # SIM is back! Resume the normal configuration/connection lane.
                             return await self._resume_after_sim_available()
@@ -6388,6 +6443,69 @@ class ModemStateMachine:
             return
 
         try:
+            # Registration gate — never attempt Simple.Connect() on a
+            # modem that is not at least REGISTERED. The Modem.Simple
+            # D-Bus interface is not exposed on modems in FAILED /
+            # LOCKED / DISABLED / ENABLED / SEARCHING, so attempting
+            # the cascade in those states produces a misleading
+            # `interface not found on this object:
+            # org.freedesktop.ModemManager1.Modem.Simple` error and
+            # then drives the FSM into FAILED for the wrong reason.
+            # Check current MM state first; only wait if the modem is
+            # plausibly in the process of registering.
+            try:
+                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                state_variant = await props.call_get(MODEM_INTERFACE, "State")
+                mm_state = state_variant.value
+            except Exception as e:
+                logger.warning(f"Could not read modem state before connection cascade: {e}",
+                              extra={'interface_number': self.interface_number})
+                mm_state = None
+
+            # MM state numbers: -1 FAILED, 2 LOCKED, 3 DISABLED,
+            # 6 ENABLED, 7 SEARCHING, 8 REGISTERED, 10 CONNECTING,
+            # 11 CONNECTED.
+            if mm_state is not None and mm_state < 6:
+                logger.warning(
+                    "Modem not in a connectable state - aborting connection cascade",
+                    extra={'interface_number': self.interface_number,
+                           'modem_state': mm_state})
+                # Let the FSM's existing failed/locked state handlers
+                # decide recovery (SIM failover, retry, etc.).
+                self.transition(ModemEvent.CONNECTION_FAILED)
+                # Give dual-SIM failover a chance — this is functionally
+                # equivalent to SIM-missing from the connection-cascade
+                # point of view. _handle_sim_missing_failover is a no-op
+                # if no alternate SIM exists, failover is disabled, or
+                # cooldown is active.
+                await self._handle_sim_missing_failover()
+                return
+
+            if mm_state is None or mm_state < 8:
+                logger.info(
+                    "Waiting for modem to reach REGISTERED before connection cascade",
+                    extra={'interface_number': self.interface_number,
+                           'modem_state': mm_state})
+                registered = await self._wait_for_registered()
+                if not registered:
+                    logger.warning(
+                        "Modem did not register in time - aborting connection cascade",
+                        extra={'interface_number': self.interface_number})
+                    self.last_failure_reason = (
+                        "Modem failed to reach REGISTERED state within the "
+                        "configured registration timeout. The SIM and/or "
+                        "supported bands may not match any available carrier."
+                    )
+                    self.last_failure_time = time.time()
+                    self.transition(ModemEvent.CONNECTION_FAILED)
+                    # Registration timeout on the active SIM looks
+                    # identical to a dead/unusable SIM from a failover
+                    # standpoint (e.g. SIM requires a band this modem
+                    # does not support). Offer dual-SIM failover; it
+                    # is a no-op when no alternate SIM is configured.
+                    await self._handle_sim_missing_failover()
+                    return
+
             # 🔧 FIX: Check if bearer is already connected before attempting new connections
             is_already_connected = await self._is_bearer_connected()
             if is_already_connected:
@@ -8825,8 +8943,17 @@ class ModemStateMachine:
         self.modem_path = None
         self.bearer_path = None
 
-        # Reset to scanning state
-        self.machine.current_state = ModemState.INITIAL.value
+        # Reset to initial state. ``FiniteMachine.current_state`` is a
+        # read-only property — assigning to it raises
+        # ``AttributeError: property 'current_state' of 'FiniteMachine'
+        # object has no setter``. The supported reset path is to call
+        # ``initialize()`` again, which re-seeds the machine to
+        # ``default_start_state`` (ModemState.INITIAL — see __init__).
+        try:
+            self.machine.initialize()
+        except Exception as e:
+            logger.warning(f"FSM machine re-initialize failed: {e}",
+                          extra={'interface_number': self.interface_number})
         await self.initialize()
 
     async def shutdown(self):
