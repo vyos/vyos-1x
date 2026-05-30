@@ -21,4 +21,4 @@ jobs:
       pull-requests: write
     secrets: inherit
     with:
-      action-ref: 'current'
+      action-ref: 'production'
