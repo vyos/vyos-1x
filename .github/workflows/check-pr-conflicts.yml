@@ -15,7 +15,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request_target' && github.event.action == 'synchronize') ||
       (github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.merged == true)
-    uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@current
+    uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@production
     permissions:
       contents: read
       pull-requests: write

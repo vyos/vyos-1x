@@ -15,5 +15,5 @@ permissions:
 
 jobs:
   check-typos:
-    uses: vyos/.github/.github/workflows/check-typos.yml@current
+    uses: vyos/.github/.github/workflows/check-typos.yml@production
     secrets: inherit

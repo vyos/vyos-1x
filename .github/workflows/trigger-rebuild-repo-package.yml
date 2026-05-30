@@ -23,7 +23,7 @@ jobs:
 
   trigger-build:
     needs: get_repo_name
-    uses: vyos/.github/.github/workflows/trigger-rebuild-repo-package.yml@current
+    uses: vyos/.github/.github/workflows/trigger-rebuild-repo-package.yml@production
     with:
       branch: ${{ github.event.pull_request.base.ref }}
       package_name: ${{ needs.get_repo_name.outputs.PACKAGE_NAME }}
