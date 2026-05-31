@@ -40,6 +40,10 @@ running = True
 # compile regex once during startup for fast match
 IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan)")
 
+# Per-interface previous operstate, used to suppress DHCP restarts on
+# UP-to-UP re-notifications (e.g. post-migration gratuitous-ARP events).
+_iface_prev_operstate: dict[str, str] = {}
+
 def match_iface(ifname: str) -> bool:
     """ Helper function returning true if interface name is a match for further
     processing (e.g. restart of DHCP(v6) client)
@@ -58,6 +62,14 @@ def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
 
     # Only handle explicit UP/DOWN state transitions; ignore other kernel states.
     if operstate not in ['UP', 'DOWN']:
+        return None
+
+    prev = _iface_prev_operstate.get(ifname)
+    _iface_prev_operstate[ifname] = operstate
+
+    if operstate == 'UP' and prev == 'UP':
+        syslog.syslog(syslog.LOG_DEBUG,
+                      f'Suppressing DHCP restart for {ifname}: already UP')
         return None
 
     if operstate == 'DOWN':
@@ -168,7 +180,10 @@ def main():
 
                     # Deletion of a network link which has been previously added to the kernel
                     case 'RTM_DELLINK':
-                        pass
+                        attrs = dict(message.get('attrs', []))
+                        ifname = attrs.get('IFLA_IFNAME', None)
+                        if ifname:
+                            _iface_prev_operstate.pop(ifname, None)
                     case _:
                         pass
 
