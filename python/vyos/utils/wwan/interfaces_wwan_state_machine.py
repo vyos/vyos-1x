@@ -259,6 +259,7 @@ class ModemStateMachine:
         self._bearer_disconnect_timer = None
         self._registration_debounce_timer = None
         self._ip_monitoring_task = None
+        self._signal_poll_task = None
         self.usage_monitor_task = None
         # Egress-filter / MSS-clamp state also referenced during teardown
         self._ipv6_egress_filter_active = False
@@ -8136,6 +8137,39 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
             return False
 
+    async def _monitor_signal_strength(self, interval_seconds: int = 5) -> None:
+        """Periodically poll signal strength while CONNECTED.
+
+        Feeds dBm samples into ``self.signal_tracker``, which is the
+        only thing that fires ``_update_signal_led``.  Without this
+        loop the LED stays dark in steady state because the only other
+        caller of ``signal_tracker.update`` is the reconnection path.
+
+        Started by ``_start_network_interface_monitoring`` on entry to
+        CONNECTED and cancelled by ``_stop_network_interface_monitoring``
+        on exit; safe to be cancelled at any await point.
+        """
+        try:
+            while True:
+                try:
+                    _percent, signal_dbm, signal_detail = \
+                        await self._get_detailed_signal_quality()
+                    if (self.signal_tracker is not None
+                            and signal_dbm is not None):
+                        await self.signal_tracker.update(
+                            signal_dbm, signal_detail or {})
+                except asyncio.CancelledError:
+                    raise
+                except Exception as poll_err:
+                    logger.debug("Signal-poll iteration failed: %s",
+                                 poll_err,
+                                 extra={'interface_number': self.interface_number})
+                await asyncio.sleep(interval_seconds)
+        except asyncio.CancelledError:
+            logger.debug("Signal-strength poll task cancelled",
+                         extra={'interface_number': self.interface_number})
+            raise
+
     async def _update_signal_led(self, level: int, avg_dbm: float, signal_detail: dict) -> None:
         """Update modem STAT LEDs using hardware API signal-level mapping.
 
@@ -10504,6 +10538,18 @@ class ModemStateMachine:
         if self.monitor_ip_changes and (not self._ip_monitoring_task or self._ip_monitoring_task.done()):
             self._ip_monitoring_task = self._safe_create_task(self._monitor_ip_changes())
 
+        # Start periodic signal-strength polling so the STAT LED tracks
+        # real-time conditions.  The MM Signal interface is set up to
+        # refresh every 5s by _enable_signal_monitoring(); we poll the
+        # cached values at the same cadence and feed them into the
+        # SignalStrengthTracker, which fires _update_signal_led() on
+        # level changes.
+        if not self._signal_poll_task or self._signal_poll_task.done():
+            self._signal_poll_task = self._safe_create_task(
+                self._monitor_signal_strength(),
+                name=f"signal-poll-wwan{self.interface_number}",
+            )
+
     async def _stop_network_interface_monitoring(self):
         """Stop network interface monitoring tasks when leaving CONNECTED state"""
         logger.info("Stopping network interface monitoring",
@@ -10521,6 +10567,11 @@ class ModemStateMachine:
         if self._ip_monitoring_task and not self._ip_monitoring_task.done():
             self._ip_monitoring_task.cancel()
             self._ip_monitoring_task = None
+
+        # Cancel signal-strength poll task
+        if self._signal_poll_task and not self._signal_poll_task.done():
+            self._signal_poll_task.cancel()
+            self._signal_poll_task = None
 
         # Remove IPv6 egress prefix filter (interface is going down)
         interface_name = f"wwan{self.interface_number}"
