@@ -2580,6 +2580,47 @@ class ModemStateMachine:
             logger.info("Starting APN connection attempts with proper priority order",
                        extra={'interface_number': self.interface_number})
 
+            # Registration gate — never call Simple.Connect() on a modem
+            # that has not yet reached REGISTERED. On a search-loop
+            # modem (e.g. SIM that requires an unsupported band) the
+            # MM Simple.Connect call will internally wait up to ~60s
+            # for registration and then fail with a misleading
+            # "Network timeout", driving the FSM into FAILED for the
+            # wrong reason. The post-FAILED path (apply_modem_configuration)
+            # already has this gate; replicate it here for the startup
+            # cascade in _configure_modem_initial as well.
+            try:
+                state_v = await props.call_get(MODEM_INTERFACE, "State")
+                pre_connect_state = state_v.value
+            except Exception:
+                pre_connect_state = None
+
+            if pre_connect_state is not None and pre_connect_state < 8:
+                logger.info(
+                    "Waiting for modem to reach REGISTERED before connection cascade",
+                    extra={'interface_number': self.interface_number,
+                           'modem_state': pre_connect_state})
+                registered = await self._wait_for_registered()
+                if not registered:
+                    logger.warning(
+                        "Modem did not register in time — aborting connection cascade",
+                        extra={'interface_number': self.interface_number})
+                    self.last_failure_reason = (
+                        "Modem failed to reach REGISTERED state within the "
+                        "configured registration timeout. The SIM and/or "
+                        "supported bands may not match any available carrier."
+                    )
+                    self.last_failure_time = time.time()
+                    # Bump the failure counter and route through the
+                    # standard FAILED path so dual-SIM failover can run
+                    # via the same logic used for connection failures.
+                    self.initial_connection_failure_count += 1
+                    self.transition(ModemEvent.CONNECTION_FAILED)
+                    # Give dual-SIM failover a chance — no-op when no
+                    # alternate SIM exists.
+                    await self._handle_sim_missing_failover()
+                    return
+
             # Get SIM config for connection parameters
             active_slot = self.config.get('primary_sim_slot', 1) if self.config else 1
             sim_config = {'pdp_type': 'ipv4v6', 'roaming': 'enabled'}  # defaults
@@ -5415,6 +5456,24 @@ class ModemStateMachine:
             sim_inserted = await self._check_sim_insertion()
 
             if not sim_inserted:
+                # `_check_sim_insertion` returns False for two very
+                # different reasons:
+                #   (a) the configured slot really has no SIM, OR
+                #   (b) the SIM identity is unchanged since the last
+                #       observation (i.e. this is just MM's normal
+                #       `searching -> enabled` carrier-search
+                #       oscillation, not a hot-swap).
+                # Only case (a) warrants triggering SIM failover —
+                # case (b) should be a quiet no-op so the existing
+                # carrier-friendly failed-retry backoff is not
+                # repeatedly disturbed.
+                if await self._is_configured_sim_present():
+                    logger.debug(
+                        "SIM still present in configured slot - "
+                        "no failover needed (search-loop oscillation)",
+                        extra={'interface_number': self.interface_number})
+                    return
+
                 # Still no configured SIM - check for any available SIM
                 if self._is_sim_failover_enabled():
                     logger.info("No configured SIM found, checking for failover options",
@@ -5427,6 +5486,29 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"Error handling potential SIM insertion: {e}",
                         extra={'interface_number': self.interface_number})
+
+    async def _is_configured_sim_present(self) -> bool:
+        """Return True if a SIM is currently present in the configured slot.
+
+        Used by ``_handle_potential_sim_insertion`` to distinguish a real
+        "SIM removed" condition from MM's normal `searching <-> enabled`
+        oscillation on an unregisterable carrier (e.g. band mismatch).
+        """
+        try:
+            if not self.proxy or not self.config:
+                return False
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            sim_slots_variant = await props.call_get(MODEM_INTERFACE, "SimSlots")
+            sim_slots = sim_slots_variant.value
+            config_sim_slot = self.config.get('primary_sim_slot', 1)
+            if len(sim_slots) < config_sim_slot:
+                return False
+            slot_path = sim_slots[config_sim_slot - 1]
+            return bool(slot_path and slot_path != '/')
+        except Exception as e:
+            logger.debug(f"Could not check configured SIM presence: {e}",
+                        extra={'interface_number': self.interface_number})
+            return False
 
     async def _periodic_sim_check(self):
         """Periodic check for SIM insertion while in WAITING_FOR_SIM state"""
