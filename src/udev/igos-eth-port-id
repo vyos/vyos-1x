@@ -69,16 +69,15 @@ def main():
             port = 0
 
     key = f"{parent}#{port}"
-    print(f"IGOS_ETH_PORT={key}")
 
-    # ---------- 3. mark interface as pinned iff a .link matches ----------
+    # ---------- 3. only emit the key if a .link file matches -------------
     needle = f"Property=IGOS_ETH_PORT={key}"
     for lf in sorted(glob.glob("/etc/systemd/network/10-igos-*.link")):
         try:
             with open(lf) as f:
                 for line in f:
                     if line.strip() == needle:
-                        print("IGOS_ETH_PINNED=1")
+                        print(f"IGOS_ETH_PORT={key}")
                         return 0
         except OSError:
             continue
