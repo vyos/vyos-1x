@@ -23,8 +23,8 @@
 # database after rule 80's .link-driven rename generates a MOVE uevent.
 
 ACTION!="add|change|move", GOTO="igos_eth_pin_end"
-SUBSYSTEM!="net",         GOTO="igos_eth_pin_end"
-KERNEL!="eth*|en*|e*",    GOTO="igos_eth_pin_end"
+SUBSYSTEM!="net",          GOTO="igos_eth_pin_end"
+KERNEL!="eth*|en*|e*",     GOTO="igos_eth_pin_end"
 
 IMPORT{program}="/usr/lib/udev/igos-eth-port-id %p"
 
