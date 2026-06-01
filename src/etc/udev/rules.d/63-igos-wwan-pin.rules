@@ -3,5 +3,6 @@ SUBSYSTEM!="net",           GOTO="igos_wwan_pin_end"
 KERNEL!="wwan*|ww*|w*",     GOTO="igos_wwan_pin_end"
 
 IMPORT{program}="/usr/lib/udev/igos-wwan-port-id %p"
+ENV{IGOS_WWAN_PORT}=="?*", NAME=""
 
 LABEL="igos_wwan_pin_end"

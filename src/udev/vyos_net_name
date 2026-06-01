@@ -16,6 +16,7 @@
 
 import os
 import re
+import glob
 import time
 import logging
 import logging.handlers
@@ -33,6 +34,29 @@ from vyos.migrate import ConfigMigrate
 # Define variables
 vyos_udev_dir = directories['vyos_udev_dir']
 config_path = '/opt/vyatta/etc/config/config.boot'
+igos_link_dir = '/etc/systemd/network'
+
+
+def get_pinned_name() -> str:
+    key = os.environ.get('IGOS_ETH_PORT', '')
+    if not key:
+        return ''
+    for lf in glob.glob(os.path.join(igos_link_dir, '10-igos-*.link')):
+        try:
+            name = ''
+            matched = False
+            with open(lf) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.replace(' ', '') == f'Property=IGOS_ETH_PORT={key}':
+                        matched = True
+                    if line.startswith('Name='):
+                        name = line.split('=', 1)[1].strip()
+            if matched and name:
+                return name
+        except OSError:
+            continue
+    return ''
 
 
 def is_available(intfs: dict, intf_name: str) -> bool:
@@ -238,8 +262,12 @@ def on_boot_event(intf_name: str, hwid: str, predefined: str = '') -> str:
     # interface; for pinned interfaces it will create the
     # 'interfaces ethernet ethN' node without hw-id, so commit-time
     # hooks still find a config entry for every live NIC.
-    leave_rescan_hint(newname, hwid)
+    pinned_name = get_pinned_name()
+    if pinned_name:
+        leave_rescan_hint(pinned_name, hwid)
+        return ''
 
+    leave_rescan_hint(newname, hwid)
     return newname
 
 
