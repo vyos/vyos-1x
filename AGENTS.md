@@ -92,7 +92,7 @@ Smoketests (`smoketest/`) run inside the QEMU harness invoked by
   at <https://vyos.dev>. This is enforced by the
   `check-pr-message.yml` reusable workflow.
 - See `CONTRIBUTING.md` for additional commit message guidance.
-- Branch model: `current` (rolling, default), `circinus` (1.5 LTS), `sagitta`
+- Branch model: `rolling` (default), `circinus` (1.5 LTS), `sagitta`
   (1.4 LTS), `equuleus` (1.3 LTS). Backports via
   `@Mergifyio backport <branch>`.
 - Default-branch protection: 2 required approvals; required status checks.
