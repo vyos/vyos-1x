@@ -1,6 +1,6 @@
-ACTION!="add|change|move", GOTO="igos_wwan_pin_end"
-SUBSYSTEM!="net",          GOTO="igos_wwan_pin_end"
-KERNEL!="eth*|ww*|w*",     GOTO="igos_wwan_pin_end"
+ACTION!="add|change|move",  GOTO="igos_wwan_pin_end"
+SUBSYSTEM!="net",           GOTO="igos_wwan_pin_end"
+KERNEL!="wwan*|ww*|w*",     GOTO="igos_wwan_pin_end"
 
 IMPORT{program}="/usr/lib/udev/igos-wwan-port-id %p"
 
