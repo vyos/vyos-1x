@@ -1,93 +1,90 @@
-#!/bin/sh
-# Generic per-physical-port id for any ethN netdev.
-#
-# Emits a line of the form:
-#   IGOS_ETH_PORT=<parent-devpath>#<port-number>
-# on stdout when a stable physical-socket identifier can be derived,
-# and exits 0.  On any failure prints nothing and exits non-zero, so
-# the device falls through to 62-temporary-interface-rename.rules and
-# 65-vyos-net.rules (today's hw-id based behaviour) untouched.
-#
-# port-number resolution order (first hit wins):
-#   1. Device-tree match: walk the parent device's of_node/ethernet-ports/
-#      port@N nodes and find the one whose local-mac-address equals the
-#      netdev's MAC.  This covers multi-port controllers that share a
-#      single parent platform device and do NOT populate dev_port -- the
-#      TI am65-cpsw-nuss family being the motivating example.  The MAC
-#      values in each port@N node are fixed up by u-boot from per-unit
-#      EEPROM, so the same physical socket on every board still yields
-#      the same DT port index.
-#   2. /sys/class/net/<if>/dev_port: the kernel's universal multi-port
-#      discriminator for controllers that do populate it (mlx5, bnxt,
-#      dual-port igc/ixgbe, etc.).  Defaults to 0 for single-port NICs.
-#
-# parent-devpath is the netdev's devpath with the trailing "/net/<if>"
-# stripped -- stable per physical socket on PCI, USB, and platform
-# buses.  Combined with the resolved port number it uniquely identifies
-# a physical socket without referencing MAC addresses or driver names
-# in the consumer (.link) files.
-#
-# Input:
-#   $1 : udev devpath (use "%p" in the rule's IMPORT{program}=).
+#!/usr/bin/env python3
+"""Generic per-physical-port id for any ethN netdev.
 
-set -eu
+Emits a line of the form:
+  IGOS_ETH_PORT=<parent-devpath>#<port-number>
+on stdout when a stable physical-socket identifier can be derived,
+and exits 0.  On any failure prints nothing and exits non-zero.
 
-devpath="${1:-}"
-case "$devpath" in
-    */net/*) ;;
-    *) exit 1 ;;
-esac
+Input:
+  sys.argv[1] : udev devpath (use "%p" in the rule's IMPORT{program}=).
+"""
 
-ifname=${devpath##*/net/}
-parent=${devpath%/net/*}
-[ -n "$parent" ] && [ -n "$ifname" ] || exit 1
+import glob
+import os
+import sys
 
-port=""
 
-# ---------- 1. device-tree local-mac-address match -------------------
-mac=$(cat "/sys/class/net/${ifname}/address" 2>/dev/null || true)
-if [ -n "$mac" ]; then
-    mac_hex=$(printf '%s' "$mac" | tr -d :: | tr 'A-F' 'a-f')
-    ports_dir="/sys/class/net/${ifname}/device/of_node/ethernet-ports"
-    if [ -d "$ports_dir" ]; then
-        for p in "$ports_dir"/port@*; do
-            [ -d "$p" ] || continue
-            macfile="$p/local-mac-address"
-            [ -r "$macfile" ] || continue
-            p_hex=$(od -An -tx1 -N6 "$macfile" 2>/dev/null \
-                    | tr -d ' \n\t' | tr 'A-F' 'a-f')
-            if [ "$p_hex" = "$mac_hex" ]; then
-                # strip "port@" prefix; reg is hex per DT spec
-                hex=${p##*port@}
-                port=$(printf '%d' "0x${hex}" 2>/dev/null || echo "")
-                break
-            fi
-        done
-    fi
-fi
+def main():
+    devpath = sys.argv[1] if len(sys.argv) > 1 else ""
 
-# ---------- 2. fall back to kernel dev_port --------------------------
-if [ -z "$port" ]; then
-    port=$(cat "/sys${devpath}/dev_port" 2>/dev/null || echo 0)
-    case "$port" in
-        ''|*[!0-9]*) port=0 ;;
-    esac
-fi
+    if "/net/" not in devpath:
+        return 1
 
-key="${parent}#${port}"
-printf 'IGOS_ETH_PORT=%s\n' "$key"
+    parts = devpath.rsplit("/net/", 1)
+    if len(parts) != 2:
+        return 1
+    parent, ifname = parts
+    if not parent or not ifname:
+        return 1
 
-# ---------- 3. mark interface as pinned iff a .link matches ----------
-# Only set IGOS_ETH_PINNED=1 when an installed .link file declares
-# Property=IGOS_ETH_PORT=<key>.  This is the signal rules 62 and 65 use
-# to skip temp-rename and vyos_net_name (which otherwise drops a hint
-# that causes vyos-interface-rescan.py to write hw-id into config.boot).
-# Interfaces with no matching .link fall through to the legacy hw-id
-# path unchanged.
-for lf in /etc/systemd/network/10-igos-*.link; do
-    [ -r "$lf" ] || continue
-    if grep -qxF "Property=IGOS_ETH_PORT=${key}" "$lf"; then
-        printf 'IGOS_ETH_PINNED=1\n'
-        break
-    fi
-done
+    port = None
+
+    # ---------- 1. device-tree local-mac-address match -------------------
+    try:
+        mac = open(f"/sys/class/net/{ifname}/address").read().strip()
+    except OSError:
+        mac = ""
+
+    if mac:
+        mac_hex = mac.replace(":", "").lower()
+        ports_dir = f"/sys/class/net/{ifname}/device/of_node/ethernet-ports"
+        if os.path.isdir(ports_dir):
+            for p in sorted(glob.glob(os.path.join(ports_dir, "port@*"))):
+                if not os.path.isdir(p):
+                    continue
+                macfile = os.path.join(p, "local-mac-address")
+                if not os.path.isfile(macfile):
+                    continue
+                try:
+                    with open(macfile, "rb") as f:
+                        raw = f.read(6)
+                    p_hex = raw.hex()
+                except OSError:
+                    continue
+                if p_hex == mac_hex:
+                    hex_str = os.path.basename(p).split("port@", 1)[1]
+                    try:
+                        port = int(hex_str, 16)
+                    except ValueError:
+                        port = None
+                    break
+
+    # ---------- 2. fall back to kernel dev_port --------------------------
+    if port is None:
+        try:
+            val = open(f"/sys{devpath}/dev_port").read().strip()
+            port = int(val)
+        except (OSError, ValueError):
+            port = 0
+
+    key = f"{parent}#{port}"
+    print(f"IGOS_ETH_PORT={key}")
+
+    # ---------- 3. mark interface as pinned iff a .link matches ----------
+    needle = f"Property=IGOS_ETH_PORT={key}"
+    for lf in sorted(glob.glob("/etc/systemd/network/10-igos-*.link")):
+        try:
+            with open(lf) as f:
+                for line in f:
+                    if line.strip() == needle:
+                        print("IGOS_ETH_PINNED=1")
+                        return 0
+        except OSError:
+            continue
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
