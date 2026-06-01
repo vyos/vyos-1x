@@ -23,6 +23,7 @@ from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_vrf_changed
 from vyos.configdict import is_source_interface
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
@@ -83,6 +84,10 @@ def get_config(config=None):
     # Protocols static arp dependency
     if 'static_arp' in macsec:
         set_dependents('static_arp', conf)
+
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        set_dependents('firewall', conf)
 
     return macsec
 
@@ -187,6 +192,9 @@ def apply(macsec):
             if os.path.isfile(wpa_suppl_conf.format(**macsec)):
                 os.unlink(wpa_suppl_conf.format(**macsec))
 
+            # run the dependents
+            call_dependents()
+
             return None
 
     # It is safe to "re-create" the interface always, there is a sanity
@@ -199,8 +207,8 @@ def apply(macsec):
         if not is_systemd_service_running(systemd_service) or 'shutdown_required' in macsec:
             call(f'systemctl reload-or-restart {systemd_service}')
 
-    if 'static_arp' in macsec:
-        call_dependents()
+    # run the dependents
+    call_dependents()
 
     return None
 

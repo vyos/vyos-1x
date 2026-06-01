@@ -23,6 +23,7 @@ from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_vrf_changed
 from vyos.configdict import node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -88,6 +89,10 @@ def get_config(config=None):
     # Protocols static arp dependency
     if 'static_arp' in vxlan:
         set_dependents('static_arp', conf)
+
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        set_dependents('firewall', conf)
 
     return vxlan
 
@@ -257,8 +262,8 @@ def apply(vxlan):
         v = VXLANIf(**vxlan)
         v.update(vxlan)
 
-    if 'static_arp' in vxlan:
-        call_dependents()
+    # run the dependents
+    call_dependents()
 
     return None
 

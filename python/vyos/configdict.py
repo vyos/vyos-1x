@@ -19,6 +19,7 @@ A library for retrieving value dicts from VyOS configs in a declarative fashion.
 import os
 import json
 
+from vyos.config import Config
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 
@@ -299,6 +300,34 @@ def has_vrf_configured(conf, intf):
 
     conf.set_level(old_level)
     return ret
+
+def is_vrf_changed(conf : Config, intf) -> bool:
+    """
+    Checks if interface has a VRF changed.
+
+    Returns True if interface has VRF changed, False if it doesn't.
+    """
+    from vyos.ifconfig import Section
+
+    # set default path for this interface
+    intfpath = ['interfaces', Section.section(intf), intf]
+
+    # Check top-level interface
+    if is_node_changed(conf, intfpath + ['vrf']):
+        return True
+
+    # check sub interfaces
+    for vif in conf.list_nodes(intfpath + ['vif']):
+        if is_node_changed(conf, intfpath + ['vif', vif, 'vrf']):
+            return True
+    for vif_s in conf.list_nodes(intfpath + ['vif-s']):
+        if is_node_changed(conf, intfpath + ['vif-s', vif_s, 'vrf']):
+            return True
+        for vif_c in conf.list_nodes(intfpath + ['vif-s', vif_s, 'vif-c']):
+            if is_node_changed(conf, intfpath + ['vif-s', vif_s, 'vif-c', vif_c, 'vrf']):
+                return True
+
+    return False
 
 def has_vlan_subinterface_configured(conf, intf):
     """
