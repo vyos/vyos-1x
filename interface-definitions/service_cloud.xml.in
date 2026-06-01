@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="cloud" owner="${vyos_conf_scripts_dir}/service_cloud.py">
+        <properties>
+          <help>Cloud service settings</help>
+          <priority>1280</priority>
+        </properties>
+        <children>
+          <leafNode name="registration">
+            <properties>
+              <help>Cloud registration code</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>6-digit registration code provided by PerleCloud</description>
+              </valueHelp>
+              <constraint>
+                <regex>[0-9]{6}</regex>
+              </constraint>
+              <constraintErrorMessage>Registration code must be exactly 6 digits</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="override-device-url">
+            <properties>
+              <help>Override the default PerleCloud device URL</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Custom URL for PerleCloud device endpoint</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
