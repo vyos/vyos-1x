@@ -197,38 +197,57 @@ def kea_parse_options(config):
     return options
 
 
-def _find_custom_vendor_options(config):
+def _iter_dhcp4_option_configs(config):
     if not isinstance(config, dict):
         return
 
-    if 'disable' in config:
+    shared_networks = config.get('shared_network_name', config)
+    if not isinstance(shared_networks, dict):
         return
 
-    custom_options = dict_search_args(config, 'vendor_option', 'custom_option')
-    if custom_options:
-        yield from custom_options.items()
+    for network_config in shared_networks.values():
+        if not isinstance(network_config, dict) or 'disable' in network_config:
+            continue
 
-    for value in config.values():
-        if isinstance(value, dict):
-            yield from _find_custom_vendor_options(value)
+        if 'option' in network_config:
+            yield network_config['option']
+
+        for subnet_config in network_config.get('subnet', {}).values():
+            if not isinstance(subnet_config, dict) or 'disable' in subnet_config:
+                continue
+
+            if 'option' in subnet_config:
+                yield subnet_config['option']
+
+            for range_config in subnet_config.get('range', {}).values():
+                if isinstance(range_config, dict) and 'option' in range_config:
+                    yield range_config['option']
+
+            for host_config in subnet_config.get('static_mapping', {}).values():
+                if (
+                    isinstance(host_config, dict)
+                    and 'disable' not in host_config
+                    and 'option' in host_config
+                ):
+                    yield host_config['option']
+
+
+def _find_custom_vendor_options(config):
+    for option_config in _iter_dhcp4_option_configs(config):
+        custom_options = dict_search_args(
+            option_config, 'vendor_option', 'custom_option'
+        )
+        if custom_options:
+            yield from custom_options.items()
 
 
 def _find_unifi_vendor_options(config):
-    if not isinstance(config, dict):
-        return
-
-    if 'disable' in config:
-        return
-
-    unifi_controller = dict_search_args(
-        config, 'vendor_option', 'ubiquiti', 'unifi_controller'
-    )
-    if unifi_controller:
-        yield unifi_controller
-
-    for value in config.values():
-        if isinstance(value, dict):
-            yield from _find_unifi_vendor_options(value)
+    for option_config in _iter_dhcp4_option_configs(config):
+        unifi_controller = dict_search_args(
+            option_config, 'vendor_option', 'ubiquiti', 'unifi_controller'
+        )
+        if unifi_controller:
+            yield unifi_controller
 
 
 def kea_parse_vendor_option_defs(config):
