@@ -111,6 +111,10 @@ class StateTransitionManager:
             transitions=[
                 StateTransition("WAITING_FOR_SIM", "CONFIGURING", "SIM_READY", "SIM card ready"),
                 StateTransition("FAILED", "CONFIGURING", "SIM_READY", "Recovery with SIM ready"),
+                # SIM missing — absorb connection failures while waiting for SIM
+                StateTransition("WAITING_FOR_SIM", "WAITING_FOR_SIM", "CONNECTION_FAILED", "Connection failed while SIM missing"),
+                StateTransition("WAITING_FOR_SIM", "WAITING_FOR_SIM", "RECONFIGURE", "Reconfigure while waiting for SIM"),
+                StateTransition("WAITING_FOR_SIM", "WAITING_FOR_SIM", "SIM_MISSING", "Duplicate SIM missing while already waiting"),
 
                 # SIM missing detection
                 StateTransition("DISCONNECTED", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while disconnected"),
