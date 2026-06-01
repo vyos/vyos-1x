@@ -1,0 +1,5 @@
+# Temporarily rename wwan* interfaces to avoid naming collisions when
+# 80-net-setup-link.rules applies the final Name= from .link files.
+# On live-boot coldplug the device is already temp-named (w2/w3) from
+# initramfs, so KERNEL=="wwan*" naturally skips it here.
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="wwan*", DRIVERS=="qmi_wwan", NAME="w$env{IFINDEX}"
