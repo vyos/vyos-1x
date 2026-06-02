@@ -37,7 +37,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 operator = '!='
                 iiface = iiface[1:]
             output.append(f'iifname {operator} {{{iiface}}}')
-        else:
+        elif 'group' in rule_conf['inbound_interface']:
             iiface = rule_conf['inbound_interface']['group']
             if iiface[0] == '!':
                 operator = '!='
@@ -52,7 +52,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 operator = '!='
                 oiface = oiface[1:]
             output.append(f'oifname {operator} {{{oiface}}}')
-        else:
+        elif 'group' in rule_conf['outbound_interface']:
             oiface = rule_conf['outbound_interface']['group']
             if oiface[0] == '!':
                 operator = '!='
@@ -80,7 +80,6 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
             if redirect_port:
                 translation_output.append(f'to {redirect_port}')
         else:
-
             translation_prefix = nat_type[:1]
             translation_output = [f'{translation_prefix}nat']
 
