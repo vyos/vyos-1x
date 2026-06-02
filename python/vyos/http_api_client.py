@@ -51,7 +51,11 @@ class ApiClientConfig:
     key: str
     port: int = 443
     timeout: Optional[int] = None
-    verify_tls: bool = False
+    # TLS peer verification, forwarded verbatim to requests' ``verify``:
+    #   True       - verify against the system CA store (secure default)
+    #   False      - disable verification (insecure; opt-in only)
+    #   "<path>"   - verify against a custom CA bundle file/dir
+    verify_tls: bool | str = True
 
 
 class ApiClient:
@@ -60,7 +64,8 @@ class ApiClient:
     Design goals:
     - minimal surface area (thin wrapper around requests)
     - consistent error handling + typed exceptions
-    - safe defaults for VyOS typical self-signed HTTPS usage (verify_tls=False)
+    - secure defaults (verify_tls=True); deployments using self-signed
+      certificates opt into verify_tls=False or supply a CA bundle path
     """
 
     _DEFAULT_HEADERS = {
@@ -77,7 +82,9 @@ class ApiClient:
         self._session = requests.Session()
         self._session.headers.update(self._DEFAULT_HEADERS)
 
-        if not config.verify_tls:
+        # Only silence the insecure-request warning when verification has been
+        # explicitly disabled. A CA bundle path or True must keep warnings on.
+        if config.verify_tls is False:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     @property
