@@ -70,17 +70,30 @@ def main():
 
     key = f"{parent}#{port}"
 
-    # ---------- 3. only emit the key if a .link file matches -------------
-    needle = f"Property=IGOS_ETH_PORT={key}"
-    for lf in sorted(glob.glob("/etc/systemd/network/10-igos-*.link")):
-        try:
-            with open(lf) as f:
-                for line in f:
-                    if line.strip() == needle:
-                        print(f"IGOS_ETH_PORT={key}")
-                        return 0
-        except OSError:
-            continue
+    try:
+        with open("/usr/lib/igos/interfaces.conf") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("=", 1)
+                if len(parts) != 2:
+                    continue
+                if parts[0] == key:
+                    target_name = parts[1]
+                    print(f'IGOS_ETH_PORT={key}')
+                    print(f'IGOS_IFNAME={target_name}')
+                    # Write rescan hint so vyos-interface-rescan sees this interface
+                    hint_dir = "/run/udev/vyos"
+                    os.makedirs(hint_dir, exist_ok=True)
+                    try:
+                        with open(os.path.join(hint_dir, target_name), "w") as hf:
+                            hf.write(mac if mac else "")
+                    except OSError:
+                        pass
+                    return 0
+    except OSError:
+        return 1
 
     return 0
 

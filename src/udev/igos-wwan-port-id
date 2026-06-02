@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys
 import re
-import glob
 
 
 def main():
@@ -23,16 +22,21 @@ def main():
 
     key = f"{devpath_parent}#{port}"
 
-    property_key = f"Property=IGOS_WWAN_PORT={key}"
-    for lf in sorted(glob.glob("/etc/systemd/network/10-igos-*.link")):
-        try:
-            with open(lf) as f:
-                for line in f:
-                    if line.strip() == property_key:
-                        print(f"IGOS_WWAN_PORT={key}")
-                        return 0
-        except OSError:
-            continue
+    try:
+        with open("/usr/lib/igos/interfaces.conf") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("=", 1)
+                if len(parts) != 2:
+                    continue
+                if parts[0] == key:
+                    print(f'IGOS_WWAN_PORT={key}')
+                    print(f'IGOS_IFNAME={parts[1]}')
+                    return 0
+    except OSError:
+        return 1
 
     return 0
 

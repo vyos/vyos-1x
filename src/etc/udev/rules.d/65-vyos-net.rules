@@ -4,11 +4,6 @@
 ACTION!="add", 				GOTO="vyos_net_end"
 SUBSYSTEM!="net",			GOTO="vyos_net_end"
 
-# NOTE: do NOT short-circuit this rule for pinned interfaces.  vyos_net_name
-# has boot-time side effects (lock, biosdevname lookup, hint accounting) that
-# VyOS configd depends on.  We instead suppress only the rescan-hint write
-# inside vyos_net_name itself when IGOS_ETH_PINNED=1 (set by rule 61).
-
 # Do name change for ethernet and wireless devices only
 KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"
 
@@ -17,6 +12,8 @@ KERNEL=="wlan*", ATTRS{type}=="803",	GOTO="vyos_net_end"
 
 # If using VyOS predefined names
 ENV{VYOS_IFNAME}!="eth*",	GOTO="end_vyos_predef_names"
+
+ENV{IGOS_IFNAME}=="?*",     GOTO="vyos_net_end"
 
 DRIVERS=="?*", PROGRAM="vyos_net_name %k $attr{address} $env{VYOS_IFNAME}", NAME="%c", GOTO="vyos_net_end"
 

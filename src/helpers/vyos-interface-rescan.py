@@ -39,34 +39,30 @@ formatter = logging.Formatter('%(levelname)s: %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-igos_link_dir = '/etc/systemd/network'
-igos_link_glob = '10-igos-*.link'
+igos_conf_path = '/usr/lib/igos/interfaces.conf'
 
 
 def is_pinned_interface(intf: str) -> bool:
-    """Return True if a 10-igos-*.link file pins this netdev name.
+    """Return True if interfaces.conf pins this netdev name.
 
     A pinned interface has its physical-socket -> name mapping enforced
-    by systemd-networkd via a .link file; recording a hw-id in
-    config.boot for it would be redundant and would re-introduce
+    by a udev rule reading /usr/lib/igos/interfaces.conf; recording a
+    hw-id in config.boot for it would be redundant and would re-introduce
     MAC-based naming on hardware swaps.  We still want the
     'interfaces ethernet ethN' node to exist so commit-time hooks find
     a config entry for the live NIC -- just without the hw-id child.
     """
-    import glob
-
     try:
-        for lf in glob.glob(os.path.join(igos_link_dir, igos_link_glob)):
-            try:
-                with open(lf) as f:
-                    for line in f:
-                        line = line.strip()
-                        if line.startswith('#'):
-                            continue
-                        if line.replace(' ', '') == f'Name={intf}':
-                            return True
-            except OSError:
-                continue
+        with open(igos_conf_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                parts = line.split('=', 1)
+                if len(parts) == 2 and parts[1] == intf:
+                    return True
+    except OSError:
+        pass
     except Exception as e:
         logger.warning(f"is_pinned_interface({intf}) error: {e}")
     return False
@@ -196,11 +192,11 @@ def interface_rescan(config_path: str):
             config.set(['interfaces', intf_type])
             config.set_tag(['interfaces', intf_type])
 
-        # Ethernet interfaces pinned by a /etc/systemd/network/10-igos-*.link
-        # file get their name from the .link's Property=IGOS_ETH_PORT match,
-        # not from MAC.  Create the node so commit-time hooks see the
-        # interface, but omit hw-id to keep MAC out of config.boot.
-        if intf_type == 'ethernet' and is_pinned_interface(intf):
+        # Interfaces pinned via /usr/lib/igos/interfaces.conf get their
+        # name from physical-port topology, not MAC.  Create the node so
+        # commit-time hooks see the interface, but omit hw-id to keep MAC
+        # out of config.boot.
+        if is_pinned_interface(intf):
             logger.info(f"Writing '{intf}' to config file (pinned; no hw-id)")
             config.set(['interfaces', intf_type, intf])
         else:

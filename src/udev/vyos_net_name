@@ -34,29 +34,6 @@ from vyos.migrate import ConfigMigrate
 # Define variables
 vyos_udev_dir = directories['vyos_udev_dir']
 config_path = '/opt/vyatta/etc/config/config.boot'
-igos_link_dir = '/etc/systemd/network'
-
-
-def get_pinned_name() -> str:
-    key = os.environ.get('IGOS_ETH_PORT', '')
-    if not key:
-        return ''
-    for lf in glob.glob(os.path.join(igos_link_dir, '10-igos-*.link')):
-        try:
-            name = ''
-            matched = False
-            with open(lf) as f:
-                for line in f:
-                    line = line.strip()
-                    if line.replace(' ', '') == f'Property=IGOS_ETH_PORT={key}':
-                        matched = True
-                    if line.startswith('Name='):
-                        name = line.split('=', 1)[1].strip()
-            if matched and name:
-                return name
-        except OSError:
-            continue
-    return ''
 
 
 def is_available(intfs: dict, intf_name: str) -> bool:
@@ -185,7 +162,7 @@ def get_configfile_interfaces() -> dict:
         for intf in eth_intfs:
             path = base + [intf, 'hw-id']
             if not config.exists(path):
-                # hw-id is optional for pinned interfaces (.link-named)
+                # hw-id is optional for pinned interfaces
                 continue
             hwid = config.return_value(path)
             if hwid in list(interfaces):
@@ -256,16 +233,6 @@ def on_boot_event(intf_name: str, hwid: str, predefined: str = '') -> str:
         newname = find_available(interfaces, prefix)
 
     logger.info(f"new name for '{intf_name}' is '{newname}'")
-
-    # Always leave the rescan hint.  vyos-interface-rescan.py is the
-    # component that decides whether to write a hw-id node for the
-    # interface; for pinned interfaces it will create the
-    # 'interfaces ethernet ethN' node without hw-id, so commit-time
-    # hooks still find a config entry for every live NIC.
-    pinned_name = get_pinned_name()
-    if pinned_name:
-        leave_rescan_hint(pinned_name, hwid)
-        return ''
 
     leave_rescan_hint(newname, hwid)
     return newname
