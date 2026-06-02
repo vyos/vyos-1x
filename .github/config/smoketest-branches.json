@@ -1,8 +1,8 @@
 {
   "branches": {
-    "current": {
-      "vyos_mirror": "https://packages.vyos.net/repositories/current/",
-      "container_image": "vyos/vyos-build:current",
+    "rolling": {
+      "vyos_mirror": "https://packages.vyos.net/repositories/rolling/",
+      "container_image": "vyos/vyos-build:rolling",
       "vyos_build_repo": "vyos/vyos-build",
       "use_pat": false,
       "build_runner": ["ubuntu-24.04"],
