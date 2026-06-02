@@ -476,7 +476,6 @@ class TftpC:
                         vrf=self.vrf).encode())
 
     def upload(self, location: str):
-        print(f'{self.command} "{self.urlstring}"')
         with open(location, 'rb') as f:
             cmd(f'{self.command} --upload-file - "{self.urlstring}"',
                 input=f.read(), vrf=self.vrf)
