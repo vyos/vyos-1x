@@ -62,16 +62,15 @@ def extract_version(s):
 def check_path(path):
     # Necessary type checking
     if not isinstance(path, list):
-        raise TypeError('Expected a list, got a {}'.format(type(path)))
-    else:
-        pass
+        raise TypeError(f'Expected a list, got a {type(path)}')
 
 
 class ConfigTreeError(Exception):
     pass
 
 
-class ConfigTree(object):
+class ConfigTree:
+    # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-statements,too-many-public-methods
     def __init__(
         self,
         config_string=None,
@@ -80,15 +79,18 @@ class ConfigTree(object):
         internal_string=None,
         libpath=LIBPATH,
     ):
-        if (
-            config_string is None
-            and address is None
-            and internal is None
-            and internal_string is None
-        ):
+        args = [config_string, address, internal, internal_string]
+        arg_names = ['config_string', 'address', 'internal', 'internal_string']
+        if all(x is None for x in args):
             raise TypeError(
                 "ConfigTree() requires one of 'config_string', 'address', 'internal', or 'internal_string'"
             )
+        if sum(x is not None for x in args) > 1:
+            raise TypeError(
+                "ConfigTree() requires exactly one of 'config_string', 'address', 'internal', or 'internal_string'"
+            )
+
+        arg = [(k, v) for (k, v) in zip(arg_names, args) if v is not None][0]
 
         self.__config = None
         self.__lib = cdll.LoadLibrary(libpath)
@@ -223,43 +225,41 @@ class ConfigTree(object):
         ]
         self.__config_dict.restype = c_char_p
 
-        if address is not None:
-            self.__config = address
-            self.__version = ''
-        elif internal is not None:
-            config = self.__read_internal(internal.encode())
-            if config is None:
-                msg = self.__get_error().decode()
-                raise ValueError(
-                    f'Failed to read internal representation from file {internal}: {msg}'
-                )
-            else:
+        match arg:
+            case ('address', address):
+                self.__config = address
+                self.__version = ''
+            case ('internal', internal):
+                config = self.__read_internal(internal.encode())
+                if config is None:
+                    msg = self.__get_error().decode()
+                    raise ValueError(
+                        f'Failed to read internal representation from file {internal}: {msg}'
+                    )
                 self.__config = config
                 self.__version = ''
-        elif internal_string is not None:
-            config = self.__read_internal_string(internal_string.encode())
-            if config is None:
-                msg = self.__get_error().decode()
-                raise ValueError(
-                    f'Failed to read internal representation from string: {msg}'
-                )
-            else:
+            case ('internal_string', internal_string):
+                config = self.__read_internal_string(internal_string.encode())
+                if config is None:
+                    msg = self.__get_error().decode()
+                    raise ValueError(
+                        f'Failed to read internal representation from string: {msg}'
+                    )
                 self.__config = config
                 self.__version = ''
-        elif config_string is not None:
-            config_section, version_section = extract_version(config_string)
-            config_section = escape_backslash(config_section)
-            config = self.__from_string(config_section.encode())
-            if config is None:
-                msg = self.__get_error().decode()
-                raise ValueError(f'Failed to parse config: {msg}')
-            else:
+            case ('config_string', config_string):
+                config_section, version_section = extract_version(config_string)
+                config_section = escape_backslash(config_section)
+                config = self.__from_string(config_section.encode())
+                if config is None:
+                    msg = self.__get_error().decode()
+                    raise ValueError(f'Failed to parse config: {msg}')
                 self.__config = config
                 self.__version = version_section
-        else:
-            raise TypeError(
-                "ConfigTree() requires one of 'config_string', 'address', or 'internal'"
-            )
+            case _:
+                raise TypeError(
+                    "ConfigTree() requires one of 'config_string', 'address', 'internal', or 'internal_string'"
+                )
 
         self.__migration = os.environ.get('VYOS_MIGRATION')
         if self.__migration:
@@ -295,7 +295,7 @@ class ConfigTree(object):
         config_string = unescape_backslash(config_string)
         if no_version:
             return config_string
-        config_string = '{0}\n{1}'.format(config_string, self.__version)
+        config_string = f'{config_string}\n{self.__version}'
         return config_string
 
     def to_commands(self, op='set'):
@@ -419,20 +419,14 @@ class ConfigTree(object):
         path_str = ' '.join(map(str, path)).encode()
 
         res = self.__exists(self.__config, path_str)
-        if res == 0:
-            return False
-        else:
-            return True
+        return bool(res)
 
     def value_exists(self, path, value):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
         res = self.__value_exists(self.__config, path_str, value.encode())
-        if res == 0:
-            return False
-        else:
-            return True
+        return bool(res)
 
     def list_nodes(self, path, path_must_exist=True):
         check_path(path)
@@ -443,11 +437,9 @@ class ConfigTree(object):
 
         if res is None:
             if path_must_exist:
-                raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
-            else:
-                return []
-        else:
-            return res
+                raise ConfigTreeError(f"Path {path} doesn't exist")
+            return []
+        return res
 
     def return_value(self, path):
         check_path(path)
@@ -457,9 +449,8 @@ class ConfigTree(object):
         res = json.loads(res_json)
 
         if res is None:
-            raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
-        else:
-            return res
+            raise ConfigTreeError(f"Path {path} doesn't exist")
+        return res
 
     def return_values(self, path):
         check_path(path)
@@ -469,19 +460,15 @@ class ConfigTree(object):
         res = json.loads(res_json)
 
         if res is None:
-            raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
-        else:
-            return res
+            raise ConfigTreeError(f"Path {path} doesn't exist")
+        return res
 
     def is_tag(self, path):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
         res = self.__is_tag(self.__config, path_str)
-        if res >= 1:
-            return True
-        else:
-            return False
+        return bool(res)
 
     def set_tag(self, path, value=True):
         check_path(path)
@@ -490,19 +477,15 @@ class ConfigTree(object):
         res = self.__set_tag(self.__config, path_str, value)
         if res == 0:
             return True
-        else:
-            msg = self.__get_error().decode()
-            raise ConfigTreeError(f'{msg}: {path}')
+        msg = self.__get_error().decode()
+        raise ConfigTreeError(f'{msg}: {path}')
 
     def is_leaf(self, path):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
         res = self.__is_leaf(self.__config, path_str)
-        if res >= 1:
-            return True
-        else:
-            return False
+        return bool(res)
 
     def set_leaf(self, path, value):
         check_path(path)
@@ -511,9 +494,8 @@ class ConfigTree(object):
         res = self.__set_leaf(self.__config, path_str, value)
         if res == 0:
             return True
-        else:
-            msg = self.__get_error().decode()
-            raise ConfigTreeError(f'{msg}: {path}')
+        msg = self.__get_error().decode()
+        raise ConfigTreeError(f'{msg}: {path}')
 
     def get_subtree(self, path, with_node=False):
         check_path(path)
@@ -541,13 +523,14 @@ class ConfigTree(object):
         return res
 
 
-def diff_compare(left, right, path=[], commands=False, libpath=LIBPATH):
+def diff_compare(left, right, path=None, commands=False, libpath=LIBPATH):
     if left is None:
         left = ConfigTree(config_string='\n')
     if right is None:
         right = ConfigTree(config_string='\n')
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
         raise TypeError('Arguments must be instances of ConfigTree')
+    path = path or []
     if path:
         if (not left.exists(path)) and (not right.exists(path)):
             raise ConfigTreeError(f"Path {path} doesn't exist")
@@ -618,6 +601,7 @@ def merge(left, right, destructive=False, libpath=LIBPATH):
 
 
 def mask_inclusive(left, right, libpath=LIBPATH):
+    # pylint: disable=raise-missing-from
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
         raise TypeError('Arguments must be instances of ConfigTree')
 
@@ -643,6 +627,7 @@ def mask_inclusive(left, right, libpath=LIBPATH):
 
 
 def mask_exclusive(left, right, libpath=LIBPATH):
+    # pylint: disable=raise-missing-from
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
         raise TypeError('Arguments must be instances of ConfigTree')
 
@@ -696,6 +681,7 @@ def subtree_from_partial(
     start: ConfigTree = None,
     libpath=LIBPATH,
 ):
+    # pylint: disable=raise-missing-from
     if start:
         if not isinstance(start, ConfigTree):
             raise TypeError("Argument 'start' must be an instance of ConfigTree")
@@ -732,6 +718,7 @@ def subtree_from_partial(
 
 
 def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH):
+    # pylint: disable=raise-missing-from
     try:
         __lib = cdll.LoadLibrary(libpath)
         __reference_tree_to_json = __lib.reference_tree_to_json
@@ -750,6 +737,7 @@ def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH
 
 
 def merge_reference_tree_cache(cache_dir, primary_name, result_name, libpath=LIBPATH):
+    # pylint: disable=raise-missing-from
     try:
         __lib = cdll.LoadLibrary(libpath)
         __merge_reference_tree_cache = __lib.merge_reference_tree_cache
@@ -768,6 +756,7 @@ def merge_reference_tree_cache(cache_dir, primary_name, result_name, libpath=LIB
 
 
 def interface_definitions_to_cache(from_dir, cache_path, libpath=LIBPATH):
+    # pylint: disable=raise-missing-from
     try:
         __lib = cdll.LoadLibrary(libpath)
         __interface_definitions_to_cache = __lib.interface_definitions_to_cache
@@ -784,6 +773,7 @@ def interface_definitions_to_cache(from_dir, cache_path, libpath=LIBPATH):
 
 
 def reference_tree_cache_to_json(cache_path, render_file, libpath=LIBPATH):
+    # pylint: disable=raise-missing-from
     try:
         __lib = cdll.LoadLibrary(libpath)
         __reference_tree_cache_to_json = __lib.reference_tree_cache_to_json
@@ -806,6 +796,7 @@ def validate_tree_filter(
     validator_dir='/usr/libexec/vyos/validators',
     libpath=LIBPATH,
 ):
+    # pylint: disable=raise-missing-from
     try:
         __lib = cdll.LoadLibrary(libpath)
         __validate_tree_filter = __lib.validate_tree_filter
@@ -838,13 +829,15 @@ def validate_tree(
 
 
 class DiffTree:
-    def __init__(self, left, right, path=[], libpath=LIBPATH):
+    # pylint: disable=too-many-instance-attributes,too-few-public-methods
+    def __init__(self, left, right, path=None, libpath=LIBPATH):
         if left is None:
             left = ConfigTree(config_string='\n')
         if right is None:
             right = ConfigTree(config_string='\n')
         if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
             raise TypeError('Arguments must be instances of ConfigTree')
+        path = path or []
         if path:
             if not left.exists(path):
                 raise ConfigTreeError(f"Path {path} doesn't exist in lhs tree")
