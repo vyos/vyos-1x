@@ -262,7 +262,7 @@ S = small, M = medium, L = large; payoff S < M < L < XL.
 - `python/vyos/utils/wwan/interfaces_wwan_service_manager.py` —
   `AlertBusInterface` D-Bus export.
 - `python/vyos/utils/wwan/wwan_client.py` — AlertBus subscriber API.
-- `python/vyos/utils/wwan/vyos-wwan-operational-commands.md` —
+- `docs/vyos-wwan-operational-commands.md` —
   existing alert-related op-mode commands.
 - `src/conf_mode/service_event-handler.py` — to be replaced in Stage 3.
 - `interface-definitions/service_event-handler.xml.in` — CLI to preserve.

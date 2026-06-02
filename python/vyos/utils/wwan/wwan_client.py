@@ -1,28 +1,18 @@
 #!/usr/bin/env python3
-# Copyright (C) 2024-2026 IGOS and contributors
+# Copyright (C) 2024-2026 Perle Systems Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# wwan_client.py — WWAN D-Bus Client Library
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
 #
-# Import this module to interact with the IGOS WWAN modem management service.
-# All D-Bus complexity is hidden behind simple async method calls.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-# Quick start:
-#
-#     from wwan_client import WWANClient
-#
-#     async def main():
-#         async with WWANClient() as client:
-#             # Connect bearer
-#             await client.connect_bearer(0)
-#
-#             # Poll status
-#             status = await client.get_bearer_status(0)
-#             print(status)  # "connected" or "disconnected"
-#
-#             # Full status dict
-#             info = await client.get_status(0)
-#             print(info['state'], info['signal_quality'])
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 WWAN D-Bus Client Library
@@ -192,7 +182,7 @@ class WWANClient:
             obj = self._bus.get_proxy_object(BUS_NAME, CONTROL_PATH, intro)
             self._ctrl_iface = obj.get_interface(CONTROL_IFACE)
 
-            # Alert bus is optional for backward compatibility with older daemons.
+            # Alert bus is optional — daemon may not export it.
             try:
                 alert_intro = await self._bus.introspect(BUS_NAME, ALERT_PATH)
                 alert_obj = self._bus.get_proxy_object(BUS_NAME, ALERT_PATH, alert_intro)
@@ -389,7 +379,7 @@ class WWANClient:
             ) from exc
 
     async def connect(self, interface_number: int) -> str:
-        """Request a data connection (legacy method).
+        """Request a data connection.
 
         In ``always-on`` mode returns a descriptive message.  In
         ``connect-on-demand`` and ``dial-on-demand`` modes returns
@@ -412,7 +402,7 @@ class WWANClient:
             raise WWANError(f"Connect failed: {exc}") from exc
 
     async def disconnect(self, interface_number: int) -> str:
-        """Request disconnection (legacy method).
+        """Request disconnection.
 
         In ``always-on`` mode performs a full disconnect.  In on-demand
         modes fires ``ENTER_IDLE`` (bearer drops, modem stays registered).
@@ -1249,11 +1239,11 @@ class WWANClientSync:
         return self._run(_inner())
 
     def connect(self, interface_number: int) -> str:
-        """Legacy connect.  See :meth:`WWANClient.connect`."""
+        """Synchronous wrapper.  See :meth:`WWANClient.connect`."""
         return self._run(self._call("connect", interface_number))
 
     def disconnect(self, interface_number: int) -> str:
-        """Legacy disconnect.  See :meth:`WWANClient.disconnect`."""
+        """Synchronous wrapper.  See :meth:`WWANClient.disconnect`."""
         return self._run(self._call("disconnect", interface_number))
 
     def connect_bearer(self, interface_number: int) -> str:

@@ -164,8 +164,8 @@ igos@igos:~$ show interfaces wwan wwan0 hardware
 
 | Field | Description |
 |---|---|
-| Manufacturer | Modem manufacturer (e.g. `Quectel`, `Sierra Wireless`) |
-| Model | Modem model (e.g. `RM520N-GL`, `EM7455`) |
+| Manufacturer | Modem manufacturer (e.g. `Quectel`) |
+| Model | Modem model (e.g. `RM520N-GL`) |
 | IMEI | International Mobile Equipment Identity |
 | Firmware revision | Modem firmware version string |
 | Hardware revision | Modem hardware revision |
@@ -400,7 +400,7 @@ igos@igos:~$ show interfaces wwan wwan0 sms 3
 
 ### `show interfaces wwan <wwanN> sms message <id>`
 
-Legacy alternate syntax for reading a specific SMS message by ID.
+Alternate syntax for reading a specific SMS message by ID.
 
 ```
 igos@igos:~$ show interfaces wwan wwan0 sms message 3

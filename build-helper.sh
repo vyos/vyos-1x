@@ -1,7 +1,18 @@
 #!/bin/bash
-
-# Build helper script to temporarily move utility files during builds
-# This preserves VyOS's original testing methodology while allowing development
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 CONF_MODE_DIR="src/conf_mode"
 TEMP_DIR="temp_configs"
@@ -10,7 +21,6 @@ TEMP_DIR="temp_configs"
 UTILITY_FILES=(
     "apn_discovery.py"
     "connection_manager.py"
-    "interfaces_wwan2.py"
     "interfaces_wwan_config.py"
     "interfaces_wwan_main.py"
     "interfaces_wwan_service_manager.py"

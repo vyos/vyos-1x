@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_main.py
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import asyncio
 import subprocess
 import sys
@@ -213,11 +227,11 @@ async def wait_for_modemmanager_dbus():
     """Wait for ModemManager to be available and responsive on D-Bus.
 
     Tight, monotonic-deadline poll of the ObjectManager interface.
-    The old version slept 2s *between* every probe even when MM
-    becomes responsive on the very first try (which is the common
-    boot-time case once we've already started it).  We now back off
-    progressively starting from 100ms, capped at 1s.  Total wall-time
-    upper bound is unchanged (~30s) but the typical happy-path time
+    Back-off progressively starting from 100ms, capped at 1s, so the
+    common boot-time case (MM responsive on the first probe once we've
+    already started it) returns immediately rather than waiting a full
+    poll interval.  Total wall-time upper bound is ~30s, but typical
+    happy-path time
     drops from 2-4s to well under 500ms.
     """
     import time

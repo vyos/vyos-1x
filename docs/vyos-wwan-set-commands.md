@@ -1,14 +1,16 @@
 # VyOS WWAN Enhanced Interface — `set` Command Reference
 
-This document defines the VyOS CLI `set` commands that map to the
-`my_config.conf` parameters for the enhanced WWAN interface management service.
+This document defines the VyOS CLI `set` commands for the enhanced WWAN
+interface management service.  Configuration is read from the VyOS config
+tree by [src/conf_mode/interfaces_wwan.py](../src/conf_mode/interfaces_wwan.py)
+and pushed to the FSM service over D-Bus.
 
 All commands are under:
 ```
 set interfaces wwan <wwanN> ...
 ```
 
-This definition replaces the upstream VyOS WWAN tree.  The legacy per-interface
+This definition replaces the upstream VyOS WWAN tree.  The upstream per-interface
 `apn`, `authentication`, `connect-on-demand`, `address`, and `dhcp-options`
 nodes are removed — those functions are handled per-SIM by the enhanced service.
 `ipv6-bridging` is a direct child of the wwan interface that copies the
@@ -572,10 +574,9 @@ set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
 > downstream NIC sees the carrier address as if it were directly attached.
 >
 > **Why this is not a true L2 bridge:**  3GPP PDN bearers are L3-only — no
-> Ethernet frames cross the modem.  Every cellular vendor (Cradlepoint,
-> Digi, Sierra, Peplink) implements "IP Passthrough" as a DHCP handoff,
-> not a bridge.  The FSM does the same: bearer L3 → dnsmasq → downstream
-> NIC.
+> Ethernet frames cross the modem.  Commercial cellular CPE products
+> implement "IP Passthrough" as a DHCP handoff, not a bridge.  The FSM
+> does the same: bearer L3 → dnsmasq → downstream NIC.
 >
 > **Architecture (FSM-owned, single CLI knob):**
 >
@@ -598,7 +599,7 @@ set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
 >    | Downstream device | What it asks for | What it gets |
 >    |---|---|---|
 >    | Windows / Linux / macOS PC | IA_NA only | Carrier `/128` + RA + DNS |
->    | OpenWrt / pfSense / VyOS / Cradlepoint | IA_NA + IA_PD | Carrier `/128` + carrier prefix as PD + RA + DNS |
+>    | OpenWrt / pfSense / VyOS / cellular passthrough CPE | IA_NA + IA_PD | Carrier `/128` + carrier prefix as PD + RA + DNS |
 >
 >    IA_PD is emitted whenever the carrier delivers any prefix `/64` or
 >    shorter.  Common cases:
@@ -612,8 +613,8 @@ set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
 >    For the `/64` case the downstream router puts the carrier `/128` on its
 >    WAN (from IA_NA) and the carrier `/64` on its LAN (from IA_PD); IPv6
 >    longest-prefix-match resolves the apparent overlap correctly.  This
->    matches Cradlepoint NCOS "PD-Pass-Through", Digi TransPort, and
->    Peplink 8.3+ behavior.
+>    follows the standard "prefix passthrough" handoff used by commercial
+>    cellular CPE products.
 > 4. **Inbound forwarding via policy routing** — the carrier IP stays
 >    bound to `wwanN` so the router itself still has a working source
 >    for outbound traffic (ModemManager probes, NTP, DNS, etc.).  Inbound
@@ -707,8 +708,8 @@ set interfaces wwan wwan0 ip-passthrough dns-server '9.9.9.9'
 set interfaces wwan wwan0 ip-passthrough dns-server '2606:4700:4700::1111'
 
 # Optional: disable TCP MSS clamp-to-PMTU on WWAN egress.
-#   Clamping is ON BY DEFAULT — this matches Cradlepoint/Peplink/Sierra/Digi
-#   passthrough behavior and transparently fixes oversized-TCP-segment drops
+#   Clamping is ON BY DEFAULT — this is industry-standard for cellular CPE
+#   passthrough and transparently fixes oversized-TCP-segment drops
 #   for downstream clients that ignore DHCP option 26 / RA MTU. The clamp
 #   uses --clamp-mss-to-pmtu so it auto-tracks the bearer MTU dynamically.
 #   Only disable for PMTUD black-hole debugging.
@@ -827,7 +828,7 @@ All three bearer methods (`connect_bearer`, `disconnect_bearer`,
 `connect_bearer()` and `disconnect_bearer()` always return `"accepted"`;
 the caller polls `get_bearer_status()` to observe the actual state.
 
-The legacy `connect()` and `disconnect()` D-Bus methods also remain.  In
+The standalone `connect()` and `disconnect()` D-Bus methods also remain.  In
 `connect-on-demand` and `dial-on-demand` modes they behave identically to
 the bearer methods (fire-and-forget `"accepted"` responses).
 
@@ -1121,10 +1122,10 @@ set interfaces wwan wwan0 logging sink 'both'
 ## Config Mapping Reference
 
 > Parameters marked *(VyOS conf_mode)* are handled by the VyOS configuration
-> script directly (kernel sysctl / ip commands) and do not appear in
-> `my_config.conf`.
+> script directly (kernel sysctl / ip commands) and are not forwarded to
+> the FSM service.
 
-| VyOS `set` Command | `my_config.conf` Key | Default |
+| VyOS `set` Command | FSM Config Key | Default |
 |---|---|---|
 | **VyOS Infrastructure** | | |
 | `description` | *(VyOS conf_mode)* | `(empty)` |

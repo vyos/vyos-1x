@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_state_machine.py
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import asyncio
 import time
 import os
@@ -2306,7 +2320,7 @@ class ModemStateMachine:
                           'current_state': self.machine.current_state})
 
     def _apply_parsed_configuration(self):
-        """Apply parsed configuration to instance variables for backward compatibility"""
+        """Apply parsed configuration to instance variables consumed by the rest of the FSM."""
         # Logging sink + level are applied process-wide so all WWAN modules
         # follow the same output destination policy.
         raw_log_level = str(self.parsed_config.raw_config.get('log_level', 'info')).upper()
@@ -6989,7 +7003,8 @@ class ModemStateMachine:
         success, reason = await self.connection_manager.try_connection_with_apn(apn_config, sim_config_with_timeout)
 
         if success:
-            # Update bearer path for backward compatibility
+            # Mirror the bearer path onto self so other FSM code paths
+            # that read self.bearer_path see the live value.
             self.bearer_path = self.connection_manager.get_current_bearer_path()
 
         return (success, reason)
@@ -8941,8 +8956,8 @@ class ModemStateMachine:
     def _band_to_string(self, band_id) -> str:
         """Convert MM MMModemBand enum to human-readable string.
 
-        ModemManager band enums changed over time; this renderer accepts both
-        legacy and modern values and prefers canonical names.
+        ModemManager band enums have varied across releases; this renderer
+        accepts both numeric and canonical values and prefers canonical names.
         """
         if hasattr(band_id, 'value'):
             band_id = band_id.value
@@ -9363,8 +9378,8 @@ class ModemStateMachine:
                 logger.debug(f"Could not read Modem.State (continuing): {e}",
                             extra={'interface_number': self.interface_number})
 
-            # Step 2: power state LOW (2).  Telit/Quectel/Sierra all
-            # support this on QMI; if not, log and leave modem disabled.
+            # Step 2: power state LOW (2).  Most modern QMI modems
+            # support this; if not, log and leave the modem disabled.
             try:
                 await modem_iface.call_set_power_state(2)
                 logger.info("Modem RF disabled (PowerState=LOW) — airplane mode active",
@@ -12339,11 +12354,11 @@ class ModemStateMachine:
     # ── radvd reload + LAN address deprecation on prefix change ────────
 
     async def _bridging_signal_radvd(self):
-        """Deprecated — no-op shim kept so older call sites do not crash.
+        """No-op compatibility shim.
 
-        Replaced by self._bridging_radvd.apply() which manages the FSM's
-        own radvd instance.  Left in place because external code paths
-        (e.g. status reporters) may still reference it.
+        Real radvd lifecycle is owned by ``self._bridging_radvd.apply()``;
+        this method exists so external introspection / status reporters
+        that look up the name on the FSM object do not raise.
         """
         return
 

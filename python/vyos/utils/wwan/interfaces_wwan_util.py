@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_util.py
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 WWAN Interface Utilities
 
@@ -501,10 +515,11 @@ async def _wait_for_modemmanager_reenumeration(interface_number: int, timeout: i
     return False
 
 
-# Legacy function for backwards compatibility
+# Synchronous wrapper for callers outside an asyncio event loop
 def modem_reset_sync(interface_number: int) -> bool:
     """
-    Synchronous version of modem_reset for backwards compatibility.
+    Synchronous wrapper around :func:`modem_reset` for callers that are
+    not running inside an asyncio event loop.
 
     Args:
         interface_number: The interface number

@@ -226,10 +226,10 @@ async def example_error_handling():
             log.error("Unexpected rejection: %s", exc)
 
 
-# ─── 6. Legacy connect / disconnect ─────────────────────────────────────────
+# ─── 6. Standalone connect / disconnect ────────────────────────────────────
 
-async def example_legacy():
-    """Use the legacy connect()/disconnect() methods (still supported)."""
+async def example_standalone():
+    """Use the standalone connect()/disconnect() methods."""
 
     async with WWANClient() as client:
         result = await client.connect(INTERFACE)
@@ -250,7 +250,7 @@ async def main():
         "dial-on-demand": example_dial_on_demand,
         "status-poll":    example_status_poll,
         "error-handling": example_error_handling,
-        "legacy":         example_legacy,
+        "standalone":     example_standalone,
     }
 
     choice = sys.argv[1] if len(sys.argv) > 1 else "basic"
