@@ -1,37 +1,18 @@
 #!/usr/bin/env python3
-#
-# Copyright (C) 2026 IGOS and contributors
+# Copyright (C) 2024-2026 Perle Systems Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# interfaces_wwan_passthrough.py — DOCSIS-modem-style IP Passthrough.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
 #
-# When configured, the FSM hands the carrier-assigned IPv4 and IPv6 addresses
-# directly to a single downstream device on a designated LAN interface via a
-# tightly-scoped dnsmasq instance.  This mirrors the behaviour of cellular
-# vendor "IP Passthrough" features (Cradlepoint / Digi / Sierra / Peplink),
-# which all hand off via DHCP because 3GPP PDN bearers are L3-only and a
-# true L2 bridge is impossible.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-# Architecture
-# ------------
-#  * One dnsmasq instance per passthrough interface, --bind-interfaces,
-#    PID file in /run/wwan/passthru-<if>.pid, conf in /run/wwan/passthru-<if>.conf,
-#    leases in /run/wwan/passthru-<if>.leases.
-#  * DHCPv4: single lease, address == carrier IPv4, default lease 60s.
-#  * DHCPv6 IA_NA + RA (M=1, O=1): hands off carrier IPv6/128 + RDNSS.
-#  * Management address (Policy B): if the user has set
-#    'interfaces ethernet <if> address ...' explicitly we leave the iface
-#    alone; otherwise we add 192.168.200.1/24 + fd00:6c61:6e30::1/64.
-#  * IP-change protection: iptables saddr DROP + conntrack flush + SIGHUP
-#    + DHCPFORCERENEW (RFC 3203) + DHCPv6 Reconfigure (RFC 8415 §18.2.11),
-#    then unblock once downstream renews (or after a 5 s grace window).
-#  * Bearer-down: stop dnsmasq, drop mgmt addr (if FSM-owned), tear down
-#    iptables rules.
-#
-# MAINTAINER NOTE — see also interfaces_wwan_bridging_radvd.py, which
-# implements a slimmer radvd-only v6 path for the "many LAN devices on a
-# bridge" use case.  Both files emit v6 RA/prefix info; bug fixes to v6
-# advertisement here should be cross-checked there (and vice versa).
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 
@@ -67,8 +48,8 @@ PASSTHRU_RULE_PRIO_BASE = 12000
 # rule — so a packet arriving on wwan<N> destined for the carrier IP is
 # delivered locally instead of being matched by our pref-12000 forwarding
 # rule.  We move `local` to pref 32765 (just before `main` at 32766) so
-# user rules fire first.  This is the same approach used by OpenWrt mwan3,
-# Cradlepoint NCOS, and most cellular CPE vendors implementing IP
+# user rules fire first.  This is the same approach used by OpenWrt mwan3
+# and most cellular CPE products implementing IP
 # Passthrough.  It does NOT affect normal forwarding: any packet that
 # does not match a passthrough rule still hits `local` and gets the same
 # treatment as before, just at a slightly later priority.
@@ -314,7 +295,7 @@ class PassthroughManager:
         ``ipv4_dns`` / ``ipv6_dns`` are the carrier-supplied DNS server
         lists from the bearer's IpConfig.  They are advertised to the
         downstream device via DHCP option 6 / option 23 so the client
-        sees the carrier's resolvers (matches Cradlepoint behaviour).
+        sees the carrier's resolvers (standard CPE passthrough behaviour).
         """
         if not self.cfg.is_active():
             await self.teardown()
@@ -612,8 +593,8 @@ class PassthroughManager:
                 lines.append(f"dhcp-option=tag:{tag},26,{int(bearer_mtu)}")
             # Classless static route (option 121): host route to the gateway
             # via dev (link-only), then default via gateway.  This pattern is
-            # what Cradlepoint/Peplink emit and is accepted by Windows, macOS,
-            # iOS, Android, and Linux clients.
+            # standard among commercial CPE passthrough products and is
+            # accepted by Windows, macOS, iOS, Android, and Linux clients.
             lines.append(
                 f"dhcp-option=tag:{tag},121,{gw_v4}/32,0.0.0.0,0.0.0.0/0,{gw_v4}"
             )
@@ -649,8 +630,8 @@ class PassthroughManager:
                 # IA_PD — offer the carrier prefix to downstream routers
                 # that request it (RFC 8415 §18.2.4: server only includes
                 # IA_PD if the client asked for one, so plain hosts like
-                # Windows/Linux PCs never see this).  Matches Cradlepoint
-                # NCOS "PD-Pass-Through" / Digi / current-Peplink behavior.
+                # Windows/Linux PCs never see this).  This is the standard
+                # "prefix passthrough" handoff used by commercial cellular CPE.
                 lines.append(
                     f"dhcp-range=set:passthru6pd,{prefix_base},{prefix_base},"
                     f"{carrier_v6_prefix},{lease}"
@@ -1545,8 +1526,8 @@ class PassthroughManager:
 
     async def _remove_inbound_route_v6(self, carrier_v6: Optional[str]) -> None:
         # carrier_v6 here is the cached *target* string, which may be
-        # either '<addr>/128' (legacy /128-only carriers) or
-        # '<prefix_base>/<plen>' (DOCSIS-style ≤/64 carriers).
+        # either '<addr>/128' (carriers that only hand out /128 on the
+        # bearer) or '<prefix_base>/<plen>' (DOCSIS-style ≤/64 carriers).
         if not carrier_v6:
             return
         target = carrier_v6 if '/' in carrier_v6 else f'{carrier_v6}/128'
@@ -1656,8 +1637,8 @@ class PassthroughManager:
     # PMTU; --clamp-mss-to-pmtu auto-tracks the wwan<N> MTU so a bearer
     # MTU change is picked up without rewriting the rule.
     #
-    # Default ON (matches Cradlepoint/Peplink/Sierra/Digi passthrough
-    # behavior).  Disable per-interface via:
+    # Default ON (industry-standard for cellular CPE passthrough
+    # implementations).  Disable per-interface via:
     #   set interfaces wwan wwanN ip-passthrough disable-mss-clamp
     # ------------------------------------------------------------------
 

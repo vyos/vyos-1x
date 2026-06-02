@@ -1,32 +1,18 @@
 #!/usr/bin/env python3
-#
-# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright (C) 2024-2026 Perle Systems Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# Operational diagnostics for board hardware: serial transceivers, modems,
-# and raw GPIO pins. Intended for bench / field bring-up — NOT to be called
-# by conf-mode. Lives behind ``test hardware ...`` so it's clearly out-of-
-# band from the configured state.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
 #
-# Examples
-# --------
-#   test hardware show serial
-#   test hardware show modem
-#   test hardware show pin
-#   test hardware show pin UARTC2_SHUT_N
-#   test hardware serial UARTC2 protocol rs485h
-#   test hardware serial UARTC2 protocol rs485h termination on
-#   test hardware modem MODEM0 reset
-#   test hardware modem MODEM0 power off
-#   test hardware modem MODEM0 sim 2
-#   test hardware pin UARTC2_MODE0 set 1
-#   test hardware pin UARTC2_SHUT_N pulse
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-# Note on persistence: under libgpiod v2 the kernel GPIO controller keeps
-# the configured direction and value after our request is released. A
-# single ``pin ... set N`` therefore holds the line at N until something
-# else (another consumer / driver reprobe / reboot) reprograms it. There
-# is no separate ``hold`` / ``release`` verb — ``set`` is persistent.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 

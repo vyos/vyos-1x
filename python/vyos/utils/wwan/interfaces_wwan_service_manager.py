@@ -1,3 +1,18 @@
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import annotations
 
 import asyncio
@@ -246,7 +261,8 @@ class ConfigServiceManager:
         except (TypeError, ValueError):
             base['interface_number'] = -1
 
-        # Stable category/code mapping from legacy alert type if not set.
+        # Derive stable category/code from the alert `type` when the
+        # caller did not supply an explicit code/category pair.
         if not base.get('code') or not base.get('category'):
             mapped = self._ALERT_TYPE_MAP.get(str(base.get('type', 'event')).lower())
             if mapped:

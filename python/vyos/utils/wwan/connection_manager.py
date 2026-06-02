@@ -1,3 +1,18 @@
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 WWAN Connection Management Module
 
@@ -263,7 +278,7 @@ class ConnectionManager:
         return 'connection_failed'
 
     def _normalize_apn_config(self, apn_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize APN config and flatten legacy/nested config structures."""
+        """Normalize APN config and flatten nested config structures."""
         if not isinstance(apn_config, dict):
             return {
                 'name': str(apn_config or ''),

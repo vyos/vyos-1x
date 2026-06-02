@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
-#
-# Copyright (C) 2024-2026 IGOS and contributors
+# Copyright (C) 2024-2026 Perle Systems Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # interfaces_wwan.py — VyOS conf_mode script for enhanced WWAN interface.
 #
@@ -9,8 +20,7 @@
 # into the nested dict expected by the WWAN FSM D-Bus service, then pushes the
 # config via D-Bus SetConfiguration.
 #
-# This script replaces the upstream VyOS interfaces_wwan.py and the flat-file
-# interfaces_wwan2.py config parser.
+# This script replaces the upstream VyOS interfaces_wwan.py.
 
 import asyncio
 import ipaddress
@@ -478,15 +488,15 @@ def build_fsm_config(wwan):
             'mgmt_owned_by_user': user_owns_eth,
             'mgmt_v4_ip': mgmt_v4_ip,
             'mgmt_v6_ip': mgmt_v6_ip,
-            # TCP MSS clamping on WWAN egress — ON by default, matches
-            # commercial cellular passthrough products (Cradlepoint, Peplink,
-            # Sierra, Digi).  Transparently fixes non-compliant downstream
+            # TCP MSS clamping on WWAN egress — ON by default,
+            # industry-standard for cellular CPE passthrough.
+            # Transparently fixes non-compliant downstream
             # clients that ignore DHCP option 26 / RA MTU.  Disable only for
             # PMTUD debugging.
             'mss_clamp_enabled': not _leaf_exists(ipt, 'disable_mss_clamp'),
             # Optional user-supplied DNS override (multi-value). When set,
             # these resolvers are advertised to the downstream device in
-            # place of carrier-supplied DNS. Mirrors Cradlepoint/Peplink.
+            # place of carrier-supplied DNS.
             'dns_servers': (
                 ipt.get('dns_server')
                 if isinstance(ipt.get('dns_server'), list)

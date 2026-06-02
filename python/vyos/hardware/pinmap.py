@@ -1,3 +1,18 @@
+# Copyright (C) 2024-2026 Perle Systems Limited
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from vyos.hardware.base import Pin
 def P(default=0): return Pin(bank=0, line=0, dir='out', active_low=False, bias='none', default=default, group=None, debounce_us=0, settle_ms=0)
 VARIANT = 'test'

@@ -1,44 +1,18 @@
 #!/usr/bin/env python3
-#
-# Copyright (C) 2026 IGOS and contributors
+# Copyright (C) 2024-2026 Perle Systems Limited
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
-# interfaces_wwan_bridging_radvd.py — FSM-owned radvd for IPv6 bridging.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
 #
-# Why an FSM-owned radvd?
-# -----------------------
-# Standard `service router-advert` requires the operator to hardcode the
-# advertised prefix into VyOS config.  On a cellular bearer the carrier
-# can hand out a new /64 on every reattach — sometimes hourly.  Asking
-# the operator to chase the prefix is not realistic, so the bridging
-# code owns its own radvd instance (one per wwan interface) and rewrites
-# its config every time the carrier prefix changes.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-# Mirrors the design used by interfaces_wwan_passthrough.py for dnsmasq:
-#   * conf: /run/wwan/bridging-radvd-<wwan>.conf
-#   * pid:  /run/wwan/bridging-radvd-<wwan>.pid
-#   * --bind-interfaces equivalent: single `interface <lan>` block
-#   * SIGHUP for live reload, hard restart on interface-name change
-#
-# Mode: A1 — SLAAC + RDNSS only.  No DHCPv6 server.  Covers SLAAC clients
-# on every modern OS.  Stateful DHCPv6 is deliberately not supported here
-# because Android refuses to implement DHCPv6 IA_NA.
-#
-# ───────────────────────────────────────────────────────────────────────────
-# MAINTAINER NOTE — duplicated v6 advertisement logic
-# ───────────────────────────────────────────────────────────────────────────
-# interfaces_wwan_passthrough.py implements a *superset* of this file's
-# behavior inside its scoped dnsmasq: RA + SLAAC + RDNSS + DHCPv6 IA_NA +
-# DHCPv6 IA_PD, all on the carrier /64.  This file exists as a separate,
-# slimmer radvd-only path because passthrough's whole policy (single host,
-# MAC-pinned, mgmt address, MSS clamp, inbound route, src whitelist) is
-# wrong for the "many LAN devices on a bridge" use case.
-#
-# Implication: if you fix a v6 advertisement bug here (lifetimes, prefix
-# flags, RDNSS handling, prefix-change deprecation, etc.) — CHECK
-# interfaces_wwan_passthrough.py's v6 dnsmasq config emission too, and
-# vice versa.  The two paths can drift, and a future consolidation pass
-# is on the table once a third v6 feature is needed in both places.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 
