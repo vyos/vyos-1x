@@ -23,12 +23,46 @@
                   <help>Show conntrack entries for IPv4 protocol</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/conntrack.py show --family inet</command>
+                <children>
+                  <node name="vrf">
+                    <properties>
+                      <help>Show conntrack IPv4 entries filtered by VRF</help>
+                    </properties>
+                    <children>
+                      <virtualTagNode>
+                        <properties>
+                          <completionHelp>
+                            <path>vrf name</path>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/conntrack.py show --family inet --vrf "$6"</command>
+                      </virtualTagNode>
+                    </children>
+                  </node>
+                </children>
               </node>
               <node name="ipv6">
                 <properties>
                   <help>Show conntrack entries for IPv6 protocol</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/conntrack.py show --family inet6</command>
+                <children>
+                  <node name="vrf">
+                    <properties>
+                      <help>Show conntrack IPv6 entries filtered by VRF</help>
+                    </properties>
+                    <children>
+                      <virtualTagNode>
+                        <properties>
+                          <completionHelp>
+                            <path>vrf name</path>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/conntrack.py show --family inet6 --vrf "$6"</command>
+                      </virtualTagNode>
+                    </children>
+                  </node>
+                </children>
               </node>
             </children>
           </node>
