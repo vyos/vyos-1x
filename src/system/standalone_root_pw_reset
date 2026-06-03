@@ -27,8 +27,23 @@ CF=/opt/vyatta/etc/config/config.boot
 ADMIN=vyos
 
 set_encrypted_password() {
-    sed -i \
-       -e "/ user $1 {/,/encrypted-password/s/encrypted-password .*\$/encrypted-password \"$2\"/" $3
+    local user=$1 epwd=$2 file=$3
+
+    # Check if encrypted-password exists within this specific user's block
+    if awk "/ user $user \{/{f=1} f && /encrypted-password/{found=1; exit} f && /^        }/{exit} END{exit !found}" "$file"; then
+        # Replace existing encrypted-password line
+        sed -i \
+           -e "/ user $user {/,/encrypted-password/s/encrypted-password .*\$/encrypted-password \"$epwd\"/" "$file"
+    else
+        # Insert encrypted-password after plaintext-password
+        sed -i \
+           -e "/ user $user {/,/plaintext-password/s/\(plaintext-password .*\)\$/\1\n                encrypted-password \"$epwd\"/" "$file"
+    fi
+}
+
+clear_plaintext_password() {
+   sed -i \
+      -e "/ user $1 {/,/plaintext-password/s/plaintext-password .*\$/plaintext-password \"\"/" $2
 }
 
 
@@ -58,6 +73,11 @@ change_password() {
     # escape any slashes in resulting password
     local eepwd=$(sed 's:/:\\/:g' <<< $epwd)
     set_encrypted_password $user $eepwd $CF
+
+    # There is issue that 'set_encrypted_password' only handles the 'encrypted-password' line,
+    # but leaves any existing 'plaintext-password' untouched (T8346).
+    # We need to clear 'plaintext-password' for the user during the password change flow.
+    clear_plaintext_password $user $CF
 }
 
 # System is so messed up that doing anything would be a mistake
