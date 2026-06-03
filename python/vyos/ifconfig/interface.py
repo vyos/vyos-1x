@@ -48,6 +48,7 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
@@ -388,8 +389,8 @@ class Interface(Control):
         >>> i.remove()
         """
         # Stop WPA supplicant if EAPoL was in use
-        if is_systemd_service_active(f'wpa_supplicant-wired@{self.ifname}'):
-            self._cmd(f'systemctl stop wpa_supplicant-wired@{self.ifname}')
+        netns = self.config['netns'] if 'netns' in self.config else None
+        stop_systemd_unit(f'wpa_supplicant-wired@{self.ifname}', netns=netns)
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
@@ -1559,17 +1560,18 @@ class Interface(Control):
             # Reload systemd unit definitions as some options are dynamically generated
             self._cmd('systemctl daemon-reload')
 
+            netns = self.config['netns'] if 'netns' in self.config else None
             # When the DHCP client is restarted a brief outage will occur, as
             # the old lease is released a new one is acquired (T4203). We will
             # only restart DHCP client if it's option changed, or if it's not
             # running, but it should be running (e.g. on system startup)
             if (vrf_changed or
                 ('dhcp_options_changed' in self.config) or
-                (not is_systemd_service_active(systemd_service))):
+                (not is_systemd_service_active(systemd_service, netns=netns))):
                 return self._cmd(f'systemctl restart {systemd_service}')
         else:
-            if is_systemd_service_active(systemd_service):
-                self._cmd(f'systemctl stop {systemd_service}')
+            netns = self.config['netns'] if 'netns' in self.config else None
+            stop_systemd_unit(systemd_service, netns=netns)
 
             # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
             # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
@@ -1618,15 +1620,16 @@ class Interface(Control):
             # Reload systemd unit definitions as some options are dynamically generated
             self._cmd('systemctl daemon-reload')
 
+            netns = self.config['netns'] if 'netns' in self.config else None
             # We must ignore any return codes. This is required to enable
             # DHCPv6-PD for interfaces which are yet not up and running.
             if (vrf_changed or
                 ('dhcpv6_options_changed' in self.config) or
-                (not is_systemd_service_active(systemd_service))):
+                (not is_systemd_service_active(systemd_service, netns=netns))):
                 return self._popen(f'systemctl restart {systemd_service}')
         else:
-            if is_systemd_service_active(systemd_service):
-                self._cmd(f'systemctl stop {systemd_service}')
+            netns = self.config['netns'] if 'netns' in self.config else None
+            stop_systemd_unit(systemd_service, netns=netns)
             if os.path.isfile(config_file):
                 os.remove(config_file)
             if os.path.isfile(script_file):

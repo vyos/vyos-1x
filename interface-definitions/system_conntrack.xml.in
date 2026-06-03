@@ -84,7 +84,6 @@
                           </completionHelp>
                         </properties>
                       </leafNode>
-                      #include <include/ip-protocol.xml.i>
                       <leafNode name="protocol">
                         <properties>
                           <help>Protocol to match (protocol name, number, or "all")</help>
@@ -170,7 +169,6 @@
                           </completionHelp>
                         </properties>
                       </leafNode>
-                      #include <include/ip-protocol.xml.i>
                       <leafNode name="protocol">
                         <properties>
                           <help>Protocol to match (protocol name, number, or "all")</help>

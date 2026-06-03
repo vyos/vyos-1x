@@ -1011,14 +1011,13 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'peer' : peer,
                         },
                     },
-
-                    '31' : {
-                        'action' : 'permit',
-                        'match' : {
-                            'peer' : peerv6,
+                    '31': {
+                        'action': 'permit',
+                        'match': {
+                            'peer': peerv6,
+                            'source-peer': peer,
                         },
                     },
-
                     '40' : {
                         'action' : 'permit',
                         'match' : {
@@ -1279,6 +1278,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'origin', 'incomplete'])
                     if 'peer' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'peer', rule_config['match']['peer']])
+                    if 'source-peer' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'source-peer', rule_config['match']['source-peer']])
                     if 'rpki-invalid' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'rpki', 'invalid'])
                     if 'rpki-not-found' in rule_config['match']:
@@ -1460,6 +1461,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'peer' in rule_config['match']:
                         tmp = f'match peer {rule_config["match"]["peer"]}'
+                        self.assertIn(tmp, config)
+                    if 'source-peer' in rule_config['match']:
+                        tmp = f'match src-peer {rule_config["match"]["source-peer"]}'
                         self.assertIn(tmp, config)
                     if 'protocol' in rule_config['match']:
                         tmp = f'match source-protocol {rule_config["match"]["protocol"]}'

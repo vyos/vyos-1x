@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import platform
 from pathlib import Path
 
 from vyos.base import Warning
@@ -26,6 +27,7 @@ from vyos.system import grub_util
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
+from vyos import flavor
 airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
@@ -68,10 +70,12 @@ def verify(console):
             # If the device name still starts with usbXXX no matching tty was found
             # and it can not be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
-                raise ConfigError(f'Device {device} does not support being used as tty')
+                raise ConfigError(f'Device "{device}" does not support being used as tty')
         if not is_tty(device, warning=True):
             Warning(f'Device "{device}" used for console is not a TTY!')
         if 'kernel' in device_config:
+            if not (device.startswith('ttyS') or device.startswith('ttyAMA')):
+                raise ConfigError(f'Device "{device}" unsupported for Kernel boot console')
             kernel_consoles.append(device)
 
     if len(kernel_consoles) > 1:
@@ -87,8 +91,17 @@ def generate(console):
             if 'serial-getty' in basename:
                 os.unlink(os.path.join(root, basename))
 
-    # Define a default console on a tty framebuffer
-    default_tty_console = ('tty', '0', '')
+    # PSL: Try to get console from the flavor.json files before defaulting
+    try:
+        default_tty_console = flavor.get_image_serial_console()
+    except Exception:
+        if platform.machine() == 'aarch64':
+            # PSL: prefer ttyS0/115200 on arm64.
+            default_tty_console = ('ttyS', '0', '115200')
+        else:
+            # Define a default console on a tty framebuffer
+            default_tty_console = ('tty', '0', '')
+
     if not console or 'device' not in console:
         grub_util.update_serial_console(*default_tty_console)
         return None

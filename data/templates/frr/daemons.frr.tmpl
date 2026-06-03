@@ -12,7 +12,7 @@
 # eigrp
 # sharpd
 # fabricd
-# pathd
+#
 #
 # The zebra, mgmtd and staticd daemons are always started and can not be disabled
 #
@@ -37,7 +37,7 @@ pbrd=no
 bfdd=yes
 fabricd=yes
 vrrpd=no
-pathd=no
+pathd=yes
 
 #
 # Define defaults for all services even those who shall be kept disabled.
@@ -103,7 +103,7 @@ vtysh_enable=yes
 watchfrr_enable=yes
 valgrind_enable=no
 
-#watchfrr_options=""
+watchfrr_options="--timeout={{ watchfrr_timeout }}"
 
 frr_profile="{{ profile }}"
 

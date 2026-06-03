@@ -310,6 +310,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for network in networks:
             self.cli_set(base_path + ['area', area, 'network', network])
 
+        # FRR requires router to be ABR for virtual-link to work
+        self.cli_set(base_path + ['area', '0', 'network', '192.178.0.0/16'])
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '172.16.0.9/12'])
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '192.178.0.9/16'])
+
         # commit changes
         self.cli_commit()
 
