@@ -257,8 +257,8 @@ jobs:
         id: secrets-check
         env:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          VYOS_APP_ID: ${{ secrets.VYOS_APP_ID }}
-          VYOS_APP_PRIVATE_KEY: ${{ secrets.VYOS_APP_PRIVATE_KEY }}
+          APP_CLIENT_ID: ${{ vars.APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           # Skip on Mergify-authored PRs (backport PRs, queue PRs). The
@@ -277,8 +277,8 @@ jobs:
             printf '::notice::Skipping AI validation — PR authored by %s (already reviewed on source PR)\n' "$PR_AUTHOR"
             exit 0
           fi
-          if [ -z "$VYOS_APP_ID" ] \
-             || [ -z "$VYOS_APP_PRIVATE_KEY" ] \
+          if [ -z "$APP_CLIENT_ID" ] \
+             || [ -z "$APP_PRIVATE_KEY" ] \
              || [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "skip_reason=missing-secrets" >> "$GITHUB_OUTPUT"
@@ -309,7 +309,7 @@ jobs:
         run: |
           gh pr comment "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
-            --body "AI Validation skipped — required secrets are not configured on this repo (\`ANTHROPIC_API_KEY\`, \`VYOS_APP_ID\`, \`VYOS_APP_PRIVATE_KEY\`). Maintainers: see the workflow run for details."
+            --body "AI Validation skipped — required secrets are not configured on this repo (\`ANTHROPIC_API_KEY\`; the org-level vyos-bot \`APP_CLIENT_ID\` + \`APP_PRIVATE_KEY\` must also be present). Maintainers: see the workflow run for details."
 
       # Check out the PR's MERGE REF into the workspace root. Required by
       # anthropics/claude-code-action@v1: it runs `git fetch origin
@@ -391,12 +391,13 @@ jobs:
       - name: Generate GitHub App token
         if: steps.secrets-check.outputs.skip != 'true'
         id: app
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        uses: vyos/.github/.github/actions/get-token@production
         with:
-          app-id: ${{ secrets.VYOS_APP_ID }}
-          private-key: ${{ secrets.VYOS_APP_PRIVATE_KEY }}
           owner: VyOS-Networks
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
           repositories: vyos-1x,vyos-docs-opus-reviewer
+          permissions: '{"contents":"read"}'
 
       - name: Sparse-checkout branches.json from reviewer
         if: steps.secrets-check.outputs.skip != 'true'
@@ -587,8 +588,9 @@ jobs:
           #     claude_args block below)
           #   - github_token is the workflow's PR-scoped default token
           #     (pull-requests:write + issues:write + contents:read) —
-          #     NOT the broader VYOS_APP_ID token, which is only used for
-          #     the vyos-1x / reviewer-source checkouts
+          #     NOT the vyos-bot App token, which is scoped to contents:read
+          #     on the VyOS-Networks org repos for the vyos-1x /
+          #     reviewer-source checkouts above
           #   - the prompt explicitly marks PR content as untrusted with
           #     <UNTRUSTED-PR-CONTENT> markers and tells Claude to treat
           #     it as data, not instructions
