@@ -18,6 +18,8 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.utils.process import run
+
 mark = '100'
 conn_mark = '555'
 conn_mark_set = '111'
@@ -53,10 +55,13 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(['policy', 'route'])
         self.cli_delete(['policy', 'route6'])
+        self.cli_delete(['firewall', 'group', 'domain-group', 'smoketest_domain'])
+        self.cli_delete(['system', 'static-host-mapping', 'host-name', 'pbr.example.com'])
         self.cli_commit()
 
         # Verify nftables cleanup
         nftables_search = [
+            ['set D_smoketest_domain'],
             ['set N_smoketest_network'],
             ['set N_smoketest_network1'],
             ['chain VYOS_PBR_smoketest']
@@ -93,6 +98,46 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_mangle')
 
         self.cli_delete(['firewall'])
+
+    def test_pbr_domain_group(self):
+        domain_group = 'smoketest_domain'
+        domain_name = 'pbr.example.com'
+        domain_ip = '192.0.2.5'
+
+        self.cli_set(['system', 'static-host-mapping', 'host-name', domain_name, 'inet', domain_ip])
+        self.cli_commit()
+
+        self.cli_set(['firewall', 'group', 'domain-group', domain_group, 'address', domain_name])
+        self.cli_commit()
+
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'group', 'domain-group', domain_group])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'set', 'mark', mark])
+        self.cli_set(['policy', 'route', 'smoketest', 'interface', interface])
+
+        self.cli_commit()
+
+        result, code = self.wait_for_result(
+            lambda: run(
+                f'sudo nft get element ip vyos_mangle '
+                f'D_{domain_group} {{ {domain_ip} }}'
+            ),
+            0,
+            pause=1,
+            timeout=10
+        )
+        self.assertTrue(
+            result,
+            f'Expected {domain_ip} in D_{domain_group}, last nft exit code {code}'
+        )
+
+        nftables_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR_UD_smoketest'],
+            [f'set D_{domain_group}'],
+            [f'elements = {{ {domain_ip} }}'],
+            [f'ip daddr @D_{domain_group}', 'meta mark set']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_mangle')
 
     def test_pbr_mark(self):
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'source', 'address', '172.16.20.10'])
