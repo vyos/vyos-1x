@@ -17,6 +17,7 @@
 
 from vyos.ifconfig import Interface
 from vyos.ifconfig.vpp.interface import VPPInterface
+from vyos.utils.dict import dict_search
 
 
 class VPPBondInterface(Interface, VPPInterface):
@@ -135,13 +136,24 @@ class VPPBondInterface(Interface, VPPInterface):
             # Delete bonding interface
             self.delete_bond()
 
+            self.index = None
+
     def update(self, config):
         # Add bond interface
-        self.add_bond()
+        if self.index is None:
+            self.add_bond()
+
+        # Delete removed members
+        members = self.get_members()
+        config_members = dict_search('member.interface', config, default=[])
+        for member in members:
+            if member not in config_members:
+                self.detach_member(interface=member)
 
         # Add members to bond
-        for member in config.get('member', {}).get('interface', []):
-            self.add_member(interface=member)
+        for member in config_members:
+            if member not in members:
+                self.add_member(interface=member)
 
         # Apply VPP-specific interface settings
         VPPInterface.update(self, config)

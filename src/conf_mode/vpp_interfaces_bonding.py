@@ -18,6 +18,7 @@
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import is_node_changed
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_mtu_ipv6
 from vyos import ConfigError
@@ -107,6 +108,12 @@ def get_config(config=None) -> dict:
         get_first_key=True,
         no_tag_node_value_mangle=True,
     )
+
+    iface_path = ['interfaces', 'vpp', 'bonding', ifname]
+    rebuild_required_nodes = ['mode', 'hash-policy', 'mac']
+    for node in rebuild_required_nodes:
+        if is_node_changed(conf, iface_path + [node]):
+            config.update({'rebuild_required': {}})
 
     config['bond_members'] = deps_bond_dict(conf)
 
@@ -225,10 +232,12 @@ def apply(config):
 
     ifname = config.get('ifname')
     bond = VPPBondInterface(ifname, config)
-    bond.remove()
+
+    if 'deleted' in config or 'rebuild_required' in config:
+        bond.remove()
 
     if 'deleted' in config:
-        return
+        return None
 
     bond.update(config)
 
