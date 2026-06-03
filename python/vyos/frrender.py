@@ -813,10 +813,15 @@ class FRRender:
             for vrf, vrf_config in config_dict['vrf']['name'].items():
                 if 'protocols' not in vrf_config:
                     continue
-                for protocol in vrf_config['protocols']:
-                    vrf_config['protocols'][protocol]['vrf'] = vrf
 
-                output += inline_helper(vrf_config['protocols'])
+                # Do not mutate config_dict in-place — it is also stored as
+                # cached_config_dict and in-place mutation breaks change
+                # detection on the next commit (T7931).
+                protocols = {
+                    protocol: {**proto_dict, 'vrf': vrf}
+                    for protocol, proto_dict in vrf_config['protocols'].items()
+                }
+                output += inline_helper(protocols)
 
         # remove any accidentally added empty newline to not confuse FRR
         output = os.linesep.join([s for s in output.splitlines() if s])
