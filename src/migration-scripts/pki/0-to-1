@@ -1,0 +1,109 @@
+# Copyright (C) VyOS Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8492: Regenerate CRLs to add required X.509 extensions (Authority Key
+# Identifier and CRL Number) that were missing from previously generated
+# CRLs. Without these extensions strongSwan silently ignores the CRL,
+# allowing revoked certificates to authenticate.
+
+from cryptography import x509
+
+from vyos.base import Warning
+from vyos.configtree import ConfigTree
+from vyos.pki import create_certificate_revocation_list
+from vyos.pki import encode_certificate
+from vyos.pki import load_certificate
+from vyos.pki import load_crl
+from vyos.pki import load_private_key
+
+base = ['pki']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base + ['ca']):
+        return
+
+    for ca_name in config.list_nodes(base + ['ca']):
+        ca_base = base + ['ca', ca_name]
+
+        if not config.exists(ca_base + ['crl']):
+            continue
+        if not config.exists(ca_base + ['private', 'key']):
+            continue
+        if not config.exists(ca_base + ['certificate']):
+            continue
+
+        ca_cert_raw = config.return_value(ca_base + ['certificate'])
+        ca_key_raw = config.return_value(ca_base + ['private', 'key'])
+
+        ca_cert = load_certificate(ca_cert_raw)
+        ca_key = load_private_key(ca_key_raw)
+
+        if not ca_cert:
+            continue
+        if not ca_key:
+            Warning(
+                f'PKI CA "{ca_name}" has a passphrase-protected private key — '
+                f'CRL regeneration skipped. To update the CRL manually, run: '
+                f'"generate pki crl {ca_name} install"'
+            )
+            continue
+
+        # Check all existing CRLs — if every one already has Authority Key
+        # Identifier, no migration is needed for this CA.
+        existing_crls_raw = config.return_values(ca_base + ['crl'])
+        needs_update = False
+        for crl_raw in existing_crls_raw:
+            existing_crl = load_crl(crl_raw)
+            if not existing_crl:
+                needs_update = True  # corrupt/unreadable CRL — regenerate
+                break
+            try:
+                existing_crl.extensions.get_extension_for_class(x509.AuthorityKeyIdentifier)
+                existing_crl.extensions.get_extension_for_class(x509.CRLNumber)
+            except x509.extensions.ExtensionNotFound:
+                needs_update = True  # required extension missing — regenerate
+                break
+
+        if not needs_update:
+            continue  # all CRLs already have AKI
+
+        # Collect serial numbers of all revoked certificates and CAs under
+        # this CA — mirrors the logic in op_mode get_config_revoked_certificates()
+        to_revoke = []
+        for section in ['certificate', 'ca']:
+            if not config.exists(base + [section]):
+                continue
+            for entry_name in config.list_nodes(base + [section]):
+                entry_base = base + [section, entry_name]
+                if not config.exists(entry_base + ['revoke']):
+                    continue
+                if not config.exists(entry_base + ['certificate']):
+                    continue
+                cert_raw = config.return_value(entry_base + ['certificate'])
+                cert = load_certificate(cert_raw)
+                if cert and cert.issuer == ca_cert.subject:
+                    to_revoke.append(cert.serial_number)
+
+        if not to_revoke:
+            continue
+
+        new_crl = create_certificate_revocation_list(ca_cert, ca_key, to_revoke)
+        if not new_crl:
+            continue
+
+        new_crl_pem = encode_certificate(new_crl)
+        new_crl_b64 = ''.join(new_crl_pem.strip().split('\n')[1:-1])
+
+        config.set(ca_base + ['crl'], value=new_crl_b64, replace=True)
