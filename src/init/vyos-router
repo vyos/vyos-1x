@@ -149,6 +149,12 @@ unmount_encrypted_config() {
     fi
 }
 
+# Function to extract prod_string and model_string from a file
+extract_from_file() {
+    local file=$1
+    prod_string=$(grep -oP '(?<=prod_id=)[^\s]+' "$file")
+    model_string=$(grep -oP '(?<=model=)[^\s]+' "$file")
+}
 
 # if necessary, provide initial config and remove nodes by product and model
 init_prod_model_bootfile_and_nodes () {
@@ -164,15 +170,20 @@ init_prod_model_bootfile_and_nodes () {
     # Scan /proc/cmdline for the token 'model=model-string' and extract the model-string
     model_string=$(grep -oP '(?<=model=)[^\s]+' /proc/cmdline)
 
-    # Check if the model-string is found
+    # Check if values are missing from /proc/cmdline
     if [[ -z $prod_string || -z $model_string ]]; then
-        echo "No 'prod_id' and/or 'model' token found in /proc/cmdline, checking /etc/product.env"
-        prod_string=$(grep -oP '(?<=prod_id=)[^\s]+' /etc/product.env)
-        model_string=$(grep -oP '(?<=model=)[^\s]+' /etc/product.env)
+        echo "No 'prod_id' and/or 'model' token found in /proc/cmdline, checking /mnt/efi/product.env"
+        extract_from_file /mnt/efi/product.env
 
+        # If still missing, check /etc/product.env
         if [[ -z $prod_string || -z $model_string ]]; then
-            echo "No 'prod_id' and/or 'model' token found, use generic igos default config"
-            return
+            echo "No 'prod_id' and/or 'model' token found in /mnt/efi/product.env, checking /etc/product.env"
+            extract_from_file /etc/product.env
+
+            if [[ -z $prod_string || -z $model_string ]]; then
+                echo "No 'prod_id' and/or 'model' token found, using generic igos default config"
+                return
+            fi
         fi
     fi
 
