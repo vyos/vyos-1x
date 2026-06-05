@@ -232,15 +232,28 @@ def get_config(config=None):
 
     return dhcp
 
-def verify_ddns_domain_servers(domain_type, domain):
-    if 'dns_server' in domain:
-        invalid_servers = []
-        for server_no, server_config in domain['dns_server'].items():
-            if 'address' not in server_config:
-                invalid_servers.append(server_no)
-        if len(invalid_servers) > 0:
-            raise ConfigError(f'{domain_type} DNS servers {", ".join(invalid_servers)} in DDNS configuration need to have an IP address')
-    return None
+
+def verify_ddns_domain(domain_type, domains, tsig_keys):
+    for domain_name, domain_config in domains.items():
+        if 'dns_server' in domain_config:
+            invalid_servers = []
+            for server_no, server_config in domain_config['dns_server'].items():
+                if 'address' not in server_config:
+                    invalid_servers.append(server_no)
+            if len(invalid_servers) > 0:
+                raise ConfigError(
+                    f'{domain_type} domain "{domain_name}" DNS servers {", ".join(invalid_servers)} '
+                    'in DDNS configuration need to have an IP address'
+                )
+
+        if 'key_name' in domain_config:
+            key_name = domain_config['key_name']
+            if key_name not in tsig_keys:
+                raise ConfigError(
+                    f'DDNS {domain_type} domain "{domain_name}" key-name "{key_name}" '
+                    'is not defined in dynamic-dns-update tsig-key'
+                )
+
 
 def verify(dhcp):
     # bail out early - looks like removal from running config
@@ -515,11 +528,13 @@ def verify(dhcp):
             if len(invalid_keys) > 0:
                 raise ConfigError(f'Both algorithm and secret need to be set for TSIG keys: {", ".join(invalid_keys)}')
 
+        defined_tsig_keys = ddns.get('tsig_key', {}).keys()
+
         if 'forward_domain' in ddns:
-            verify_ddns_domain_servers('Forward', ddns['forward_domain'])
+            verify_ddns_domain('Forward', ddns['forward_domain'], defined_tsig_keys)
 
         if 'reverse_domain' in ddns:
-            verify_ddns_domain_servers('Reverse', ddns['reverse_domain'])
+            verify_ddns_domain('Reverse', ddns['reverse_domain'], defined_tsig_keys)
 
     if 'client_class' in dhcp:
         # Check client class values are valid

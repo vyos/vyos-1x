@@ -1356,16 +1356,6 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
             ]
         )
-        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'algorithm', 'sha256'])
-        self.cli_set(
-            ddns
-            + [
-                'tsig-key',
-                'reverse-0-168-192',
-                'secret',
-                'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
-            ]
-        )
         self.cli_set(
             ddns
             + [
@@ -1413,37 +1403,6 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 '1053',
             ]
         )
-        self.cli_set(
-            ddns
-            + [
-                'reverse-domain',
-                '0.168.192.in-addr.arpa',
-                'dns-server',
-                '2',
-                'address',
-                '100.100.0.1',
-            ]
-        )
-        self.cli_set(
-            ddns
-            + [
-                'reverse-domain',
-                '0.168.192.in-addr.arpa',
-                'dns-server',
-                '2',
-                'port',
-                '1153',
-            ]
-        )
-        self.cli_set(
-            ddns
-            + [
-                'reverse-domain',
-                '0.168.192.in-addr.arpa',
-                'key-name',
-                'reverse-0-168-192',
-            ]
-        )
 
         shared = base_path + ['shared-network-name', shared_net_name]
 
@@ -1466,6 +1425,61 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             pool + ['dynamic-dns-update', 'hostname-char-replacement', '_xXx_']
         )
 
+        self.cli_commit()
+
+        # DNS server without an IP address must be rejected
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'dns-server',
+                '2',
+                'port',
+                '1153',
+            ]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Fix missing address — commit must now succeed
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'dns-server',
+                '2',
+                'address',
+                '100.100.0.1',
+            ]
+        )
+        self.cli_commit()
+
+        # key-name referencing a non-existent tsig-key must be rejected
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'key-name',
+                'reverse-0-168-192',
+            ]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Define the missing tsig-key — commit must now succeed
+        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'algorithm', 'sha256'])
+        self.cli_set(
+            ddns
+            + [
+                'tsig-key',
+                'reverse-0-168-192',
+                'secret',
+                'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
+            ]
+        )
         self.cli_commit()
 
         config = read_file(KEA4_CONF)
