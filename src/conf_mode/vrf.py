@@ -23,6 +23,7 @@ import vyos.defaults
 from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_map
+from vyos.defaults import wireguard_fwmark_pref
 from vyos.firewall import conntrack_required
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
@@ -265,10 +266,10 @@ def apply(vrf):
                 # Remove map element
                 cmd(f'nft {nft_del_element}')
 
-            # Remove all ip rules pointing to this VRF table
+            # Remove WireGuard fwmark routing rules created for this VRF table
             table_id = get_vrf_tableid(tmp)
             for afi in ['-4', '-6']:
-                while call(f'ip {afi} rule del table {table_id}') == 0:
+                while call(f'ip {afi} rule del pref {wireguard_fwmark_pref} table {table_id}') == 0:
                     pass
 
             # Delete the VRF Kernel interface

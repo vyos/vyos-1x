@@ -31,6 +31,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_bond_bridge_member
+from vyos.defaults import wireguard_fwmark_pref
 from vyos.ifconfig import WireGuardIf
 from vyos.utils.kernel import check_kmod
 from vyos.utils.network import check_port_availability
@@ -174,7 +175,7 @@ def apply(wireguard):
             if table_id is not None:
                 for afi in ['-4', '-6']:
                     call(
-                        f'ip {afi} rule del pref 1998 fwmark {prev_fwmark} table {table_id}'
+                        f'ip {afi} rule del pref {wireguard_fwmark_pref} fwmark {prev_fwmark} table {table_id}'
                     )
 
     # Add ip rule to route fwmark-marked WireGuard tunnel packets into the
@@ -185,7 +186,7 @@ def apply(wireguard):
         table_id = get_vrf_tableid(wireguard['vrf'])
         for afi in ['-4', '-6']:
             call(
-                f'ip {afi} rule add pref 1998 fwmark {wireguard["fwmark"]} table {table_id}'
+                f'ip {afi} rule add pref {wireguard_fwmark_pref} fwmark {wireguard["fwmark"]} table {table_id}'
             )
 
     domain_resolver_usage = '/run/use-vyos-domain-resolver-interfaces-wireguard-' + wireguard['ifname']
