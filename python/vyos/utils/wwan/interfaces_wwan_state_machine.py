@@ -12756,6 +12756,76 @@ class ModemStateMachine:
                     iface_name,
                     extra={'interface_number': self.interface_number})
 
+    async def _install_default_route(self, family, gateway, interface_name):
+        """Install the bearer default route for a point-to-point cellular link.
+
+        Both families apply the bearer address as a host route (/32 for IPv4,
+        /128 for IPv6), so there is never a connected subnet that makes the
+        carrier gateway on-link.  A plain ``via <gw>`` route therefore fails
+        with "No route to host"; ``onlink`` is the correct-by-construction
+        form for this PtP addressing, so we use it directly.  When the carrier
+        supplies no gateway we fall back to a device-scope default route
+        (valid because the link is point-to-point).
+
+        ``ip route replace`` is used for idempotency: it succeeds whether or
+        not a default route already exists, so reconfiguration on every IP
+        change is clean and produces no spurious warnings.
+
+        Args:
+            family: 4 or 6 (IP version).
+            gateway: carrier gateway address, or a falsy value if none.
+            interface_name: e.g. ``wwan0``.
+        """
+        base = ['ip', '-6'] if family == 6 else ['ip']
+        label = f"IPv{family}"
+
+        if gateway:
+            # onlink: nexthop is directly reachable on this PtP device even
+            # though the host-route addressing leaves no on-link subnet.
+            cmd = base + ['route', 'replace', 'default', 'via', gateway,
+                          'dev', interface_name, 'onlink']
+            success_msg = (f"{label} default route via {gateway} "
+                           f"dev {interface_name} (onlink)")
+        else:
+            cmd = base + ['route', 'replace', 'default', 'dev', interface_name]
+            success_msg = f"{label} default route via device {interface_name}"
+
+        result = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await result.communicate()
+
+        if result.returncode == 0:
+            logger.info(success_msg,
+                       extra={'interface_number': self.interface_number})
+            return True
+
+        # gateway present but unreachable: last-resort device-scope route.
+        if gateway:
+            logger.warning(
+                f"{label} default route via {gateway} failed "
+                f"({stderr.decode().strip()}); falling back to device route",
+                extra={'interface_number': self.interface_number})
+            fallback = base + ['route', 'replace', 'default',
+                               'dev', interface_name]
+            result = await asyncio.create_subprocess_exec(
+                *fallback,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            _, stderr = await result.communicate()
+            if result.returncode == 0:
+                logger.info(f"{label} default route via device {interface_name} "
+                            f"(device-only fallback)",
+                           extra={'interface_number': self.interface_number})
+                return True
+
+        logger.error(f"All {label} route attempts failed: {stderr.decode().strip()}",
+                    extra={'interface_number': self.interface_number})
+        return False
+
     async def _apply_bearer_ip_configuration(self):
         """Apply bearer IP configuration to the interface (VyOS responsibility)"""
         try:
@@ -12820,20 +12890,24 @@ class ModemStateMachine:
             # Apply IPv4 configuration
             if bearer_ips.get('ipv4'):
                 ipv4_addr = bearer_ips['ipv4']
-                ipv4_prefix = bearer_ips.get('ipv4_prefix', '30')  # Default /30 for PtP
+                ipv4_prefix = bearer_ips.get('ipv4_prefix', '30')  # Carrier prefix (used for passthrough / logging)
                 ipv4_gateway = bearer_ips.get('ipv4_gateway')
                 ipv4_dns = bearer_ips.get('ipv4_dns', [])
                 ipv4_mtu = bearer_ips.get('ipv4_mtu')
 
-                logger.info(f"Applying IPv4 configuration: {ipv4_addr}/{ipv4_prefix}",
+                logger.info(f"Applying IPv4 configuration: {ipv4_addr}/32 (carrier prefix /{ipv4_prefix})",
                            extra={'interface_number': self.interface_number,
                                   'gateway': ipv4_gateway,
                                   'dns_servers': ipv4_dns,
                                   'mtu': ipv4_mtu})
 
-                # Add IPv4 address
+                # Add IPv4 address with /32 — point-to-point link to carrier.
+                # The carrier-reported prefix is often synthetic; a host route
+                # avoids installing a bogus connected subnet and mirrors the
+                # IPv6 /128 model.  The default route is installed as 'onlink'
+                # (see _install_default_route) so the gateway is still usable.
                 result = await asyncio.create_subprocess_exec(
-                    'ip', 'addr', 'add', f"{ipv4_addr}/{ipv4_prefix}", 'dev', interface_name,
+                    'ip', 'addr', 'add', f"{ipv4_addr}/32", 'dev', interface_name,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
@@ -12882,66 +12956,11 @@ class ModemStateMachine:
                                           'mtu_source': mtu_source,
                                           'network_mtu': ipv4_mtu or 'not provided'})
 
-                # Add IPv4 default route if gateway provided
-                if ipv4_gateway:
-                    result = await asyncio.create_subprocess_exec(
-                        'ip', 'route', 'add', 'default', 'via', ipv4_gateway, 'dev', interface_name,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await result.communicate()
-
-                    if result.returncode != 0 and b'exists' not in stderr:
-                        logger.warning(f"IPv4 default route via {ipv4_gateway} failed: {stderr.decode().strip()}",
-                                      extra={'interface_number': self.interface_number})
-                        # Retry with 'onlink' flag - tells kernel gateway is directly reachable
-                        # This is standard for cellular PtP links where nexthop validation fails
-                        logger.info("Retrying IPv4 route with onlink flag",
-                                   extra={'interface_number': self.interface_number})
-                        result = await asyncio.create_subprocess_exec(
-                            'ip', 'route', 'add', 'default', 'via', ipv4_gateway, 'dev', interface_name, 'onlink',
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE
-                        )
-                        stdout, stderr = await result.communicate()
-                        if result.returncode == 0 or b'exists' in stderr:
-                            logger.info(f"IPv4 default route added via {ipv4_gateway} dev {interface_name} (onlink)",
-                                       extra={'interface_number': self.interface_number})
-                        else:
-                            logger.warning(f"IPv4 onlink route also failed: {stderr.decode().strip()}",
-                                          extra={'interface_number': self.interface_number})
-                            # Final fallback: device-only default route
-                            result = await asyncio.create_subprocess_exec(
-                                'ip', 'route', 'add', 'default', 'dev', interface_name,
-                                stdout=asyncio.subprocess.PIPE,
-                                stderr=asyncio.subprocess.PIPE
-                            )
-                            stdout, stderr = await result.communicate()
-                            if result.returncode == 0 or b'exists' in stderr:
-                                logger.info(f"IPv4 default route added via device {interface_name} (device-only fallback)",
-                                           extra={'interface_number': self.interface_number})
-                            else:
-                                logger.error(f"All IPv4 route attempts failed: {stderr.decode().strip()}",
-                                            extra={'interface_number': self.interface_number})
-                    else:
-                        logger.info(f"IPv4 default route added via {ipv4_gateway} dev {interface_name}",
-                                   extra={'interface_number': self.interface_number})
-                else:
-                    # No gateway from carrier - add device-only default route
+                # Add IPv4 default route (onlink via gateway, or device route).
+                if not ipv4_gateway:
                     logger.info("No IPv4 gateway from carrier, adding device route",
                                extra={'interface_number': self.interface_number})
-                    result = await asyncio.create_subprocess_exec(
-                        'ip', 'route', 'add', 'default', 'dev', interface_name,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await result.communicate()
-                    if result.returncode == 0 or b'exists' in stderr:
-                        logger.info(f"IPv4 default route added via device {interface_name}",
-                                   extra={'interface_number': self.interface_number})
-                    else:
-                        logger.warning(f"IPv4 device route failed: {stderr.decode().strip()}",
-                                      extra={'interface_number': self.interface_number})
+                await self._install_default_route(4, ipv4_gateway, interface_name)
 
             # ── IPv4 source enforcement: unblock egress now that new IP + route are live ──
             if ipv4_changed:
@@ -12983,65 +13002,11 @@ class ModemStateMachine:
                     logger.warning(f"Failed to add IPv6 address: {stderr.decode()}",
                                  extra={'interface_number': self.interface_number})
 
-                # Add IPv6 default route if gateway provided
-                if ipv6_gateway:
-                    result = await asyncio.create_subprocess_exec(
-                        'ip', '-6', 'route', 'add', 'default', 'via', ipv6_gateway, 'dev', interface_name,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await result.communicate()
-
-                    if result.returncode != 0 and b'exists' not in stderr:
-                        logger.warning(f"IPv6 default route via {ipv6_gateway} failed: {stderr.decode().strip()}",
-                                      extra={'interface_number': self.interface_number})
-                        # Retry with 'onlink' flag
-                        logger.info("Retrying IPv6 route with onlink flag",
-                                   extra={'interface_number': self.interface_number})
-                        result = await asyncio.create_subprocess_exec(
-                            'ip', '-6', 'route', 'add', 'default', 'via', ipv6_gateway, 'dev', interface_name, 'onlink',
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE
-                        )
-                        stdout, stderr = await result.communicate()
-                        if result.returncode == 0 or b'exists' in stderr:
-                            logger.info(f"IPv6 default route added via {ipv6_gateway} dev {interface_name} (onlink)",
-                                       extra={'interface_number': self.interface_number})
-                        else:
-                            logger.warning(f"IPv6 onlink route also failed: {stderr.decode().strip()}",
-                                          extra={'interface_number': self.interface_number})
-                            # Final fallback: device-only default route
-                            result = await asyncio.create_subprocess_exec(
-                                'ip', '-6', 'route', 'add', 'default', 'dev', interface_name,
-                                stdout=asyncio.subprocess.PIPE,
-                                stderr=asyncio.subprocess.PIPE
-                            )
-                            stdout, stderr = await result.communicate()
-                            if result.returncode == 0 or b'exists' in stderr:
-                                logger.info(f"IPv6 default route added via device {interface_name} (device-only fallback)",
-                                           extra={'interface_number': self.interface_number})
-                            else:
-                                logger.error(f"All IPv6 route attempts failed: {stderr.decode().strip()}",
-                                            extra={'interface_number': self.interface_number})
-                    else:
-                        logger.info(f"IPv6 default route added via {ipv6_gateway} dev {interface_name}",
-                                   extra={'interface_number': self.interface_number})
-                else:
-                    # No gateway from carrier - add device-only default route
+                # Add IPv6 default route (onlink via gateway, or device route).
+                if not ipv6_gateway:
                     logger.info("No IPv6 gateway from carrier, adding device route",
                                extra={'interface_number': self.interface_number})
-                    result = await asyncio.create_subprocess_exec(
-                        'ip', '-6', 'route', 'add', 'default', 'dev', interface_name,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await result.communicate()
-                    if result.returncode == 0 or b'exists' in stderr:
-                        logger.info(f"IPv6 default route added via device {interface_name}",
-                                   extra={'interface_number': self.interface_number})
-                    else:
-                        logger.warning(f"IPv6 device route failed: {stderr.decode().strip()}",
-                                      extra={'interface_number': self.interface_number})
+                await self._install_default_route(6, ipv6_gateway, interface_name)
 
             # ── IPv6 source enforcement: persistent egress prefix whitelist ──
             if new_ipv6:
