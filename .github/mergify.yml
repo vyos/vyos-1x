@@ -15,48 +15,13 @@
 # Local overrides for this repo go below the `extends:` line — any keys
 # defined here merge with (or, for same-name rules, replace) the inherited
 # configuration per Mergify's `extends:` semantics.
+#
+# T8966 (2026-06-06): the former T-ID-format opt-out override (rule
+# `Flag T-ID format violation in PR title or commit messages`) was removed.
+# The central config no longer enforces strict `T<digits>:` format — that
+# moved per-product-repo — so docs (a non-product repo) inherits only the
+# generic loose-title + body checks, no override needed.
 
 extends: mergify
-
-pull_request_rules:
-  # ------------------------------------------------------------------
-  # Override: disable T-ID-format checks for PR title and commit messages.
-  #
-  # The central baseline in vyos/mergify enforces `T<digits>: <text>` (with
-  # optional `scope: ` prefix) on both the PR title and every commit's first
-  # line. That matches the convention in vyos/vyos-1x and other code repos
-  # where engineering work tracks against a Phorge task.
-  #
-  # vyos-documentation does not require a Phorge T-ID per PR — much of the
-  # work here is conventional-commits style (`fix(ext): …`, `ci(...): …`,
-  # `chore(deps): …`) with no upstream ticket. Inheriting the central rules
-  # labels every such PR `invalid-title` / `invalid-commit-title`, which is
-  # noise.
-  #
-  # Per Mergify `extends:` semantics, same-name rules in the child REPLACE
-  # the parent's. The override below MUST use the parent's exact rule name
-  # — `Flag T-ID format violation in PR title or commit messages` — or the
-  # parent rule keeps firing and `invalid-title` labels every PR. (The
-  # earlier two-rule override shipped in 3d44fe06 used the wrong names
-  # and was a no-op; PR #2014 surfaced the regression.)
-  #
-  # Conditions are constructed to never match (a PR cannot simultaneously
-  # be closed and not closed), so the `toggle` action always falls into
-  # the "remove label" branch — cleaning up `invalid-title` on any PR
-  # that picked it up while the broken override was in place.
-  # ------------------------------------------------------------------
-
-  - name: Flag T-ID format violation in PR title or commit messages
-    description: >
-      Disabled in vyos-documentation — this repo does not require Phorge
-      T-IDs in PR titles or commit message headlines. Conventional-commits
-      style (`fix(ext): …`, `ci(...): …`, `chore(deps): …`) is acceptable.
-    conditions:
-      - closed
-      - '-closed'
-    actions:
-      label:
-        toggle:
-          - invalid-title
 merge_protections_settings:
   reporting_method: check-runs
