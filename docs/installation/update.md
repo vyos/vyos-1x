@@ -91,7 +91,7 @@ configured appropriately for your installed release.
 For updates to the Rolling Release for AMD64, the following URL may be
 used:
 
-<https://raw.githubusercontent.com/vyos/vyos-nightly-build/refs/heads/current/version.json>
+<https://raw.githubusercontent.com/vyos/vyos-nightly-build/rolling/version.json>
 :::
 
 :::{hint}
