@@ -1,282 +1,515 @@
 ---
-lastproofread: '2023-11-13'
+myst:
+  html_meta:
+    description: |
+      Protocol Independent Multicast (PIM) routes multicast traffic between
+      routers using the existing unicast routing table for path decisions.
+      VyOS supports PIM Sparse Mode (PIM-SM) and IGMP versions 2 and 3.
+    keywords: pim, pim-sm, multicast, igmp, rendezvous point, rp
 ---
 
 (pim)=
 
-# PIM – Protocol Independent Multicast
+# PIM
 
-VyOS supports {abbr}`PIM-SM (PIM Sparse Mode)` as well as
-{abbr}`IGMP (Internet Group Management Protocol)` v2 and v3
+{abbr}`PIM (Protocol Independent Multicast)` routes multicast traffic between
+routers using the existing unicast routing table for path decisions. VyOS
+supports PIM Sparse Mode (PIM-SM) and IGMP versions 2 and 3.
 
-{abbr}`PIM (Protocol Independent Multicast)` must be configured in every
-interface of every participating router. Every router must also have the
-location of the Rendevouz Point manually configured. Then, unidirectional
-shared trees rooted at the Rendevouz Point will automatically be built
-for multicast distribution.
+In PIM-SM, traffic from multicast sources is forwarded toward the
+{abbr}`RP (Rendezvous Point)`. Multicast receivers use IGMP to signal their
+local router which groups they want to receive, and the router uses PIM to
+pull that traffic from the RP via a shared tree.
 
-Traffic from multicast sources will go to the Rendezvous Point, and
-receivers will pull it from a shared tree using {abbr}`IGMP (Internet
-Group Management Protocol)`.
+A working PIM-SM deployment requires:
 
-Multicast receivers will talk IGMP to their local router, so, besides
-having PIM configured in every router, IGMP must also be configured in
-any router where there could be a multicast receiver locally connected.
+- PIM enabled on every interface along the multicast path.
+- The location of the RP declared identically on every router in the PIM
+  domain.
+- IGMP enabled on interfaces facing multicast receivers.
 
-VyOS supports both IGMP version 2 and version 3 (which allows
-source-specific multicast).
+## Configuration
 
-## PIM-SM - PIM Sparse Mode
+### PIM-SM
 
 ```{cfgcmd} set protocols pim ecmp
 
-If PIM has the a choice of ECMP nexthops for a particular
-{abbr}`RPF (Reverse Path Forwarding)`, PIM will cause S,G flows to be
-spread out amongst the nexthops. If this command is not specified then
-the first nexthop found will be used.
+**Enable {abbr}`ECMP (Equal-Cost Multipath)` routing for multicast traffic.**
+
+When a specific {abbr}`RPF (Reverse Path Forwarding)` lookup returns
+multiple equal-cost next-hops, enabling this feature distributes (S,G)
+multicast flows across all of them.
+
+If ECMP is not enabled, PIM defaults to using only the first next-hop
+returned by the RPF lookup.
+```
+
+Example:
+
+```none
+set protocols pim ecmp
 ```
 
 ```{cfgcmd} set protocols pim ecmp rebalance
 
-If PIM is using ECMP and an interface goes down, cause PIM to rebalance all
-S,G flows across the remaining nexthops. If this command is not configured
-PIM only modifies those S,G flows that were using the interface that went
-down.
+**Enable automatic rebalancing of all PIM (S,G) multicast flows when an
+ECMP next-hop interface fails.**
+
+When ECMP is enabled, and one of the interfaces used by PIM goes down,
+this feature forces PIM to redistribute all existing (S,G) flows across
+the remaining equal-cost interfaces.
+
+If rebalancing is not configured, PIM only reroutes the specific flows
+that were actively using the failed interface.
 ```
 
-```{cfgcmd} set protocols pim join-prune-interval \<n\>
+Example:
 
-Modify the join/prune interval that PIM uses to the new value. Time is
-specified in seconds.
-
-The default time is 60 seconds.
-
-If you enter a value smaller than 60 seconds be aware that this can and
-will affect convergence at scale.
+```none
+set protocols pim ecmp rebalance
 ```
 
-```{cfgcmd} set protocols pim keep-alive-timer \<n\>
+```{cfgcmd} set protocols pim join-prune-interval \<1-65535\>
 
-Modify the time out value for a S,G flow from 1-65535 seconds. If choosing
-a value below 31 seconds be aware that some hardware platforms cannot see
-data flowing in better than 30 second chunks.
+**Configure the interval, in seconds, at which PIM sends Join/Prune
+messages to upstream neighbors.**
+
+The default interval is 60 seconds. Setting a value below 60 seconds can
+negatively impact convergence at scale.
 ```
 
-```{cfgcmd} set protocols pim packets \<n\>
+Example:
 
-When processing packets from a neighbor process the number of packets
-incoming at one time before moving on to the next task.
-
-The default value is 3 packets.
-
-This command is only useful at scale when you can possibly have a large
-number of PIM control packets flowing.
+```none
+set protocols pim join-prune-interval 120
 ```
 
-```{cfgcmd} set protocols pim register-accept-list \<prefix-list\>
+```{cfgcmd} set protocols pim keep-alive-timer \<1-65535\>
 
-When PIM receives a register packet the source of the packet will be compared
-to the prefix-list specified, and if a permit is received normal processing
-continues. If a deny is returned for the source address of the register packet
-a register stop message is sent to the source.
+**Configure the keep-alive timeout interval, in seconds, for (S,G)
+multicast flow state.**
 ```
 
-```{cfgcmd} set protocols pim register-suppress-time \<n\>
-
-Modify the time that pim will register suppress a FHR will send register
-notifications to the kernel.
+```{note}
+Some hardware cannot detect traffic flowing in intervals shorter than 30
+seconds. For such hardware, ensure the value is set to 31 seconds or
+higher.
 ```
 
-```{cfgcmd} set protocols pim rp \<address\> group \<group\>
+Example:
 
-In order to use PIM, it is necessary to configure a {abbr}`RP (Rendezvous Point)`
-for join messages to be sent to. Currently the only methodology to do this is
-via static rendezvous point commands.
-
-All routers in the PIM network must agree on these values.
-
-The first ip address is the RP's address and the second value is the matching
-prefix of group ranges covered.
+```none
+set protocols pim keep-alive-timer 60
 ```
 
-```{cfgcmd} set protocols pim rp keep-alive-timer \<n\>
+```{cfgcmd} set protocols pim packets \<1-255\>
 
-Modify the time out value for a S,G flow from 1-65535 seconds at
-{abbr}`RP (Rendezvous Point)`. The normal keepalive period for the KAT(S,G)
-defaults to 210 seconds. However, at the {abbr}`RP (Rendezvous Point)`, the
-keepalive period must be at least the Register_Suppression_Time, or the RP
-may time out the (S,G) state before the next Null-Register arrives.
-Thus, the KAT(S,G) is set to max(Keepalive_Period, RP_Keepalive_Period)
-when a Register-Stop is sent.
+**Configure the number of incoming PIM packets processed consecutively
+from a neighbor before the system moves to the next task.**
 
-If choosing a value below 31 seconds be aware that some hardware platforms
-cannot see data flowing in better than 30 second chunks.
+The default value is 3 packets. This command is only useful in
+deployments with a high number of PIM control packets.
+```
 
-See {rfc}`7761#section-4.1` for details.
+Example:
+
+```none
+set protocols pim packets 10
+```
+
+```{cfgcmd} set protocols pim register-accept-list prefix-list \<prefix-list\>
+
+**Configure a prefix-list to filter incoming PIM Register messages.**
+
+When PIM receives a Register packet, the multicast source IP address is
+evaluated against the specified prefix-list. If the source IP address is
+permitted, normal PIM processing continues. If the source IP address is
+denied, a Register-Stop message is sent to the sender.
+```
+
+Example:
+
+```none
+set protocols pim register-accept-list prefix-list MULTICAST-SOURCES
+```
+
+```{cfgcmd} set protocols pim register-suppress-time \<1-65535\>
+
+**Configure the duration, in seconds, during which a
+{abbr}`FHR (First-Hop Router)` suppresses sending PIM Register messages.**
+```
+
+Example:
+
+```none
+set protocols pim register-suppress-time 60
+```
+
+```{cfgcmd} set protocols pim rp address \<ip-address\> group \<prefix\>
+
+**Configure a Rendezvous Point (RP) for the specified multicast group
+range.**
+
+To use PIM, you must configure an RP to receive Join messages. VyOS
+currently supports only static RP configuration.
+
+The `<address>` parameter defines the RP's IP address, and the `<group>`
+parameter defines the prefix of the multicast group range served by this
+RP.
+
+A single RP can serve multiple group ranges. Repeat the command with
+different `<group>` prefixes to map several ranges to the same RP.
+```
+
+Example:
+
+% stop_vyoslinter
+```none
+set protocols pim rp address 192.0.2.1 group 239.0.0.0/8
+```
+% start_vyoslinter
+
+```{cfgcmd} set protocols pim rp keep-alive-timer \<1-65535\>
+
+**Configure the keep-alive timeout interval, in seconds, for (S,G)
+multicast flow state at the Rendezvous Point (RP).**
+
+This value must be at least equal to the register-suppression-time;
+otherwise, the RP may time out the (S,G) state before the next
+Null-Register message arrives from the FHR.
+
+When a Register-Stop is sent, the KAT(S,G) at the RP is set to the maximum
+of the global Keepalive_Period and the RP_Keepalive_Period.
+
+The default value is 210 seconds.
+
+See [RFC 7761, Section 4.1](https://datatracker.ietf.org/doc/html/rfc7761#section-4.1)
+for details.
+```
+
+```{note}
+As some hardware platforms cannot detect data flowing in intervals shorter
+than 30 seconds, ensure the value is set to 31 seconds or higher.
+```
+
+Example:
+
+```none
+set protocols pim rp keep-alive-timer 300
 ```
 
 ```{cfgcmd} set protocols pim no-v6-secondary
 
-When sending PIM hello packets tell PIM to not send any v6 secondary
-addresses on the interface. This information is used to allow PIM to use v6
-nexthops in it's decision for {abbr}`RPF (Reverse Path Forwarding)` lookup
-if this option is not set (default).
+**Disable sending IPv6 secondary addresses in PIM Hello messages.**
+
+By default, PIM Hello messages include all IPv6 secondary addresses
+configured on the interface, allowing PIM neighbors to use them as IPv6
+next-hops for RPF lookups.
 ```
 
-```{cfgcmd} set protocols pim spt-switchover infinity-and-beyond [prefix-list \<list\>]
+Example:
 
-On the last hop router if it is desired to not switch over to the SPT tree
-configure this command.
+```none
+set protocols pim no-v6-secondary
+```
 
-Optional parameter prefix-list can be use to control which groups to switch or
-not switch. If a group is PERMIT as per the prefix-list, then the SPT switchover
-does not happen for it and if it is DENY, then the SPT switchover happens.
+```{cfgcmd} set protocols pim spt-switchover infinity-and-beyond prefix-list \<list\>
+
+**On the {abbr}`LHR (Last-Hop Router)`, suppress the switchover from the
+shared (*,G) tree to the source-specific (S,G)
+{abbr}`SPT (Shortest-Path Tree)`.**
+
+The optional `prefix-list` controls which groups are affected: groups
+matched by a *permit* entry stay on the shared tree, groups matched by a
+*deny* entry switch over normally. Without a prefix-list, the suppression
+applies to all groups.
+```
+
+Example:
+
+```none
+set protocols pim spt-switchover infinity-and-beyond
+set protocols pim spt-switchover infinity-and-beyond prefix-list SHARED-TREE-GROUPS
 ```
 
 ```{cfgcmd} set protocols pim ssm prefix-list \<list\>
 
-Specify a range of group addresses via a prefix-list that forces PIM to never
-do {abbr}`SSM (Source-Specific Multicast)` over.
+**Configure a prefix-list with the range of multicast group IP addresses
+that operate in {abbr}`SSM (Source-Specific Multicast)` mode.**
 ```
 
+Example:
 
-### Interface specific commands
-
-```{cfgcmd} set protocols pim interface \<interface\> bfd [profile \<name\>]
-
-Automatically create BFD session for each RIP peer discovered in this
-interface. When the BFD session monitor signalize that the link is down
-the RIP peer is removed and all the learned routes associated with that
-peer are removed.
-
-If optional profile parameter is used, select a BFD profile for the BFD
-sessions created via this interface.
+```none
+set protocols pim ssm prefix-list SSM-RANGE
 ```
 
-```{cfgcmd} set protocols pim interface \<interface\> dr-priority \<n\>
+#### Interface-specific commands
 
-Set the {abbr}`DR (Designated Router)` Priority for the interface.
-This command is useful to allow the user to influence what node becomes
-the DR for a LAN segment.
+```{cfgcmd} set protocols pim interface \<interface\> bfd
+
+**Enable {abbr}`BFD (Bidirectional Forwarding Detection)` for each PIM
+neighbor discovered on the specified interface.**
+
+When BFD detects a link failure, the PIM neighbor relationship is torn
+down, and all associated multicast (S,G) entries are removed.
 ```
 
-```{cfgcmd} set protocols pim interface \<interface\> hello \<n\>
+Example:
 
-Set the PIM hello and hold interval for a interface.
+```none
+set protocols pim interface eth0 bfd
+```
+
+```{cfgcmd} set protocols pim interface \<interface\> bfd profile \<name\>
+
+**Apply the specified BFD profile to BFD sessions on this PIM interface.**
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 bfd profile fast-failover
+```
+
+```{cfgcmd} set protocols pim interface \<interface\> dr-priority \<1-4294967295\>
+
+**Configure the {abbr}`DR (Designated Router)` priority for the specified
+interface.**
+
+The router with the highest interface priority is elected as the DR for a
+LAN segment.
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 dr-priority 100
+```
+
+```{cfgcmd} set protocols pim interface \<interface\> hello \<1-180\>
+
+**Configure the PIM Hello interval, in seconds, for the specified
+interface.**
+
+PIM Hello messages are sent periodically on the interface to discover and
+maintain PIM neighbor relationships. The hold time (the duration after
+which a neighbor is considered dead if no Hello is received) is calculated
+based on the Hello interval.
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 hello 10
 ```
 
 ```{cfgcmd} set protocols pim interface \<interface\> no-bsm
 
-Tell PIM that we would not like to use this interface to process
-bootstrap messages.
+**Disable processing of PIM {abbr}`BSMs (Bootstrap Messages)` on the
+specified interface.**
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 no-bsm
 ```
 
 ```{cfgcmd} set protocols pim interface \<interface\> no-unicast-bsm
 
-Tell PIM that we would not like to use this interface to process
-unicast bootstrap messages.
+**Disable processing of unicast PIM BSMs on this interface.**
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 no-unicast-bsm
 ```
 
 ```{cfgcmd} set protocols pim interface \<interface\> passive
 
-Disable sending and receiving PIM control packets on the interface.
+**Disable sending and receiving PIM control packets on this interface.**
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 passive
 ```
 
 ```{cfgcmd} set protocols pim interface \<interface\> source-address \<ip-address\>
 
-If you have multiple addresses configured on a particular interface and would
-like PIM to use a specific source address associated with that interface.
+**Configure the source IP address PIM uses for control messages sent on
+the specified interface.**
+
+This command is useful when multiple IP addresses are configured on a
+single interface.
 ```
 
+Example:
 
-## IGMP - Internet Group Management Protocol)
-
-```{cfgcmd} set protocols pim igmp watermark-warning \<n\>
-
-Configure watermark warning generation for an IGMP group limit. Generates
-warning once the configured group limit is reached while adding new groups.
+```none
+set protocols pim interface eth0 source-address 192.0.2.10
 ```
 
-(pim-igmp-interface-commands)=
+### IGMP
 
-### Interface specific commands
+```{cfgcmd} set protocols pim igmp watermark-warning \<1-65535\>
+
+**Configure watermark warning generation based on the number of joined
+IGMP groups.**
+
+When the total number of joined IGMP groups reaches this specified limit,
+the router generates a warning.
+```
+
+Example:
+
+```none
+set protocols pim igmp watermark-warning 500
+```
+
+#### Interface-specific commands
+
+```{cfgcmd} set protocols pim interface \<interface\> igmp
+
+**Enable IGMP on the specified interface.**
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 igmp
+```
+
+```{cfgcmd} set protocols pim interface \<interface\> igmp disable
+
+**Administratively disable IGMP on the specified interface without removing
+the existing IGMP configuration.**
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 igmp disable
+```
 
 ```{cfgcmd} set protocols pim interface \<interface\> igmp join \<multicast-address\> source-address \<IP-address\>
 
-Use this command to allow the selected interface to join a multicast
-group defining the multicast address you want to join and the source
-IP address too.
+**Configure the interface to join a specific (S,G) channel.**
+
+Specify both the multicast IP address (G) and the source IP address (S).
+Each command joins one (S,G) channel. To join multiple channels sharing
+the same group, repeat the command with different `source-address` values.
 ```
 
-```{cfgcmd} set protocols pim interface \<interface\> igmp query-interval \<seconds\>
+Example:
 
-Use this command to configure in the selected interface the IGMP
-host query interval (1-1800) in seconds that PIM will use.
+% stop_vyoslinter
+```none
+set protocols pim interface eth0 igmp join 232.1.1.100 source-address 192.0.2.50
+set protocols pim interface eth0 igmp join 232.1.1.100 source-address 192.0.2.51
+```
+% start_vyoslinter
+
+```{cfgcmd} set protocols pim interface \<interface\> igmp query-interval \<1-1800\>
+
+**Configure the IGMP Host Query Interval, in seconds, on the specified
+interface.**
+
+This setting determines the interval between IGMP queries sent by the
+router to discover which multicast groups have active listeners on the
+attached network.
 ```
 
-```{cfgcmd} set protocols pim interface \<interface\> igmp query-max-response-time \<n\>
-
-Use this command to configure in the selected interface the IGMP
-query response timeout value (10-250) in deciseconds. If a report is
-not returned in the specified time, it will be assumed the (S,G) or
-(\*,G) state {rfc}`7761#section-4.1` has timed out.
-```
-
-```{cfgcmd} set protocols pim interface \<interface\> igmp version \<version-number\>
-
-Use this command to define in the selected interface whether you
-choose IGMP version 2 or 3.
-
-The default value is 3.
-```
-
-
-#### Example
-
-In the following example we can see a basic multicast setup:
-
-```{image} /_static/images/multicast-basic.webp
-:align: center
-:alt: Network Topology Diagram
-:width: 90%
-```
-
-**Router 1**
+Example:
 
 ```none
-set interfaces ethernet eth2 address '172.16.0.2/24'
-set interfaces ethernet eth1 address '100.64.0.1/24'
-set protocols ospf area 0 network '172.16.0.0/24'
-set protocols ospf area 0 network '100.64.0.0/24'
-set protocols igmp interface eth1
+set protocols pim interface eth1 igmp query-interval 125
+```
+
+```{cfgcmd} set protocols pim interface \<interface\> igmp query-max-response-time \<10-250\>
+
+**Configure the IGMP maximum query response time, in deciseconds, on the
+specified interface.**
+
+This value is inserted in IGMP queries and specifies the maximum time
+hosts have to respond with a membership report. If no report is received
+within the specified window, PIM assumes there are no longer any active
+local receivers and may time out the associated (\*,G) or (S,G) state
+(see [RFC 7761, Section 4.1](https://datatracker.ietf.org/doc/html/rfc7761#section-4.1)).
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 igmp query-max-response-time 50
+```
+
+```{cfgcmd} set protocols pim interface \<interface\> igmp version \<2-3\>
+
+**Configure the IGMP version on the specified interface.**
+
+The default version is 3.
+```
+
+Example:
+
+```none
+set protocols pim interface eth0 igmp version 2
+```
+
+## Example
+
+The following example demonstrates a basic PIM Sparse Mode (PIM-SM) multicast
+deployment across three routers, showing how to configure each router's role
+within a multicast domain. Together, the three routers form a complete
+multicast distribution path from sources to receivers, with one router acting
+as the Rendezvous Point (RP).
+
+### Topology and roles
+
+- Router 1 is the {abbr}`LHR (Last-Hop Router)`.
+- Router 3 is the {abbr}`RP (Rendezvous Point)`.
+- Router 2 is the {abbr}`FHR (First-Hop Router)`.
+
+**Router 1:**
+
+```none
+set interfaces ethernet eth2 address '198.51.100.1/30'
+set interfaces ethernet eth1 address '192.0.2.1/24'
+set protocols ospf area 0 network '198.51.100.0/30'
+set protocols ospf area 0 network '192.0.2.0/24'
 set protocols pim interface eth1
+set protocols pim interface eth1 igmp
 set protocols pim interface eth2
-set protocols pim rp address 172.16.255.1 group '224.0.0.0/4'
+set protocols pim rp address 203.0.113.1 group '224.0.0.0/4'
 ```
 
-**Router 3**
+**Router 3:**
 
 ```none
-set interfaces dummy dum0 address '172.16.255.1/24'
-set interfaces ethernet eth0 address '172.16.0.1/24'
-set interfaces ethernet eth1 address '172.16.1.1/24'
-set protocols ospf area 0 network '172.16.0.0/24'
-set protocols ospf area 0 network '172.16.255.0/24'
-set protocols ospf area 0 network '172.16.1.0/24'
+set interfaces dummy dum0 address '203.0.113.1/32'
+set interfaces ethernet eth0 address '198.51.100.2/30'
+set interfaces ethernet eth1 address '198.51.100.5/30'
+set protocols ospf area 0 network '198.51.100.0/30'
+set protocols ospf area 0 network '203.0.113.1/32'
+set protocols ospf area 0 network '198.51.100.4/30'
 set protocols pim interface dum0
 set protocols pim interface eth0
 set protocols pim interface eth1
-set protocols pim rp address 172.16.255.1 group '224.0.0.0/4'
+set protocols pim rp address 203.0.113.1 group '224.0.0.0/4'
 ```
 
-**Router 2**
+**Router 2:**
 
 ```none
-set interfaces ethernet eth1 address '10.0.0.1/24'
-set interfaces ethernet eth2 address '172.16.1.2/24'
-set protocols ospf area 0 network '10.0.0.0/24'
-set protocols ospf area 0 network '172.16.1.0/24'
+set interfaces ethernet eth1 address '203.0.113.129/25'
+set interfaces ethernet eth2 address '198.51.100.6/30'
+set protocols ospf area 0 network '203.0.113.128/25'
+set protocols ospf area 0 network '198.51.100.4/30'
 set protocols pim interface eth1
 set protocols pim interface eth2
-set protocols pim rp address 172.16.255.1 group '224.0.0.0/4'
+set protocols pim rp address 203.0.113.1 group '224.0.0.0/4'
 ```
