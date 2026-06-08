@@ -110,9 +110,12 @@ def get_config(config=None):
 
 def get_ppid(pid):
     try:
-        return int((PROC/str(pid)/'stat').read_text().split()[3])
+        for line in (PROC / str(pid) / 'status').read_text().splitlines():
+            if line.startswith('PPid:'):
+                return int(line.split()[1])
     except Exception:
         return None
+    return None
 
 def is_login(pid):
     try:
