@@ -2205,8 +2205,8 @@ msgid "https://pgp.mit.edu/pks/lookup?op=get&search=0xFD220285A0FE6D7E"
 msgstr "https://pgp.mit.edu/pks/lookup?op=get&search=0xFD220285A0FE6D7E"
 
 #: ../../installation/update.rst:86
-msgid "https://raw.githubusercontent.com/vyos/vyos-nightly-build/refs/heads/current/version.json"
-msgstr "https://raw.githubusercontent.com/vyos/vyos-nightly-build/refs/heads/current/version.json"
+msgid "https://raw.githubusercontent.com/vyos/vyos-nightly-build/rolling/version.json"
+msgstr "https://raw.githubusercontent.com/vyos/vyos-nightly-build/rolling/version.json"
 
 #: ../../installation/update.rst:91
 msgid "https://vyos.net/get/nightly-builds/"
