@@ -161,8 +161,9 @@ def verify(proxy):
 
     conf_session_device = resolve_device_from_leaf_pid(get_vbash_pid_from_temp_config_dir())
 
-    if conf_session_device and 'serial_restart' in proxy:
-        if conf_session_device in proxy['serial_restart']:
+    if conf_session_device:
+        affected_devices = set(proxy.get('serial_restart', [])) | set(proxy.get('serial_remove', []))
+        if conf_session_device in affected_devices:
             raise ConfigError(f'Attempting to change config on current serial port: {conf_session_device}')
 
     if 'device' in proxy:
