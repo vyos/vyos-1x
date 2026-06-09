@@ -1,210 +1,287 @@
+---
+myst:
+  html_meta:
+    description: |
+      Resource Public Key Infrastructure (RPKI) is an architecture designed
+      to secure the internet routing infrastructure by cryptographically
+      associating IP address prefixes with their originating ASNs.
+    keywords: rpki, roa, bgp, routing security, rtr, validator, asn
+---
+
 (rpki)=
 
 # RPKI
 
-:::{pull-quote}
+{abbr}`RPKI (Resource Public Key Infrastructure)` is an architecture designed
+to secure the internet routing infrastructure. It cryptographically associates
+IP address prefixes with the correct originating
+{abbr}`ASNs (Autonomous System Numbers)`. BGP routers can use this data to
+check the origin of each route against the corresponding
+{abbr}`ROA (Route Origin Authorization)` for validity. RPKI is described in
+[RFC 6480](https://datatracker.ietf.org/doc/html/rfc6480).
 
-There are two types of Network Admins who deal with BGP, those who have
-created an international incident and/or outage, and those who are lying
+BGP routers can retrieve ROA information from RPKI Relying Party software,
+also known as an RPKI server or validator, using the RTR protocol. Open-source
+implementations include NLnet Labs'
+[Routinator](https://www.nlnetlabs.nl/projects/routing/routinator/) (Rust),
+OpenBSD's [rpki-client](https://www.rpki-client.org/) (C), and
+[StayRTR](https://github.com/bgp/stayrtr) (Go). The RTR protocol is described
+in [RFC 8210](https://datatracker.ietf.org/doc/html/rfc8210).
 
--- [tweet by EvilMog](https://twitter.com/Evil_Mog/status/1230924170508169216), 2020-02-21
-:::
-
-{abbr}`RPKI (Resource Public Key Infrastructure)` is a framework designed to
-secure the Internet routing infrastructure. It associates BGP route
-announcements with the correct originating {abbr}`ASN (Autonomus System
-Number)` which BGP routers can then use to check each route against the
-corresponding {abbr}`ROA (Route Origin Authorisation)` for validity. RPKI is
-described in {rfc}`6480`.
-
-A BGP-speaking router like VyOS can retrieve ROA information from RPKI
-"Relying Party software" (often just called an "RPKI server" or "RPKI
-validator") by using {abbr}`RTR (RPKI to Router)` protocol. There are several
-open source implementations to choose from, such as NLNetLabs' [Routinator]
-(written in Rust), OpenBSD's [rpki-client] (written in C), and [StayRTR] (written
-in Go). The RTR protocol is described in {rfc}`8210`.
-
-:::{tip}
-If you are new to these routing security technologies then there is an
-[excellent guide to RPKI] by NLnet Labs which will get you up to speed
-very quickly. Their documentation explains everything from what RPKI is to
-deploying it in production. It also has some
-[help and operational guidance] including "What can I do about my route
-having an Invalid state?"
-:::
+```{tip}
+If you are new to routing security, the
+[RPKI Documentation](https://rpki.readthedocs.io/) maintained by NLnet Labs
+will quickly get you up to speed. It covers everything from fundamental
+concepts to production deployment.
+```
 
 ## Getting started
 
-First you will need to deploy an RPKI validator for your routers to use. NLnet
-Labs provides a collection of [software] you can compare and settle on one.
-Once your server is running you can start validating announcements.
+First, you need to deploy an RPKI validator for your routers. The
+[RPKI Documentation](https://rpki.readthedocs.io/) maintained by NLnet Labs
+provides a comprehensive list of open-source software packages you can compare
+and choose from. Once your chosen server is running, your routers can start
+validating announcements.
 
-Imported prefixes during the validation may have values:
+After validation, imported routes may have one of the following states:
 
-> valid
->
-> : The prefix and ASN that originated it match a signed ROA. These are
->   probably trustworthy route announcements.
->
-> invalid
->
-> : The prefix or prefix length and ASN that originated it doesn't
->   match any existing ROA. This could be the result of a prefix hijack, or
->   merely a misconfiguration, but should probably be treated as
->   untrustworthy route announcements.
->
-> notfound
->
-> : No ROA exists which covers that prefix. Unfortunately this is the case for
->   about 40%-50% of the prefixes which were announced to the {abbr}`DFZ
->   (default-free zone)` at the start of 2024.
+- `valid`: The prefix and originating ASN match a signed ROA. These route
+  announcements are considered trustworthy.
+- `invalid`: The prefix, prefix length, or originating ASN does not match
+  any existing ROA. This may indicate a prefix hijack or misconfiguration
+  and should be treated as untrustworthy.
+- `notfound`: No ROA covers the prefix. As of early 2024, this applies to
+  approximately 40% to 50% of prefixes announced to the
+  {abbr}`DFZ (Default-Free Zone)`.
 
-:::{note}
-If you are responsible for the global addresses assigned to your
-network, please make sure that your prefixes have ROAs associated with them
-to avoid being `notfound` by RPKI. For most ASNs this will involve
-publishing ROAs via your {abbr}`RIR (Regional Internet Registry)` (RIPE
-NCC, APNIC, ARIN, LACNIC, or AFRINIC), and is something you are encouraged
-to do whenever you plan to announce addresses into the DFZ.
+```{note}
+If you manage global IP addresses for your network, ensure their prefixes
+have associated ROAs to prevent them from being marked as `notfound` by
+RPKI.
+```
 
-Particularly large networks may wish to run their own RPKI certificate
+For most network operators, this involves publishing ROAs through their
+respective {abbr}`RIR (Regional Internet Registry)`, such as ARIN, RIPE NCC,
+APNIC, LACNIC, or AFRINIC. It is highly recommended to create ROAs for any IP
+prefixes you plan to announce into the DFZ.
+
+Particularly large networks may choose to run their own RPKI certificate
 authority and publication server instead of publishing ROAs via their RIR.
-This is a subject far beyond the scope of VyOS' documentation. Consider
-reading about [Krill] if this is a rabbit hole you need or especially want
-to dive down.
-:::
+This subject is beyond the scope of VyOS documentation. For more information,
+consider reviewing resources about
+[Krill](https://www.nlnetlabs.nl/projects/routing/krill/).
 
-### Features of the Current Implementation
+## Current implementation
 
-In a nutshell, the current implementation provides the following features:
+The current implementation includes the following features:
 
-- The BGP router can connect to one or more RPKI cache servers to receive
-  validated prefix to origin AS mappings. Advanced failover can be implemented
-  by server sockets with different preference values.
-- If no connection to an RPKI cache server can be established after a
-  pre-defined timeout, the router will process routes without prefix origin
-  validation. It still will try to establish a connection to an RPKI cache
-  server in the background.
-- By default, enabling RPKI does not change best path selection. In particular,
-  invalid prefixes will still be considered during best path selection. However,
-  the router can be configured to ignore all invalid prefixes.
-- Route maps can be configured to match a specific RPKI validation state. This
-  allows the creation of local policies, which handle BGP routes based on the
-  outcome of the Prefix Origin Validation.
-- Updates from the RPKI cache servers are directly applied and path selection is
-  updated accordingly. (Soft reconfiguration must be enabled for this to work).
+- The BGP router connects to one or more RPKI cache servers to receive
+  validated prefix-to-origin AS mappings. Advanced failover can be
+  implemented by configuring multiple cache servers with different
+  preference values.
+- If no connection to an RPKI cache server is established after a predefined
+  timeout, the router processes routes without prefix origin validation. It
+  will continue attempting to connect to an RPKI cache server in the
+  background.
+- By default, enabling RPKI does not affect best path selection. Invalid
+  prefixes are still considered during best path selection, but you can
+  configure the router to ignore them.
+- You can configure route maps to match a specific RPKI validation state.
+  This enables the creation of local policies that handle BGP routes based
+  on Prefix Origin Validation results.
+- Updates from RPKI cache servers are applied directly, and path selection
+  is updated accordingly. Note: BGP soft reconfiguration must be enabled
+  for this feature to work.
 
 ## Configuration
 
 ```{cfgcmd} set protocols rpki polling-period \<1-86400\>
 
-Define the time interval to update the local cache
+**Configure the interval, in seconds, at which the router polls the RPKI
+cache server for updates.**
 
 The default value is 300 seconds.
 ```
 
+Example:
+
+```none
+set protocols rpki polling-period 600
+```
+
 ```{cfgcmd} set protocols rpki expire-interval \<600-172800\>
 
-Set the number of seconds the router waits until the router
-expires the cache.
+**Configure the interval, in seconds, after which the router expires its
+cached RPKI data.**
 
 The default value is 7200 seconds.
 ```
 
+Example:
+
+```none
+set protocols rpki expire-interval 14400
+```
+
 ```{cfgcmd} set protocols rpki retry-interval \<1-7200\>
 
-Set the number of seconds the router waits until retrying to connect
-to the cache server.
+**Configure the interval, in seconds, before the router retries a failed
+connection to the RPKI cache server.**
 
 The default value is 600 seconds.
 ```
 
-```{cfgcmd} set protocols rpki cache \<address\> port \<port\>
+Example:
 
-Defined the IPv4, IPv6 or FQDN and port number of the caching RPKI caching
-instance which is used.
-
-This is a mandatory setting.
+```none
+set protocols rpki retry-interval 60
 ```
 
-```{cfgcmd} set protocols rpki cache \<address\> preference \<preference\>
+```{cfgcmd} set protocols rpki cache \<address\> port \<1-65535\>
 
-Multiple RPKI caching instances can be supplied and they need a preference in
-which their result sets are used.
+**Configure the address and port of an RPKI cache server.**
 
-This is a mandatory setting.
+The address can be specified as an IPv4 or IPv6 address, or as a
+{abbr}`FQDN (Fully Qualified Domain Name)`.
 ```
 
+```{note}
+You need to configure both `port` and `preference` for each cache server
+IP address.
+```
+
+Example:
+
+```none
+set protocols rpki cache 192.0.2.1 port 3323
+```
+
+```{cfgcmd} set protocols rpki cache \<address\> preference \<1-255\>
+
+**Configure the preference value for an RPKI cache server.**
+
+When multiple cache servers are configured, the router prioritizes
+connecting to the server with the lowest preference value.
+```
+
+```{note}
+You need to configure both `port` and `preference` for each cache server
+IP address.
+```
+
+```{note}
+`preference` values must be unique across cache servers.
+```
+
+Example:
+
+```none
+set protocols rpki cache 192.0.2.1 preference 1
+```
 
 ### SSH
 
-Connections to the RPKI caching server can not only be established by TCP using
-the RTR protocol but you can also rely on a secure SSH session to the server.
-This provides transport integrity and confidentiality and it is a good idea if
-your validation software supports it. To enable SSH, first you need to create
-an SSH client keypair using `generate ssh client-key
-/config/auth/id_rsa_rpki`. Once your key is created you can setup the
-connection.
+You can connect to the RPKI cache server using the RTR protocol over plain
+TCP or over SSH. SSH provides transport integrity and confidentiality. Use
+SSH if your validation software supports this option.
+
+To use SSH authentication, complete the following steps:
+
+   **Step 1.** Generate an SSH client keypair:
+
+```{opcmd} generate ssh client-key /config/auth/id_rsa_rpki
+```
+
+   **Step 2.** Extract the base64 portion from both keys, plus the public
+   key's algorithm identifier:
+
+```bash
+   grep -v "PRIVATE KEY" /config/auth/id_rsa_rpki | tr -d '\n'
+   awk '{print $2}' /config/auth/id_rsa_rpki.pub
+   awk '{print $1}' /config/auth/id_rsa_rpki.pub
+```
+
+```{note}
+   The PKI subsystem accepts only the base64 portion of each key, without
+   any PEM/OpenSSH headers, footer, or line breaks. If you paste the file
+   contents directly, the commit fails.
+```
+
+   **Step 3.** Import the keypair into the PKI subsystem:
+
+```none
+   set pki openssh <name> private key <base64-encoded-private-key>
+   set pki openssh <name> public key <base64-encoded-public-key>
+   set pki openssh <name> public type <type>
+```
+
+Once the keypair is imported, set up the SSH connection using the commands
+below.
 
 ```{cfgcmd} set protocols rpki cache \<address\> ssh username \<user\>
 
-SSH username to establish an SSH connection to the cache server.
+**Configure the SSH username for authenticating to the RPKI cache server.**
 ```
 
-```{cfgcmd} set protocols rpki cache \<address\> ssh private-key-file \<filepath\>
+Example:
 
-Local path that includes the private key file of the router.
+```none
+set protocols rpki cache 192.0.2.1 ssh username rpki-user
 ```
 
-```{cfgcmd} set protocols rpki cache \<address\> ssh public-key-file \<filepath\>
+```{cfgcmd} set protocols rpki cache \<address\> ssh key \<name\>
 
-Local path that includes the public key file of the router.
+**Configure the name of the OpenSSH keypair used to authenticate to the RPKI
+cache server.**
+
+The `<name>` must match a keypair name previously defined under the
+`set pki openssh` commands.
 ```
 
-:::{note}
-When using SSH, private-key-file and public-key-file
-are mandatory options.
-:::
+Example:
+
+```none
+set protocols rpki cache 192.0.2.1 ssh key rpki
+```
 
 ## Example
 
-We can build route-maps for import based on these states. Here is a simple
-RPKI configuration, where `routinator` is the RPKI-validating "cache"
-server with ip `192.0.2.1`:
+The following example demonstrates how to connect to an RPKI cache server
+(such as Routinator) and build an import route-map to filter prefixes based
+on their validation state.
+
+First, configure the connection to the RPKI cache server at `192.0.2.1`:
 
 ```none
 set protocols rpki cache 192.0.2.1 port '3323'
 set protocols rpki cache 192.0.2.1 preference '1'
 ```
 
-Here is an example route-map to apply to routes learned at import. In this
-filter we reject prefixes with the state `invalid`, and set a higher
-`local-preference` if the prefix is RPKI `valid` rather than merely
-`notfound`.
+Next, create a route-map to apply to your incoming BGP updates. This policy
+dictates the following behavior:
+
+- Permits `valid` prefixes and assigns a high local-preference (300).
+- Permits `notfound` prefixes but assigns a lower local-preference (125).
+- Rejects prefixes with an `invalid` state.
 
 ```none
 set policy route-map ROUTES-IN rule 10 action 'permit'
 set policy route-map ROUTES-IN rule 10 match rpki 'valid'
 set policy route-map ROUTES-IN rule 10 set local-preference '300'
+
 set policy route-map ROUTES-IN rule 20 action 'permit'
 set policy route-map ROUTES-IN rule 20 match rpki 'notfound'
 set policy route-map ROUTES-IN rule 20 set local-preference '125'
+
 set policy route-map ROUTES-IN rule 30 action 'deny'
 set policy route-map ROUTES-IN rule 30 match rpki 'invalid'
 ```
 
-Once your routers are configured to reject RPKI-invalid prefixes, you can
-test whether the configuration is working correctly using Cloudflare's [test]
-website. Keep in mind that in order for this to work, you need to have no
-default routes or anything else that would still send traffic to RPKI-invalid
-destinations.
+After configuring your routers to reject RPKI-invalid prefixes, verify the
+setup using [Cloudflare's test website](https://isbgpsafe.com/).
 
-[excellent guide to rpki]: https://rpki.readthedocs.io/
-[help and operational guidance]: https://rpki.readthedocs.io/en/latest/about/help.html
-[krill]: https://www.nlnetlabs.nl/projects/rpki/krill/
-[routinator]: https://www.nlnetlabs.nl/projects/rpki/routinator/
-[rpki-client]: https://www.rpki-client.org/
-[software]: https://rpki.readthedocs.io/en/latest/ops/tools.html#relying-party-software
-[stayrtr]: https://github.com/bgp/stayrtr/
-[test]: https://isbgpsafeyet.com/
-[tweet by evilmog]: <https://twitter.com/Evil_Mog/status/1230924170508169216>
+```{note}
+Ensure there are no default routes or other paths that would direct traffic
+to RPKI-invalid destinations. Otherwise, the test may report the router as
+unsafe.
+```
