@@ -16,7 +16,7 @@ Alternatively, you can set up your own build machine and run a
 
 :::{note}
 Starting with VyOS 1.4, only source code and Debian package
-repositories of the rolling release (the **current** branch) are publicly
+repositories of the rolling release (the `rolling` branch) are publicly
 available.
 
 The source code and pre-built Debian package repositories of LTS releases
@@ -110,7 +110,7 @@ you build the ISO.
 To manually download the container from DockerHub, run:
 
 ```none
-$ docker pull vyos/vyos-build:current  # For VyOS rolling release
+$ docker pull vyos/vyos-build:rolling  # For VyOS rolling release
 ```
 
 
@@ -119,14 +119,14 @@ $ docker pull vyos/vyos-build:current  # For VyOS rolling release
 The container can also be built directly from source:
 
 ```none
-$ git clone -b current --single-branch https://github.com/vyos/vyos-build
+$ git clone -b rolling --single-branch https://github.com/vyos/vyos-build
 
 $ cd vyos-build
-$ docker build -t vyos/vyos-build:current docker
+$ docker build -t vyos/vyos-build:rolling docker
 ```
 
 :::{note}
-VyOS switched to Debian Bookworm (12) in its `current` branch.
+VyOS switched to Debian Bookworm (12) in the `rolling` branch.
 Due to software version updates, it is recommended to use the official
 Docker Hub image to build VyOS ISO.
 :::
@@ -134,17 +134,17 @@ Docker Hub image to build VyOS ISO.
 #### Tips and Tricks
 
 You can create Bash aliases to easily launch the latest container per release
-train (`current`). Add the following to your `.bash_aliases` file:
+train (`rolling`). Add the following to your `.bash_aliases` file:
 
 ```none
-alias vybld='docker pull vyos/vyos-build:current && docker run --rm -it \
+alias vybld='docker pull vyos/vyos-build:rolling && docker run --rm -it \
     -v "$(pwd)":/vyos \
     -v "$HOME/.gitconfig":/etc/gitconfig \
     -v "$HOME/.bash_aliases":/home/vyos_bld/.bash_aliases \
     -v "$HOME/.bashrc":/home/vyos_bld/.bashrc \
     -w /vyos --privileged --sysctl net.ipv6.conf.lo.disable_ipv6=0 \
     -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
-    vyos/vyos-build:current bash'
+    vyos/vyos-build:rolling bash'
 ```
 
 Now you have a new alias `vybld` that launches development containers in
@@ -168,7 +168,7 @@ Now that you understand the prerequisites, you can build a VyOS ISO from source.
 First, fetch the latest source code from GitHub:
 
 ```none
-$ git clone -b current --single-branch https://github.com/vyos/vyos-build
+$ git clone -b rolling --single-branch https://github.com/vyos/vyos-build
 ```
 
 Now you can begin a fresh VyOS ISO build. Change to the `vyos-build`
@@ -176,7 +176,7 @@ directory and run:
 
 ```none
 $ cd vyos-build
-$ docker run --rm -it --privileged -v $(pwd):/vyos -w /vyos vyos/vyos-build:current bash
+$ docker run --rm -it --privileged -v $(pwd):/vyos -w /vyos vyos/vyos-build:rolling bash
 ```
 
 Start the build:
@@ -266,7 +266,7 @@ Del frr 7.5-20210215-00-g8a5d3b7cd-0 [2671 kB]
 Del frr-snmp 7.5-20210215-00-g8a5d3b7cd-0 [55.1 kB]
 Del frr-rpki-rtrlib 7.5-20210215-00-g8a5d3b7cd-0 [37.3 kB]
 make: *** [Makefile:30: iso] Error 1
-(10:13) vyos_bld ece068908a5b:/vyos [current] #
+(10:13) vyos_bld ece068908a5b:/vyos [rolling] #
 ```
 
 To debug the build process and gain additional information of what could be the
@@ -274,7 +274,7 @@ root cause, you need to use `chroot` to change into the build directory. This is
 explained in the following step by step procedure:
 
 ```none
-vyos_bld ece068908a5b:/vyos [current] # sudo chroot build/chroot /bin/bash
+vyos_bld ece068908a5b:/vyos [rolling] # sudo chroot build/chroot /bin/bash
 ```
 
 We now need to mount some required, volatile filesystems
@@ -413,7 +413,7 @@ quantity of your CPU/cores and disk speed. Expect 20 minutes
 :::
 
 ```none
-(18:59) vyos_bld 412374ca36b8:/vyos/vyos-build/packages/linux-kernel [current] # ./build-kernel.sh
+(18:59) vyos_bld 412374ca36b8:/vyos/vyos-build/packages/linux-kernel [rolling] # ./build-kernel.sh
 I: Copy Kernel config (x86_64_vyos_defconfig) to Kernel Source
 I: Apply Kernel patch: /vyos/vyos-build/packages/linux-kernel/patches/kernel/0001-VyOS-Add-linkstate-IP-device-attribute.patch
 patching file Documentation/networking/ip-sysctl.txt
@@ -676,8 +676,8 @@ $ git clone --recurse-submodules https://github.com/vyos/vyos-1x
 Launch the Docker container and build the package:
 
 ```none
-# For VyOS 1.3 (equuleus, current)
-$ docker run --rm -it --privileged -v $(pwd):/vyos -w /vyos vyos/vyos-build:current bash
+# For VyOS 1.3 (equuleus, rolling)
+$ docker run --rm -it --privileged -v $(pwd):/vyos -w /vyos vyos/vyos-build:rolling bash
 
 # Change to source directory
 $ cd vyos-1x
