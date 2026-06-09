@@ -1,222 +1,359 @@
+---
+myst:
+  html_meta:
+    description: |
+      OpenFabric is a routing protocol derived from IS-IS that provides
+      link-state routing with optimized flooding, making it well-suited
+      for spine-leaf topologies.
+    keywords: openfabric, isis, link-state, spine-leaf, fabric, net, lsp
+---
+
 (openfabric)=
 
 # OpenFabric
 
-OpenFabric, specified in [draft-white-openfabric-06.txt](https://datatracker.ietf.org/doc/html/draft-white-openfabric-06), is
-a routing protocol derived from IS-IS, providing link-state routing with
-efficient flooding for topologies like spine-leaf networks.
+% stop_vyoslinter
+OpenFabric, specified in [draft-white-openfabric-06.txt](https://datatracker.ietf.org/doc/html/draft-white-openfabric-06),
+% start_vyoslinter
+is a routing protocol derived from IS-IS. It provides link-state routing with
+optimized flooding, making it well-suited for spine-leaf topologies.
 
-OpenFabric a dual stack protocol.
-A single OpenFabric instance is able to perform routing for both IPv4 and IPv6.
+OpenFabric is a dual-stack protocol. A single instance can simultaneously
+route both IPv4 and IPv6 traffic.
 
-## General
+## Configuration
 
-### Configuration
+### Mandatory settings
 
-#### Mandatory Settings
-
-For OpenFabric to operate correctly, one must do the equivalent of a Router ID
-in Connectionless Network Service (CLNS). This Router ID is called the
-{abbr}`NET (Network Entity Title)`. The system identifier must be unique within
-the network
+Each OpenFabric router must be configured with a unique
+{abbr}`NET (Network Entity Title)`, the
+{abbr}`CLNS (Connectionless Network Service)` equivalent of a Router ID. The
+6-byte system identifier portion of the NET must be unique across the fabric.
 
 ```{cfgcmd} set protocols openfabric net \<network-entity-title\>
 
-This command sets network entity title (NET) provided in ISO format.
+**Configure the Network Entity Title (NET) for the router.**
 
-Here is an example {abbr}`NET (Network Entity Title)` value:
+A typical NET looks like ``49.0001.1921.6800.1002.00``.
 
-:::{code-block} none
-49.0001.1921.6800.1002.00
-:::
-The CLNS address consists of the following parts:
+The NET consists of the following parts:
 
-* {abbr}`AFI (Address family authority identifier)` - ``49`` The AFI value
-  49 is what OpenFabric uses for private addressing.
+- **{abbr}`AFI (Authority and Format Identifier)`** (`49`): OpenFabric
+  conventionally uses AFI value 49 for private addressing.
+- **Area identifier** (`0001`): The area number within the fabric (in this
+  case, Area 1).
+- **System identifier** (`1921.6800.1002`): Uniquely identifies the router
+  within the fabric. We recommend deriving this value from the router IP
+  address or MAC address. To construct the system identifier from an IPv4
+  address (for example, `192.168.1.2`):
 
-* Area identifier: ``0001`` OpenFabric area number (numerical area ``1``)
+  - Pad each octet with leading zeros: `192.168.1.2` → `192.168.001.002`.
+  - Regroup the digits into three 4-digit blocks: `192.168.001.002` →
+    `1921.6800.1002`.
 
-* System identifier: ``1921.6800.1002`` - for system identifiers we recommend
-  to use IP address or MAC address of the router itself. The way to construct
-  this is to keep all of the zeroes of the router IP address, and then change
-  the periods from being every three numbers to every four numbers. The
-  address that is listed here is ``192.168.1.2``, which if expanded will turn
-  into ``192.168.001.002``. Then all one has to do is move the dots to have
-  four numbers instead of three. This gives us ``1921.6800.1002``.
-
-* {abbr}`NET (Network Entity Title)` selector: ``00`` Must always be 00. This
-  setting indicates "this system" or "local system."
+- **NET selector** (`00`): Must always be `00` to indicate the local system.
 ```
 
+Example:
+
+```none
+set protocols openfabric net 49.0001.1921.6800.1002.00
+```
 
 ```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> address-family \<ipv4|ipv6\>
 
-This command enables OpenFabric instance with \<NAME\> on this interface, and
-allows for adjacency to occur for address family (IPv4 or IPv6 or both).
+**Configure the named OpenFabric domain on a specific interface for the
+given address family (IPv4 or IPv6).**
+
+For dual-stack operation, run the command twice: once with `ipv4` and once
+with `ipv6`.
 ```
 
-#### OpenFabric Global Configuration
+Example:
 
-```{cfgcmd} set protocols openfabric domain-password \<plaintext-password|md5\> \<password\>
-
-This command configures the authentication password for a routing domain,
-as clear text or md5 one.
+```none
+set protocols openfabric domain fabric1 interface eth1 address-family ipv4
+set protocols openfabric domain fabric1 interface eth1 address-family ipv6
 ```
 
+### OpenFabric global configuration
+
+```{cfgcmd} set protocols openfabric domain \<name\> domain-password \<plaintext-password|md5\> \<password\>
+
+**Configure the authentication password for the specified OpenFabric
+domain.**
+
+The password can be specified as either plain text or
+an {abbr}`MD5 (Message-Digest Algorithm 5)` hash.
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 domain-password md5 'shared-secret'
+```
 
 ```{cfgcmd} set protocols openfabric domain \<name\> purge-originator
 
-This command enables {rfc}`6232` purge originator identification.
+**Enable {abbr}`POI (Purge Originator Identification)` for the specified
+OpenFabric domain.**
+
+POI is defined in RFC 6232.
 ```
 
+Example:
+
+```none
+set protocols openfabric domain fabric1 purge-originator
+```
 
 ```{cfgcmd} set protocols openfabric domain \<name\> set-overload-bit
 
-This command sets overload bit to avoid any transit traffic through this
-router.
+**Configure the overload bit for the specified OpenFabric domain.**
+
+This instructs other routers in the domain not to use this router for
+transit traffic.
 ```
 
+Example:
+
+```none
+set protocols openfabric domain fabric1 set-overload-bit
+```
 
 ```{cfgcmd} set protocols openfabric domain \<name\> log-adjacency-changes
 
-Log changes in adjacency state.
+**Enable logging of adjacency state changes in the specified OpenFabric
+domain.**
 ```
 
+Example:
 
-```{cfgcmd} set protocols openfabric domain \<name\> fabric-tier \<number\>
-
-This command sets a static tier number to advertise as location
-in the fabric.
+```none
+set protocols openfabric domain fabric1 log-adjacency-changes
 ```
 
-#### Interface Configuration
+```{cfgcmd} set protocols openfabric domain \<name\> fabric-tier \<0-14\>
 
-```{cfgcmd} set protocols openfabric interface \<interface\> hello-interval \<seconds\>
+**Configure a static tier number for the specified OpenFabric domain.**
 
-This command sets hello interval in seconds on a given interface.
-The range is 1 to 600. Hello packets are used to establish and maintain
-adjacency between OpenFabric neighbors.
+The router advertises the tier value to indicate its location in the
+OpenFabric domain.
 ```
 
+Example:
 
-```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> hello-multiplier \<number\>
-
-This command sets multiplier for hello holding time on a given
-interface. The range is 2 to 100.
+```none
+set protocols openfabric domain fabric1 fabric-tier 1
 ```
 
+### Interface configuration
 
-```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> metric \<metric\>
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> hello-interval \<1-600\>
 
-This command sets default metric for circuit.
-The metric range is 1 to 16777215.
+**Configure the interval, in seconds, at which the router transmits Hello
+packets on this interface.**
+
+Hello packets are exchanged with neighbors to establish and maintain
+adjacencies.
 ```
 
+Example:
 
-```{cfgcmd} set protocols openfabric interface \<interface\> passive
-
-This command enables the passive mode for this interface.
+```none
+set protocols openfabric domain fabric1 interface eth0 hello-interval 5
 ```
 
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> hello-multiplier \<2-100\>
 
-```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> password plaintext-password \<text\>
-
-This command sets the authentication password for the interface.
+**Configure the multiplier used to compute the Hello hold time on the
+specified interface.**
 ```
 
+Example:
 
-```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> csnp-interval \<seconds\>
-
-This command sets Complete Sequence Number Packets (CSNP) interval in seconds.
-The interval range is 1 to 600.
+```none
+set protocols openfabric domain fabric1 interface eth0 hello-multiplier 3
 ```
 
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> metric \<0-16777215\>
 
-```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> psnp-interval \<number\>
+**Configure the routing metric for the specified interface.**
 
-This command sets Partial Sequence Number Packets (PSNP) interval in seconds.
-The interval range is 1 to 120.
+This metric is used in path selection to determine the most efficient
+route. Lower metrics indicate preferred paths.
 ```
 
-#### Timers
+Example:
 
-```{cfgcmd} set protocols openfabric domain \<name\> lsp-gen-interval \<seconds\>
-
-This command sets minimum interval at which link-state packets (LSPs) are
-generated. The interval range is 1 to 120.
+```none
+set protocols openfabric domain fabric1 interface eth0 metric 100
 ```
 
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> passive
 
-```{cfgcmd} set protocols openfabric domain \<name\> lsp-refresh-interval \<seconds\>
+**Enable passive mode for the specified interface.**
 
-This command sets LSP refresh interval in seconds. The interval range
-is 1 to 65235.
+In passive mode, the router does not send Hello packets on the interface
+and does not form adjacencies.
 ```
 
+Example:
 
-```{cfgcmd} set protocols openfabric domain \<name\> max-lsp-lifetime \<seconds\>
-
-This command sets LSP maximum LSP lifetime in seconds. The interval range
-is 360 to 65535. LSPs remain in a database for 1200 seconds by default.
-If they are not refreshed by that time, they are deleted. You can change
-the LSP refresh interval or the LSP lifetime. The LSP refresh interval
-should be less than the LSP lifetime or else LSPs will time out before
-they are refreshed.
+```none
+set protocols openfabric domain fabric1 interface eth0 passive
 ```
 
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> password \<plaintext-password|md5\> \<password\>
 
-```{cfgcmd} set protocols openfabric domain \<name\> spf-interval \<seconds\>
+**Configure the authentication password for the specified interface.**
 
-This command sets minimum interval between consecutive shortest path first
-(SPF) calculations in seconds.The interval range is 1 to 120.
+The password can be specified as either plain text or
+an {abbr}`MD5 (Message-Digest Algorithm 5)` hash.
 ```
 
-## Examples
-### Enable OpenFabric
+Example:
+
+```none
+set protocols openfabric domain fabric1 interface eth0 password plaintext-password link-secret
+```
+
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> csnp-interval \<1-600\>
+
+**Configure the interval, in seconds, at which
+{abbr}`CSNPs (Complete Sequence Number PDUs)` are sent on the specified
+interface.**
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 interface eth0 csnp-interval 10
+```
+
+```{cfgcmd} set protocols openfabric domain \<name\> interface \<interface\> psnp-interval \<0-120\>
+
+**Configure the interval, in seconds, at which
+{abbr}`PSNPs (Partial Sequence Number PDUs)` are sent on the specified
+interface.**
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 interface eth0 psnp-interval 2
+```
+
+### Timers
+
+```{cfgcmd} set protocols openfabric domain \<name\> lsp-gen-interval \<1-120\>
+
+**Configure the minimum interval, in seconds, between successive
+generations of the same {abbr}`LSP (Link State PDU)` in the OpenFabric
+domain.**
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 lsp-gen-interval 5
+```
+
+```{cfgcmd} set protocols openfabric domain \<name\> lsp-refresh-interval \<1-65235\>
+
+**Configure the LSP refresh interval, in seconds, for the OpenFabric
+domain.**
+```
+
+```{note}
+The value must be lower than `max-lsp-lifetime`. Otherwise, LSPs will
+time out before they can be refreshed.
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 lsp-refresh-interval 900
+```
+
+```{cfgcmd} set protocols openfabric domain \<name\> max-lsp-lifetime \<360-65535\>
+
+**Configure the maximum lifetime, in seconds, for LSPs in the OpenFabric
+domain.**
+
+By default, LSPs remain in the link-state database for 1200 seconds and
+are deleted if they are not refreshed.
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 max-lsp-lifetime 1200
+```
+
+```{cfgcmd} set protocols openfabric domain \<name\> spf-interval \<1-120\>
+
+**Configure the minimum interval, in seconds, between consecutive
+{abbr}`SPF (Shortest Path First)` calculations in the OpenFabric domain.**
+```
+
+Example:
+
+```none
+set protocols openfabric domain fabric1 spf-interval 5
+```
+
+## Example
+
+The following example demonstrates a basic OpenFabric configuration between
+two routers.
 
 **Node 1:**
 
 ```none
-set interfaces loopback lo address '192.168.255.255/32'
+set interfaces loopback lo address '198.51.100.1/32'
 set interfaces ethernet eth1 address '192.0.2.1/24'
 
 set protocols openfabric domain VyOS interface eth1 address-family ipv4
 set protocols openfabric domain VyOS interface lo address-family ipv4
-set protocols openfabric net '49.0001.1921.6825.5255.00'
+set protocols openfabric domain VyOS interface lo passive
+set protocols openfabric net '49.0001.1980.5110.0001.00'
 ```
 
 **Node 2:**
 
 ```none
-set interfaces loopback lo address '192.168.255.254/32'
+set interfaces loopback lo address '198.51.100.2/32'
 set interfaces ethernet eth1 address '192.0.2.2/24'
 
 set protocols openfabric domain VyOS interface eth1 address-family ipv4
 set protocols openfabric domain VyOS interface lo address-family ipv4
-set protocols openfabric net '49.0001.1921.6825.5254.00'
+set protocols openfabric domain VyOS interface lo passive
+set protocols openfabric net '49.0001.1980.5110.0002.00'
 ```
 
-This gives us the following neighborships:
+After committing the configuration, verify the neighbor adjacencies on both
+nodes: 
 
 ```none
-Node-1@vyos:~$ show openfabric neighbor
+vyos@node-1:~$ show openfabric neighbor
 show openfabric neighbor
 Area VyOS:
   System Id           Interface   L  State        Holdtime SNPA
- vyos                eth1        2  Up            27       2020.2020.2020
+  node-2              eth1        2  Up            27      2020.2020.2020
 
 
-Node-2@vyos:~$ show openfabric neighbor
+vyos@node-2:~$ show openfabric neighbor
 show openfabric neighbor
 Area VyOS:
   System Id           Interface   L  State        Holdtime SNPA
- vyos                eth1        2  Up            30       2020.2020.2020
+  node-1              eth1        2  Up            30      2020.2020.2020
 ```
 
-Here's the IP routes that are populated:
+Verify that the OpenFabric routes have successfully populated:
 
 ```none
-Node-1@vyos:~$ show ip route openfabric
+vyos@node-1:~$ show ip route openfabric
 show ip route openfabric
 Codes: K - kernel route, C - connected, S - static, R - RIP,
        O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
@@ -226,9 +363,9 @@ Codes: K - kernel route, C - connected, S - static, R - RIP,
        t - trapped, o - offload failure
 
 f   192.0.2.0/24 [115/20] via 192.0.2.2, eth1 onlink, weight 1, 00:00:10
-f>* 192.168.255.254/32 [115/20] via 192.0.2.2, eth1 onlink, weight 1, 00:00:10
+f>* 198.51.100.2/32 [115/20] via 192.0.2.2, eth1 onlink, weight 1, 00:00:10
 
-Node-2@vyos:~$ show ip route openfabric
+vyos@node-2:~$ show ip route openfabric
 show ip route openfabric
 Codes: K - kernel route, C - connected, S - static, R - RIP,
        O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
@@ -238,5 +375,5 @@ Codes: K - kernel route, C - connected, S - static, R - RIP,
        t - trapped, o - offload failure
 
 f   192.0.2.0/24 [115/20] via 192.0.2.1, eth1 onlink, weight 1, 00:00:48
-f>* 192.168.255.255/32 [115/20] via 192.0.2.1, eth1 onlink, weight 1, 00:00:48
+f>* 198.51.100.1/32 [115/20] via 192.0.2.1, eth1 onlink, weight 1, 00:00:48
 ```
