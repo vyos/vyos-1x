@@ -181,15 +181,17 @@ class Ethtool:
         # Configuration of RX/TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
-            ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return str(self._ring_buffer.get(f'{rx_tx}-max', None))
+            raise ValueError('Ring-buffer type must be either "rx" or "tx"')
+        value = self._ring_buffer.get(f'{rx_tx}-max') if self._ring_buffer else None
+        return str(value) if value is not None else None
 
     def get_ring_buffer(self, rx_tx):
         # Configuration of RX/TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
-            ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return str(self._ring_buffer.get(rx_tx, None))
+            raise ValueError('Ring-buffer type must be either "rx" or "tx"')
+        value = self._ring_buffer.get(rx_tx) if self._ring_buffer else None
+        return str(value) if value is not None else None
 
     def check_speed_duplex(self, speed, duplex):
         """ Check if the passed speed and duplex combination is supported by
