@@ -27,6 +27,7 @@ import ipaddress
 import os
 import re
 import sys
+import time
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -96,6 +97,118 @@ def _csv_to_list(value, cast=str):
     return [cast(x.strip()) for x in str(value).split(',') if x.strip()]
 
 
+def _detect_passthrough_conflicts(conf, pt_iface):
+    """Detect services/topology conflicting with an IP-passthrough LAN port.
+
+    bind-interfaces dnsmasq instances spawned by the FSM will silently
+    lose to (or steal from) any other DHCP/RA service running on the same
+    LAN port, and cannot serve a bridge/bond slave.  Returns a conflict
+    dict for verify() to turn into a clean ConfigError; empty dict when
+    there is nothing to flag (including when *pt_iface* is unset).
+    """
+    if not pt_iface:
+        return {}
+    # dhcp-server conflict: only flag when *this* LAN interface is
+    # explicitly listed as a listen-interface for some subnet.  The
+    # previous predicate also matched any subnet that simply had
+    # `default-router` set (which is true on virtually every
+    # dhcp-server config) and produced false positives.
+    dhcp_conflict = False
+    if conf.exists(['service', 'dhcp-server', 'shared-network-name']):
+        for sn in (conf.list_nodes(
+                ['service', 'dhcp-server', 'shared-network-name']) or []):
+            for s in (conf.list_nodes(
+                    ['service', 'dhcp-server', 'shared-network-name',
+                     sn, 'subnet']) or []):
+                listen = conf.return_values(
+                    ['service', 'dhcp-server', 'shared-network-name',
+                     sn, 'subnet', s, 'listen-interface']) or []
+                if pt_iface in listen:
+                    dhcp_conflict = True
+                    break
+            if dhcp_conflict:
+                break
+    # Bridge / bond membership conflict: a passthrough interface
+    # MUST be a standalone wired LAN port — a bind-interfaces dnsmasq
+    # cannot serve a slave of a bridge or bond.
+    bridge_master = None
+    for br in (conf.list_nodes(['interfaces', 'bridge']) or []):
+        members = conf.list_nodes(
+            ['interfaces', 'bridge', br, 'member', 'interface']) or []
+        if pt_iface in members:
+            bridge_master = br
+            break
+    bond_master = None
+    for bn in (conf.list_nodes(['interfaces', 'bonding']) or []):
+        members = conf.list_nodes(
+            ['interfaces', 'bonding', bn, 'member', 'interface']) or []
+        if pt_iface in members:
+            bond_master = bn
+            break
+    return {
+        'dhcp_server': dhcp_conflict,
+        'dhcpv6_server': conf.exists(
+            ['service', 'dhcpv6-server', 'shared-network-name']
+        ),
+        'router_advert': conf.exists(
+            ['service', 'router-advert', 'interface', pt_iface]
+        ),
+        'bridge_master': bridge_master,
+        'bond_master': bond_master,
+    }
+
+
+def _detect_ipv6_bridging_conflicts(conf, brg_iface):
+    """Detect bridge/bond enslavement of an ipv6-bridging target interface.
+
+    If the user points ipv6-bridging at a physical interface that is
+    itself enslaved in a bridge or bond, the address would be added to a
+    slave that does not carry L3 — SLAAC clients on the actual master
+    would see nothing useful.  Returns a conflict dict for verify();
+    empty dict when there is nothing to flag (including when *brg_iface*
+    is unset).
+    """
+    if not brg_iface:
+        return {}
+    brg_bridge_master = None
+    for br in (conf.list_nodes(['interfaces', 'bridge']) or []):
+        if br == brg_iface:
+            continue  # targeting the bridge itself is fine
+        members = conf.list_nodes(
+            ['interfaces', 'bridge', br, 'member', 'interface']) or []
+        if brg_iface in members:
+            brg_bridge_master = br
+            break
+    brg_bond_master = None
+    for bn in (conf.list_nodes(['interfaces', 'bonding']) or []):
+        if bn == brg_iface:
+            continue  # targeting the bond itself is fine
+        members = conf.list_nodes(
+            ['interfaces', 'bonding', bn, 'member', 'interface']) or []
+        if brg_iface in members:
+            brg_bond_master = bn
+            break
+    return {
+        'bridge_master': brg_bridge_master,
+        'bond_master': brg_bond_master,
+    }
+
+
+def _passthrough_user_eth_addresses(conf, pt_iface):
+    """Return user-set `interfaces ethernet <pt_iface> address` values.
+
+    Drives IP-passthrough Policy B: when the user has assigned explicit
+    addresses to the passthrough port, the FSM must NOT auto-provision a
+    management address (user wins).  Returns [] when none are set.
+    """
+    if not pt_iface:
+        return []
+    eth_path = ['interfaces', 'ethernet', pt_iface, 'address']
+    if conf.exists(eth_path):
+        return conf.return_values(eth_path) or []
+    return []
+
+
 # ---------------------------------------------------------------------------
 # get_config  — read the VyOS tree and return raw dict
 # ---------------------------------------------------------------------------
@@ -146,106 +259,54 @@ def get_config(config=None):
         # dhcp6c can solicit an IA_PD from the carrier.  Otherwise the
         # chain drops it as forbidden upstream chatter.
         'dhcpv6_pd': conf.exists(iface_base + ['dhcpv6-options', 'pd']),
+        # IPv4 routing parameters that fight DOCSIS-style ip-passthrough.
+        # Passthrough forwards inbound carrier-IP packets that arrive on
+        # wwanN out the LAN port (asymmetric path) and so REQUIRES IPv4
+        # forwarding on, and must NOT have strict reverse-path filtering on
+        # wwanN.  `ip disable-forwarding` and `ip source-validation strict`
+        # silently break it — verify() refuses the combination.
+        'ip_disable_forwarding': conf.exists(
+            iface_base + ['ip', 'disable-forwarding']
+        ),
+        'ip_source_validation': (
+            conf.return_value(iface_base + ['ip', 'source-validation'])
+            if conf.exists(iface_base + ['ip', 'source-validation'])
+            else None
+        ),
+        # VRF assignment of wwanN.  Both ip-passthrough and ipv6-bridging
+        # splice the cellular bearer to a separate LAN interface that lives
+        # in the default VRF; confining wwanN to a non-default VRF table
+        # breaks that cross-interface path — verify() refuses the combo.
+        'vrf': (
+            conf.return_value(iface_base + ['vrf'])
+            if conf.exists(iface_base + ['vrf'])
+            else None
+        ),
     }
 
-    # ── IP passthrough conflict guard ────────────────────────────────────
-    # bind-interfaces dnsmasq instances spawned by the FSM will silently
-    # lose to (or steal from) any other DHCP/RA service running on the
-    # same LAN port.  Stash live-tree existence flags so verify() can
-    # raise a clean ConfigError instead of producing a confusing runtime
-    # race between dnsmasq, kea, and radvd/router-advert.
+    # ── Conflict guards (computed here while the Config object is live) ───
+    # IP-passthrough: bind-interfaces dnsmasq cannot coexist with another
+    # DHCP/RA service on, or bridge/bond enslavement of, the same LAN port.
+    # Resolved to a clean ConfigError in verify().
     pt_iface_lookup = None
     if wwan['_user_set']['ip_passthrough_interface']:
         pt_iface_lookup = conf.return_value(
             iface_base + ['ip-passthrough', 'interface']
         )
-    wwan['_passthrough_conflicts'] = {}
-    if pt_iface_lookup:
-        # dhcp-server conflict: only flag when *this* LAN interface is
-        # explicitly listed as a listen-interface for some subnet.  The
-        # previous predicate also matched any subnet that simply had
-        # `default-router` set (which is true on virtually every
-        # dhcp-server config) and produced false positives.
-        dhcp_conflict = False
-        if conf.exists(['service', 'dhcp-server', 'shared-network-name']):
-            for sn in (conf.list_nodes(
-                    ['service', 'dhcp-server', 'shared-network-name']) or []):
-                for s in (conf.list_nodes(
-                        ['service', 'dhcp-server', 'shared-network-name',
-                         sn, 'subnet']) or []):
-                    listen = conf.return_values(
-                        ['service', 'dhcp-server', 'shared-network-name',
-                         sn, 'subnet', s, 'listen-interface']) or []
-                    if pt_iface_lookup in listen:
-                        dhcp_conflict = True
-                        break
-                if dhcp_conflict:
-                    break
-        # Bridge / bond membership conflict: a passthrough interface
-        # MUST be a standalone wired LAN port — a bind-interfaces dnsmasq
-        # cannot serve a slave of a bridge or bond.
-        bridge_master = None
-        for br in (conf.list_nodes(['interfaces', 'bridge']) or []):
-            members = conf.list_nodes(
-                ['interfaces', 'bridge', br, 'member', 'interface']) or []
-            if pt_iface_lookup in members:
-                bridge_master = br
-                break
-        bond_master = None
-        for bn in (conf.list_nodes(['interfaces', 'bonding']) or []):
-            members = conf.list_nodes(
-                ['interfaces', 'bonding', bn, 'member', 'interface']) or []
-            if pt_iface_lookup in members:
-                bond_master = bn
-                break
-        wwan['_passthrough_conflicts'] = {
-            'dhcp_server': dhcp_conflict,
-            'dhcpv6_server': conf.exists(
-                ['service', 'dhcpv6-server', 'shared-network-name']
-            ),
-            'router_advert': conf.exists(
-                ['service', 'router-advert', 'interface', pt_iface_lookup]
-            ),
-            'bridge_master': bridge_master,
-            'bond_master': bond_master,
-        }
+    wwan['_passthrough_conflicts'] = _detect_passthrough_conflicts(
+        conf, pt_iface_lookup
+    )
 
-    # ── IPv6 bridging conflict guard ─────────────────────────
-    # Mirrors the passthrough check: if the user pointed ipv6-bridging at a
-    # physical interface that is itself enslaved in a bridge or bond, the
-    # address would be added to a slave that does not carry L3 — SLAAC
-    # clients on the actual master would see nothing useful.  Stash the
-    # conflict so verify() can raise a clean ConfigError instructing the
-    # user to target the master interface instead.
+    # ipv6-bridging: target must be the L3-owning interface, not a
+    # bridge/bond slave.
     brg_iface_lookup = None
     if wwan['_user_set']['ipv6_bridging_interface']:
         brg_iface_lookup = conf.return_value(
             iface_base + ['ipv6-bridging', 'interface']
         )
-    wwan['_ipv6_bridging_conflicts'] = {}
-    if brg_iface_lookup:
-        brg_bridge_master = None
-        for br in (conf.list_nodes(['interfaces', 'bridge']) or []):
-            if br == brg_iface_lookup:
-                continue  # targeting the bridge itself is fine
-            members = conf.list_nodes(
-                ['interfaces', 'bridge', br, 'member', 'interface']) or []
-            if brg_iface_lookup in members:
-                brg_bridge_master = br
-                break
-        brg_bond_master = None
-        for bn in (conf.list_nodes(['interfaces', 'bonding']) or []):
-            if bn == brg_iface_lookup:
-                continue  # targeting the bond itself is fine
-            members = conf.list_nodes(
-                ['interfaces', 'bonding', bn, 'member', 'interface']) or []
-            if brg_iface_lookup in members:
-                brg_bond_master = bn
-                break
-        wwan['_ipv6_bridging_conflicts'] = {
-            'bridge_master': brg_bridge_master,
-            'bond_master': brg_bond_master,
-        }
+    wwan['_ipv6_bridging_conflicts'] = _detect_ipv6_bridging_conflicts(
+        conf, brg_iface_lookup
+    )
 
     # ── IP Passthrough — Policy B coexistence check ──────────────────────
     # If the user designated a passthrough interface AND has set an explicit
@@ -255,11 +316,8 @@ def get_config(config=None):
     ipt = wwan.get('ip_passthrough', {}) or {}
     pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
     if pt_iface and wwan['_user_set']['ip_passthrough_interface']:
-        eth_path = ['interfaces', 'ethernet', pt_iface, 'address']
-        user_addrs = []
-        if conf.exists(eth_path):
-            user_addrs = conf.return_values(eth_path) or []
-        wwan.setdefault('ip_passthrough', {})['_user_eth_addresses'] = user_addrs
+        wwan.setdefault('ip_passthrough', {})['_user_eth_addresses'] = \
+            _passthrough_user_eth_addresses(conf, pt_iface)
 
     return wwan
 
@@ -267,6 +325,125 @@ def get_config(config=None):
 # ---------------------------------------------------------------------------
 # build_fsm_config  — translate VyOS dict → FSM nested dict
 # ---------------------------------------------------------------------------
+
+def _build_ipv6_bridging(wwan):
+    """Build the FSM ipv6_bridging sub-dict (carrier /64 to one LAN)."""
+    brg = wwan.get('ipv6_bridging', {}) or {}
+    brg_iface = brg.get('interface') if isinstance(brg, dict) else None
+    return {
+        'enabled': bool(brg_iface) and wwan['_user_set']['ipv6_bridging_interface'],
+        'interface': brg_iface or '',
+        'reconciliation_interval': _leaf_int(brg, 'reconciliation_interval', 10),
+    }
+
+
+def _build_ipv6_management_address(wwan):
+    """Build the FSM ipv6_management_address sub-dict.
+
+    Opt-in: enabled only when the user creates the `management-address`
+    node.  When enabled the FSM stamps <prefix>::host-id on wwanN and
+    installs an ip6tables chain that permits ICMPv6, ESTABLISHED/RELATED,
+    and (unless `disable-default-https` is set) TCP 443.  Additional
+    ports are opened via permit-tcp / permit-udp; permit-source narrows
+    every permit (including the default-443) to listed source prefixes.
+    Mutually exclusive with `ip-passthrough` (verify() refuses both).
+    """
+    ipv6_mgmt_node = (wwan.get('ipv6', {}) or {}).get('management_address', {}) or {}
+
+    def _as_list(v):
+        if not v:
+            return []
+        return v if isinstance(v, list) else [v]
+
+    mgmt_configured = wwan['_user_set'].get('ipv6_mgmt_addr_configured', False)
+    return {
+        'enabled': mgmt_configured and (not wwan['_user_set'].get('ip_passthrough')),
+        'host_id': _leaf(ipv6_mgmt_node, 'host_id', '::1'),
+        'disable_default_https': wwan['_user_set'].get(
+            'ipv6_mgmt_addr_disable_default_https', False),
+        'permit_tcp': [int(p) for p in _as_list(ipv6_mgmt_node.get('permit_tcp'))],
+        'permit_udp': [int(p) for p in _as_list(ipv6_mgmt_node.get('permit_udp'))],
+        'permit_source': _as_list(ipv6_mgmt_node.get('permit_source')),
+    }
+
+
+def _build_ip_passthrough(wwan):
+    """Build the FSM ip_passthrough sub-dict (DOCSIS-modem-style).
+
+    Returns ``{'enabled': False}`` when no passthrough interface is set.
+    """
+    ipt = wwan.get('ip_passthrough', {}) or {}
+    pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
+    if not pt_iface:
+        return {'enabled': False}
+
+    # Policy B: only emit a default mgmt address when the user has NOT
+    # set 'interfaces ethernet <if> address ...' on the passthrough port.
+    user_eth_addrs = ipt.get('_user_eth_addresses') or []
+    user_owns_eth = bool(user_eth_addrs)
+    mgmt_v4_cidr = (
+        '' if user_owns_eth
+        else _leaf(ipt, 'management_address', '192.168.200.1/24')
+    )
+    mgmt_v6_cidr = (
+        '' if user_owns_eth
+        else _leaf(ipt, 'management_address_ipv6', 'fd00:6c61:6e30::1/64')
+    )
+
+    # Pre-resolve bare-IP forms (no /CIDR) for use as DHCPv4 option 3
+    # router and DHCPv6 advertised gateway.  RFC-strict clients (Windows)
+    # reject leases with router=0.0.0.0, so we always supply a real IP
+    # when one is available — either FSM-owned default or the user's
+    # first ethernet address under Policy B.
+    def _bare_ip(cidr: str, want_v6: bool = False) -> str:
+        if not cidr:
+            return ''
+        try:
+            ip = ipaddress.ip_interface(cidr).ip
+        except (ValueError, TypeError):
+            return ''
+        if want_v6 and ip.version != 6:
+            return ''
+        if not want_v6 and ip.version != 4:
+            return ''
+        return str(ip)
+
+    if user_owns_eth:
+        mgmt_v4_ip = next(
+            (_bare_ip(a) for a in user_eth_addrs if _bare_ip(a)), '')
+        mgmt_v6_ip = next(
+            (_bare_ip(a, want_v6=True) for a in user_eth_addrs
+             if _bare_ip(a, want_v6=True)), '')
+    else:
+        mgmt_v4_ip = _bare_ip(mgmt_v4_cidr)
+        mgmt_v6_ip = _bare_ip(mgmt_v6_cidr, want_v6=True)
+
+    return {
+        'enabled': True,
+        'interface': pt_iface,
+        'mac': _leaf(ipt, 'mac', '') or '',
+        'lease_time': _leaf_int(ipt, 'lease_time', 60),
+        'management_address': mgmt_v4_cidr,
+        'management_address_ipv6': mgmt_v6_cidr,
+        'mgmt_owned_by_user': user_owns_eth,
+        'mgmt_v4_ip': mgmt_v4_ip,
+        'mgmt_v6_ip': mgmt_v6_ip,
+        # TCP MSS clamping on WWAN egress — ON by default,
+        # industry-standard for cellular CPE passthrough.
+        # Transparently fixes non-compliant downstream
+        # clients that ignore DHCP option 26 / RA MTU.  Disable only for
+        # PMTUD debugging.
+        'mss_clamp_enabled': not _leaf_exists(ipt, 'disable_mss_clamp'),
+        # Optional user-supplied DNS override (multi-value). When set,
+        # these resolvers are advertised to the downstream device in
+        # place of carrier-supplied DNS.
+        'dns_servers': (
+            ipt.get('dns_server')
+            if isinstance(ipt.get('dns_server'), list)
+            else ([ipt.get('dns_server')] if ipt.get('dns_server') else [])
+        ),
+    }
+
 
 def build_fsm_config(wwan):
     """Produce the config dict expected by the FSM D-Bus SetConfiguration."""
@@ -398,37 +575,10 @@ def build_fsm_config(wwan):
     fb = sim_cfg.get('sim_failback', {})
 
     # ── IPv6 bridging (carrier /64 to one downstream LAN) ────────────────
-    brg = wwan.get('ipv6_bridging', {}) or {}
-    brg_iface = brg.get('interface') if isinstance(brg, dict) else None
-    ipv6_bridging = {
-        'enabled': bool(brg_iface) and wwan['_user_set']['ipv6_bridging_interface'],
-        'interface': brg_iface or '',
-        'reconciliation_interval': _leaf_int(brg, 'reconciliation_interval', 10),
-    }
+    ipv6_bridging = _build_ipv6_bridging(wwan)
 
     # ── IPv6 management-address (FSM-stamped <prefix>::host-id on wwanN) ─
-    # Opt-in: enabled only when the user creates the `management-address`
-    # node.  When enabled the FSM stamps <prefix>::host-id on wwanN and
-    # installs an ip6tables chain that permits ICMPv6, ESTABLISHED/RELATED,
-    # and (unless `disable-default-https` is set) TCP 443.  Additional
-    # ports are opened via permit-tcp / permit-udp; permit-source narrows
-    # every permit (including the default-443) to listed source prefixes.
-    # Mutually exclusive with `ip-passthrough` (verify() refuses both).
-    ipv6_mgmt_node = (wwan.get('ipv6', {}) or {}).get('management_address', {}) or {}
-    def _as_list(v):
-        if not v:
-            return []
-        return v if isinstance(v, list) else [v]
-    mgmt_configured = wwan['_user_set'].get('ipv6_mgmt_addr_configured', False)
-    ipv6_management_address = {
-        'enabled': mgmt_configured and (not wwan['_user_set'].get('ip_passthrough')),
-        'host_id': _leaf(ipv6_mgmt_node, 'host_id', '::1'),
-        'disable_default_https': wwan['_user_set'].get(
-            'ipv6_mgmt_addr_disable_default_https', False),
-        'permit_tcp': [int(p) for p in _as_list(ipv6_mgmt_node.get('permit_tcp'))],
-        'permit_udp': [int(p) for p in _as_list(ipv6_mgmt_node.get('permit_udp'))],
-        'permit_source': _as_list(ipv6_mgmt_node.get('permit_source')),
-    }
+    ipv6_management_address = _build_ipv6_management_address(wwan)
 
     # ── Timeouts ─────────────────────────────────────────────────────────
     to = wwan.get('timeouts', {})
@@ -437,74 +587,7 @@ def build_fsm_config(wwan):
     lg = wwan.get('logging', {})
 
     # ── IP Passthrough (DOCSIS-modem-style) ──────────────────────────────
-    ipt = wwan.get('ip_passthrough', {}) or {}
-    pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
-    if pt_iface:
-        # Policy B: only emit a default mgmt address when the user has NOT
-        # set 'interfaces ethernet <if> address ...' on the passthrough port.
-        user_eth_addrs = ipt.get('_user_eth_addresses') or []
-        user_owns_eth = bool(user_eth_addrs)
-        mgmt_v4_cidr = (
-            '' if user_owns_eth
-            else _leaf(ipt, 'management_address', '192.168.200.1/24')
-        )
-        mgmt_v6_cidr = (
-            '' if user_owns_eth
-            else _leaf(ipt, 'management_address_ipv6', 'fd00:6c61:6e30::1/64')
-        )
-        # Pre-resolve bare-IP forms (no /CIDR) for use as DHCPv4 option 3
-        # router and DHCPv6 advertised gateway.  RFC-strict clients (Windows)
-        # reject leases with router=0.0.0.0, so we always supply a real IP
-        # when one is available — either FSM-owned default or the user's
-        # first ethernet address under Policy B.
-        def _bare_ip(cidr: str, want_v6: bool = False) -> str:
-            if not cidr:
-                return ''
-            try:
-                ip = ipaddress.ip_interface(cidr).ip
-            except (ValueError, TypeError):
-                return ''
-            if want_v6 and ip.version != 6:
-                return ''
-            if not want_v6 and ip.version != 4:
-                return ''
-            return str(ip)
-        if user_owns_eth:
-            mgmt_v4_ip = next(
-                (_bare_ip(a) for a in user_eth_addrs if _bare_ip(a)), '')
-            mgmt_v6_ip = next(
-                (_bare_ip(a, want_v6=True) for a in user_eth_addrs
-                 if _bare_ip(a, want_v6=True)), '')
-        else:
-            mgmt_v4_ip = _bare_ip(mgmt_v4_cidr)
-            mgmt_v6_ip = _bare_ip(mgmt_v6_cidr, want_v6=True)
-        ip_passthrough = {
-            'enabled': True,
-            'interface': pt_iface,
-            'mac': _leaf(ipt, 'mac', '') or '',
-            'lease_time': _leaf_int(ipt, 'lease_time', 60),
-            'management_address': mgmt_v4_cidr,
-            'management_address_ipv6': mgmt_v6_cidr,
-            'mgmt_owned_by_user': user_owns_eth,
-            'mgmt_v4_ip': mgmt_v4_ip,
-            'mgmt_v6_ip': mgmt_v6_ip,
-            # TCP MSS clamping on WWAN egress — ON by default,
-            # industry-standard for cellular CPE passthrough.
-            # Transparently fixes non-compliant downstream
-            # clients that ignore DHCP option 26 / RA MTU.  Disable only for
-            # PMTUD debugging.
-            'mss_clamp_enabled': not _leaf_exists(ipt, 'disable_mss_clamp'),
-            # Optional user-supplied DNS override (multi-value). When set,
-            # these resolvers are advertised to the downstream device in
-            # place of carrier-supplied DNS.
-            'dns_servers': (
-                ipt.get('dns_server')
-                if isinstance(ipt.get('dns_server'), list)
-                else ([ipt.get('dns_server')] if ipt.get('dns_server') else [])
-            ),
-        }
-    else:
-        ip_passthrough = {'enabled': False}
+    ip_passthrough = _build_ip_passthrough(wwan)
 
     # ── Assemble the complete config dict ────────────────────────────────
     config = {
@@ -619,24 +702,71 @@ def verify(wwan):
     verify_mtu_ipv6(wwan)
     verify_mirror_redirect(wwan)
 
+    user_set = wwan.get('_user_set', {})
+
+    # ── Bearer IPv6-prefix consumers are mutually exclusive ──────────────
+    # ip-passthrough, ipv6-bridging, ipv6 management-address and DHCPv6 PD
+    # (dhcpv6-options pd) each lay claim to the carrier-assigned IPv6 prefix,
+    # so at most one may be active.  The first three all read the bearer's
+    # ModemManager Ip6Config prefix directly; DHCPv6 PD runs dhcp6c, which
+    # in practice is delegated the same carrier /64 by most cellular
+    # networks — so we enforce a single-consumer policy rather than gamble
+    # on carrier-specific prefix sizing.  Centralised here (rather than as
+    # pairwise checks) so the invariant is declarative and a fifth consumer
+    # is a one-line addition.  Keyed on the live-tree intent flags: a
+    # passthrough node without an `interface` is inert (and is reported by
+    # the dedicated check below), so it does not count as a consumer here —
+    # this preserves the historical behaviour where exclusivity errors only
+    # surfaced once passthrough had an interface.
+    prefix_consumers = {
+        'ip-passthrough': user_set.get('ip_passthrough_interface'),
+        'ipv6-bridging': user_set.get('ipv6_bridging_interface'),
+        'ipv6 management-address': user_set.get('ipv6_mgmt_addr_configured'),
+        'dhcpv6-options pd': user_set.get('dhcpv6_pd'),
+    }
+    active_consumers = [name for name, on in prefix_consumers.items() if on]
+    if len(active_consumers) > 1:
+        raise ConfigError(
+            f"{', '.join(active_consumers)} are mutually exclusive — each "
+            f"consumes the bearer's carrier-assigned IPv6 prefix.  "
+            f"Configure only one."
+        )
+
+    # ── VRF is incompatible with prefix-to-LAN stitching features ────────
+    # ip-passthrough and ipv6-bridging both splice the cellular bearer onto
+    # a separate LAN interface (passthrough policy-routes inbound carrier-IP
+    # packets out the LAN port; bridging lands the carrier /64 on the LAN
+    # L3 interface).  That stitching lives in the default VRF.  Placing
+    # wwanN into a non-default VRF confines its routes and forwarding to
+    # that VRF's table, severing the cross-interface path so the feature
+    # comes up but never passes traffic.  Reject the combination at commit
+    # time rather than ship a config that looks valid but silently fails.
+    if user_set.get('vrf'):
+        vrf_blockers = [
+            name for name, on in (
+                ('ip-passthrough', user_set.get('ip_passthrough_interface')),
+                ('ipv6-bridging', user_set.get('ipv6_bridging_interface')),
+            ) if on
+        ]
+        if vrf_blockers:
+            raise ConfigError(
+                f"{' and '.join(vrf_blockers)} cannot be used while the "
+                f"WWAN interface is assigned to VRF "
+                f"'{user_set['vrf']}' — these features bridge the bearer to "
+                f"a LAN interface in the default VRF, and a non-default VRF "
+                f"confines wwanN's routing so the path never completes.  "
+                f"Remove the 'vrf' assignment or disable the feature."
+            )
+
     # ── IP Passthrough verification ──────────────────────────────────────
     # Reason about user intent via live-tree flags stashed by get_config(),
     # not the defaults-merged dict (XML <defaultValue> tags would otherwise
     # make unconfigured sub-leaves indistinguishable from user-set ones).
-    user_set = wwan.get('_user_set', {})
     if user_set.get('ip_passthrough'):
         if not user_set.get('ip_passthrough_interface'):
             raise ConfigError(
                 "ip-passthrough sub-options require 'ip-passthrough "
                 "interface <eth>' to be set first."
-            )
-        # Mutually exclusive with ipv6-bridging — both consume the bearer's
-        # IPv6 prefix.
-        if user_set.get('ipv6_bridging_interface'):
-            raise ConfigError(
-                "ip-passthrough is mutually exclusive with ipv6-bridging — "
-                "both consume the bearer's IPv6 prefix.  Remove one or the "
-                "other."
             )
         # Conflict guard: bind-interfaces dnsmasq cannot coexist with
         # another service trying to serve DHCP / RA on the same LAN port.
@@ -671,6 +801,28 @@ def verify(wwan):
                 f"'{conflicts['bond_master']}' — the designated LAN "
                 f"port must be a standalone wired interface."
             )
+        # IPv4 routing parameters on wwanN that break passthrough.
+        # Passthrough policy-routes inbound carrier-IP packets (which
+        # arrive on wwanN) out the LAN port — an asymmetric path that
+        # REQUIRES IPv4 forwarding enabled and reverse-path filtering no
+        # stricter than loose on wwanN.  These two settings silently drop
+        # that inbound traffic, so reject the combination at commit time
+        # rather than ship a passthrough that looks up but never works.
+        if user_set.get('ip_disable_forwarding'):
+            raise ConfigError(
+                "ip-passthrough requires IPv4 forwarding on the WWAN "
+                "interface, but 'ip disable-forwarding' is set — inbound "
+                "traffic to the passed-through device would be dropped.  "
+                "Remove 'ip disable-forwarding'."
+            )
+        if user_set.get('ip_source_validation') == 'strict':
+            raise ConfigError(
+                "ip-passthrough is incompatible with 'ip source-validation "
+                "strict' on the WWAN interface — strict reverse-path "
+                "filtering drops the asymmetrically-routed inbound traffic "
+                "destined for the passed-through device.  Use 'loose' or "
+                "'disable' instead."
+            )
 
     # ── ipv6-bridging guard ── must target the L3-owning interface ────────
     brg_conflicts = wwan.get('_ipv6_bridging_conflicts', {}) or {}
@@ -689,20 +841,6 @@ def verify(wwan):
             f"carrier prefix lands on the L3-owning interface."
         )
 
-    # ── IPv6 management-address guard ────────────────────────────────────
-    # The FSM stamps `<carrier-prefix>::host-id` on wwanN whenever the
-    # bearer has IPv6 and ip-passthrough is not configured.  Passthrough
-    # hands the entire carrier prefix to a downstream device — there is
-    # no FSM-owned IP on wwanN to attach to — so the two are mutually
-    # exclusive.
-    if user_set.get('ipv6_mgmt_addr_configured') and \
-            user_set.get('ip_passthrough'):
-        raise ConfigError(
-            "'ipv6 management-address' is mutually exclusive with "
-            "'ip-passthrough' — passthrough hands the carrier IPv6 to "
-            "a downstream device, leaving no FSM-owned address on the "
-            "WWAN interface.  Remove one or the other."
-        )
 
     return None
 
@@ -789,6 +927,22 @@ def apply(wwan):
     return None
 
 
+def _is_transient_dbus_error(exc):
+    """True when a WWAN D-Bus error means the service has not yet claimed its
+    bus name (started but still booting), as opposed to a real method error.
+
+    `systemctl start` returns while the manager is still acquiring
+    `com.igos.IgosModemManager`, so the first call after a fresh start can
+    race the name acquisition.  Callers retry these until their deadline.
+    """
+    msg = str(exc)
+    return (
+        'was not provided by any .service files' in msg
+        or 'NameHasNoOwner' in msg
+        or 'ServiceUnknown' in msg
+    )
+
+
 async def _apply_via_dbus(interface_number, config, connect_timeout=20.0):
     """Push configuration to the FSM D-Bus service.
 
@@ -802,10 +956,8 @@ async def _apply_via_dbus(interface_number, config, connect_timeout=20.0):
     """
     # Import here to avoid hard dependency at module level
     from vyos.utils.wwan.wwan_client import WWANClient, WWANError
-    import time
 
     deadline = time.monotonic() + connect_timeout
-    last_exc = None
     while True:
         try:
             async with WWANClient() as client:
@@ -820,20 +972,12 @@ async def _apply_via_dbus(interface_number, config, connect_timeout=20.0):
             # genuine method errors.  Treat name-not-found as transient
             # only while we are still within the connect timeout; any
             # other WWANError is a real configuration failure.
-            msg = str(exc)
-            transient = (
-                'was not provided by any .service files' in msg
-                or 'NameHasNoOwner' in msg
-                or 'ServiceUnknown' in msg
-            )
-            last_exc = exc
-            if transient and time.monotonic() < deadline:
+            if _is_transient_dbus_error(exc) and time.monotonic() < deadline:
                 await asyncio.sleep(0.5)
                 continue
             raise ConfigError(
                 f'WWAN D-Bus configuration failed: {exc}') from exc
         except Exception as exc:
-            last_exc = exc
             if time.monotonic() < deadline:
                 # Treat unexpected connect-time errors as transient
                 # until the timeout expires (covers DBus transport-level
@@ -859,7 +1003,6 @@ async def _remove_via_dbus(interface_number):
     deleting state (the on-disk cache will be cleaned up on next start).
     """
     from vyos.utils.wwan.wwan_client import WWANClient, WWANError
-    import time
 
     deadline = time.monotonic() + 20.0
     while True:
@@ -869,13 +1012,7 @@ async def _remove_via_dbus(interface_number):
                 print(f'WWAN interface {interface_number}: {result}')
                 return True
         except WWANError as exc:
-            msg = str(exc)
-            transient = (
-                'was not provided by any .service files' in msg
-                or 'NameHasNoOwner' in msg
-                or 'ServiceUnknown' in msg
-            )
-            if transient and time.monotonic() < deadline:
+            if _is_transient_dbus_error(exc) and time.monotonic() < deadline:
                 await asyncio.sleep(0.5)
                 continue
             print(f'Warning: WWAN RemoveInterface failed: {exc}')

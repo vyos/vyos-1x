@@ -18,7 +18,7 @@ carrier-supplied IPv6 prefix (typically /64) verbatim to a single downstream
 LAN interface (no DHCPv6 client involved — not real PD).  Standard VyOS
 `dhcpv6-options pd …` nodes are also available for real DHCPv6 PD via
 dhcp6c.  VyOS infrastructure features (`description`,
-`disable`, `vrf`, `ip`, `ipv6`, `mirror`, `redirect`, `mtu`) are retained.
+`disable`, `vrf`, `ip`, `ipv6`, `mirror`, `mtu`) are retained.
 
 ---
 
@@ -31,7 +31,6 @@ interfaces
         ├── disable                                       # valueless — admin shutdown
         ├── mtu <576-1500>                                # fallback MTU if carrier does not provide one (default: 1420); also ceiling
         ├── vrf <name>                                    # VRF instance name
-        ├── redirect <interface>                          # redirect incoming packets to interface
         ├── connection-mode <always-on|connect-on-demand|dial-on-demand>
         ├── network-mode <auto|lte|5g|3g|2g>              # modem-level RAT selection
         │
@@ -198,14 +197,13 @@ automatically using a 4-priority APN discovery chain:
 |---|---|---|
 | **Description** | `(empty)` | No interface description |
 | **Disable** | not set | Interface is admin-up |
-| **VRF** | not set | Interface is in the default VRF |
-| **Redirect** | not set | No packet redirect |
+| **VRF** | not set | Interface is in the default VRF.  **Incompatible** with `ip-passthrough` and `ipv6-bridging` — both splice the bearer to a LAN interface in the default VRF, so `verify()` rejects a non-default VRF assignment when either feature is active. |
 | **Mirror** | not set | No ingress/egress mirroring |
 | **IPv4 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
 | **IPv6 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
 | **IPv6 bridging** | not configured | No prefix is bridged; configure `ipv6-bridging interface <lan>` to copy the carrier /64 onto a downstream LAN interface (NOT DHCPv6 PD). |
 | **IPv6 management-address** | not configured (opt-in) | FSM leaves `wwanN` address-only.  When the user creates `ipv6 management-address`, the FSM stamps `<carrier-prefix>::1/128` and installs an `ip6tables` chain permitting ICMPv6, ESTABLISHED/RELATED, and TCP 443 (VyOS HTTPS UI); everything else is dropped.  Use `disable-default-https` to suppress the 443 auto-permit, `permit-tcp` / `permit-udp` to open additional ports, and `permit-source` to gate all permits to a specific source prefix. |
-| **DHCPv6 PD** | not configured | Standard VyOS `dhcpv6-options pd …` is available; dhcp6c runs only when configured. |
+| **DHCPv6 PD** | not configured | Standard VyOS `dhcpv6-options pd …` is available; dhcp6c runs only when configured.  **Mutually exclusive** with `ip-passthrough`, `ipv6-bridging` and `ipv6 management-address` — all four consume the carrier-assigned IPv6 prefix, so `verify()` permits only one. |
 | **Bridging reconciliation** | `10 s` | Safety-net timer re-checks the downstream LAN interface; netlink watch provides instant detection |
 | **Active SIM slot** | `1` | Slot 1 is used |
 | **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (enabled by default), 4) automatic (let the network assign) |
@@ -284,10 +282,9 @@ set interfaces wwan wwan0 description 'Primary LTE uplink — Bell Canada'
 # set interfaces wwan wwan0 disable
 
 # VRF binding
+# NOTE: incompatible with ip-passthrough and ipv6-bridging (both stitch the
+# bearer to a LAN interface in the default VRF) — verify() will reject it.
 set interfaces wwan wwan0 vrf 'CELLULAR'
-
-# Redirect all incoming packets to another interface
-# set interfaces wwan wwan0 redirect 'eth0'
 
 # Network mode — modem RAT selection
 set interfaces wwan wwan0 network-mode 'auto'
@@ -381,10 +378,12 @@ set interfaces wwan wwan0 ipv6 source-validation 'strict'
 > configuration and is **not** touched by this chain.  If you want to
 > firewall the carrier IID, do so in the normal VyOS firewall tree.
 >
-> **Mutually exclusive with `ip-passthrough`.**  Passthrough hands the
-> carrier IPv6 to a downstream device — there is no FSM-owned address
-> on `wwanN` to attach to — so `verify()` refuses to commit a config
-> that sets both.
+> **Mutually exclusive with `ip-passthrough`, `ipv6-bridging` and
+> `dhcpv6-options pd`.**  All four lay claim to the carrier-assigned IPv6
+> prefix on the bearer, so `verify()` refuses to commit a config that
+> enables more than one.  (Passthrough hands the carrier IPv6 to a
+> downstream device, leaving no FSM-owned address on `wwanN` to attach
+> to.)
 >
 > **`host-id` format.**  The leaf accepts a full IPv6 literal with the
 > upper 64 bits set to zero, e.g. `::1`, `::cafe`, `::dead:beef`.  The
@@ -434,7 +433,9 @@ set interfaces wwan wwan0 ipv6 management-address host-id '::cafe'
 > becomes the on-link prefix on your designated LAN port.  For real
 > DHCPv6 PD (carrier-issued sub-prefix), use the standard VyOS
 > `dhcpv6-options pd …` tree below — that runs `dhcp6c` and accepts a
-> requested `length`.
+> requested `length`.  Note the two are **mutually exclusive**: bridging
+> and PD both consume the carrier prefix, so `verify()` permits only one
+> (along with `ip-passthrough` and `ipv6 management-address`).
 >
 > **How it works:** The FSM reads the bearer's `Ip6Config` to learn the
 > carrier prefix and prefix length.  It then assigns the first usable
@@ -674,9 +675,18 @@ set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
 >  - `ipv6-bridging` (`set interfaces wwan wwan0 ipv6-bridging …`) is
 >    mutually exclusive with passthrough — both consume the bearer's IPv6.
 >    Use passthrough's built-in IA_PD (above) to delegate the carrier
->    prefix to the downstream router instead.
+>    prefix to the downstream router instead.  `ipv6 management-address`
+>    and `dhcpv6-options pd` are likewise mutually exclusive with
+>    passthrough for the same reason — only one carrier-prefix consumer
+>    may be active.
 >  - The interface should be wired (not Wi-Fi) — DHCPFORCERENEW behaviour
 >    on wireless drivers is unreliable.
+>  - **IPv4 routing parameters on `wwanN` that break passthrough are
+>    rejected at commit time:** `ip disable-forwarding` (passthrough must
+>    forward inbound carrier-IP traffic out the LAN port) and
+>    `ip source-validation strict` (strict reverse-path filtering drops the
+>    asymmetrically-routed inbound traffic).  Use `ip source-validation
+>    loose` or `disable` if you need RPF.
 
 ```
 # Single CLI knob — designate the LAN port
@@ -1131,7 +1141,6 @@ set interfaces wwan wwan0 logging sink 'both'
 | `description` | *(VyOS conf_mode)* | `(empty)` |
 | `disable` | `interface_disabled` | `false` (admin-up) |
 | `vrf` | *(VyOS conf_mode)* | not set (default VRF) |
-| `redirect` | *(VyOS conf_mode)* | not set |
 | `mirror ingress` | *(VyOS conf_mode)* | not set |
 | `mirror egress` | *(VyOS conf_mode)* | not set |
 | `ip adjust-mss` | *(VyOS conf_mode)* | not set |
