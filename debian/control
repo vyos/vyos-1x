@@ -241,9 +241,6 @@ Depends:
   openssh-server,
   sshguard,
 # End "service ssh"
-# For "service salt-minion"
-  salt-minion,
-# End "service salt-minion"
 # For "service snmp"
   snmp,
   snmpd,
