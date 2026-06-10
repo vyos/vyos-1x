@@ -24,7 +24,7 @@ serial_console = 'ttyS0'
 base = ['system', 'console']
 
 def migrate(config: ConfigTree) -> None:
-    if not base:
+    if not config.exists(base):
         return
 
     root_dir = disk.find_persistence()
