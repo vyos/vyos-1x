@@ -870,12 +870,13 @@ def range_to_regex(num_range):
 @register_filter('kea_address_json')
 def kea_address_json(addresses):
     from json import dumps
-    from vyos.utils.network import is_addr_assigned
+    from vyos.utils.network import get_interfaces_by_ip
 
     out = []
 
     for address in addresses:
-        ifname = is_addr_assigned(address, return_ifname=True, include_vrf=True)
+        ifaces = get_interfaces_by_ip(address, include_vrf=True)
+        ifname = ifaces[0] if ifaces else None
 
         if not ifname:
             continue
