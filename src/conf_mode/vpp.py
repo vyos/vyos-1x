@@ -97,6 +97,10 @@ override_drivers: dict[str, str] = {
 # drivers that does not use PCIe addresses
 not_pci_drv: list[str] = ['hv_netvsc']
 
+# drivers that are fundamentally incompatible with VPP/DPDK — no PMD exists and
+# they expose no PCI address, so allow-unsupported-nics cannot rescue them
+incompatible_drv: list[str] = ['vif']
+
 # drivers that support interrupt RX mode for DPDK and XDP
 drivers_support_interrupt: dict[str, list] = {
     'atlantic': ['dpdk', 'xdp'],
@@ -596,6 +600,12 @@ def verify(config):
 
     # ensure DPDK/XDP settings are properly configured
     for iface, iface_config in config['settings']['interface'].items():
+        orig_driver = dict_search(f'persist_config.{iface}.original_driver', config)
+        if orig_driver and orig_driver in incompatible_drv:
+            raise ConfigError(
+                f'Interface "{iface}" driver "{orig_driver}" is not supported by VPP/DPDK.'
+            )
+
         if not _is_device_allowed(config, iface):
             raise ConfigError(
                 f'NIC used by "{iface}" is not validated for VPP on VyOS. '
@@ -645,10 +655,9 @@ def verify(config):
         if rx_mode and rx_mode != 'polling':
             # By default drivers operate in polling mode. Not all NIC drivers support
             # RX mode interrupt and adaptive
-            driver = config.get('persist_config').get(iface).get('original_driver')
             if (
-                driver not in drivers_support_interrupt
-                or iface_config['driver'] not in drivers_support_interrupt[driver]
+                orig_driver not in drivers_support_interrupt
+                or iface_config['driver'] not in drivers_support_interrupt[orig_driver]
             ):
                 raise ConfigError(
                     f'RX mode {rx_mode} is not supported for interface {iface}'
