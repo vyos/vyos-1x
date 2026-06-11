@@ -658,6 +658,10 @@ def configure_serial_console(config_file: str, console_type: str) -> None:
     # serial was defined by user.
     if console_type == 'S':
         config.set(base + [device, 'kernel'])
+    if console_type == 'K':
+        # remove any residual setting from flavor file image build
+        if config.exists(base + [device, 'kernel']):
+            config.delete(base + [device, 'kernel'])
 
     with open(config_file, 'w') as f:
         f.write(config.to_string())
