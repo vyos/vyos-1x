@@ -264,6 +264,17 @@
 {# j2lint: disable=jinja-statements-delimeter #}
 {%- endmacro -%}
 !
+{% if parameters.input_queue_limit is vyos_defined %}
+bgp input-queue-limit {{ parameters.input_queue_limit }}
+{% else %}
+no bgp input-queue-limit
+{% endif %}
+{% if parameters.output_queue_limit is vyos_defined %}
+bgp output-queue-limit {{ parameters.output_queue_limit }}
+{% else %}
+no bgp output-queue-limit
+{% endif %}
+!
 router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-notation ' ~ parameters.as_notation | replace('as', '') if parameters.as_notation is vyos_defined }}
 {% if parameters.ebgp_requires_policy is vyos_defined %}
  bgp ebgp-requires-policy

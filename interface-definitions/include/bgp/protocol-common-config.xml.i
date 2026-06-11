@@ -1548,6 +1548,18 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="input-queue-limit">
+      <properties>
+        <help>Input Queue limit for all peers when messaging parsing.</help>
+        <valueHelp>
+          <format>u32:1-4294967295</format>
+          <description>Default 10000, Increase this only if you have the memory to handle large queues.</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-4294967295"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <leafNode name="labeled-unicast">
       <properties>
         <help>BGP Labeled-unicast options</help>
@@ -1593,6 +1605,18 @@
       <properties>
         <help>Enable IGP route check for network statements</help>
         <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="output-queue-limit">
+      <properties>
+        <help>Output Queue limit for all peers when messaging parsing.</help>
+        <valueHelp>
+          <format>u32:1-4294967295</format>
+          <description>Default 10000, Increase this only if you have the memory to handle large queues.</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-4294967295"/>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="route-reflector-allow-outbound-policy">
