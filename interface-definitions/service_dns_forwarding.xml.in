@@ -686,7 +686,7 @@
               </leafNode>
               <leafNode name="refresh-on-ttl-perc">
                 <properties>
-                  <help>Refresh cached records when remaining TTL is below this percent of the original (0 disables)</help>
+                  <help>Refresh cached records when remaining TTL is below this percent of the original (0 to disable)</help>
                   <valueHelp>
                     <format>u32:0-100</format>
                     <description>Percentage of original TTL remaining before refresh</description>
