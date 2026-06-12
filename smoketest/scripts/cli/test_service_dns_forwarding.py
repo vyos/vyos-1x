@@ -133,17 +133,17 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
     # PowerDNS cache-related recursor options
     def test_recursor_cache_options(self):
-        refresh_on_ttl_perc = '10'
+        ttl_percent = '10'
         nothing_below_nxdomain = 'yes'
         minimum_ttl_override = '30'
 
-        self.cli_set(base_path + ['refresh-on-ttl-perc', refresh_on_ttl_perc])
+        self.cli_set(base_path + ['ttl-percent', ttl_percent])
         self.cli_set(base_path + ['nothing-below-nxdomain', nothing_below_nxdomain])
         self.cli_set(base_path + ['minimum-ttl-override', minimum_ttl_override])
 
         self.cli_commit()
 
-        self.assertEqual(get_config_value('refresh-on-ttl-perc'), refresh_on_ttl_perc)
+        self.assertEqual(get_config_value('refresh-on-ttl-perc'), ttl_percent)
         self.assertEqual(get_config_value('nothing-below-nxdomain'), nothing_below_nxdomain)
         self.assertEqual(get_config_value('minimum-ttl-override'), minimum_ttl_override)
 
