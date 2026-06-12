@@ -368,6 +368,44 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_static_mapping_duplicate_address_prefix(self):
+        shared_net_name = 'SMOKE-DUP'
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        mapping = pool + ['static-mapping']
+
+        self.cli_set(pool + ['subnet-id', '1'])
+        duid1 = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:01'
+        duid2 = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:02'
+        dup_addr = inc_ip(subnet, 10)
+        dup_prefix = inc_ip(subnet, 1 << 64) + '/64'
+
+        # commit valid config with a single address mapping
+        self.cli_set(mapping + ['client1', 'duid', duid1])
+        self.cli_set(mapping + ['client1', 'ipv6-address', dup_addr])
+        self.cli_commit()
+
+        # adding a second mapping with the same address must fail
+        self.cli_set(mapping + ['client2', 'duid', duid2])
+        self.cli_set(mapping + ['client2', 'ipv6-address', dup_addr])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(mapping + ['client1'])
+        self.cli_commit()
+
+        # commit valid config with a single prefix mapping
+        self.cli_set(mapping + ['client1', 'duid', duid1])
+        self.cli_set(mapping + ['client1', 'ipv6-prefix', dup_prefix])
+        self.cli_commit()
+
+        # adding a second mapping with the same prefix must fail
+        self.cli_set(mapping + ['client2', 'ipv6-prefix', dup_prefix])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(mapping + ['client1'])
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

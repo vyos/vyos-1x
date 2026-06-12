@@ -223,12 +223,25 @@ def verify(dhcpv6):
 
             # Static mappings don't require anything (but check if IP is in subnet if it's set)
             if 'static_mapping' in subnet_config:
+                reserved_addresses = []
+                reserved_prefixes = []
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
                     if 'ipv6_address' in mapping_config:
                         # Static address must be in subnet
                         for address in mapping_config['ipv6_address']:
                             if ip_address(address) not in ip_network(subnet):
                                 raise ConfigError(f'static-mapping address for mapping "{mapping}" is not in subnet "{subnet}"!')
+                            if address in reserved_addresses:
+                                raise ConfigError(f'Duplicate IPv6 address "{address}" in static-mapping "{mapping}" '
+                                                  f'within shared-network "{network}", subnet "{subnet}"!')
+                            reserved_addresses.append(address)
+
+                    if 'ipv6_prefix' in mapping_config:
+                        for prefix in mapping_config['ipv6_prefix']:
+                            if prefix in reserved_prefixes:
+                                raise ConfigError(f'Duplicate IPv6 prefix "{prefix}" in static-mapping "{mapping}" '
+                                                  f'within shared-network "{network}", subnet "{subnet}"!')
+                            reserved_prefixes.append(prefix)
 
                     if ('ipv6_address' not in mapping_config and 'ipv6_prefix' not in mapping_config):
                         raise ConfigError('Either IPv6 address or IPv6 prefix must be set for static mapping '
