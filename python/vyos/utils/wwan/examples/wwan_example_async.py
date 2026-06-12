@@ -124,7 +124,8 @@ async def example_full_config():
         # Enhanced reconnection
         "enhanced_reconnection": {
             "enabled": True,
-            "signal_threshold": -85,
+            "signal_threshold_rssi": -85,
+            "signal_threshold_rsrp": -105,
             "retry_interval_good_signal": 30,
             "retry_interval_poor_signal": 120,
         },

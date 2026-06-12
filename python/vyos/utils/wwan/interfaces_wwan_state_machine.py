@@ -17,7 +17,9 @@
 import asyncio
 import time
 import os
+import re
 import json
+import shutil
 import datetime
 import ipaddress
 import socket
@@ -260,9 +262,22 @@ class ModemStateMachine:
         self.proxy = None
         self.config = None
         self._previous_config = None        # Track previous config for selective disconnection
+        # Cache for the modem's hardware band capability read via qmicli.
+        # Band capability is immutable hardware info, so it is read at most
+        # once per service lifetime. None = not yet attempted; [] = attempted
+        # but unavailable (no QMI port / qmicli missing / query failed).
+        self._cached_qmi_band_capability = None
         self.modem_path = None
         self.bearer_path = None
         self.user_disconnected = False
+        # Persistent desired-bearer-state for on-demand modes.  Unlike
+        # connect_requested (a transient queue cleared once acted upon), this
+        # records the operator's standing intent: once a connect is issued in
+        # connect-on-demand mode the bearer must behave like always-on
+        # (auto-reconnect on failure) and be re-established after a service
+        # crash/restart, until an explicit disconnect is issued.  Persisted in
+        # __runtime_state__ and restored before config is applied.
+        self.bearer_requested = False
         self._shutting_down = False         # Set by shutdown() to suppress recovery
         self._airplane_mode_requested = False  # Set when disable=true is applied
         self._airplane_mode_active = False     # True once SetPowerState(LOW) succeeded
@@ -311,6 +326,14 @@ class ModemStateMachine:
         self.max_failovers_before_backoff = 3 # Max failovers before extended backoff
         self.failover_backoff_seconds = 3600 # 1 hour extended backoff after max failovers (carrier-friendly)
 
+        # Signal-loss SIM-failover tracking — timestamp when the active SIM's
+        # signal first dropped continuously below the configured sim-failover
+        # signal-threshold.  Reset to None whenever signal recovers or a
+        # failover attempt fires.  When the continuous below-threshold duration
+        # reaches sim_failover_signal_loss_timer, _monitor_signal_strength
+        # triggers _handle_signal_loss_failover().
+        self._signal_failover_below_since = None
+
         # Connectivity recovery tracking for SIM escalation
         self.connectivity_recovery_attempts = 0  # Consecutive recovery attempts on same SIM
         self.max_recovery_before_sim_switch = 3  # Attempts before escalating to SIM switch
@@ -324,7 +347,7 @@ class ModemStateMachine:
         self._sticky_failover_timestamp = None            # When sticky hold was activated
         self.failback_suppressed_by_connection_failure = False  # Suppress failback when primary SIM's APN cascade failed
         # Anti-flap protection — SIM 1 must be CONTINUOUSLY present for
-        # sim_failover_revert_timer seconds before failback fires.  A user
+        # sim_failback_stability_time seconds before failback fires.  A user
         # repeatedly cycling the SIM resets this timestamp on every removal,
         # so flapping cards never trigger failback.
         self._primary_first_seen_present_ts = None  # When SIM 1 first reappeared in this on-failover session
@@ -413,6 +436,16 @@ class ModemStateMachine:
         # Protected via asyncio.Lock so only one failover runs at a time.
         self._sim_failover_lock = asyncio.Lock()
         self._sim_failover_in_progress = False
+
+        # FAILED-state investigation debounce — the same pre-existing FAILED
+        # condition can be observed by two independent startup paths:
+        # _configure_modem_initial() Step 0a (when config is already present)
+        # and _dispatch_initial_modem_state() (the synthesized cold-attach
+        # event). Without a guard both run the reason investigation +
+        # SIM-failover attempt, producing duplicate log lines. Suppress a
+        # repeat investigation of the same reason within a short window.
+        self._last_failed_investigation_ts = 0.0
+        self._last_failed_investigation_reason = None
 
         # SIM PIN/PUK unlock safety — try only once per boot cycle
         self._pin_unlock_attempted = False    # True after first PIN attempt (success or failure)
@@ -1857,7 +1890,9 @@ class ModemStateMachine:
                 # Out-of-band modem power cycles / SIM mux changes can land us in
                 # REGISTERED while FSM is stale (DISCONNECTED/IDLE/FAILED).
                 # Re-enter APN flow unless policy says to stay idle.
-                if self.connection_mode == 'connect-on-demand':
+                if (self.connection_mode == 'connect-on-demand'
+                        and not self.bearer_requested):
+                    # No standing connect request — park idle (SMS available).
                     if current_fsm_state == ModemState.DISCONNECTED.value:
                         logger.info("Modem registered in connect-on-demand mode - entering REGISTERED_IDLE",
                                    extra={'interface_number': self.interface_number,
@@ -2211,7 +2246,8 @@ class ModemStateMachine:
                           'active_sim': primary_sim_slot,
                           'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', True),
                           'enhanced_reconnection': self.enhanced_reconnection,
-                          'signal_threshold': self.reconnection_signal_threshold,
+                          'signal_threshold_rssi': getattr(self, 'reconnection_signal_threshold_rssi', -85),
+                          'signal_threshold_rsrp': getattr(self, 'reconnection_signal_threshold_rsrp', -105),
                           'current_state': self.machine.current_state})
 
 
@@ -2316,7 +2352,8 @@ class ModemStateMachine:
                           'active_sim': primary_sim_slot,
                           'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', True),
                           'enhanced_reconnection': self.parsed_config.enhanced_reconnection.enabled,
-                          'signal_threshold': self.parsed_config.enhanced_reconnection.signal_threshold,
+                          'signal_threshold_rssi': self.parsed_config.enhanced_reconnection.signal_threshold_rssi,
+                          'signal_threshold_rsrp': self.parsed_config.enhanced_reconnection.signal_threshold_rsrp,
                           'current_state': self.machine.current_state})
 
     def _apply_parsed_configuration(self):
@@ -2336,7 +2373,8 @@ class ModemStateMachine:
 
         # Enhanced reconnection configuration
         self.enhanced_reconnection = self.parsed_config.enhanced_reconnection.enabled
-        self.reconnection_signal_threshold = self.parsed_config.enhanced_reconnection.signal_threshold
+        self.reconnection_signal_threshold_rssi = self.parsed_config.enhanced_reconnection.signal_threshold_rssi
+        self.reconnection_signal_threshold_rsrp = self.parsed_config.enhanced_reconnection.signal_threshold_rsrp
         self.enhanced_reconnection_max_retries = self.parsed_config.enhanced_reconnection.max_retries
         self.retry_interval_good_signal = self.parsed_config.enhanced_reconnection.retry_interval_good_signal
         self.retry_interval_poor_signal = self.parsed_config.enhanced_reconnection.retry_interval_poor_signal
@@ -2562,7 +2600,8 @@ class ModemStateMachine:
 
             # Check connection mode: park at REGISTERED_IDLE for connect-on-demand
             if self.machine.current_state == ModemState.CONFIGURING.value:
-                if self.connection_mode == 'connect-on-demand':
+                if (self.connection_mode == 'connect-on-demand'
+                        and not self.bearer_requested):
                     logger.info("Connect-on-demand active — parking at REGISTERED_IDLE "
                                 "(modem registered, no bearer, SMS available)",
                                extra={'interface_number': self.interface_number})
@@ -2572,8 +2611,12 @@ class ModemStateMachine:
                     # dial-on-demand: auto-connect at boot, bearer toggleable via
                     #   connect_bearer() / disconnect_bearer(); no auto-reconnect
                     #   after manual disconnect_bearer()
+                    # connect-on-demand with a standing connect request
+                    #   (bearer_requested, e.g. restored after a crash): reconnect
+                    #   and then behave like always-on until explicit disconnect.
                     logger.info(f"{self.connection_mode} active — proceeding to connection phase",
-                               extra={'interface_number': self.interface_number})
+                               extra={'interface_number': self.interface_number,
+                                      'bearer_requested': self.bearer_requested})
                     self.transition(ModemEvent.CONNECT)
             else:
                 logger.info("Skipping automatic connect transition - FSM already advanced",
@@ -2679,30 +2722,19 @@ class ModemStateMachine:
                 )
                 self.last_failure_time = time.time()
 
-                # Attempt SIM failover if available
-                if (self._is_sim_failover_enabled()
-                        and self._is_failover_allowed()):
-                    fallback_sim = 2 if self.current_active_sim == 1 else 1
-                    if self._is_target_sim_enabled(fallback_sim):
-                        logger.warning(
-                            "Roaming mismatch on current SIM — "
-                            "attempting failover to alternate SIM",
-                            extra={'interface_number': self.interface_number,
-                                   'target_sim': fallback_sim})
-                        self.sim_switch_reason = 'roaming_not_allowed'
-                        self.target_sim_slot = fallback_sim
-                        self.failback_suppressed_by_connection_failure = True
-                        self._record_failover()
-                        self._emit_failover_event(
-                            event_type='failover',
-                            from_sim=self.current_active_sim,
-                            to_sim=fallback_sim,
-                            reason='roaming_not_allowed',
-                            trigger='_configure_modem_initial')
-                        self.transition(ModemEvent.CONNECTION_FAILED)
-                        self.transition(ModemEvent.SWITCH_SIM)
-                        self._safe_create_task(self._execute_sim_switch())
-                        return
+                # Attempt SIM failover to the alternate SIM.  The shared
+                # executor probes SimSlots for an actually-present alternate,
+                # applies cooldown/lock gating, and (via pre_switch_event)
+                # transitions through CONNECTION_FAILED so SWITCH_SIM has a
+                # valid source state.  suppress_failback keeps us off the
+                # roaming-locked primary until corrected config arrives.
+                switched = await self._failover_to_alternate_sim(
+                    'roaming_not_allowed', '_configure_modem_initial',
+                    switch_reason='roaming_not_allowed',
+                    suppress_failback=True,
+                    pre_switch_event=ModemEvent.CONNECTION_FAILED)
+                if switched:
+                    return
 
                 # No failover available — park in FAILED
                 logger.error(
@@ -2970,48 +3002,22 @@ class ModemStateMachine:
                     self.transition(ModemEvent.CONNECTION_FAILED)
                     return
 
-                # For dual-SIM: attempt failover to the other SIM if enabled
-                if (self._is_sim_failover_enabled()
-                        and self._is_failover_allowed()):
-                    fallback_sim = 2 if self.current_active_sim == 1 else 1
-
-                    if not self._is_target_sim_enabled(fallback_sim):
-                        logger.warning(
-                            f"SIM failover target slot {fallback_sim} is disabled in config — "
-                            "parking in FAILED state",
-                            extra={'interface_number': self.interface_number,
-                                   'target_sim': fallback_sim})
-                        self.transition(ModemEvent.CONNECTION_FAILED)
-                    else:
-                        logger.warning(
-                            "Initial connection failed on current SIM, "
-                            "attempting failover to alternate SIM",
-                            extra={'interface_number': self.interface_number,
-                                   'current_sim': self.current_active_sim,
-                                   'target_sim': fallback_sim,
-                                   'reason': 'initial_connection_failure'})
-                        self.sim_switch_reason = 'initial_connection_failure'
-                        self.target_sim_slot = fallback_sim
-                        # Suppress failback to primary until new config arrives —
-                        # the primary SIM's APN/parameters are known-bad so there is
-                        # no point switching back only to fail again.
-                        self.failback_suppressed_by_connection_failure = True
-                        self._record_failover()
-                        self._emit_failover_event(
-                            event_type='failover',
-                            from_sim=self.current_active_sim,
-                            to_sim=fallback_sim,
-                            reason='initial_connection_failure',
-                            trigger='_configure_modem_initial',
-                            extra_data={'configured_apn_rejected': self.configured_apn_rejected,
-                                        'failed_apn': self.last_failed_apn})
-                        # Transition to FAILED first so SWITCH_SIM has a valid source state
-                        self.transition(ModemEvent.CONNECTION_FAILED)
-                        self.transition(ModemEvent.SWITCH_SIM)
-                        self._safe_create_task(self._execute_sim_switch())
-                else:
-                    # Single SIM or failover not allowed — park in FAILED and
-                    # wait for the user to push corrected configuration.
+                # For dual-SIM: attempt failover to the other SIM.  The shared
+                # executor probes for an actually-present alternate slot,
+                # applies cooldown/lock gating, transitions through
+                # CONNECTION_FAILED (pre_switch_event) so SWITCH_SIM has a valid
+                # source state, and suppresses failback to the known-bad primary
+                # until corrected config arrives.
+                switched = await self._failover_to_alternate_sim(
+                    'initial_connection_failure', '_configure_modem_initial',
+                    switch_reason='initial_connection_failure',
+                    suppress_failback=True,
+                    pre_switch_event=ModemEvent.CONNECTION_FAILED,
+                    extra_data={'configured_apn_rejected': self.configured_apn_rejected,
+                                'failed_apn': self.last_failed_apn})
+                if not switched:
+                    # Single SIM or failover not allowed/possible — park in
+                    # FAILED and wait for the user to push corrected config.
                     logger.error(
                         "No SIM failover available — parking in FAILED state. "
                         "Apply new configuration via SetConfiguration() to retry.",
@@ -3481,7 +3487,7 @@ class ModemStateMachine:
                                      'preferred_carrier': preferred_carrier})
 
                 try:
-                    scan_timeout = self.config.get('network_scan_timeout', 60)
+                    scan_timeout = self.config.get('network_scan_timeout', 180)
                     operators = await asyncio.wait_for(gpp_iface.call_scan(), timeout=float(scan_timeout))
                     await self._process_scan_results(operators, preferred_carrier, gpp_iface, props)
                 except asyncio.TimeoutError:
@@ -3509,7 +3515,7 @@ class ModemStateMachine:
                     "- this may take 2+ minutes",
                     extra={'interface_number': self.interface_number})
         try:
-            scan_timeout = self.config.get('network_scan_timeout', 60)
+            scan_timeout = self.config.get('network_scan_timeout', 180)
             operators = await asyncio.wait_for(gpp_iface.call_scan(), timeout=float(scan_timeout))
             await self._process_scan_results(operators, None, gpp_iface, props)
         except asyncio.TimeoutError:
@@ -4051,6 +4057,36 @@ class ModemStateMachine:
                 return slot.get('enabled', True)
         return True  # Slot not found in config — assume enabled
 
+    def _signal_failover_possible(self) -> bool:
+        """Cheap precheck: is signal-loss SIM-failover worth evaluating?
+
+        Avoids spinning the below-threshold timer (and emitting failover
+        attempts) on single-SIM setups or when failover is disabled.  Returns
+        True only when failover is enabled and at least one *eligible* SIM slot
+        other than the currently-active one exists in the configuration.
+        Physical presence of that SIM is still verified at switch time by
+        _failover_to_alternate_sim_locked().
+
+        A candidate slot is NOT eligible if it is the primary SIM while a
+        data-cap sticky hold (``failback_suppressed_by_data_limit``) is
+        active: in that case the primary was deliberately abandoned because it
+        hit its data limit, so weak signal on the backup must not drag us back
+        onto the capped primary (which would defeat sim-failover-sticky and
+        cause failover↔failback oscillation).
+        """
+        if not self.config or not self._is_sim_failover_enabled():
+            return False
+        active = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+        primary = self.config.get('primary_sim_slot', 1)
+        for slot in self.config.get('sim_slots', []):
+            slot_num = slot.get('slot')
+            if slot_num == active or not slot.get('enabled', True):
+                continue
+            if slot_num == primary and self.failback_suppressed_by_data_limit:
+                continue
+            return True
+        return False
+
     def _record_failover(self):
         """Record that a SIM failover was performed"""
         self.last_failover_time = time.time()
@@ -4353,12 +4389,12 @@ class ModemStateMachine:
 
         # Stability gate — primary SIM must be CONTINUOUSLY available for
         # this many seconds before failback fires.  Reuses the existing
-        # sim_failover_revert_timer config knob (default 300s).  Anti-flap:
+        # sim_failback_stability_time config knob (default 300s).  Anti-flap:
         # if SIM 1 disappears at any point, the timestamp resets and the
         # gate restarts from zero.
-        revert_timer = 300
+        stability_time = 300
         if self.config:
-            revert_timer = max(0, int(self.config.get('sim_failover_revert_timer', 300)))
+            stability_time = max(0, int(self.config.get('sim_failback_stability_time', 300)))
 
         # Cooldown between successive failbacks — prevents rapid
         # failover↔failback ping-pong if the user keeps cycling the SIM
@@ -4368,6 +4404,18 @@ class ModemStateMachine:
         if self.config:
             failback_cooldown = max(0, int(self.config.get(
                 'failover_cooldown_seconds', 600)))
+
+        # Fine evaluation cadence — DECOUPLED from check_interval.  The
+        # stability gate is wall-clock based, so it can only fire as
+        # promptly as the loop wakes up; sleeping a full check_interval
+        # (default 600s) between iterations rounded a 300s stability_time
+        # up to the next poll, so failback took ~10 min instead of ~5.
+        # The presence probe is a cheap local D-Bus SimSlots read (it
+        # never touches the radio), so waking every ~30s — or faster if
+        # the user deliberately set a shorter check_interval — is free and
+        # lets the gate fire at stability_time (±poll_cadence) while
+        # genuinely re-verifying continuous presence on every tick.
+        poll_cadence = max(5, min(check_interval, 30))
 
         primary = self.primary_sim_slot
         if primary is None:
@@ -4379,13 +4427,14 @@ class ModemStateMachine:
                    extra={'interface_number': self.interface_number,
                           'primary_sim': primary,
                           'check_interval_seconds': check_interval,
-                          'revert_timer_seconds': revert_timer,
+                          'poll_cadence_seconds': poll_cadence,
+                          'stability_time_seconds': stability_time,
                           'failback_cooldown_seconds': failback_cooldown})
 
         # First probe happens after a short settle so the SIM 2 connection
         # has a chance to stabilize and ModemManager has populated SimSlots
         # for the (possibly just re-enumerated) modem.  Subsequent
-        # iterations use the full check_interval.
+        # iterations wake on the fine poll_cadence.
         FIRST_CHECK_SETTLE_SECONDS = 30
         # Reset stability tracking on monitor start — every fresh
         # on-failover session begins with no observed primary presence.
@@ -4398,7 +4447,7 @@ class ModemStateMachine:
                     await asyncio.sleep(FIRST_CHECK_SETTLE_SECONDS)
                     first_iteration = False
                 else:
-                    await asyncio.sleep(check_interval)
+                    await asyncio.sleep(poll_cadence)
 
                 # Guard: stop if we're no longer on a failover SIM (e.g. user manually switched)
                 if not self.is_on_failover_sim:
@@ -4468,7 +4517,7 @@ class ModemStateMachine:
                     logger.debug("Primary SIM not yet available, will check again",
                                 extra={'interface_number': self.interface_number,
                                        'primary_sim': primary,
-                                       'next_check_in': check_interval})
+                                       'next_check_in': poll_cadence})
                     continue
 
                 # Primary appears present.  Start (or continue) the
@@ -4478,16 +4527,16 @@ class ModemStateMachine:
                     logger.info("Primary SIM detected — starting failback stability gate",
                                extra={'interface_number': self.interface_number,
                                       'primary_sim': primary,
-                                      'required_seconds': revert_timer})
+                                      'required_seconds': stability_time})
                     continue
 
                 continuous_present = now_ts - self._primary_first_seen_present_ts
-                if continuous_present < revert_timer:
+                if continuous_present < stability_time:
                     logger.debug("Primary SIM present but stability gate not yet satisfied",
                                 extra={'interface_number': self.interface_number,
                                        'primary_sim': primary,
                                        'continuous_present_seconds': int(continuous_present),
-                                       'required_seconds': revert_timer})
+                                       'required_seconds': stability_time})
                     continue
 
                 # Cooldown gate — refuse to failback if we just failed back
@@ -4520,7 +4569,7 @@ class ModemStateMachine:
                 logger.error(f"Failback monitor error: {e}",
                             extra={'interface_number': self.interface_number})
                 # Continue monitoring despite errors
-                await asyncio.sleep(check_interval)
+                await asyncio.sleep(poll_cadence)
 
     async def _probe_sim_slot_info(self, slot_number: int) -> dict:
         """Read whatever SIM identity is available from a specific slot's D-Bus object.
@@ -4887,6 +4936,26 @@ class ModemStateMachine:
                 0: 'none', 1: 'unknown', 2: 'sim-missing', 3: 'sim-error',
             }.get(failed_reason, f'unknown({failed_reason})')
 
+            # Debounce duplicate investigations of the same FAILED reason.
+            # At startup both _configure_modem_initial() Step 0a and the
+            # synthesized _dispatch_initial_modem_state() event can land here
+            # for the very same pre-existing FAILED condition; without this
+            # guard the reason investigation and SIM-failover attempt run
+            # (and log) twice. A short window is safe — repeating failover
+            # within seconds adds nothing when it already concluded.
+            now = time.time()
+            if (self._last_failed_investigation_reason == failed_reason
+                    and (now - self._last_failed_investigation_ts) < 10.0):
+                logger.debug(
+                    "Skipping duplicate FAILED-state investigation "
+                    "(same reason within debounce window)",
+                    extra={'interface_number': self.interface_number,
+                           'failed_reason': failed_reason,
+                           'failed_reason_name': reason_name})
+                return
+            self._last_failed_investigation_ts = now
+            self._last_failed_investigation_reason = failed_reason
+
             logger.warning(
                 "Modem FAILED state — investigating reason",
                 extra={'interface_number': self.interface_number,
@@ -5116,37 +5185,103 @@ class ModemStateMachine:
     async def _handle_sim_missing_failover(self):
         """Handle SIM missing by attempting failover to available SIM.
 
+        Thin wrapper retained for the many call sites that react to a
+        missing/locked/FAILED SIM. Delegates to the shared, reason-aware
+        executor below.
+        """
+        return await self._failover_to_alternate_sim(
+            'sim_missing', '_handle_sim_missing_failover')
+
+    async def _handle_signal_loss_failover(self):
+        """Fail over to the alternate SIM after sustained weak signal.
+
+        Triggered by ``_monitor_signal_strength`` once the active SIM's
+        signal stays below the configured ``sim sim-failover
+        signal-threshold`` (metric-aware: RSRP for LTE/5G, RSSI for 2G/3G)
+        continuously for ``sim-failover signal-loss-timer`` seconds.
+
+        Reuses the same alternate-SIM discovery, cooldown/backoff gating
+        and switch primitive as the missing-SIM path; the only differences
+        are the recorded reason and observability metadata.
+        """
+        return await self._failover_to_alternate_sim(
+            'signal_loss', '_handle_signal_loss_failover')
+
+    async def _failover_to_alternate_sim(self, reason: str, trigger: str, *,
+                                         switch_reason: str = None,
+                                         event_type: str = None,
+                                         extra_data: dict = None,
+                                         pre_switch_event=None,
+                                         suppress_failback: bool = False,
+                                         disconnect_reason_override: str = None):
+        """Reentrancy-guarded wrapper around the SIM failover executor.
+
         Protected by _sim_failover_lock to prevent multiple concurrent failover
         attempts when the SIM tray is rapidly pushed in and out.  If a failover
         or SIM switch is already running, additional calls are silently skipped.
+
+        Keyword arguments let the various failover triggers (roaming mismatch,
+        initial-connection failure, recovery exhaustion, connectivity
+        escalation, registration flap, ...) reuse the single race-safe,
+        slot-probing executor while preserving their distinct observability and
+        FSM side effects:
+
+            switch_reason            override for ``self.sim_switch_reason``
+                                     (defaults to ``automatic_failover_<reason>``)
+            event_type               override for the emitted event type
+                                     (defaults to ``failover`` / ``data_limit_failover``)
+            extra_data               extra context merged into the event payload
+            pre_switch_event         ModemEvent transitioned before SWITCH_SIM
+                                     (e.g. CONNECTION_FAILED when the FSM is not
+                                     in a state from which SWITCH_SIM is valid)
+            suppress_failback        set ``failback_suppressed_by_connection_failure``
+                                     so we do not bounce back to a known-bad primary
+            disconnect_reason_override  stamp ``self._disconnect_reason_override``
+                                     consumed by the DISCONNECT handler
         """
         try:
             # ── Reentrancy guard ─────────────────────────────────────────
             if self._sim_failover_in_progress or self._sim_switch_in_progress:
                 logger.info("SIM failover skipped — already in progress",
                            extra={'interface_number': self.interface_number,
+                                  'reason': reason,
                                   'failover_in_progress': self._sim_failover_in_progress,
                                   'switch_in_progress': self._sim_switch_in_progress})
                 return False
 
             if self._sim_failover_lock.locked():
                 logger.info("SIM failover skipped — lock held by another task",
-                           extra={'interface_number': self.interface_number})
+                           extra={'interface_number': self.interface_number,
+                                  'reason': reason})
                 return False
 
             async with self._sim_failover_lock:
                 self._sim_failover_in_progress = True
                 try:
-                    return await self._handle_sim_missing_failover_locked()
+                    return await self._failover_to_alternate_sim_locked(
+                        reason, trigger,
+                        switch_reason=switch_reason,
+                        event_type=event_type,
+                        extra_data=extra_data,
+                        pre_switch_event=pre_switch_event,
+                        suppress_failback=suppress_failback,
+                        disconnect_reason_override=disconnect_reason_override)
                 finally:
                     self._sim_failover_in_progress = False
 
         except Exception as e:
             logger.error(f"SIM failover attempt failed (outer): {e}",
-                        extra={'interface_number': self.interface_number})
+                        extra={'interface_number': self.interface_number,
+                               'reason': reason})
             return False
 
-    async def _handle_sim_missing_failover_locked(self):
+    async def _failover_to_alternate_sim_locked(self, reason: str, trigger: str, *,
+                                                switch_reason: str = None,
+                                                event_type: str = None,
+                                                extra_data: dict = None,
+                                                pre_switch_event=None,
+                                                suppress_failback: bool = False,
+                                                disconnect_reason_override: str = None):
         """Inner implementation of SIM failover — always called under _sim_failover_lock."""
         try:
             if not self.config:
@@ -5169,13 +5304,23 @@ class ModemStateMachine:
             if not self._is_failover_allowed():
                 logger.warning("SIM failover blocked by cooldown/backoff, waiting",
                               extra={'interface_number': self.interface_number,
+                                     'reason': reason,
                                      'failover_count': self.failover_count,
                                      'last_failover_time': self.last_failover_time})
                 return False
 
-            logger.info("Attempting SIM failover due to missing SIM",
+            # Anchor on the SIM actually in use (current_active_sim), not just
+            # the configured primary.  This is what makes "switch away from the
+            # SIM we're on" correct for every trigger — including a failover
+            # fired while already running on the backup SIM (e.g. weak signal
+            # or data-limit on the backup).  Falls back to the configured slot
+            # before the first successful registration sets current_active_sim.
+            from_sim = self.current_active_sim or self.config_active_sim
+
+            logger.info("Attempting SIM failover",
                        extra={'interface_number': self.interface_number,
-                              'missing_sim': self.config_active_sim})
+                              'reason': reason,
+                              'active_sim': from_sim})
 
             # Check what SIMs are available
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
@@ -5228,12 +5373,12 @@ class ModemStateMachine:
             logger.info("Available SIMs detected",
                        extra={'interface_number': self.interface_number,
                               'available_sims': available_sims,
-                              'config_sim': self.config_active_sim})
+                              'active_sim': from_sim})
 
             # Find alternative SIM
             fallback_sim = None
             for sim_num in available_sims:
-                if sim_num != self.config_active_sim:
+                if sim_num != from_sim:
                     fallback_sim = sim_num
                     break
 
@@ -5248,25 +5393,49 @@ class ModemStateMachine:
             if fallback_sim:
                 logger.warning("Performing automatic SIM failover",
                               extra={'interface_number': self.interface_number,
-                                     'from_sim': self.config_active_sim,
+                                     'from_sim': from_sim,
                                      'to_sim': fallback_sim,
-                                     'reason': 'sim_missing'})
+                                     'reason': reason})
 
-                # Set failover reason and target
-                self.sim_switch_reason = 'automatic_failover_missing_sim'
+                # Set failover reason and target.  Callers may override the
+                # recorded switch reason so the existing per-trigger status
+                # strings (roaming_not_allowed, connectivity_failure_escalation,
+                # ...) are preserved verbatim in op-mode status output.
+                self.sim_switch_reason = switch_reason or f'automatic_failover_{reason}'
                 self.target_sim_slot = fallback_sim
+
+                # Optional per-trigger FSM side effects: suppress failback to a
+                # known-bad primary, and/or stamp the disconnect reason that the
+                # DISCONNECT handler consumes.
+                if suppress_failback:
+                    self.failback_suppressed_by_connection_failure = True
+                if disconnect_reason_override:
+                    self._disconnect_reason_override = disconnect_reason_override
 
                 # Record the failover for cooldown tracking
                 self._record_failover()
 
-                # Emit event for observability
+                # Emit event for observability — keep the dedicated
+                # data-limit/registration-flap event types so telemetry stays
+                # distinct.  Always include the probed available-SIM list.
+                event_extra = {'available_sims': available_sims}
+                if extra_data:
+                    event_extra.update(extra_data)
                 self._emit_failover_event(
-                    event_type='failover',
-                    from_sim=self.config_active_sim,
+                    event_type=(event_type
+                                or ('data_limit_failover'
+                                    if reason == 'data_limit' else 'failover')),
+                    from_sim=from_sim,
                     to_sim=fallback_sim,
-                    reason='sim_missing',
-                    trigger='_handle_sim_missing_failover',
-                    extra_data={'available_sims': available_sims})
+                    reason=reason,
+                    trigger=trigger,
+                    extra_data=event_extra)
+
+                # Some callers (initial-configuration failures) are not in a
+                # state from which SWITCH_SIM is valid; let them inject an
+                # intermediate transition (e.g. CONNECTION_FAILED) first.
+                if pre_switch_event is not None:
+                    self.transition(pre_switch_event)
 
                 # Start SIM switch process
                 self.transition(ModemEvent.SWITCH_SIM)
@@ -5274,15 +5443,17 @@ class ModemStateMachine:
                 return True
 
             else:
-                logger.error("No alternative SIM available for failover",
+                logger.warning("No alternative SIM available for failover",
                             extra={'interface_number': self.interface_number,
-                                   'config_sim': self.config_active_sim,
+                                   'reason': reason,
+                                   'active_sim': from_sim,
                                    'available_sims': available_sims})
                 return False
 
         except Exception as e:
             logger.error(f"SIM failover attempt failed: {e}",
-                        extra={'interface_number': self.interface_number})
+                        extra={'interface_number': self.interface_number,
+                               'reason': reason})
             return False
 
     async def _handle_locked_state(self):
@@ -6128,12 +6299,125 @@ class ModemStateMachine:
                                   'error': str(band_e),
                                   'per_sim_bands': per_sim_bands_cfg})
 
+            # Enforce the 5G NR band selection separately.  ModemManager's
+            # CurrentBands write path does not cover NR on QMI modems, so this
+            # is applied over QMI (libqmi) regardless of whether the MM write
+            # above succeeded.
+            await self._configure_nr_band_preference()
+
         except Exception as e:
             logger.error(f"Band configuration error: {e}",
                         extra={'interface_number': self.interface_number})
             # Don't fail the entire configuration for band issues
             logger.warning("Continuing configuration without band changes",
                           extra={'interface_number': self.interface_number})
+
+    async def _configure_nr_band_preference(self):
+        """Enforce the per-SIM 5G NR band selection over QMI.
+
+        ModemManager's ``CurrentBands`` write path does not cover 5G NR on
+        QMI modems, so NR band selection from ``supported-bands`` is applied
+        here via the ``igos-wwan-qmi-band-set`` helper (libqmi GI bindings).
+
+        The selection is written with change-duration POWER_CYCLE so the modem
+        does not persist it — VyOS config stays authoritative and this runs on
+        every startup / SIM change / config change while the modem is disabled.
+        ``all`` (or an empty / over-restrictive selection) writes the modem's
+        full supported NR set, clearing any prior restriction.  Never raises.
+        """
+        try:
+            if not self.config or not self.proxy:
+                return
+
+            # Resolve per-SIM band configuration (same source as MM bands).
+            primary_sim_slot = self.config.get('primary_sim_slot', 1)
+            sim_slots = self.config.get('sim_slots', [])
+            active_sim_config = next(
+                (sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
+            per_sim_bands_raw = active_sim_config.get('supported_bands', 'all')
+            if isinstance(per_sim_bands_raw, str):
+                per_sim_bands_cfg = [b.strip() for b in per_sim_bands_raw.split(',') if b.strip()]
+            else:
+                per_sim_bands_cfg = list(per_sim_bands_raw)
+            per_sim_is_all = (per_sim_bands_cfg == ['all'] or not per_sim_bands_cfg)
+
+            # The helper must be installed (it pulls in the libqmi GI typelib).
+            helper = shutil.which('igos-wwan-qmi-band-set') or \
+                '/usr/bin/igos-wwan-qmi-band-set'
+            if not os.path.exists(helper):
+                logger.info("igos-wwan-qmi-band-set helper not installed — "
+                            "skipping 5G NR band enforcement",
+                            extra={'interface_number': self.interface_number})
+                return
+
+            # QMI control device for this modem.
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            modem_all_raw = await props.call_get_all(MODEM_INTERFACE)
+            modem_props = {k: (v.value if hasattr(v, 'value') else v)
+                           for k, v in modem_all_raw.items()}
+            device = self._qmi_control_device(modem_props)
+            if not device:
+                return  # MBIM/AT-only modem — no QMI port to write NR bands on
+
+            # Modem's supported NR set as band numbers (QMI caps use base 300).
+            caps = await self._qmi_get_band_capability_constants(modem_props)
+            supported_nr = sorted({c - 300 for c in caps if c >= 301})
+            if not supported_nr:
+                # Modem reports no 5G NR capability — nothing to enforce.
+                return
+
+            # Compute the desired NR band numbers.
+            if per_sim_is_all:
+                desired_nr = supported_nr
+            else:
+                requested_nr = sorted({
+                    self._band_name_to_mm_constant(name) - 300
+                    for name in per_sim_bands_cfg
+                    if (self._band_name_to_mm_constant(name) or 0) >= 301
+                })
+                desired_nr = [b for b in requested_nr if b in supported_nr]
+                if not desired_nr:
+                    # None of the requested NR bands are supported (or none
+                    # were requested) — write the full supported set so no
+                    # stale restriction lingers, mirroring the LTE/MM
+                    # "empty intersection" fallback.
+                    logger.info("No supported 5G NR band in per-SIM selection — "
+                                "writing full supported NR set",
+                                extra={'interface_number': self.interface_number,
+                                       'requested_nr': requested_nr,
+                                       'supported_nr': supported_nr})
+                    desired_nr = supported_nr
+
+            nr_csv = ','.join(str(b) for b in desired_nr)
+            logger.info("Enforcing 5G NR band preference over QMI",
+                        extra={'interface_number': self.interface_number,
+                               'device': device,
+                               'nr_bands': desired_nr})
+
+            proc = await asyncio.create_subprocess_exec(
+                helper, '--device', device, '--nr-bands', nr_csv,
+                '--duration', 'power-cycle',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
+            detail = (err or out or b'').decode(errors='replace').strip()
+            if proc.returncode == 0:
+                logger.info("5G NR band preference applied",
+                            extra={'interface_number': self.interface_number,
+                                   'nr_bands': desired_nr, 'detail': detail})
+            else:
+                logger.warning("5G NR band preference not applied",
+                               extra={'interface_number': self.interface_number,
+                                      'returncode': proc.returncode,
+                                      'detail': detail})
+        except asyncio.TimeoutError:
+            logger.warning("5G NR band preference helper timed out",
+                           extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.info("5G NR band enforcement skipped",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
 
     async def _configure_network_mode(self):
         """Configure network mode (access technology) on the modem.
@@ -6241,23 +6525,33 @@ class ModemStateMachine:
         """Map human-readable band names to ModemManager uint32 constants"""
         # These are the actual MM_MODEM_BAND_* constants from ModemManager source
         return {
-            # GSM bands
-            'gsm-850': 1,
-            'gsm-900': 2,
-            'gsm-1800': 3,
-            'gsm-1900': 4,
+            # GSM bands — values are the real MM_MODEM_BAND_* enum; the tokens
+            # match exactly what `show interfaces wwan` prints, so a band seen
+            # in status can be pasted straight into `supported-bands`.
+            'egsm-900': 1,
+            'dcs-1800': 2,
+            'pcs-1900': 3,
+            'g850': 4,
+            'g450': 14,
+            'g480': 15,
+            'g750': 16,
+            'g380': 17,
+            'g410': 18,
+            'g710': 19,
+            'g810': 20,
+            'any': 256,
 
-            # UMTS/3G bands
-            'umts-1': 5,     # 2100 MHz
-            'umts-2': 6,     # 1900 MHz PCS
-            'umts-3': 7,     # 1800 MHz DCS
-            'umts-4': 8,     # 1700/2100 MHz AWS
-            'umts-5': 9,     # 850 MHz
-            'umts-6': 10,    # 800 MHz
-            'umts-7': 11,    # 2600 MHz
-            'umts-8': 12,    # 900 MHz
-            'umts-9': 13,    # 1700 MHz
-            'umts-10': 14,   # 1700/2100 MHz
+            # UMTS/3G bands (legacy MM_MODEM_BAND_UTRAN_* — the enum order is
+            # NOT sequential with the 3GPP band number, hence the mapping)
+            'umts-1': 5,     # UTRAN_1  2100 MHz
+            'umts-3': 6,     # UTRAN_3  1800 MHz
+            'umts-4': 7,     # UTRAN_4  1700/2100 MHz AWS
+            'umts-6': 8,     # UTRAN_6  800 MHz
+            'umts-5': 9,     # UTRAN_5  850 MHz
+            'umts-8': 10,    # UTRAN_8  900 MHz
+            'umts-9': 11,    # UTRAN_9  1700 MHz
+            'umts-2': 12,    # UTRAN_2  1900 MHz PCS
+            'umts-7': 13,    # UTRAN_7  2600 MHz
 
             # LTE/EUTRAN bands
             'eutran-1': 31,   # 2100 MHz
@@ -6344,9 +6638,27 @@ class ModemStateMachine:
         }
 
     def _band_name_to_mm_constant(self, band_name):
-        """Convert human-readable band name to MM constant"""
+        """Convert a human-readable band token to its MM constant.
+
+        Falls back to the algorithmic EUTRAN/NGRAN/UTRAN encodings so every
+        band the modem can report round-trips with :meth:`_band_to_string`,
+        even when it is not in the hand-maintained mapping table.  Returns
+        ``None`` for unrecognised tokens.
+        """
+        name = band_name.lower().strip()
         mapping = self._get_band_name_to_constant_mapping()
-        return mapping.get(band_name.lower().strip())
+        if name in mapping:
+            return mapping[name]
+        m = re.match(r'(eutran|ngran|umts|utran)-(\d+)$', name)
+        if m:
+            family, number = m.group(1), int(m.group(2))
+            if family == 'ngran':
+                return 300 + number
+            if family == 'eutran':
+                return 30 + number
+            # modern MM_MODEM_BAND_UTRAN_N = 200 + N
+            return 200 + number
+        return None
 
     @staticmethod
     def _is_technology_group(name):
@@ -6359,6 +6671,149 @@ class ModemStateMachine:
         mapping = self._get_band_name_to_constant_mapping()
         reverse_mapping = {v: k for k, v in mapping.items()}
         return reverse_mapping.get(mm_constant, f"unknown-{mm_constant}")
+
+    def _qmi_control_device(self, modem_props):
+        """Return the QMI control device node (e.g. ``/dev/cdc-wdm0``).
+
+        Reads ModemManager's ``Ports`` property (an array of
+        ``(name, MMModemPortType)`` tuples) and returns the first QMI port
+        (``MM_MODEM_PORT_TYPE_QMI == 5``).  Returns ``None`` when the modem
+        exposes no QMI port (e.g. an MBIM- or AT-only modem).
+        """
+        try:
+            ports = modem_props.get('Ports', []) or []
+            for entry in ports:
+                try:
+                    name, ptype = entry[0], int(entry[1])
+                except (TypeError, IndexError, ValueError):
+                    continue
+                if ptype != 5:  # MM_MODEM_PORT_TYPE_QMI
+                    continue
+                if hasattr(name, 'value'):
+                    name = name.value
+                name = str(name) if name else ''
+                if not name:
+                    continue
+                return name if name.startswith('/dev/') else f'/dev/{name}'
+        except Exception:
+            pass
+        return None
+
+    async def _qmi_get_band_capability_constants(self, modem_props):
+        """Read the modem's hardware band capability via ``qmicli``.
+
+        ModemManager does not enumerate 5G NR bands in ``SupportedBands``
+        for QMI modems, so this fills the gap for status reporting by reading
+        the capability straight from the modem via ``qmicli``:
+
+        * **LTE** comes from DMS Get Band Capabilities
+          (``LTE bands (extended):``).
+        * **NR5G** comes from NAS Get System Selection Preference
+          (``NR5G SA/NSA band preference:``).  The DMS message has an
+          optional NR TLV, but it is left unpopulated on many QMI modems
+          (e.g. Telit FN920); NAS exposes the NR list as the band
+          *preference*, which with an unrestricted registration equals the
+          modem's supported NR set.
+
+        Runs over the shared ModemManager ``qmi-proxy`` (``-p``) so it does
+        not disturb MM's own QMI session, and only ever *reads* (no state
+        change).  Band capability is immutable hardware info, so the result
+        is cached for the life of the service.  Never raises.
+
+        :returns: list of MM band constants (``300 + N`` for NR, ``30 + N``
+            for LTE), or ``[]`` when QMI is unavailable.
+        """
+        if self._cached_qmi_band_capability is not None:
+            return self._cached_qmi_band_capability
+
+        constants = []
+        try:
+            device = self._qmi_control_device(modem_props)
+            if not device:
+                self._cached_qmi_band_capability = []
+                return []
+            if not shutil.which('qmicli'):
+                logger.info("qmicli not installed — cannot read 5G NR band "
+                            "capability via QMI",
+                            extra={'interface_number': self.interface_number})
+                self._cached_qmi_band_capability = []
+                return []
+
+            async def _qmicli(*args):
+                """Run a read-only qmicli command over MM's qmi-proxy.
+
+                Returns stdout text, or ``None`` on non-zero exit.
+                """
+                proc = await asyncio.create_subprocess_exec(
+                    'qmicli', '-d', device, '-p', *args,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                out, err = await asyncio.wait_for(proc.communicate(), timeout=10)
+                if proc.returncode != 0:
+                    logger.info("qmicli query failed",
+                                extra={'interface_number': self.interface_number,
+                                       'device': device,
+                                       'args': ' '.join(args),
+                                       'error': err.decode(errors='replace').strip()})
+                    return None
+                return out.decode(errors='replace')
+
+            def _collect(pattern, base, text):
+                """Append ``base + N`` for every band number N matched by
+                ``pattern`` (group 1 is a comma-separated list).  Non-numeric
+                values such as ``'none'`` are skipped."""
+                for match in re.finditer(pattern, text, re.IGNORECASE):
+                    for tok in match.group(1).split(','):
+                        digits = re.search(r'\d+', tok)
+                        if digits:
+                            constants.append(base + int(digits.group()))
+
+            # --- LTE capability via DMS Get Band Capabilities ---
+            # Labels are stable; only the bare-number lines are parsed (the
+            # name-form lines duplicate MM's SupportedBands and are awkward to
+            # parse reliably):
+            #   LTE bands (extended): '1, 3, 7, ...'  ← bare band numbers
+            #   NR5G bands: '1, 3, 78, ...'           ← bare band numbers (rare)
+            dms = await _qmicli('--dms-get-band-capabilities')
+            if dms is None:
+                self._cached_qmi_band_capability = []
+                return []
+            _collect(r"LTE bands \(extended\):\s*'([^']*)'", 30, dms)
+            # Some modems populate NR here; most (e.g. Telit FN920) do not.
+            _collect(r"NR5G bands:\s*'([^']*)'", 300, dms)
+
+            # --- NR capability via NAS Get System Selection Preference ---
+            # The DMS message's optional NR TLV is unpopulated on many QMI
+            # modems, so NAS is the real NR source.  It reports the NR list as
+            # the band *preference*; with an unrestricted registration that
+            # preference equals the modem's supported NR set.  Only consult NAS
+            # when DMS yielded no NR constants, so a modem that does report NR
+            # in DMS keeps that authoritative value.
+            #   NR5G SA band preference: '1, 3, 78, ...'   ← bare band numbers
+            #   NR5G NSA band preference: '1, 3, 78, ...'  ← bare band numbers
+            if not any(c >= 300 for c in constants):
+                nas = await _qmicli('--nas-get-system-selection-preference')
+                if nas:
+                    _collect(
+                        r"NR5G (?:SA |NSA )?band preference(?: \(extended\))?:"
+                        r"\s*'([^']*)'", 300, nas)
+
+            constants = sorted(set(constants))
+            logger.info("Read band capability over QMI",
+                        extra={'interface_number': self.interface_number,
+                               'device': device,
+                               'qmi_band_constants': constants})
+        except asyncio.TimeoutError:
+            logger.info("qmicli band-capability query timed out",
+                        extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.info("Band capability not readable over QMI",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
+
+        self._cached_qmi_band_capability = constants
+        return constants
 
     def _requires_disconnection(self, old_config, new_config):
         """Determine if configuration changes require bearer disconnection"""
@@ -6396,8 +6851,13 @@ class ModemStateMachine:
         old_slots = {slot['slot']: slot for slot in old_sim_slots}
         new_slots = {slot['slot']: slot for slot in new_sim_slots}
 
-        # Connection-affecting SIM parameters
-        connection_sim_params = ['apn', 'username', 'password', 'auth_type', 'pdp_type', 'roaming']
+        # Connection-affecting SIM parameters.  ``supported_bands`` is included
+        # so that a band-only edit re-runs _configure_supported_bands() (which
+        # also enforces the 5G NR band selection over QMI) while the modem is
+        # disabled — without it, a pure band change would not be applied until
+        # the next bearer bounce.
+        connection_sim_params = ['apn', 'username', 'password', 'auth_type',
+                                 'pdp_type', 'roaming', 'supported_bands']
 
         for slot_num in set(old_slots.keys()) | set(new_slots.keys()):
             old_slot = old_slots.get(slot_num, {})
@@ -7524,28 +7984,26 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
 
     async def _handle_data_limit_failover(self):
-        """Handle SIM failover triggered by data limit exceeded on current SIM."""
+        """Handle SIM failover triggered by data limit exceeded on current SIM.
+
+        Delegates to the shared, lock-protected failover executor
+        (``_failover_to_alternate_sim``) so the data-limit path gets the same
+        real D-Bus SIM probing, cooldown/backoff gating and reentrancy guards
+        as the missing-SIM and signal-loss triggers — no duplicated switch
+        logic.  If no failover is possible (failover disabled, blocked by
+        cooldown/backoff, no usable alternate SIM present, or the target slot
+        disabled) the modem is disconnected instead, because staying connected
+        on a SIM that is over its data cap is not acceptable.
+
+        The sticky-hold bookkeeping (``failback_suppressed_by_data_limit``) is
+        set by the data-usage monitor before this is called, so failback will
+        not return to the capped SIM until the billing cycle resets.
+        """
         try:
             if not self._is_sim_failover_enabled():
-                logger.warning("Data limit sim-failover requested but sim_failover is globally disabled, disconnecting instead",
+                logger.warning("Data limit sim-failover requested but sim_failover is "
+                              "globally disabled, disconnecting instead",
                               extra={'interface_number': self.interface_number})
-                self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
-                return
-
-            if not self._is_failover_allowed():
-                logger.warning("Data limit failover blocked by cooldown, disconnecting instead",
-                              extra={'interface_number': self.interface_number})
-                self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
-                return
-
-            fallback_sim = 2 if self.current_active_sim == 1 else 1
-
-            if not self._is_target_sim_enabled(fallback_sim):
-                logger.warning(
-                    f"Data limit failover skipped — target slot {fallback_sim} "
-                    "is disabled in config, disconnecting instead",
-                    extra={'interface_number': self.interface_number,
-                           'target_sim': fallback_sim})
                 self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
                 return
 
@@ -7553,21 +8011,15 @@ class ModemStateMachine:
                           extra={'interface_number': self.interface_number,
                                  'current_sim': self.current_active_sim})
 
-            self.sim_switch_reason = 'data_limit_exceeded'
-            self.target_sim_slot = fallback_sim
+            success = await self._failover_to_alternate_sim(
+                'data_limit', '_handle_data_limit_failover')
 
-            self._record_failover()
-
-            # Emit event for observability
-            self._emit_failover_event(
-                event_type='data_limit_failover',
-                from_sim=self.current_active_sim,
-                to_sim=fallback_sim,
-                reason='data_limit_exceeded',
-                trigger='_handle_data_limit_failover')
-
-            self.transition(ModemEvent.SWITCH_SIM)
-            await self._execute_sim_switch()
+            if not success:
+                logger.warning("Data limit failover could not switch SIM "
+                              "(no usable alternate / blocked) — disconnecting instead",
+                              extra={'interface_number': self.interface_number,
+                                     'current_sim': self.current_active_sim})
+                self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
 
         except Exception as e:
             logger.error(f"Data limit failover failed: {e}",
@@ -7818,17 +8270,77 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
             return False
 
+    @staticmethod
+    def _select_signal_metric(signal_detail, signal_dbm, rssi_threshold, rsrp_threshold):
+        """Pick the comparison metric + matching threshold for the active RAT.
+
+        RSRP is the canonical 3GPP coverage metric for LTE/5G-NR; RSSI is the
+        legacy wideband metric for 2G/3G. The two scales differ by ~20 dB, so
+        each is compared against its own configured threshold.
+
+        Args:
+            signal_detail: dict from _get_detailed_signal_quality with keys
+                'technology', 'rssi', 'rsrp' (values may be '' when absent).
+            signal_dbm: the collapsed dBm value (fallback when the preferred
+                metric field is unavailable).
+            rssi_threshold: configured RSSI threshold (dBm).
+            rsrp_threshold: configured RSRP threshold (dBm).
+
+        Returns:
+            (metric_name, metric_dbm, threshold_dbm)
+        """
+        def _num(value):
+            try:
+                if value is None or value == '':
+                    return None
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        detail = signal_detail or {}
+        technology = (detail.get('technology') or '').upper()
+        rsrp = _num(detail.get('rsrp'))
+        rssi = _num(detail.get('rssi'))
+
+        # LTE / 5G-NR: prefer RSRP (3GPP coverage metric) when available.
+        if technology in ('LTE', '5G NR', 'NR5G', '5G') and rsrp is not None:
+            return 'rsrp', rsrp, rsrp_threshold
+
+        # 2G/3G or any RAT that only exposes RSSI.
+        if rssi is not None:
+            return 'rssi', rssi, rssi_threshold
+
+        # No technology hint but an RSRP value is present (e.g. LTE-only modem).
+        if rsrp is not None:
+            return 'rsrp', rsrp, rsrp_threshold
+
+        # Last resort: compare the collapsed value against the RSSI threshold
+        # (matches legacy behaviour and the documented default scale).
+        return 'rssi', signal_dbm, rssi_threshold
+
     async def _check_signal_adequacy_for_reconnection(self):
-        """Check if signal strength is adequate for reliable reconnection"""
+        """Check if signal strength is adequate for reliable reconnection.
+
+        Signal strength is reported on different scales depending on the
+        active radio technology, so a single dBm threshold cannot be applied
+        uniformly:
+
+          * 2G/3G (GSM/UMTS/CDMA/EVDO) report wideband RSSI.
+          * LTE / 5G-NR report RSRP, the 3GPP per-resource-element coverage
+            metric, which sits roughly 20 dB below RSSI for the same radio
+            conditions.
+
+        We therefore pick the configured threshold that matches the metric
+        actually reported by the modem (rssi vs rsrp).
+        """
         try:
             # If enhanced reconnection is disabled, always return True
             if not getattr(self, 'enhanced_reconnection', True):
                 return True
 
-            # Use enhanced reconnection configuration
-            min_signal_dbm = getattr(self, 'reconnection_signal_threshold', -85)
             buffer_dbm = getattr(self, 'signal_strength_buffer', 5)
-            effective_threshold = min_signal_dbm - buffer_dbm
+            rssi_threshold = getattr(self, 'reconnection_signal_threshold_rssi', -85)
+            rsrp_threshold = getattr(self, 'reconnection_signal_threshold_rsrp', -105)
 
             signal_percent, signal_dbm, signal_detail = await self._get_detailed_signal_quality()
 
@@ -7841,12 +8353,19 @@ class ModemStateMachine:
             if self.signal_tracker and signal_dbm:
                 await self.signal_tracker.update(signal_dbm, signal_detail)
 
-            adequate = signal_dbm >= effective_threshold
+            # Select the metric + matching threshold for the active technology.
+            metric_name, metric_dbm, min_signal_dbm = self._select_signal_metric(
+                signal_detail, signal_dbm, rssi_threshold, rsrp_threshold)
+            effective_threshold = min_signal_dbm - buffer_dbm
+
+            adequate = metric_dbm >= effective_threshold
 
             logger.info("Enhanced signal adequacy check for reconnection",
                        extra={'interface_number': self.interface_number,
                               'signal_percent': signal_percent,
-                              'signal_dbm': signal_dbm,
+                              'technology': (signal_detail or {}).get('technology'),
+                              'metric': metric_name,
+                              'metric_dbm': metric_dbm,
                               'threshold_dbm': min_signal_dbm,
                               'effective_threshold': effective_threshold,
                               'buffer_dbm': buffer_dbm,
@@ -8160,10 +8679,21 @@ class ModemStateMachine:
         loop the LED stays dark in steady state because the only other
         caller of ``signal_tracker.update`` is the reconnection path.
 
+        It also drives signal-loss SIM failover: when the active SIM's
+        signal stays below the configured ``sim sim-failover
+        signal-threshold`` (metric-aware: RSRP for LTE/5G, RSSI for 2G/3G)
+        continuously for ``sim-failover signal-loss-timer`` seconds, it
+        triggers ``_handle_signal_loss_failover`` to switch to the
+        alternate SIM.
+
         Started by ``_start_network_interface_monitoring`` on entry to
         CONNECTED and cancelled by ``_stop_network_interface_monitoring``
         on exit; safe to be cancelled at any await point.
         """
+        # Reset the below-threshold tracker each time the loop starts (i.e. on
+        # every entry to CONNECTED) so a stale timestamp from a previous
+        # session can't cause an immediate failover.
+        self._signal_failover_below_since = None
         try:
             while True:
                 try:
@@ -8173,6 +8703,10 @@ class ModemStateMachine:
                             and signal_dbm is not None):
                         await self.signal_tracker.update(
                             signal_dbm, signal_detail or {})
+
+                    # Signal-loss SIM failover evaluation
+                    await self._evaluate_signal_loss_failover(
+                        signal_dbm, signal_detail)
                 except asyncio.CancelledError:
                     raise
                 except Exception as poll_err:
@@ -8184,6 +8718,74 @@ class ModemStateMachine:
             logger.debug("Signal-strength poll task cancelled",
                          extra={'interface_number': self.interface_number})
             raise
+
+    async def _evaluate_signal_loss_failover(self, signal_dbm, signal_detail) -> None:
+        """Track sustained weak signal and fail over to the alternate SIM.
+
+        Called once per signal-poll iteration. Compares the active SIM's
+        signal against the configured sim-failover threshold for the metric
+        actually reported by the modem (RSRP on LTE/5G, RSSI on 2G/3G). When
+        the signal stays below that threshold continuously for
+        ``sim_failover_signal_loss_timer`` seconds, it triggers a failover.
+        """
+        # Cheap gate: skip entirely on single-SIM setups or when disabled.
+        if not self._signal_failover_possible():
+            self._signal_failover_below_since = None
+            return
+
+        # Don't evaluate while a switch/failover is already running.
+        if self._sim_switch_in_progress or self._sim_failover_in_progress:
+            return
+
+        if signal_dbm is None:
+            # No reading — don't accumulate against the timer (a missing
+            # reading is not the same as confirmed weak signal).
+            return
+
+        rssi_threshold = self.config.get('sim_failover_signal_threshold_rssi', -90)
+        rsrp_threshold = self.config.get('sim_failover_signal_threshold_rsrp', -110)
+        loss_timer = max(1, int(self.config.get('sim_failover_signal_loss_timer', 60)))
+
+        metric_name, metric_dbm, threshold = self._select_signal_metric(
+            signal_detail, signal_dbm, rssi_threshold, rsrp_threshold)
+
+        if metric_dbm >= threshold:
+            # Signal adequate — clear any in-progress weak-signal window.
+            if self._signal_failover_below_since is not None:
+                logger.info("Signal recovered above sim-failover threshold",
+                           extra={'interface_number': self.interface_number,
+                                  'metric': metric_name,
+                                  'metric_dbm': metric_dbm,
+                                  'threshold_dbm': threshold})
+                self._signal_failover_below_since = None
+            return
+
+        # Below threshold — start or continue the weak-signal window.
+        now = time.time()
+        if self._signal_failover_below_since is None:
+            self._signal_failover_below_since = now
+            logger.warning("Signal dropped below sim-failover threshold — "
+                          "starting signal-loss timer",
+                          extra={'interface_number': self.interface_number,
+                                 'metric': metric_name,
+                                 'metric_dbm': metric_dbm,
+                                 'threshold_dbm': threshold,
+                                 'signal_loss_timer': loss_timer})
+            return
+
+        elapsed = now - self._signal_failover_below_since
+        if elapsed >= loss_timer:
+            logger.warning("Sustained weak signal — triggering SIM failover",
+                          extra={'interface_number': self.interface_number,
+                                 'metric': metric_name,
+                                 'metric_dbm': metric_dbm,
+                                 'threshold_dbm': threshold,
+                                 'elapsed_seconds': round(elapsed, 1),
+                                 'signal_loss_timer': loss_timer})
+            # Require a fresh full window before another attempt (the
+            # cooldown/backoff in _is_failover_allowed also applies).
+            self._signal_failover_below_since = None
+            self._safe_create_task(self._handle_signal_loss_failover())
 
     async def _update_signal_led(self, level: int, avg_dbm: float, signal_detail: dict) -> None:
         """Update modem STAT LEDs using hardware API signal-level mapping.
@@ -8409,6 +9011,34 @@ class ModemStateMachine:
                 else:
                     status['current_bands'] = []
 
+                # Supported (capability) bands — every band the modem reports
+                # it can operate on.  ModemManager's SupportedBands omits 5G NR
+                # on many QMI modems (a known MM < 1.22 limitation), so when no
+                # NGRAN band is present we fall back to qmicli's DMS band
+                # capability to recover the 5G NR (and LTE) list.
+                supported_constants = []
+                supported_list = modem_props.get('SupportedBands', [])
+                if supported_list and hasattr(supported_list, '__iter__'):
+                    for b in supported_list:
+                        bv = b.value if hasattr(b, 'value') else b
+                        try:
+                            supported_constants.append(int(bv))
+                        except (TypeError, ValueError):
+                            continue
+                # MM exposes no 5G NR capability → ask the modem over QMI.
+                if not any(300 <= c <= 1000 for c in supported_constants):
+                    for c in await self._qmi_get_band_capability_constants(modem_props):
+                        if c not in supported_constants:
+                            supported_constants.append(c)
+                seen_band_names = set()
+                supported_band_names = []
+                for c in sorted(supported_constants):
+                    name = self._band_to_string(c)
+                    if name not in seen_band_names:
+                        seen_band_names.add(name)
+                        supported_band_names.append(name)
+                status['supported_bands'] = supported_band_names
+
                 # Signal quality percentage (from modem GetAll)
                 sq = modem_props.get('SignalQuality', None)
                 if sq:
@@ -8445,6 +9075,7 @@ class ModemStateMachine:
                 status.setdefault(k, '')
             status.setdefault('modem_state_failed_reason', 0)
             status.setdefault('current_bands', [])
+            status.setdefault('supported_bands', [])
 
         # ── 6. Signal quality (batched GetAll on Signal interface) ─────────
         try:
@@ -8954,10 +9585,12 @@ class ModemStateMachine:
         return ', '.join(techs) if techs else 'unknown'
 
     def _band_to_string(self, band_id) -> str:
-        """Convert MM MMModemBand enum to human-readable string.
+        """Render an MM band constant as its canonical CLI token.
 
-        ModemManager band enums have varied across releases; this renderer
-        accepts both numeric and canonical values and prefers canonical names.
+        The returned token is exactly what ``supported-bands`` accepts
+        (lowercase ``eutran-7``, ``ngran-78``, ``umts-1``, ``egsm-900`` …),
+        so a band shown in status can be copied straight into a ``set``
+        command.  Accepts numeric or already-canonical input.
         """
         if hasattr(band_id, 'value'):
             band_id = band_id.value
@@ -8967,54 +9600,19 @@ class ModemStateMachine:
         except (TypeError, ValueError):
             return f'band-{band_id}'
 
-        # Preserve historical GSM labels used in existing output.
-        legacy_gsm = {
-            1: 'EGSM-900',
-            2: 'DCS-1800',
-            3: 'PCS-1900',
-            4: 'G850',
-            14: 'G450',
-            15: 'G480',
-            16: 'G750',
-            17: 'G380',
-            18: 'G410',
-            19: 'G710',
-            20: 'G810',
-            256: 'ANY',
-        }
-        if band_id in legacy_gsm:
-            return legacy_gsm[band_id]
-
-        # First try explicit configured mappings (includes canonical names
-        # such as eutran-66 -> 96 and ngran-78 -> 378).
+        # Named bands (GSM + legacy 3G) and any explicitly-mapped LTE/NR band.
         name = self._mm_constant_to_band_name(band_id)
         if not name.startswith('unknown-'):
-            if name.startswith('umts-'):
-                return f"UTRAN-{name.split('-', 1)[1]}"
-            return name.upper()
+            return name
 
-        # Fallback decoding for constants not explicitly listed in config map.
-        # New MM-style UTRAN constants: 200 + band
-        if 201 <= band_id <= 299:
-            return f'UTRAN-{band_id - 200}'
-
-        # New MM-style NGRAN constants: 300 + band
-        if 300 <= band_id <= 1000:
-            return f'NGRAN-{band_id - 300}'
-
-        # New MM-style EUTRAN constants: 30 + band
-        if 31 <= band_id <= 199:
-            return f'EUTRAN-{band_id - 30}'
-
-        # Legacy UTRAN constants used by older MM versions.
-        legacy_utran = {
-            5: 'UTRAN-1', 6: 'UTRAN-3', 7: 'UTRAN-4', 8: 'UTRAN-6',
-            9: 'UTRAN-5', 10: 'UTRAN-8', 11: 'UTRAN-9', 12: 'UTRAN-2',
-            13: 'UTRAN-7',
-        }
-        if band_id in legacy_utran:
-            return legacy_utran[band_id]
-
+        # Algorithmic fallback for bands not in the mapping table.  These
+        # mirror _band_name_to_mm_constant so display and input round-trip.
+        if 300 <= band_id <= 1000:      # MM_MODEM_BAND_NGRAN_N = 300 + N
+            return f'ngran-{band_id - 300}'
+        if 201 <= band_id <= 299:       # modern MM_MODEM_BAND_UTRAN_N = 200 + N
+            return f'umts-{band_id - 200}'
+        if 31 <= band_id <= 199:        # MM_MODEM_BAND_EUTRAN_N = 30 + N
+            return f'eutran-{band_id - 30}'
         return f'band-{band_id}'
 
     @staticmethod
@@ -9690,38 +10288,20 @@ class ModemStateMachine:
                                    'attempts': self.disconnection_recovery_attempts,
                                    'current_sim': self.current_active_sim})
 
-                        if (self._is_sim_failover_enabled()
-                                and self._is_failover_allowed()):
-                            fallback_sim = 2 if self.current_active_sim == 1 else 1
-                            if self._is_target_sim_enabled(fallback_sim):
-                                logger.warning(
-                                    "Escalating to SIM failover after "
-                                    "disconnection recovery failure",
-                                    extra={'interface_number': self.interface_number,
-                                           'from_sim': self.current_active_sim,
-                                           'to_sim': fallback_sim})
-                                self.disconnection_recovery_attempts = 0
-                                self.sim_switch_reason = 'disconnection_recovery_exhausted'
-                                self.target_sim_slot = fallback_sim
-                                self._record_failover()
-                                self._emit_failover_event(
-                                    event_type='failover',
-                                    from_sim=self.current_active_sim,
-                                    to_sim=fallback_sim,
-                                    reason='disconnection_recovery_exhausted',
-                                    trigger='handle_disconnection_recovery',
-                                    extra_data={
-                                        'recovery_attempts':
-                                            self.max_recovery_before_sim_switch})
-                                self.transition(ModemEvent.SWITCH_SIM)
-                                await self._execute_sim_switch()
-                                return
-                            else:
-                                logger.warning(
-                                    f"SIM failover skipped — target slot "
-                                    f"{fallback_sim} disabled in config",
-                                    extra={'interface_number': self.interface_number,
-                                           'target_sim': fallback_sim})
+                        # Escalate to SIM failover via the shared executor
+                        # (probes SimSlots for a present alternate, applies
+                        # cooldown/lock gating).  Reset the recovery counter
+                        # only once the switch is under way so the new SIM
+                        # starts fresh; otherwise fail.
+                        switched = await self._failover_to_alternate_sim(
+                            'disconnection_recovery_exhausted',
+                            'handle_disconnection_recovery',
+                            switch_reason='disconnection_recovery_exhausted',
+                            extra_data={'recovery_attempts':
+                                        self.max_recovery_before_sim_switch})
+                        if switched:
+                            self.disconnection_recovery_attempts = 0
+                            return
 
                         # No SIM failover available
                         self.transition(ModemEvent.CONNECTION_FAILED)
@@ -9811,35 +10391,17 @@ class ModemStateMachine:
                                    'timeout_seconds': registration_wait})
 
                     # Escalate to SIM failover (when enabled) before declaring failure.
-                    if (escalate and self._is_sim_failover_enabled()
-                            and self._is_failover_allowed()):
-                        fallback_sim = 2 if self.current_active_sim == 1 else 1
-                        if self._is_target_sim_enabled(fallback_sim):
-                            logger.warning(
-                                "Escalating to SIM failover after registration wait timeout",
-                                extra={'interface_number': self.interface_number,
-                                       'from_sim': self.current_active_sim,
-                                       'to_sim': fallback_sim,
-                                       'reason': 'registration_recovery_timeout'})
+                    # The shared executor probes for a present alternate slot and
+                    # applies cooldown/lock gating; the escalate flag stays here.
+                    if escalate:
+                        switched = await self._failover_to_alternate_sim(
+                            'registration_recovery_timeout',
+                            'handle_disconnection_recovery',
+                            switch_reason='registration_recovery_timeout',
+                            extra_data={'registration_timeout_seconds': registration_wait})
+                        if switched:
                             self.disconnection_recovery_attempts = 0
-                            self.sim_switch_reason = 'registration_recovery_timeout'
-                            self.target_sim_slot = fallback_sim
-                            self._record_failover()
-                            self._emit_failover_event(
-                                event_type='failover',
-                                from_sim=self.current_active_sim,
-                                to_sim=fallback_sim,
-                                reason='registration_recovery_timeout',
-                                trigger='handle_disconnection_recovery',
-                                extra_data={'registration_timeout_seconds': registration_wait},
-                            )
-                            self.transition(ModemEvent.SWITCH_SIM)
-                            await self._execute_sim_switch()
                             return
-                        logger.warning(
-                            f"SIM failover skipped — target slot {fallback_sim} disabled in config",
-                            extra={'interface_number': self.interface_number,
-                                   'target_sim': fallback_sim})
 
                     self.transition(ModemEvent.CONNECTION_FAILED)
 
@@ -10178,34 +10740,18 @@ class ModemStateMachine:
                 # Reset recovery counter (will be set again if new SIM also fails)
                 self.connectivity_recovery_attempts = 0
 
-                # Set up failover metadata
-                fallback_sim = 2 if self.current_active_sim == 1 else 1
-
-                if not self._is_target_sim_enabled(fallback_sim):
-                    logger.warning(
-                        f"Connectivity failover skipped — target slot {fallback_sim} "
-                        "is disabled in config, falling back to normal recovery",
-                        extra={'interface_number': self.interface_number,
-                               'target_sim': fallback_sim})
-                    # Fall through to normal recovery below
-                else:
-                    self.sim_switch_reason = 'connectivity_failure_escalation'
-                    self.target_sim_slot = fallback_sim
-
-                    self._record_failover()
-                    self._emit_failover_event(
-                        event_type='failover',
-                        from_sim=self.current_active_sim,
-                        to_sim=fallback_sim,
-                        reason='connectivity_failure_escalation',
-                        trigger='_trigger_connectivity_recovery',
-                        extra_data={'recovery_attempts': self.connectivity_recovery_attempts})
-
-                    # FSM: CONNECTED → SIM_SWITCHING; _execute_sim_switch handles
-                    # bearer disconnect, task teardown, and the full switch sequence.
-                    self._disconnect_reason_override = 'connectivity_failure'
-                    self.transition(ModemEvent.SWITCH_SIM)
-                    await self._execute_sim_switch()
+                # Escalate via the shared executor: probes SimSlots for a present
+                # alternate, applies cooldown/lock gating, stamps the disconnect
+                # reason consumed by the DISCONNECT handler, and runs the full
+                # switch.  On any failure (no alternate / disabled target /
+                # cooldown) fall through to normal recovery below.
+                switched = await self._failover_to_alternate_sim(
+                    'connectivity_failure_escalation',
+                    '_trigger_connectivity_recovery',
+                    switch_reason='connectivity_failure_escalation',
+                    disconnect_reason_override='connectivity_failure',
+                    extra_data={'recovery_attempts': self.connectivity_recovery_attempts})
+                if switched:
                     return
 
             # Normal recovery: use the standard disconnect → recovery path.
@@ -11005,52 +11551,17 @@ class ModemStateMachine:
     async def _initiate_sim_failover(self, reason='registration_flap'):
         """Initiate SIM failover due to registration flap detection.
 
-        Follows the same pattern as _handle_data_limit_failover: check cooldown,
-        set switch reason, record the event, and trigger the SIM switch.
+        Thin wrapper over the shared failover executor: it probes SimSlots for
+        a present alternate slot, applies cooldown/lock gating, and runs the
+        switch.  The registration-flap detector that calls this already gates
+        on ``_is_sim_failover_enabled()``.  The distinct
+        ``registration_flap_failover`` event type and the flap-specific switch
+        reason are preserved for observability.
         """
-        try:
-            if not self._is_failover_allowed():
-                logger.warning("Registration flap failover blocked by cooldown — skipping",
-                              extra={'interface_number': self.interface_number,
-                                     'reason': reason})
-                return
-
-            fallback_sim = 2 if self.current_active_sim == 1 else 1
-
-            if not self._is_target_sim_enabled(fallback_sim):
-                logger.warning(
-                    f"Registration flap failover skipped — target slot {fallback_sim} "
-                    "is disabled in config",
-                    extra={'interface_number': self.interface_number,
-                           'target_sim': fallback_sim,
-                           'reason': reason})
-                return
-            logger.warning(f"📡🔀 Initiating SIM failover SIM{self.current_active_sim}→SIM{fallback_sim} "
-                          f"(reason: {reason})",
-                          extra={'interface_number': self.interface_number,
-                                 'from_sim': self.current_active_sim,
-                                 'to_sim': fallback_sim,
-                                 'reason': reason})
-
-            self.sim_switch_reason = reason
-            self.target_sim_slot = fallback_sim
-
-            self._record_failover()
-            self._emit_failover_event(
-                event_type='registration_flap_failover',
-                from_sim=self.current_active_sim,
-                to_sim=fallback_sim,
-                reason=reason,
-                trigger='_initiate_sim_failover')
-
-            self.transition(ModemEvent.SWITCH_SIM)
-            await self._execute_sim_switch()
-
-        except Exception as e:
-            logger.error(f"Registration flap failover failed: {e}",
-                        extra={'interface_number': self.interface_number,
-                               'reason': reason})
-            self.transition(ModemEvent.CONNECTION_FAILED)
+        await self._failover_to_alternate_sim(
+            reason, '_initiate_sim_failover',
+            switch_reason=reason,
+            event_type='registration_flap_failover')
 
     async def _set_interface_down(self):
         """Set the network interface DOWN"""

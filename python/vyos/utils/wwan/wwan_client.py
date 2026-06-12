@@ -306,13 +306,17 @@ class WWANClient:
             ``verbose_logging``, ``log_level``, ``hardware_reset_enabled``,
             ``max_hardware_resets``, ``hardware_reset_cooldown``,
             ``data_usage_monitoring_interval``,
-            ``sim_failover_connect_retries``, ``sim_failover_revert_timer``,
-            ``sim_failover_signal_loss_timer``, ``sim_failover_signal_threshold``,
-            ``sim_failback_enabled``, ``sim_failback_check_interval``.
+            ``sim_failover_connect_retries``,
+            ``sim_failover_signal_loss_timer``,
+            ``sim_failover_signal_threshold_rssi``,
+            ``sim_failover_signal_threshold_rsrp``,
+            ``sim_failback_enabled``, ``sim_failback_check_interval``,
+            ``sim_failback_stability_time``.
 
             **Nested dicts:**
             ``enhanced_reconnection`` — keys: ``enabled``,
-            ``signal_threshold``, ``retry_interval_good_signal``,
+            ``signal_threshold_rssi``, ``signal_threshold_rsrp``,
+            ``retry_interval_good_signal``,
             ``retry_interval_poor_signal``, ``max_wait_for_signal``,
             ``signal_check_interval``, ``signal_strength_buffer``.
 
@@ -381,9 +385,12 @@ class WWANClient:
     async def connect(self, interface_number: int) -> str:
         """Request a data connection.
 
-        In ``always-on`` mode returns a descriptive message.  In
-        ``connect-on-demand`` and ``dial-on-demand`` modes returns
-        ``"accepted"`` (fire-and-forget).
+        In ``connect-on-demand`` and ``dial-on-demand`` modes returns
+        ``"accepted"`` (fire-and-forget); poll :meth:`get_bearer_status` for
+        the result.  In ``always-on`` mode the bearer is FSM-managed, so the
+        call is **rejected** by the service with a
+        ``com.igos.IgosModemManager.InvalidConnectionMode`` D-Bus error
+        (surfaced here as :class:`WWANError`).
 
         Parameters
         ----------
@@ -404,8 +411,12 @@ class WWANClient:
     async def disconnect(self, interface_number: int) -> str:
         """Request disconnection.
 
-        In ``always-on`` mode performs a full disconnect.  In on-demand
-        modes fires ``ENTER_IDLE`` (bearer drops, modem stays registered).
+        In ``connect-on-demand`` and ``dial-on-demand`` modes fires
+        ``ENTER_IDLE`` (bearer drops, modem stays registered) and returns
+        ``"accepted"`` (fire-and-forget).  In ``always-on`` mode the bearer is
+        FSM-managed, so the call is **rejected** by the service with a
+        ``com.igos.IgosModemManager.InvalidConnectionMode`` D-Bus error
+        (surfaced here as :class:`WWANError`).
 
         Parameters
         ----------

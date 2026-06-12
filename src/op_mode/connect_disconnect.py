@@ -65,11 +65,23 @@ def connect(interface):
         # and drives the modem through its own state machine.
         try:
             client = _wwan_client()
-            if client.get_bearer_status(_wwan_ifnum(interface)) == 'connected':
+            ifnum = _wwan_ifnum(interface)
+            # In always-on mode the bearer is FSM-managed (auto-connect at
+            # boot, self-heal on failure), so a manual connect is rejected.
+            # Check the mode BEFORE the bearer-status short-circuit so the
+            # rejection surfaces regardless of the current bearer state
+            # (otherwise an already-connected always-on modem would print a
+            # misleading "already connected!" instead of the rejection).
+            mode = client.get_status(ifnum).get('connection_mode', 'always-on')
+            if mode == 'always-on':
+                # Call through so the service's clear InvalidConnectionMode
+                # error is what the operator sees.
+                client.connect(ifnum)
+            elif client.get_bearer_status(ifnum) == 'connected':
                 print(f'Interface {interface}: already connected!')
             else:
                 print(f'Interface {interface}: connecting...')
-                client.connect(_wwan_ifnum(interface))
+                client.connect(ifnum)
         except Exception as exc:
             print(f'Interface {interface}: connect failed: {exc}')
             exit(1)
@@ -104,11 +116,23 @@ def disconnect(interface):
         # the bearer does not automatically reconnect.
         try:
             client = _wwan_client()
-            if client.get_bearer_status(_wwan_ifnum(interface)) != 'connected':
+            ifnum = _wwan_ifnum(interface)
+            # In always-on mode the bearer is FSM-managed and self-healing,
+            # so a manual disconnect is rejected.  Check the mode BEFORE the
+            # bearer-status short-circuit so the rejection surfaces
+            # regardless of the current bearer state (otherwise a
+            # disconnected always-on modem would print a misleading
+            # "connection is already down" instead of the rejection).
+            mode = client.get_status(ifnum).get('connection_mode', 'always-on')
+            if mode == 'always-on':
+                # Call through so the service's clear InvalidConnectionMode
+                # error is what the operator sees.
+                client.disconnect(ifnum)
+            elif client.get_bearer_status(ifnum) != 'connected':
                 print(f'Interface {interface}: connection is already down')
             else:
                 print(f'Interface {interface}: disconnecting...')
-                client.disconnect(_wwan_ifnum(interface))
+                client.disconnect(ifnum)
         except Exception as exc:
             print(f'Interface {interface}: disconnect failed: {exc}')
             exit(1)

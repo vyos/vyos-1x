@@ -36,6 +36,14 @@ class ModemManagerMonitor:
         self.restart_attempts = 0
         self.max_restart_attempts = 5
         self.restart_delay = 5
+        # Dedicated, long-lived system-bus connection used solely to watch
+        # org.freedesktop.DBus NameOwnerChanged for ModemManager.  Kept
+        # separate from the service/FSM bus because the latter is torn down
+        # and replaced on every reconnect (update_bus_connection disconnects
+        # the old bus); this watch must survive that swap.
+        self._name_owner_bus = None
+        self._last_mm_owner = ''
+        self._reconnect_lock = asyncio.Lock()
 
     async def monitor_modemmanager(self):
         """Monitor ModemManager and restart if it crashes"""
@@ -105,6 +113,98 @@ class ModemManagerMonitor:
         """Stop monitoring ModemManager"""
         self.monitoring = False
         logger.info("ModemManager monitoring stopped")
+
+    async def setup_name_owner_watch(self):
+        """Watch D-Bus NameOwnerChanged for ModemManager (event-driven restart
+        detection).
+
+        The 10s ``systemctl is-active`` poll in :meth:`monitor_modemmanager`
+        cannot catch a fast restart: a ``systemctl restart ModemManager`` (or
+        systemd's own ``Restart=`` auto-restart after a crash) brings MM back
+        well within the poll interval, so the poll observes ``active`` on both
+        sides and :meth:`handle_modemmanager_crash` never fires.  The FSMs are
+        then left holding stale proxies bound to the dead MM instance while the
+        fresh instance leaves the modem in the ``disabled`` state it boots into
+        — the connection is never re-established.
+
+        Subscribing to ``org.freedesktop.DBus.NameOwnerChanged`` for the
+        ModemManager bus name is event-driven and cannot miss a restart, no
+        matter how brief.  This complements (does not replace) the poll, which
+        still actively restarts MM if it stays down.
+        """
+        try:
+            self._name_owner_bus = await MessageBus(
+                bus_type=BusType.SYSTEM).connect()
+            introspect = await self._name_owner_bus.introspect(
+                "org.freedesktop.DBus", "/org/freedesktop/DBus")
+            dbus_obj = self._name_owner_bus.get_proxy_object(
+                "org.freedesktop.DBus", "/org/freedesktop/DBus", introspect)
+            dbus_iface = dbus_obj.get_interface("org.freedesktop.DBus")
+
+            # Seed the current owner so we react only to genuine changes
+            # (we get no signal for an MM that is already running).
+            try:
+                self._last_mm_owner = await dbus_iface.call_get_name_owner(
+                    "org.freedesktop.ModemManager1")
+            except Exception:
+                self._last_mm_owner = ''
+
+            dbus_iface.on_name_owner_changed(self._on_mm_name_owner_changed)
+            logger.info("ModemManager NameOwnerChanged watch active",
+                        extra={'current_owner': self._last_mm_owner or '(none)'})
+        except Exception as e:
+            logger.error(
+                f"Failed to set up ModemManager NameOwnerChanged watch: {e}")
+
+    def _on_mm_name_owner_changed(self, name, old_owner, new_owner):
+        """Signal handler: react when ModemManager (re)claims its bus name."""
+        if name != "org.freedesktop.ModemManager1":
+            return
+        if not new_owner:
+            # Bare disappearance: the systemctl poll owns the "MM stays down"
+            # case (it actively restarts MM).  Just note the loss here.
+            logger.warning("ModemManager bus name owner lost",
+                           extra={'old_owner': old_owner or '(none)'})
+            self._last_mm_owner = ''
+            return
+        if new_owner == self._last_mm_owner:
+            return  # no real change
+        logger.warning(
+            "ModemManager (re)appeared on D-Bus — triggering FSM reconnect",
+            extra={'old_owner': old_owner or '(none)', 'new_owner': new_owner})
+        self._last_mm_owner = new_owner
+        asyncio.create_task(self._reconnect_after_restart())
+
+    async def _reconnect_after_restart(self):
+        """Rebuild FSM proxies and re-initialize after MM (re)appears.
+
+        Guarded so overlapping NameOwnerChanged signals (down→up often arrives
+        as two events) and a racing systemctl-poll recovery cannot drive two
+        concurrent reconnects.
+        """
+        if self._reconnect_lock.locked():
+            logger.info("Reconnect already in progress, skipping duplicate")
+            return
+        async with self._reconnect_lock:
+            # The bus name can be claimed slightly before MM's ObjectManager
+            # is responsive; wait for it to actually answer before reconnect.
+            bus = await ModemManagerMonitor.wait_for_modemmanager_dbus()
+            if not bus:
+                logger.error(
+                    "ModemManager name appeared but ObjectManager never became "
+                    "responsive; leaving recovery to the systemctl poll")
+                return
+            logger.info("Reconnecting FSMs to fresh ModemManager instance")
+            await self.service_manager.update_bus_connection(bus)
+
+    def disconnect_name_owner_watch(self):
+        """Tear down the dedicated NameOwnerChanged watch bus."""
+        if self._name_owner_bus:
+            try:
+                self._name_owner_bus.disconnect()
+            except Exception as e:  # noqa: BLE001 -- best-effort cleanup
+                logger.debug(f"Error disconnecting name-owner watch bus: {e}")
+            self._name_owner_bus = None
 
     # ModemManager is a singleton system service, so the operations that
     # check/start/restart it and wait for it on D-Bus are stateless and
@@ -323,6 +423,9 @@ async def main():
 
         # Create and start ModemManager monitor
         monitor = ModemManagerMonitor(manager)
+        # Event-driven MM-restart detection (catches fast restarts the 10s
+        # systemctl poll misses); complements monitor_modemmanager().
+        await monitor.setup_name_owner_watch()
         monitor_task = asyncio.create_task(monitor.monitor_modemmanager())
 
         logger.info("Starting WWAN configuration service with ModemManager monitoring...")
@@ -358,6 +461,7 @@ async def main():
         # Cleanup
         if monitor:
             monitor.stop_monitoring()
+            monitor.disconnect_name_owner_watch()
         if manager:
             # Bound the shutdown.  manager.shutdown() awaits a per-FSM
             # bearer disconnect over D-Bus to ModemManager (no client-side

@@ -81,12 +81,13 @@ class InterfaceConfig(ServiceInterface):
         # SIM failover settings (global enable + policy)
         "sim_failover": "enabled",
         "sim_failover_connect_retries": 3,
-        "sim_failover_revert_timer": 300,
         "sim_failover_signal_loss_timer": 60,
-        "sim_failover_signal_threshold": -90,
+        "sim_failover_signal_threshold_rssi": -90,
+        "sim_failover_signal_threshold_rsrp": -110,
 
         # SIM failback settings
         "sim_failback_enabled": True,
+        "sim_failback_stability_time": 300,
         "sim_failback_check_interval": 600,
 
         # Data usage settings (per-SIM only; no global defaults needed)
@@ -114,7 +115,8 @@ class InterfaceConfig(ServiceInterface):
         # Enhanced reconnection settings
         "enhanced_reconnection": {
             "enabled": True,
-            "signal_threshold": -85,
+            "signal_threshold_rssi": -85,
+            "signal_threshold_rsrp": -105,
             "retry_interval_good_signal": 30,
             "retry_interval_poor_signal": 120,
             "max_wait_for_signal": 120,
@@ -333,6 +335,7 @@ class InterfaceConfig(ServiceInterface):
 
             runtime_state = {
                 'user_disconnected': bool(getattr(self.fsm, 'user_disconnected', False)),
+                'bearer_requested': bool(getattr(self.fsm, 'bearer_requested', False)),
                 'connection_mode': str(getattr(self.fsm, 'connection_mode', 'always-on')),
             }
             state_doc['__runtime_state__'] = runtime_state
@@ -354,6 +357,7 @@ class InterfaceConfig(ServiceInterface):
             logger.info("Runtime state saved",
                        extra={'interface_number': self.interface_number,
                               'user_disconnected': runtime_state['user_disconnected'],
+                              'bearer_requested': runtime_state['bearer_requested'],
                               'connection_mode': runtime_state['connection_mode']})
         except Exception as e:
             logger.error(f"Failed to save runtime state: {e}",
@@ -535,24 +539,37 @@ class InterfaceConfig(ServiceInterface):
             logger.info("Applying restored configuration",
                        extra={'interface_number': self.interface_number})
 
+            # Pre-seed persisted desired bearer state BEFORE applying config so
+            # the initial parking decision in _configure_modem_initial() honors
+            # it.  This applies to connect-on-demand ONLY: that mode normally
+            # parks at REGISTERED_IDLE, so if the operator had a standing connect
+            # request before the crash we must reconnect (and then behave like
+            # always-on) instead of forgetting and sitting idle; conversely a
+            # persisted disconnect hold keeps the bearer down across the restart.
+            #
+            # dial-on-demand is deliberately NOT restored here: it is a variant
+            # of always-on and must always come up connected at boot regardless
+            # of any prior disconnect_bearer().  Leaving its flags at the FSM
+            # defaults (user_disconnected=False, bearer_requested=False) lets
+            # _configure_modem_initial() auto-connect (the idle-park branch is
+            # connect-on-demand-only) and lets recovery self-heal like always-on.
+            if isinstance(self._restored_runtime_state, dict):
+                rs = self._restored_runtime_state
+                mode = str(rs.get('connection_mode', 'always-on'))
+                if mode == 'connect-on-demand':
+                    self.fsm.bearer_requested = bool(
+                        rs.get('bearer_requested', False))
+                    self.fsm.user_disconnected = bool(
+                        rs.get('user_disconnected', False))
+                    logger.info(
+                        "Restored connect-on-demand desired bearer state from crash state",
+                        extra={'interface_number': self.interface_number,
+                               'bearer_requested': self.fsm.bearer_requested,
+                               'user_disconnected': self.fsm.user_disconnected,
+                               'connection_mode': mode})
+
             # Apply the configuration
             await self.set_configuration(dbus_config)
-
-            # Re-apply persisted runtime hold state (dial-on-demand manual disconnect)
-            if isinstance(self._restored_runtime_state, dict):
-                hold = bool(self._restored_runtime_state.get('user_disconnected', False))
-                mode = str(getattr(self.fsm, 'connection_mode', 'always-on'))
-                if hold and mode == 'dial-on-demand':
-                    self.fsm.user_disconnected = True
-                    logger.info("Restored dial-on-demand manual-disconnect hold from crash state",
-                               extra={'interface_number': self.interface_number,
-                                      'user_disconnected': True,
-                                      'connection_mode': mode})
-                else:
-                    logger.debug("No runtime hold restoration needed",
-                                extra={'interface_number': self.interface_number,
-                                       'restored_hold': hold,
-                                       'connection_mode': mode})
 
             logger.info("Restored configuration applied successfully",
                        extra={'interface_number': self.interface_number})
@@ -1261,14 +1278,14 @@ class InterfaceConfig(ServiceInterface):
                                      'validation_field': 'sim_failover_connect_retries'})
                 raise ValueError("sim_failover_connect_retries must be an integer between 0 and 100")
 
-        # Validate sim_failover_revert_timer
-        if 'sim_failover_revert_timer' in config:
-            timer = config['sim_failover_revert_timer']
+        # Validate sim_failback_stability_time
+        if 'sim_failback_stability_time' in config:
+            timer = config['sim_failback_stability_time']
             if not isinstance(timer, int) or timer < 0 or timer > 86400:
-                logger.warning("Invalid sim_failover_revert_timer",
+                logger.warning("Invalid sim_failback_stability_time",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'sim_failover_revert_timer'})
-                raise ValueError("sim_failover_revert_timer must be an integer between 0 and 86400 seconds")
+                                     'validation_field': 'sim_failback_stability_time'})
+                raise ValueError("sim_failback_stability_time must be an integer between 0 and 86400 seconds")
 
         # Validate sim_failover_signal_loss_timer
         if 'sim_failover_signal_loss_timer' in config:
@@ -1311,14 +1328,22 @@ class InterfaceConfig(ServiceInterface):
                                          'validation_field': 'data_limit_warning'})
                     raise ValueError("Each data_limit_warning threshold must be between 1 and 100 percent")
 
-        # Validate signal threshold
-        if 'sim_failover_signal_threshold' in config:
-            threshold = config['sim_failover_signal_threshold']
+        # Validate signal thresholds (metric-specific: RSSI for 2G/3G, RSRP for LTE/5G)
+        if 'sim_failover_signal_threshold_rssi' in config:
+            threshold = config['sim_failover_signal_threshold_rssi']
             if not isinstance(threshold, int) or threshold < -120 or threshold > 0:
-                logger.warning("Invalid sim_failover_signal_threshold",
+                logger.warning("Invalid sim_failover_signal_threshold_rssi",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'sim_failover_signal_threshold'})
-                raise ValueError("sim_failover_signal_threshold must be between -120 and 0 dBm")
+                                     'validation_field': 'sim_failover_signal_threshold_rssi'})
+                raise ValueError("sim_failover_signal_threshold_rssi must be between -120 and 0 dBm")
+
+        if 'sim_failover_signal_threshold_rsrp' in config:
+            threshold = config['sim_failover_signal_threshold_rsrp']
+            if not isinstance(threshold, int) or threshold < -140 or threshold > 0:
+                logger.warning("Invalid sim_failover_signal_threshold_rsrp",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_failover_signal_threshold_rsrp'})
+                raise ValueError("sim_failover_signal_threshold_rsrp must be between -140 and 0 dBm")
 
         # Validate data_limit_size (0 = unlimited, positive = limit in bytes)
         if 'data_limit_size' in config:
@@ -1611,7 +1636,23 @@ class InterfaceConfig(ServiceInterface):
 
         In on-demand / dial-on-demand modes the response is a simple
         ``"accepted"``; the caller polls ``get_bearer_status()`` separately.
+
+        Rejected in **always-on** mode: there the bearer is managed entirely
+        by the FSM (auto-connect at boot, self-heal on failure), so a manual
+        connect has no meaning and could mislead the caller into assuming
+        on-demand semantics that do not exist in this mode.
         """
+        # In always-on mode the bearer is FSM-managed end to end.  Raise
+        # before the try block so the DBusError propagates with its own
+        # error name rather than being re-wrapped as a generic
+        # ConnectionError by the except handler below.
+        if getattr(self.fsm, 'connection_mode', '') == 'always-on':
+            raise DBusError(
+                "com.igos.IgosModemManager.InvalidConnectionMode",
+                f"Interface {self.interface_number} is in always-on mode; the "
+                f"bearer is managed automatically and cannot be connected "
+                f"manually. Use connection-mode connect-on-demand or "
+                f"dial-on-demand for manual control.")
         try:
             # Reject if the interface is administratively disabled (airplane
             # mode).  Without this guard the request would silently queue
@@ -1637,6 +1678,15 @@ class InterfaceConfig(ServiceInterface):
 
             # Fire-and-forget shorthand for on-demand modes
             fire_and_forget = self.fsm.connection_mode != 'always-on'
+
+            # Record the standing intent to be connected (on-demand modes) so
+            # the bearer behaves like always-on once up and is re-established
+            # after a crash/restart until an explicit disconnect.  Mirrors
+            # connect_bearer().
+            if fire_and_forget:
+                self.fsm.user_disconnected = False
+                self.fsm.bearer_requested = True
+                self._save_runtime_state()
 
             # States where CONNECT transition is valid right now
             connectable_states = {'FAILED', 'REGISTERED_IDLE'}
@@ -1687,6 +1737,17 @@ class InterfaceConfig(ServiceInterface):
 
     @method()
     async def disconnect(self) -> 's':  # type: ignore[name-defined]  # noqa: F821
+        # In always-on mode the bearer is FSM-managed and self-healing, so a
+        # manual disconnect would only be undone by auto-recovery.  Reject it
+        # before the try block so the DBusError propagates with its own error
+        # name instead of being re-wrapped as a generic DisconnectionError.
+        if getattr(self.fsm, 'connection_mode', '') == 'always-on':
+            raise DBusError(
+                "com.igos.IgosModemManager.InvalidConnectionMode",
+                f"Interface {self.interface_number} is in always-on mode; the "
+                f"bearer is managed automatically and cannot be disconnected "
+                f"manually. Use connection-mode connect-on-demand or "
+                f"dial-on-demand for manual control.")
         try:
             logger.info("Disconnecting interface",
                        extra={'interface_number': self.interface_number})
@@ -1722,6 +1783,12 @@ class InterfaceConfig(ServiceInterface):
             if current_state in disconnectable:
                 # On-demand / dial-on-demand: drop bearer but keep registration
                 if fire_and_forget:
+                    # Record the explicit disconnect so the FSM does not
+                    # auto-reconnect and the bearer stays down across a
+                    # crash/restart.  Mirrors disconnect_bearer().
+                    self.fsm.user_disconnected = True
+                    self.fsm.bearer_requested = False
+                    self._save_runtime_state()
                     self.fsm.transition(ModemEvent.ENTER_IDLE)
                     return "accepted"
                 self.fsm.transition(ModemEvent.DISCONNECT)
@@ -1778,7 +1845,20 @@ class InterfaceConfig(ServiceInterface):
         Otherwise queues ``connect_requested`` so the bearer comes up when
         the modem is ready.  The caller polls ``get_bearer_status()`` to
         observe the result.
+
+        Rejected in **always-on** mode: the bearer is brought up and kept up
+        by the FSM, so there is never an idle bearer to establish on demand.
         """
+        # In always-on mode the bearer is FSM-managed end to end.  Raise
+        # before the try block so the DBusError propagates with its own
+        # error name rather than being re-wrapped by the except handler.
+        if getattr(self.fsm, 'connection_mode', '') == 'always-on':
+            raise DBusError(
+                "com.igos.IgosModemManager.InvalidConnectionMode",
+                f"Interface {self.interface_number} is in always-on mode; the "
+                f"bearer is managed automatically and cannot be connected "
+                f"manually. Use connection-mode connect-on-demand or "
+                f"dial-on-demand for manual control.")
         try:
             # Reject if the interface is administratively disabled (airplane
             # mode).  Without this guard the request would silently queue
@@ -1802,8 +1882,12 @@ class InterfaceConfig(ServiceInterface):
                        extra={'interface_number': self.interface_number,
                               'current_state': current_state})
 
-            # Always clear user-disconnect hold so auto-recovery can resume
+            # Always clear user-disconnect hold so auto-recovery can resume,
+            # and record the standing intent to be connected so the bearer is
+            # re-established after a crash/restart and behaves like always-on
+            # (auto-reconnect on failure) until an explicit disconnect.
             self.fsm.user_disconnected = False
+            self.fsm.bearer_requested = True
             self._save_runtime_state()
 
             if current_state == ModemState.REGISTERED_IDLE.value:
@@ -1826,7 +1910,20 @@ class InterfaceConfig(ServiceInterface):
         (transitions to ``REGISTERED_IDLE``).  SMS remains available.  If the
         bearer is already down the call is a harmless no-op.  The caller polls
         ``get_bearer_status()`` to observe the result.
+
+        Rejected in **always-on** mode: the bearer is meant to self-heal, so a
+        manual teardown would only be undone by auto-recovery.
         """
+        # In always-on mode the bearer is FSM-managed and self-healing.  Raise
+        # before the try block so the DBusError propagates with its own error
+        # name instead of being re-wrapped by the except handler.
+        if getattr(self.fsm, 'connection_mode', '') == 'always-on':
+            raise DBusError(
+                "com.igos.IgosModemManager.InvalidConnectionMode",
+                f"Interface {self.interface_number} is in always-on mode; the "
+                f"bearer is managed automatically and cannot be disconnected "
+                f"manually. Use connection-mode connect-on-demand or "
+                f"dial-on-demand for manual control.")
         try:
             from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent, ModemState
             current_state = (
@@ -1839,13 +1936,24 @@ class InterfaceConfig(ServiceInterface):
                               'current_state': current_state,
                               'connection_mode': getattr(self.fsm, 'connection_mode', 'unknown')})
 
-            # In dial-on-demand mode, flag this as a user-initiated disconnect
-            # so the FSM does not auto-reconnect.  The flag is cleared by
-            # connect_bearer(), service restart, or modem reset.
-            if getattr(self.fsm, 'connection_mode', '') == 'dial-on-demand':
+            # In on-demand modes (connect-on-demand and dial-on-demand) flag
+            # this as a user-initiated disconnect so the FSM does not
+            # auto-reconnect the bearer behind the operator's back.  Without
+            # this, a bearer-down event racing the ENTER_IDLE transition (or a
+            # future recovery path) could bring the bearer back up despite an
+            # explicit disconnect request.  Clearing bearer_requested also
+            # ensures the bearer stays down across a service crash/restart.
+            # The flags are cleared/reset by connect_bearer(), service restart
+            # in always-on, or modem reset.  always-on is excluded: there the
+            # bearer is meant to self-heal.
+            if getattr(self.fsm, 'connection_mode', '') in (
+                    'connect-on-demand', 'dial-on-demand'):
                 self.fsm.user_disconnected = True
-                logger.info("Dial-on-demand: bearer held down until connect_bearer()",
-                           extra={'interface_number': self.interface_number})
+                self.fsm.bearer_requested = False
+                logger.info("On-demand: bearer held down until connect_bearer()",
+                           extra={'interface_number': self.interface_number,
+                                  'connection_mode': getattr(
+                                      self.fsm, 'connection_mode', 'unknown')})
                 self._save_runtime_state()
 
             bearer_up = {ModemState.CONNECTED.value}

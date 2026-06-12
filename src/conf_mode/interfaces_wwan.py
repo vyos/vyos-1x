@@ -549,9 +549,11 @@ def build_fsm_config(wwan):
     # ── Enhanced reconnection ────────────────────────────────────────────
     rc = wwan.get('reconnection', {})
     ri = rc.get('retry_interval', {})
+    rc_st = rc.get('signal_threshold', {})
     enhanced_reconnection = {
         'enabled': not _leaf_exists(rc, 'disable_enhanced'),
-        'signal_threshold': _leaf_int(rc, 'signal_threshold', -85),
+        'signal_threshold_rssi': _leaf_int(rc_st, 'rssi', -85),
+        'signal_threshold_rsrp': _leaf_int(rc_st, 'rsrp', -105),
         'retry_interval_good_signal': _leaf_int(ri, 'good_signal', 30),
         'retry_interval_poor_signal': _leaf_int(ri, 'poor_signal', 120),
         'max_wait_for_signal': _leaf_int(rc, 'max_wait_for_signal', 120),
@@ -616,16 +618,19 @@ def build_fsm_config(wwan):
         'sim_failover_connect_retries': _leaf_int(
             sf, 'connect_retries', 3
         ),
-        'sim_failover_revert_timer': _leaf_int(sf, 'revert_timer', 300),
         'sim_failover_signal_loss_timer': _leaf_int(
             sf, 'signal_loss_timer', 60
         ),
-        'sim_failover_signal_threshold': _leaf_int(
-            sf, 'signal_threshold', -90
+        'sim_failover_signal_threshold_rssi': _leaf_int(
+            sf.get('signal_threshold', {}), 'rssi', -90
+        ),
+        'sim_failover_signal_threshold_rsrp': _leaf_int(
+            sf.get('signal_threshold', {}), 'rsrp', -110
         ),
 
         # SIM failback
         'sim_failback_enabled': not _leaf_exists(fb, 'disable'),
+        'sim_failback_stability_time': _leaf_int(fb, 'stability_time', 300),
         'sim_failback_check_interval': _leaf_int(
             fb, 'check_interval', 600
         ),
@@ -650,7 +655,7 @@ def build_fsm_config(wwan):
         'connection_timeout': _leaf_int(to, 'connection', 120),
         'registration_timeout': _leaf_int(to, 'registration', 180),
         'network_scan_timeout': _leaf_int(
-            wwan.get('network_scan', {}), 'timeout', 60
+            wwan.get('network_scan', {}), 'timeout', 180
         ),
         'network_mode': _leaf(wwan, 'network_mode', 'auto'),
 
@@ -730,6 +735,28 @@ def verify(wwan):
             f"{', '.join(active_consumers)} are mutually exclusive — each "
             f"consumes the bearer's carrier-assigned IPv6 prefix.  "
             f"Configure only one."
+        )
+
+    # ── ip-passthrough is incompatible with dial-on-demand ───────────────
+    # Passthrough leases the carrier-assigned IP straight through to a
+    # downstream device (DOCSIS-modem style); the downstream NIC owns that
+    # public address.  dial-on-demand hands an external app a D-Bus
+    # disconnect_bearer() lever that can tear the bearer down at any time —
+    # which would yank the carrier IP out from under the downstream device,
+    # leaving it with a stale lease and a black-holed default route until
+    # its next renewal, and race the passthrough dnsmasq/policy-routing
+    # teardown against the operator's connect/disconnect calls.  Passthrough
+    # assumes an always-up bearer, so only always-on is permitted.  Reject
+    # the combination at commit time.
+    if (wwan.get('connection_mode') == 'dial-on-demand'
+            and user_set.get('ip_passthrough_interface')):
+        raise ConfigError(
+            "ip-passthrough cannot be used with connection-mode "
+            "dial-on-demand — passthrough leases the carrier IP to a "
+            "downstream device and assumes an always-up bearer, but "
+            "dial-on-demand allows the bearer to be torn down on demand, "
+            "stranding the downstream device with a stale lease.  Use "
+            "connection-mode always-on with ip-passthrough."
         )
 
     # ── VRF is incompatible with prefix-to-LAN stitching features ────────

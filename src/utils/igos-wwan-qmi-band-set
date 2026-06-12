@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# igos-wwan-qmi-band-set — set the 5G NR (NR5G SA) band preference on a QMI
+# modem via libqmi's GObject-introspection bindings.
+#
+# ModemManager does not expose a write path for 5G NR band selection — its
+# ``CurrentBands`` property only covers 2G/3G/LTE on most QMI modems — and the
+# ``qmicli`` CLI cannot set band masks either (only the libqmi *library* can).
+# This helper bridges that gap for the VyOS WWAN FSM (igos-wwan-manager):  the
+# FSM invokes it as a subprocess so the GLib main loop stays out of the FSM's
+# asyncio event loop.
+#
+# The NR band preference is written with change-duration POWER_CYCLE so the
+# modem does NOT persist it to NVRAM — VyOS configuration remains the single
+# source of truth and the FSM re-applies the desired set on every startup, SIM
+# change and configuration change.  Pass the full modem-supported NR set to
+# clear a previous restriction (the operator's ``all`` case).
+#
+# Usage:
+#     igos-wwan-qmi-band-set --device /dev/cdc-wdm0 --nr-bands 1,3,78
+#     igos-wwan-qmi-band-set --device /dev/cdc-wdm0 --nr-bands 1,3,78 \
+#                            --duration permanent
+#
+# ``--nr-bands`` is an explicit, comma-separated list of NR band numbers (no
+# ``ngran-`` prefix).  The FSM passes the full modem-supported NR set when the
+# operator selects ``all`` and the requested ∩ supported set otherwise — this
+# helper never interprets ``all``.
+#
+# Exit codes:
+#     0  success
+#     1  invalid arguments / nothing to do
+#     2  libqmi GI bindings unavailable
+#     3  QMI operation failed
+
+import argparse
+import sys
+
+# NR5G SA Band Preference is a sequence of eight guint64 masks (QMI NAS Set
+# System Selection Preference, TLV 0x2F).  Band N maps to bit (N-1):
+#   mask_index = (N - 1) // 64 ; bit = (N - 1) % 64
+_NR_MASK_WORDS = 8
+_NR_MAX_BAND = _NR_MASK_WORDS * 64  # 512
+
+
+def _eprint(*args):
+    print(*args, file=sys.stderr, flush=True)
+
+
+def _parse_bands(spec):
+    """Parse a comma-separated NR band list into a sorted set of ints.
+
+    Tolerates ``ngran-`` / ``n`` prefixes and whitespace.  Out-of-range or
+    non-numeric tokens are skipped (with a warning) rather than aborting.
+    """
+    bands = set()
+    for tok in spec.split(','):
+        tok = tok.strip().lower()
+        if not tok:
+            continue
+        for prefix in ('ngran-', 'nr5g-', 'nr-', 'n'):
+            if tok.startswith(prefix):
+                tok = tok[len(prefix):]
+                break
+        if not tok.isdigit():
+            _eprint(f'igos-wwan-qmi-band-set: ignoring invalid NR band {tok!r}')
+            continue
+        n = int(tok)
+        if 1 <= n <= _NR_MAX_BAND:
+            bands.add(n)
+        else:
+            _eprint(f'igos-wwan-qmi-band-set: NR band {n} out of range '
+                    f'(1-{_NR_MAX_BAND}) — ignored')
+    return sorted(bands)
+
+
+def _bands_to_masks(bands):
+    """Convert a list of NR band numbers to eight guint64 mask words."""
+    masks = [0] * _NR_MASK_WORDS
+    for n in bands:
+        idx = (n - 1) // 64
+        bit = (n - 1) % 64
+        masks[idx] |= (1 << bit)
+    return masks
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Set the 5G NR band preference on a QMI modem via libqmi.')
+    parser.add_argument('--device', required=True,
+                        help='QMI control device, e.g. /dev/cdc-wdm0')
+    parser.add_argument('--nr-bands', required=True,
+                        help='comma-separated NR band numbers, e.g. 1,3,78')
+    parser.add_argument('--duration', choices=('power-cycle', 'permanent'),
+                        default='power-cycle',
+                        help='change duration (default: power-cycle, so the '
+                             'modem does not persist the selection)')
+    parser.add_argument('--timeout', type=int, default=15,
+                        help='per-operation QMI timeout in seconds')
+    args = parser.parse_args()
+
+    bands = _parse_bands(args.nr_bands)
+    if not bands:
+        _eprint('igos-wwan-qmi-band-set: no valid NR bands given — nothing '
+                'to do')
+        return 1
+
+    # Import GI lazily so that argument errors don't require the typelib.
+    try:
+        import gi
+        gi.require_version('Qmi', '1.0')
+        from gi.repository import Qmi, Gio, GLib
+    except (ImportError, ValueError) as e:
+        _eprint(f'igos-wwan-qmi-band-set: libqmi GI bindings unavailable: {e}')
+        return 2
+
+    masks = _bands_to_masks(bands)
+    duration = (Qmi.NasChangeDuration.POWER_CYCLE
+                if args.duration == 'power-cycle'
+                else Qmi.NasChangeDuration.PERMANENT)
+
+    loop = GLib.MainLoop()
+    state = {'rc': 3}
+
+    def _quit():
+        if loop.is_running():
+            loop.quit()
+
+    def _fail(msg):
+        _eprint(f'igos-wwan-qmi-band-set: {msg}')
+        state['rc'] = 3
+        _quit()
+
+    def _release_and_quit(device, client):
+        # Best-effort cleanup; the operation result is already recorded.
+        def _released(dev, res, _data):
+            try:
+                dev.release_client_finish(res)
+            except GLib.Error:
+                pass
+            _quit()
+        try:
+            device.release_client(
+                client, Qmi.DeviceReleaseClientFlags.RELEASE_CID,
+                args.timeout, None, _released, None)
+        except Exception:
+            _quit()
+
+    def _ssp_ready(client, res, device):
+        try:
+            output = client.set_system_selection_preference_finish(res)
+            output.get_result()  # raises GLib.Error on a QMI failure
+        except GLib.Error as e:
+            _eprint(f'igos-wwan-qmi-band-set: set NR band preference '
+                    f'failed: {e.message}')
+            state['rc'] = 3
+            _release_and_quit(device, client)
+            return
+        _eprint('igos-wwan-qmi-band-set: NR band preference set to '
+                f'{bands} (duration={args.duration})')
+        state['rc'] = 0
+        _release_and_quit(device, client)
+
+    def _client_ready(device, res, _data):
+        try:
+            client = device.allocate_client_finish(res)
+        except GLib.Error as e:
+            _fail(f'allocate NAS client failed: {e.message}')
+            return
+        try:
+            sinput = Qmi.MessageNasSetSystemSelectionPreferenceInput.new()
+            sinput.set_change_duration(duration)
+            sinput.set_nr5g_sa_band_preference(*masks)
+        except (GLib.Error, TypeError) as e:
+            _fail(f'building NR band preference request failed: {e}')
+            return
+        client.set_system_selection_preference(
+            sinput, args.timeout, None, _ssp_ready, device)
+
+    def _open_ready(device, res, _data):
+        try:
+            device.open_finish(res)
+        except GLib.Error as e:
+            _fail(f'opening QMI device failed: {e.message}')
+            return
+        device.allocate_client(
+            Qmi.Service.NAS, Qmi.CID_NONE, args.timeout, None,
+            _client_ready, None)
+
+    def _new_ready(_source, res, _data):
+        try:
+            device = Qmi.Device.new_finish(res)
+        except GLib.Error as e:
+            _fail(f'creating QMI device failed: {e.message}')
+            return
+        device.open(Qmi.DeviceOpenFlags.PROXY, args.timeout, None,
+                    _open_ready, None)
+
+    try:
+        gfile = Gio.File.new_for_path(args.device)
+        Qmi.Device.new(gfile, None, _new_ready, None)
+    except Exception as e:  # noqa: BLE001 — never crash the FSM caller
+        _eprint(f'igos-wwan-qmi-band-set: could not start QMI device '
+                f'creation: {e}')
+        return 3
+
+    loop.run()
+    return state['rc']
+
+
+if __name__ == '__main__':
+    sys.exit(main())

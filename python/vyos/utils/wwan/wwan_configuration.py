@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 class EnhancedReconnectionConfig:
     '''Enhanced reconnection strategy configuration'''
     enabled: bool = True
-    signal_threshold: int = -85
+    signal_threshold_rssi: int = -85   # 2G/3G boundary (legacy wideband RSSI)
+    signal_threshold_rsrp: int = -105  # LTE/5G boundary (3GPP coverage metric)
     max_retries: int = 3
     retry_interval_good_signal: int = 30
     retry_interval_poor_signal: int = 120
@@ -147,7 +148,8 @@ class ConfigurationLoader:
                                   'primary_sim': primary_sim_slot,
                                   'connectivity_monitoring_enabled': connectivity_monitoring.get('enabled', True),
                                   'enhanced_reconnection_enabled': enhanced_reconnection.enabled,
-                                  'signal_threshold': enhanced_reconnection.signal_threshold})
+                                  'signal_threshold_rssi': enhanced_reconnection.signal_threshold_rssi,
+                                  'signal_threshold_rsrp': enhanced_reconnection.signal_threshold_rsrp})
 
             return wwan_config
 
@@ -171,16 +173,27 @@ class ConfigurationLoader:
             else:
                 enhanced_enabled = bool(enhanced_value)
 
+        # Reconnection fields live inside the nested 'enhanced_reconnection'
+        # dict (produced by conf-mode and DEFAULT_CONFIG). Fall back to
+        # flat top-level keys for backward compatibility with older caches.
+        er = enhanced_value if isinstance(enhanced_value, dict) else {}
+
+        def _val(nested_key, flat_key, default):
+            if nested_key in er:
+                return er[nested_key]
+            return config.get(flat_key, default)
+
         return EnhancedReconnectionConfig(
             enabled=enhanced_enabled,
-            signal_threshold=int(config.get('reconnection_signal_threshold', -85)),
-            max_retries=int(config.get('enhanced_reconnection_max_retries', 3)),
-            retry_interval_good_signal=int(config.get('retry_interval_good_signal', 30)),
-            retry_interval_poor_signal=int(config.get('retry_interval_poor_signal', 120)),
-            max_wait_for_signal=int(config.get('max_wait_for_signal', 120)),
-            signal_check_interval=int(config.get('signal_check_interval', 10)),
-            normal_monitoring_interval=int(config.get('normal_monitoring_interval', 30)),
-            signal_strength_buffer=int(config.get('signal_strength_buffer', 5))
+            signal_threshold_rssi=int(_val('signal_threshold_rssi', 'reconnection_signal_threshold_rssi', -85)),
+            signal_threshold_rsrp=int(_val('signal_threshold_rsrp', 'reconnection_signal_threshold_rsrp', -105)),
+            max_retries=int(_val('max_retries', 'enhanced_reconnection_max_retries', 3)),
+            retry_interval_good_signal=int(_val('retry_interval_good_signal', 'retry_interval_good_signal', 30)),
+            retry_interval_poor_signal=int(_val('retry_interval_poor_signal', 'retry_interval_poor_signal', 120)),
+            max_wait_for_signal=int(_val('max_wait_for_signal', 'max_wait_for_signal', 120)),
+            signal_check_interval=int(_val('signal_check_interval', 'signal_check_interval', 10)),
+            normal_monitoring_interval=int(_val('normal_monitoring_interval', 'normal_monitoring_interval', 30)),
+            signal_strength_buffer=int(_val('signal_strength_buffer', 'signal_strength_buffer', 5))
         )
 
     def _parse_interface_management_config(self, config: Dict[str, Any]) -> InterfaceManagementConfig:
@@ -252,10 +265,16 @@ class ConfigurationLoader:
                                 extra={'interface_number': self.interface_number})
                 return False
 
-            # Validate signal threshold range
-            if not (-120 <= config.enhanced_reconnection.signal_threshold <= -50):
-                self.logger.warning(f'Signal threshold {config.enhanced_reconnection.signal_threshold} '
+            # Validate signal threshold ranges (metric-specific scales)
+            rssi_thr = config.enhanced_reconnection.signal_threshold_rssi
+            rsrp_thr = config.enhanced_reconnection.signal_threshold_rsrp
+            if not (-120 <= rssi_thr <= -50):
+                self.logger.warning(f'RSSI threshold {rssi_thr} '
                                   f'is outside typical range (-120 to -50 dBm)',
+                                  extra={'interface_number': self.interface_number})
+            if not (-140 <= rsrp_thr <= -44):
+                self.logger.warning(f'RSRP threshold {rsrp_thr} '
+                                  f'is outside typical range (-140 to -44 dBm)',
                                   extra={'interface_number': self.interface_number})
 
             # Validate retry intervals

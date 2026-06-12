@@ -107,21 +107,25 @@ interfaces
         │     │
         │     ├── sim-failback
         │     |     ├── disable                           #   valueless — turn off failback
-        │     |     └── check-interval <seconds>          #   default: 600
+        │     |     ├── check-interval <seconds>          #   default: 600  (upper bound on primary-SIM poll cadence; capped to ~30 s internally)
+        │     |     └── stability-time <seconds>          #   default: 300  (primary must stay present this long before failback; governs failback latency)
         │     │
         │     └── sim-failover
         │           ├── disable                           #   valueless — turn off failover
         │           ├── connect-retries <count>           #   default: 3
-        │           ├── revert-timer <seconds>            #   default: 300
         │           ├── signal-loss-timer <seconds>       #   default: 60
-        │           └── signal-threshold <dBm>            #   default: -90
+        │           └── signal-threshold
+        │                 ├── rssi <dBm>                   #   default: -90  (2G/3G)
+        │                 └── rsrp <dBm>                   #   default: -110 (LTE/5G)
         │
         ├── apn-discovery
         │     └── disable                                #   valueless — disable Android APN DB (enabled by default)
         │
         ├── reconnection
         │     ├── disable-enhanced                        #   valueless — fall back to basic fixed-interval reconnection (enhanced by default)
-        │     ├── signal-threshold <dBm>                  #   default: -85
+        │     ├── signal-threshold
+        │     │     ├── rssi <dBm>                        #   default: -85  (2G/3G)
+        │     │     └── rsrp <dBm>                        #   default: -105 (LTE/5G)
         │     ├── retry-interval
         │     │     ├── good-signal <seconds>             #   default: 30
         │     │     └── poor-signal <seconds>             #   default: 120
@@ -135,7 +139,7 @@ interfaces
         │     ├── registration-recovery-delay <seconds>   #   default: 20
         │     ├── registration-flap-count <count>          #   default: 5 (0 = disabled)
         │     ├── registration-flap-window <seconds>       #   default: 360
-        │     ├── ip-change-delay <milliseconds>           #   default: 500
+        │     ├── ip-change-delay <milliseconds>           #   default: 500  (NOTE: milliseconds, unlike the other timers here which are seconds)
         │     ├── disable-ensure-link-up-on-connect       #   valueless — turn off link-up enforcement (on by default)
         │     ├── disable-monitor-bearer-state            #   valueless — turn off bearer-state tracking (on by default)
         │     ├── disable-monitor-ip-changes              #   valueless — turn off IP-change detection (on by default)
@@ -172,7 +176,7 @@ interfaces
         │     └── escalation-threshold <count>             #   default: 3  (disable/enable cycle after N failures; 0 = never)
         │
         ├── network-scan
-        │     └── timeout <seconds>                       #   default: 60
+        │     └── timeout <seconds>                       #   default: 180  (scans can take 2+ min; range 10-300)
         │
         ├── timeouts
         │     ├── connection <seconds>                    #   default: 120
@@ -220,7 +224,7 @@ automatically using a 4-priority APN discovery chain:
 | **Connection mode** | `always-on` | Modem connects immediately at boot and stays connected |
 | **Enhanced reconnection** | `enabled` | Signal-quality-aware reconnection; use `disable-enhanced` to fall back to basic fixed-interval |
 | **Reconnection retry** | good-signal `15 s`, poor-signal `45 s` | Active by default (enhanced reconnection is on) |
-| **Signal threshold** | `-85 dBm` | Boundary between "good" and "poor" reconnection strategies |
+| **Signal threshold** | RSSI `-85 dBm`, RSRP `-105 dBm` | Boundary between "good" and "poor" reconnection strategies; RSRP is used on LTE/5G, RSSI on 2G/3G (the two scales differ by ~20 dB) |
 | **Bearer disconnect delay** | `15 s` | Grace period before tearing down a disconnected bearer |
 | **Registration recovery delay** | `20 s` | Debounce for registration-lost flaps |
 | **Registration flap detection** | count `5`, window `360 s` | If ≥5 debounced registration losses in 360 s, trigger SIM failover (0 = disabled) |
@@ -237,7 +241,7 @@ automatically using a 4-priority APN discovery chain:
 | **Hardware reset** | `enabled`, max `3` attempts, cooldown `300 s` | Modem power-cycles after repeated unrecoverable failures; use `disable` to turn off |
 | **Failed-state retry** | `enabled`, intervals `600,1800,3600,7200`, cap `7200 s`, escalation threshold `3` | Periodically reattempts connection from FAILED state (data-plan top-up, carrier provisioning, transient errors); carrier-friendly backoff (~10 attempts/hour worst case) avoids triggering Verizon/AT&T throttling; after 3 consecutive failures, escalates to modem disable/enable cycle to clear stale EPS context |
 | **Band selection** | `all` | All modem-supported radio technologies enabled |
-| **Network scan timeout** | `60 s` | Max wait for network scan completion |
+| **Network scan timeout** | `180 s` | Max wait for network scan completion (scans can take 2+ min) |
 | **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
 | **Registration timeout** | `180 s` | Max wait for network registration |
 | **Normal monitoring interval** | `30 s` | Polling cycle in CONNECTED state |
@@ -681,6 +685,13 @@ set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
 >    may be active.
 >  - The interface should be wired (not Wi-Fi) — DHCPFORCERENEW behaviour
 >    on wireless drivers is unreliable.
+>  - **`connection-mode dial-on-demand` is rejected at commit time** when
+>    passthrough is configured.  Passthrough leases the carrier IP straight
+>    through to a downstream device and assumes an always-up bearer;
+>    dial-on-demand exposes a `disconnect_bearer()` lever that could tear
+>    the bearer down out from under the downstream device, stranding it
+>    with a stale lease and a black-holed route.  Use the default
+>    `connection-mode always-on` with passthrough.
 >  - **IPv4 routing parameters on `wwanN` that break passthrough are
 >    rejected at commit time:** `ip disable-forwarding` (passthrough must
 >    forward inbound carrier-IP traffic out the LAN port) and
@@ -772,14 +783,15 @@ set interfaces wwan wwan0 sim slot 2 data-limit warning '75,90'
 
 # SIM failback (enabled by default; use 'disable' to turn off)
 # set interfaces wwan wwan0 sim sim-failback disable
-set interfaces wwan wwan0 sim sim-failback check-interval 600
+set interfaces wwan wwan0 sim sim-failback check-interval 600   # upper bound on poll cadence (capped to ~30 s internally)
+set interfaces wwan wwan0 sim sim-failback stability-time 300   # primary must stay present this long before failback (governs latency)
 
 # SIM failover (enabled by default; use 'disable' to turn off)
 # set interfaces wwan wwan0 sim sim-failover disable
 set interfaces wwan wwan0 sim sim-failover connect-retries 3
-set interfaces wwan wwan0 sim sim-failover revert-timer 300
 set interfaces wwan wwan0 sim sim-failover signal-loss-timer 60
-set interfaces wwan wwan0 sim sim-failover signal-threshold -90
+set interfaces wwan wwan0 sim sim-failover signal-threshold rssi -90
+set interfaces wwan wwan0 sim sim-failover signal-threshold rsrp -110
 ```
 
 ### APN Discovery
@@ -805,42 +817,75 @@ Three connection modes are available (choose one):
 
 | Mode | Startup bearer | D-Bus `connect_bearer()` | D-Bus `disconnect_bearer()` | D-Bus `get_bearer_status()` |
 |---|---|---|---|---|
-| **always-on** (default) | yes, auto | reconnect from FAILED | full disconnect | `"connected"` / `"disconnected"` |
+| **always-on** (default) | yes, auto | **rejected** (`InvalidConnectionMode`) | **rejected** (`InvalidConnectionMode`) | `"connected"` / `"disconnected"` |
 | **connect-on-demand** | **no** (REGISTERED_IDLE) | bring up bearer | drop bearer → REGISTERED_IDLE | `"connected"` / `"disconnected"` |
 | **dial-on-demand** | **yes**, auto | bring up bearer | drop bearer → REGISTERED_IDLE | `"connected"` / `"disconnected"` |
 
 **always-on** — Current default.  Modem registers, bearer is established, Linux
-interface comes up, and stays connected indefinitely.
+interface comes up, and stays connected indefinitely.  Because the bearer is
+managed entirely by the FSM (auto-connect at boot, self-heal on failure), the
+manual `connect()` / `connect_bearer()` / `disconnect()` / `disconnect_bearer()`
+D-Bus calls are **rejected** with a `com.igos.IgosModemManager.InvalidConnectionMode`
+error — there is no on-demand semantics in this mode.  Switch to
+`connect-on-demand` or `dial-on-demand` for manual bearer control.
 
 **connect-on-demand** — VyOS-compatible explicit mode.  The FSM registers the
 modem on the network but does **not** establish a bearer.  The modem sits idle
 at `REGISTERED_IDLE` until an external application issues a D-Bus
-`connect_bearer()` call.  Once connected, the bearer stays up until an explicit
-`disconnect_bearer()` or a failure.  SMS is available while parked at
-`REGISTERED_IDLE`.
+`connect_bearer()` call.  **Once a connect is issued the bearer behaves
+exactly like always-on** — it stays up and auto-reconnects on failure
+(carrier drop, signal loss, modem reset) — until an explicit
+`disconnect_bearer()` (or `disconnect()`) is issued.  A transient failure does
+**not** drop the modem back to idle; only an explicit disconnect does.  SMS is
+available while parked at `REGISTERED_IDLE`.
 
-**dial-on-demand** — Auto-connect with external bearer management.  The FSM
-registers the modem **and** establishes the bearer automatically at startup
-(identical to always-on).  An external application can then:
+The standing connect/disconnect intent is **persisted** (in the FSM's
+`__runtime_state__`): if the service crashes or is restarted, connect-on-demand
+remembers whether it was in the requested-connected state and re-establishes
+the bearer automatically on startup (rather than forgetting and parking idle).
+Likewise, an explicit disconnect is remembered, so the bearer stays down across
+a restart until the next `connect_bearer()`.
+
+**dial-on-demand** — A **variant of always-on** with external bearer
+management.  The FSM registers the modem **and** establishes the bearer
+automatically at startup, exactly like always-on.  An external application can
+then:
 
 1. Call D-Bus `disconnect_bearer()` → bearer drops, modem parks at
-   `REGISTERED_IDLE` (registered, SMS available, no data).
+   `REGISTERED_IDLE` (registered, SMS available, no data).  **Linux is not
+   told the bearer went down** — the kernel interface stays up with its (now
+   stale) IP and routes, so upstream apps still see the interface as available.
 2. Call D-Bus `connect_bearer()` → bearer is re-established.
 3. Poll D-Bus `get_bearer_status()` → returns `"connected"` or `"disconnected"`.
 
-During normal connection procedure, `dial-on-demand` will continue to bring
-the bearer up automatically.  Auto-reconnect suppression only applies after an
-explicit bearer disconnect command (`disconnect_bearer()` / on-demand
-`disconnect()`) has been issued.
+**While the bearer is up, dial-on-demand behaves identically to always-on.**
+Every event that always-on reacts to is honored and propagated to Linux:
 
-All three bearer methods (`connect_bearer`, `disconnect_bearer`,
-`get_bearer_status`) are always available regardless of connection mode.
-`connect_bearer()` and `disconnect_bearer()` always return `"accepted"`;
-the caller polls `get_bearer_status()` to observe the actual state.
+- bearer drops unexpectedly (carrier deactivation, signal loss) → the kernel
+  interface is brought down and auto-recovery re-establishes the bearer;
+- bearer comes back up → IP/routes re-applied and the interface brought up;
+- the carrier-assigned IP address changes → the interface is re-cycled and
+  re-addressed;
+- the SIM swaps / fails over → full teardown and reconnect on the new SIM.
 
-The standalone `connect()` and `disconnect()` D-Bus methods also remain.  In
-`connect-on-demand` and `dial-on-demand` modes they behave identically to
-the bearer methods (fire-and-forget `"accepted"` responses).
+The only difference from always-on is the **explicit** `disconnect_bearer()`
+(or on-demand `disconnect()`): that, and only that, drops the bearer without
+notifying Linux and suppresses auto-reconnect until the next `connect_bearer()`.
+A transient/unexpected failure while connected does **not** suppress recovery.
+
+Unlike connect-on-demand, dial-on-demand does **not** persist the disconnect
+intent across a service crash/restart: because it is a variant of always-on, it
+**always comes up connected at boot**, regardless of whether the bearer was
+manually disconnected before the restart.
+
+In `connect-on-demand` and `dial-on-demand` modes, the bearer methods
+(`connect_bearer`, `disconnect_bearer`) and the standalone `connect()` /
+`disconnect()` methods are available and return fire-and-forget `"accepted"`
+responses; the caller polls `get_bearer_status()` to observe the actual state.
+In `always-on` mode the bearer is FSM-managed, so `connect()`, `disconnect()`,
+`connect_bearer()` and `disconnect_bearer()` are **rejected** with a
+`com.igos.IgosModemManager.InvalidConnectionMode` error.  `get_bearer_status()`
+is available in every mode.
 
 **Silent disconnect behaviour (both on-demand modes):**
 - Bearer is released via MM `Simple.Disconnect()`
@@ -858,7 +903,8 @@ the bearer methods (fire-and-forget `"accepted"` responses).
 ```
 # Enhanced reconnection is enabled by default — no command needed to activate.
 # To disable: set interfaces wwan wwan0 reconnection disable-enhanced
-set interfaces wwan wwan0 reconnection signal-threshold -85
+set interfaces wwan wwan0 reconnection signal-threshold rssi -85
+set interfaces wwan wwan0 reconnection signal-threshold rsrp -105
 set interfaces wwan wwan0 reconnection retry-interval good-signal 15
 set interfaces wwan wwan0 reconnection retry-interval poor-signal 45
 set interfaces wwan wwan0 reconnection max-wait-for-signal 120
@@ -912,10 +958,55 @@ set interfaces wwan wwan0 connectivity-monitoring ipv6-targets '2001:4860:4860::
 # To disable failover:
 # set interfaces wwan wwan0 sim sim-failover disable
 set interfaces wwan wwan0 sim sim-failover connect-retries 3
-set interfaces wwan wwan0 sim sim-failover revert-timer 300
 set interfaces wwan wwan0 sim sim-failover signal-loss-timer 60
-set interfaces wwan wwan0 sim sim-failover signal-threshold -90
+set interfaces wwan wwan0 sim sim-failover signal-threshold rssi -90
+set interfaces wwan wwan0 sim sim-failover signal-threshold rsrp -110
 ```
+
+**Signal-loss failover.**  While connected, the active SIM's signal is polled
+continuously.  When it stays below the `signal-threshold` for the metric the
+modem actually reports — **RSRP** on LTE/5G-NR, **RSSI** on 2G/3G (the two
+scales differ by ~20 dB, which is why each has its own value) — for
+`signal-loss-timer` seconds without recovering, the router fails over to the
+alternate SIM (slot must be present and enabled).  The same cooldown/backoff
+that prevents missing-SIM ping-pong applies here, so a marginal cell can't
+cause rapid SIM flapping.  Failover is skipped silently on single-SIM setups.
+
+> **Triggers:** SIM failover fires on any of — (a) sustained weak signal as
+> above, (b) the configured SIM going missing/locked/FAILED, (c) the APN
+> connect cascade failing `connect-retries` times, or (d) the active SIM
+> reaching its `data-limit` when the limit `action` is `sim-failover` /
+> `sim-failover-sticky`.  All four paths share one switch engine, so the same
+> cooldown/backoff and reentrancy guards apply to every trigger — they cannot
+> race each other.
+
+**Failback (returning to the primary SIM).**  Two parameters work together —
+they are *not* alternatives:
+
+> * `sim-failback check-interval` (default 600 s) is an **upper bound on the
+>   poll cadence**: how often, at most, the failback monitor probes whether the
+>   primary SIM is physically present (IMSI/ICCID visible in the modem's slot).
+>   The probe is a cheap local D-Bus read that never touches the radio, so the
+>   monitor actually wakes on a fine cadence (`min(check-interval, 30 s)`,
+>   floored at 5 s) to keep failback responsive — set `check-interval` *below*
+>   30 s if you want even tighter polling.  Values above 30 s no longer slow
+>   failback down (see `stability-time`).
+> * `sim-failback stability-time` (default 300 s) is the **continuous-presence
+>   dwell** and the dominant term in failback latency: the primary SIM must
+>   remain present for this long *without interruption* before failback fires.
+>   The dwell is wall-clock based and re-verified on every fine poll, so
+>   failback occurs at `stability-time` (±one poll cadence), not rounded up to
+>   a full `check-interval`.  If the primary disappears at any point, the dwell
+>   counter resets to zero (anti-flap).
+>
+> There is **no signal-recovery detection** — while running on the alternate
+> SIM the modem cannot measure the primary SIM's signal, so failback is driven
+> by *presence + time*, not by the primary's link quality.  In the signal-loss
+> case the primary SIM was never removed (just weak), so its presence gate is
+> satisfied immediately and failback occurs once `stability-time` elapses.  A
+> failback cooldown (~600 s) additionally prevents rapid failover↔failback
+> ping-pong, so the effective minimum dwell on the alternate SIM is roughly
+> `max(stability-time, failback-cooldown)`.
 
 ### Data Usage Monitoring
 
@@ -928,6 +1019,15 @@ set interfaces wwan wwan0 sim sim-failover signal-threshold -90
 | `disable` | Disconnect bearer when limit hit |
 | `sim-failover` | Switch to backup SIM; failback resumes normally when `sim-failback` is enabled |
 | `sim-failover-sticky` | Switch to backup SIM **and suppress failback** until the billing cycle resets — avoids overage charges on the primary SIM |
+
+> **Interaction with signal-loss failover:** while a `sim-failover-sticky` hold
+> is active (primary abandoned because it hit its data cap), signal-loss
+> failover will **not** switch back onto the capped primary even if the backup
+> SIM's signal goes weak.  This prevents the two mechanisms from fighting each
+> other (weak-signal dragging you back onto a SIM that sticky is deliberately
+> avoiding).  If a disconnect/disable action cannot fail over — no usable
+> alternate SIM present, target slot disabled, or failover globally disabled —
+> the bearer is disconnected rather than left running on the over-limit SIM.
 
 ```
 set interfaces wwan wwan0 data-usage monitoring-interval 30
@@ -978,6 +1078,18 @@ set interfaces wwan wwan0 failed-retry escalation-threshold 3
 > because different carriers use different frequencies.
 > Use per-SIM `supported-bands` for carrier-specific band restrictions.
 > The final active band set is: per-SIM ∩ modem-supported.
+>
+> **2G/3G/LTE** band restrictions are applied via ModemManager's
+> `CurrentBands` property.  **5G NR** band restrictions are applied separately
+> over QMI (libqmi) because ModemManager does not expose an NR band write path
+> on QMI modems.  The NR selection is written with change-duration
+> `POWER_CYCLE`, so the modem does **not** persist it — VyOS configuration
+> stays authoritative and the selection is re-applied on every startup, SIM
+> change and configuration change.  Selecting `all` (or a selection that
+> matches no supported NR band) writes the modem's full supported NR set,
+> clearing any prior restriction.  NR enforcement requires a QMI modem and the
+> `gir1.2-qmi-1.0` typelib (installed by the `igos-wwan-qmi-band-set` helper's
+> dependency); on non-QMI modems it is silently skipped.
 >
 > `preferred-carrier` and `enable-network-scan` are **per-SIM only** settings
 > because each SIM has its own carrier.  Configure them under
@@ -1156,11 +1268,12 @@ set interfaces wwan wwan0 logging sink 'both'
 | `sim primary-slot` | `primary_sim_slot` | `1` |
 | `sim sim-failback disable` | `sim_failback_enabled` | `enabled` |
 | `sim sim-failback check-interval` | `sim_failback_check_interval` | `600` |
+| `sim sim-failback stability-time` | `sim_failback_stability_time` | `300` |
 | `sim sim-failover disable` | `sim_failover` | `enabled` |
 | `sim sim-failover connect-retries` | `sim_failover_connect_retries` | `3` |
-| `sim sim-failover revert-timer` | `sim_failover_revert_timer` | `300` |
 | `sim sim-failover signal-loss-timer` | `sim_failover_signal_loss_timer` | `60` |
-| `sim sim-failover signal-threshold` | `sim_failover_signal_threshold` | `-90` |
+| `sim sim-failover signal-threshold rssi` | `sim_failover_signal_threshold_rssi` | `-90` |
+| `sim sim-failover signal-threshold rsrp` | `sim_failover_signal_threshold_rsrp` | `-110` |
 | `sim slot N apn` | `sim_slot_N_apn` | `(empty)` |
 | `sim slot N username` | `sim_slot_N_username` | `(empty)` |
 | `sim slot N password` | `sim_slot_N_password` | `(empty)` |
@@ -1182,7 +1295,8 @@ set interfaces wwan wwan0 logging sink 'both'
 | `apn-discovery disable` | `android_apn_discovery` | `enabled` |
 | `connection-mode` | `connection_mode` | `always-on` |
 | `reconnection disable-enhanced` | `enhanced_reconnection` | `enabled` |
-| `reconnection signal-threshold` | `reconnection_signal_threshold` | `-85` |
+| `reconnection signal-threshold rssi` | `reconnection_signal_threshold_rssi` | `-85` |
+| `reconnection signal-threshold rsrp` | `reconnection_signal_threshold_rsrp` | `-105` |
 | `reconnection retry-interval good-signal` | `retry_interval_good_signal` | `30` |
 | `reconnection retry-interval poor-signal` | `retry_interval_poor_signal` | `120` |
 | `reconnection max-wait-for-signal` | `max_wait_for_signal` | `120` |
@@ -1257,7 +1371,8 @@ set interfaces wwan wwan0 sim slot 2 data-limit action 'sim-failover'
 # set interfaces wwan wwan0 apn-discovery disable
 # reconnection enhanced is on by default — to disable:
 # set interfaces wwan wwan0 reconnection disable-enhanced
-set interfaces wwan wwan0 reconnection signal-threshold -85
+set interfaces wwan wwan0 reconnection signal-threshold rssi -85
+set interfaces wwan wwan0 reconnection signal-threshold rsrp -105
 
 # connectivity-monitoring and interface-management are enabled by default
 set interfaces wwan wwan0 connectivity-monitoring interval 60

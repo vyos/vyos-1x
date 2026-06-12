@@ -170,6 +170,11 @@ Depends:
   modemmanager,
   usb-modeswitch,
   libqmi-utils,
+# gir1.2-qmi-1.0 provides the libqmi GObject-introspection typelib used by
+# igos-wwan-qmi-band-set to set the 5G NR band preference (qmicli cannot set
+# band masks — only the libqmi library can).
+  gir1.2-qmi-1.0,
+  python3-gi,
 # dnsmasq is required by ip-passthrough — the FSM spawns a per-interface
 # scoped instance to hand the carrier IPv4/IPv6 to one downstream device
 # (DOCSIS-modem-style passthrough). dnsmasq-utils provides dhcp_release2

@@ -496,6 +496,20 @@
                     </properties>
                     <defaultValue>600</defaultValue>
                   </leafNode>
+                  <leafNode name="stability-time">
+                    <properties>
+                      <help>Time the primary SIM must be continuously present before failback</help>
+                      <valueHelp>
+                        <format>u32:60-86400</format>
+                        <description>Time in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 60-86400"/>
+                      </constraint>
+                      <constraintErrorMessage>Stability time must be 60-86400 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>300</defaultValue>
+                  </leafNode>
                 </children>
               </node>
               <!-- SIM failover -->
@@ -524,20 +538,6 @@
                     </properties>
                     <defaultValue>3</defaultValue>
                   </leafNode>
-                  <leafNode name="revert-timer">
-                    <properties>
-                      <help>Time before reverting to primary SIM</help>
-                      <valueHelp>
-                        <format>u32:60-86400</format>
-                        <description>Timer in seconds</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 60-86400"/>
-                      </constraint>
-                      <constraintErrorMessage>Revert timer must be 60-86400 seconds</constraintErrorMessage>
-                    </properties>
-                    <defaultValue>300</defaultValue>
-                  </leafNode>
                   <leafNode name="signal-loss-timer">
                     <properties>
                       <help>Duration of signal loss before triggering failover</help>
@@ -552,20 +552,41 @@
                     </properties>
                     <defaultValue>60</defaultValue>
                   </leafNode>
-                  <leafNode name="signal-threshold">
+                  <node name="signal-threshold">
                     <properties>
-                      <help>Signal strength threshold for failover trigger</help>
-                      <valueHelp>
-                        <format>u32:-120--50</format>
-                        <description>Signal strength in dBm</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range -120--50"/>
-                      </constraint>
-                      <constraintErrorMessage>Signal threshold must be -120 to -50 dBm</constraintErrorMessage>
+                      <help>Signal strength threshold for failover trigger (metric-specific)</help>
                     </properties>
-                    <defaultValue>-90</defaultValue>
-                  </leafNode>
+                    <children>
+                      <leafNode name="rsrp">
+                        <properties>
+                          <help>RSRP threshold for LTE/5G-NR (3GPP coverage metric)</help>
+                          <valueHelp>
+                            <format>u32:-140--44</format>
+                            <description>RSRP in dBm</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range -140--44"/>
+                          </constraint>
+                          <constraintErrorMessage>RSRP threshold must be -140 to -44 dBm</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>-110</defaultValue>
+                      </leafNode>
+                      <leafNode name="rssi">
+                        <properties>
+                          <help>RSSI threshold for 2G/3G (legacy wideband metric)</help>
+                          <valueHelp>
+                            <format>u32:-120--50</format>
+                            <description>RSSI in dBm</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range -120--50"/>
+                          </constraint>
+                          <constraintErrorMessage>RSSI threshold must be -120 to -50 dBm</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>-90</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </node>
             </children>
@@ -734,20 +755,41 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="signal-threshold">
+              <node name="signal-threshold">
                 <properties>
-                  <help>Boundary between good and poor signal reconnection strategies</help>
-                  <valueHelp>
-                    <format>u32:-120--50</format>
-                    <description>Signal strength in dBm</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range -120--50"/>
-                  </constraint>
-                  <constraintErrorMessage>Signal threshold must be -120 to -50 dBm</constraintErrorMessage>
+                  <help>Boundary between good and poor signal reconnection strategies (metric-specific)</help>
                 </properties>
-                <defaultValue>-85</defaultValue>
-              </leafNode>
+                <children>
+                  <leafNode name="rsrp">
+                    <properties>
+                      <help>RSRP boundary for LTE/5G-NR (3GPP coverage metric)</help>
+                      <valueHelp>
+                        <format>u32:-140--44</format>
+                        <description>RSRP in dBm</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range -140--44"/>
+                      </constraint>
+                      <constraintErrorMessage>RSRP threshold must be -140 to -44 dBm</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>-105</defaultValue>
+                  </leafNode>
+                  <leafNode name="rssi">
+                    <properties>
+                      <help>RSSI boundary for 2G/3G (legacy wideband metric)</help>
+                      <valueHelp>
+                        <format>u32:-120--50</format>
+                        <description>RSSI in dBm</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range -120--50"/>
+                      </constraint>
+                      <constraintErrorMessage>RSSI threshold must be -120 to -50 dBm</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>-85</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
               <node name="retry-interval">
                 <properties>
                   <help>Reconnection retry intervals based on signal quality</help>
@@ -1258,7 +1300,7 @@
                   </constraint>
                   <constraintErrorMessage>Scan timeout must be 10-300 seconds</constraintErrorMessage>
                 </properties>
-                <defaultValue>60</defaultValue>
+                <defaultValue>180</defaultValue>
               </leafNode>
             </children>
           </node>
