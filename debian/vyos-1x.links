@@ -1,3 +1,4 @@
 /usr/libexec/vyos/system/standalone_root_pw_reset /opt/vyatta/sbin/standalone_root_pw_reset
 /usr/libexec/vyos/vyconf_cli.py /usr/libexec/vyos/vyconf/bin/vy_commit
 /usr/libexec/vyos/vyconf_cli.py /usr/libexec/vyos/vyconf/bin/vy_in_session
+/usr/bin/bgpq4 /usr/bin/bgpq3
