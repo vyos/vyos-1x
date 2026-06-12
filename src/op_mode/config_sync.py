@@ -28,6 +28,9 @@ from vyos.configtree import ConfigTree
 from vyos.configtree import ConfigTreeError
 from vyos.configtree import DiffTree
 from vyos.config import Config
+from vyos.derivedtree import apply_exclusion_list
+from vyos.derivedtree import DerivedTreeError
+from vyos.defaults import config_sync_exclusion_list
 
 CONFIG_FILE = Path('/run/config_sync_conf.conf')
 
@@ -121,6 +124,14 @@ class ConfigSyncDiffManager:
         except ConfigTreeError as e:
             raise opmode.InternalError(f'Unable to build remote ConfigTree: {e}') from e
 
+    def _get_exclude_list(self) -> list[list[str]]:
+        # add as instance method, for future access to CLI settings from self.Config
+        exclude_file = Path(config_sync_exclusion_list)
+        if not exclude_file.exists():
+            raise opmode.InternalError('Config-sync exclusion list file not available')
+
+        return read_json(exclude_file, defaultonfailure=[])
+
     def _format_remote_diff(self, diff_tree: DiffTree, path: list, commands: bool):
         add_tree = diff_tree.add
         del_tree = diff_tree.delete
@@ -192,8 +203,16 @@ class ConfigSyncDiffManager:
                 'Invalid source, must be one of: running, candidate, saved'
             )
 
+        exclude_list = self._get_exclude_list()
+
         try:
-            diff_tree = DiffTree(remote_tree, local_tree)
+            masked_local = apply_exclusion_list(local_tree, exclude_list)
+            masked_remote = apply_exclusion_list(remote_tree, exclude_list)
+        except DerivedTreeError as e:
+            raise opmode.InternalError(str(e)) from e
+
+        try:
+            diff_tree = DiffTree(masked_remote, masked_local)
         except ConfigTreeError as e:
             raise opmode.InternalError(str(e)) from e
 
