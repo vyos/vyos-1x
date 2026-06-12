@@ -75,6 +75,18 @@ def write_saved_value(path: list, value=None, config_path: str=config_file):
 
     write_file(config_path, ct.to_string())
 
+
+def get_saved_config_tree() -> 'ConfigTree':
+    # pylint: disable=import-outside-toplevel
+    """Return config tree of saved config.
+
+    Raises ConfigTreeError.
+    """
+    from vyos.configtree import ConfigTree
+
+    return ConfigTree.load_file(config_file)
+
+
 def flag(l: list) -> list:
     res = [l[0:i] for i,_ in enumerate(l, start=1)]
     return res
