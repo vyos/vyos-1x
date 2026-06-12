@@ -22,7 +22,7 @@ with a permanent installation on a hard drive or other storage device.
   - Access to Source
 
 * - Nightly (Current)
-  - Automatically built from the current branch. Always up to date
+  - Automatically built from the `rolling` branch. Always up to date
     with cutting edge development but guaranteed to contain bugs.
   - Every night
   - Developing VyOS, testing new features, experimenting.
@@ -116,7 +116,7 @@ guide at {ref}`bug_report`. We depend on your feedback to improve VyOS.
 :::
 
 The following link contains the most recent VyOS builds for AMD64
-systems from the `current` branch: <https://vyos.net/get/nightly-builds/>
+systems from the `rolling` branch: <https://vyos.net/get/nightly-builds/>
 
 ### Download Verification
 
