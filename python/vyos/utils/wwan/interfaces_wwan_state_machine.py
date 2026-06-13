@@ -816,6 +816,20 @@ class ModemStateMachine:
                                'current_state': self.machine.current_state})
                     return
 
+                # Honor a standing user disconnect.  In connect-on-demand /
+                # dial-on-demand the operator may have issued a disconnect
+                # while we were stuck in FAILED; we must not auto-reconnect
+                # behind their back.  Stop retrying and stay down until an
+                # explicit connect arrives (which clears user_disconnected).
+                if self.user_disconnected and self.connection_mode in (
+                        'connect-on-demand', 'dial-on-demand'):
+                    logger.info(
+                        "User disconnect active — stopping failed-state retry "
+                        "loop; will stay down until an explicit connect",
+                        extra={'interface_number': self.interface_number,
+                               'connection_mode': self.connection_mode})
+                    return
+
                 # Verify modem is still accessible and registered
                 if not self.proxy:
                     logger.warning(
@@ -2095,6 +2109,17 @@ class ModemStateMachine:
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
+                # Actually tear down the data bearer at the ModemManager
+                # level.  Without this the FSM would report REGISTERED_IDLE
+                # (get_bearer_status -> "disconnected") while the real bearer
+                # stayed up — mmcli still shows connected and traffic still
+                # flows.  Scheduling the async teardown keeps FSM state and
+                # the live modem in sync.
+                try:
+                    self._safe_create_task(self._disconnect_bearer())
+                except RuntimeError:
+                    # No event loop running (e.g., during tests) - ignore
+                    pass
                 self._record_bearer_down('enter_idle')
                 logger.info("ENTER_IDLE event processed",
                            extra={'interface_number': self.interface_number,
@@ -2122,6 +2147,18 @@ class ModemStateMachine:
                               'event': event.value,
                               'current_state': new_state,
                               'previous_state': old_state})
+
+            # On-demand reconnect driver.  REGISTERED_IDLE → CONNECTING only
+            # happens via an explicit user connect (connect()/connect_bearer()).
+            # The modem is already REGISTERED at the MM level, so no new MM
+            # state-change signal will fire to drive the connection — we must
+            # kick apply_modem_configuration() ourselves.  This is the fast
+            # path: the last-connected APN is reused (PRIORITY 1.5 in
+            # apply_modem_configuration), so reconnection skips discovery.
+            if (event == ModemEvent.CONNECT
+                    and old_state == ModemState.REGISTERED_IDLE.value
+                    and new_state == ModemState.CONNECTING.value):
+                self._safe_create_task(self.apply_modem_configuration())
 
             # Policy: clear LED (OFF) in no-connection states so stale bars
             # from previous bearer sessions are not shown.
@@ -2883,6 +2920,28 @@ class ModemStateMachine:
                                  extra={'interface_number': self.interface_number})
 
             if connection_successful:
+                # Honor an in-flight user disconnect.  In connect-on-demand /
+                # dial-on-demand a disconnect may have been issued while this
+                # connect was still completing (FSM in CONNECTING, so the
+                # disconnect handler could not fire ENTER_IDLE from CONNECTED).
+                # The requirement is that once the user disconnects we stay
+                # down until an explicit connect arrives — so tear the freshly
+                # established bearer back down and park at REGISTERED_IDLE
+                # instead of advancing to CONNECTED.  A subsequent connect
+                # clears user_disconnected and proceeds normally.
+                if self.user_disconnected and self.connection_mode in (
+                        'connect-on-demand', 'dial-on-demand'):
+                    logger.info(
+                        "Connection completed but user requested disconnect — "
+                        "tearing bearer back down and parking idle",
+                        extra={'interface_number': self.interface_number,
+                               'connection_mode': self.connection_mode,
+                               'current_state': self.machine.current_state})
+                    await self._disconnect_bearer()
+                    if self.machine.current_state == ModemState.CONNECTING.value:
+                        self.transition(ModemEvent.ENTER_IDLE)
+                    return
+
                 logger.info("Connection established successfully, transitioning to CONNECTED state",
                            extra={'interface_number': self.interface_number})
 
@@ -5293,6 +5352,24 @@ class ModemStateMachine:
                               extra={'interface_number': self.interface_number})
                 return False
 
+            # Honor a standing user disconnect.  In connect-on-demand /
+            # dial-on-demand, automatic SIM failover (sim-missing, signal
+            # loss, ...) must not silently bring a SIM back up and reconnect
+            # while the operator has explicitly disconnected — we must stay
+            # down until an explicit connect.  A connect always clears
+            # user_disconnected *before* dispatching, so connect-initiated
+            # failover (e.g. "connect while the active SIM is gone") still
+            # passes this gate and proceeds to the alternate SIM.
+            if self.user_disconnected and self.connection_mode in (
+                    'connect-on-demand', 'dial-on-demand'):
+                logger.info(
+                    "SIM failover suppressed — user disconnect active (on-demand); "
+                    "staying down until an explicit connect",
+                    extra={'interface_number': self.interface_number,
+                           'reason': reason,
+                           'connection_mode': self.connection_mode})
+                return False
+
             # Check if failover is enabled for the active SIM
             if not self._is_sim_failover_enabled():
                 logger.info("SIM failover disabled for active slot, waiting for configured SIM",
@@ -6972,19 +7049,44 @@ class ModemStateMachine:
                     extra={'interface_number': self.interface_number})
 
     async def _disconnect_bearer(self):
-        """Disconnect the current bearer connection"""
+        """Disconnect the current bearer connection.
+
+        Always issues a disconnect down to ModemManager — even when we have
+        no tracked bearer path — and finishes with an all-bearers sweep
+        (``Simple.Disconnect('/')``).  Disconnecting an already-idle modem is
+        harmless, and the unconditional sweep is what keeps ModemManager from
+        drifting out of sync with the FSM: a stale bearer_path, an extra
+        bearer MM created on its own, or a bearer left behind by a racey
+        teardown would otherwise stay up while the FSM believes it is idle.
+        This mirrors the convention used on the startup / retry paths.
+        """
         try:
-            if self.bearer_path and self.proxy:
-                logger.info("Disconnecting bearer for reconfiguration",
+            if not self.proxy:
+                logger.warning("No modem proxy — cannot disconnect bearer",
+                              extra={'interface_number': self.interface_number})
+                return
+
+            simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+
+            if self.bearer_path:
+                logger.info("Disconnecting bearer",
                            extra={'interface_number': self.interface_number,
                                   'bearer_path': self.bearer_path})
-
-                simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
-                await simple_iface.call_disconnect(self.bearer_path)
+                try:
+                    await simple_iface.call_disconnect(self.bearer_path)
+                except Exception as e:
+                    # Fall through to the all-bearers sweep below.
+                    logger.debug(f"Tracked bearer disconnect failed: {e}",
+                                extra={'interface_number': self.interface_number})
                 self.bearer_path = None
 
-                logger.info("Bearer disconnected successfully",
-                           extra={'interface_number': self.interface_number})
+            # Unconditional sweep: drop any bearer MM still holds so the modem
+            # is genuinely idle regardless of what we were tracking.  Harmless
+            # no-op when nothing is connected.
+            await simple_iface.call_disconnect('/')
+
+            logger.info("Bearer disconnected successfully",
+                       extra={'interface_number': self.interface_number})
 
         except Exception as e:
             logger.error(f"Failed to disconnect bearer: {e}",

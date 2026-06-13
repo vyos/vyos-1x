@@ -116,6 +116,7 @@ class StateTransitionManager:
                 StateTransition("DISCONNECTING", "CONFIGURING", "CONFIG_UPDATE", "Recovery: reconfigure after bearer loss"),
                 StateTransition("CONNECTED", "REGISTERED_IDLE", "ENTER_IDLE", "On-demand disconnect: drop bearer, keep registration"),
                 StateTransition("USAGE_MONITORING", "REGISTERED_IDLE", "ENTER_IDLE", "On-demand disconnect from monitoring"),
+                StateTransition("CONNECTING", "REGISTERED_IDLE", "ENTER_IDLE", "In-flight connect aborted by user disconnect (on-demand)"),
             ]
         )
 

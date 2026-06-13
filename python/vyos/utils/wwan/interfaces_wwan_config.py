@@ -1718,6 +1718,21 @@ class InterfaceConfig(ServiceInterface):
                     return "accepted"
                 return f"connect() on {self.interface_number}"
 
+            if current_state == 'WAITING_FOR_SIM':
+                # The active SIM is gone (e.g. popped out after a disconnect).
+                # Honor the connect by attempting SIM failover to an alternate
+                # SIM.  user_disconnected was already cleared above, so the
+                # failover executor's on-demand suppression gate lets this
+                # connect-initiated failover through.  No-op for single-SIM
+                # setups — bearer_requested makes us connect automatically
+                # once a SIM is re-inserted.
+                self.fsm._safe_create_task(
+                    self.fsm._handle_sim_missing_failover())
+                if fire_and_forget:
+                    return "accepted"
+                return (f"Connect request for interface {self.interface_number} "
+                        f"triggered SIM failover (active SIM missing).")
+
             # Not ready yet — queue the request so FSM connects when it can
             self.fsm.connect_requested = True
             if fire_and_forget:
@@ -1892,6 +1907,16 @@ class InterfaceConfig(ServiceInterface):
 
             if current_state == ModemState.REGISTERED_IDLE.value:
                 self.fsm.transition(ModemEvent.CONNECT)
+            elif current_state == ModemState.WAITING_FOR_SIM.value:
+                # The active SIM is gone (e.g. popped out after a disconnect).
+                # Honor the connect by attempting SIM failover to an alternate
+                # SIM.  user_disconnected was just cleared above, so the
+                # failover executor's on-demand suppression gate lets this
+                # connect-initiated failover through.  No-op for single-SIM
+                # setups — bearer_requested (set above) makes us connect
+                # automatically once a SIM is re-inserted.
+                self.fsm._safe_create_task(
+                    self.fsm._handle_sim_missing_failover())
             elif current_state not in {ModemState.CONNECTED.value,
                                         ModemState.CONNECTING.value}:
                 self.fsm.connect_requested = True
