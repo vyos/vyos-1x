@@ -21,7 +21,33 @@
 # The central config no longer enforces strict `T<digits>:` format — that
 # moved per-product-repo — so docs (a non-product repo) inherits only the
 # generic loose-title + body checks, no override needed.
+#
+# T8937 (2026-06): replaced the eps1lon `check-open-prs-conflict.yml` GHA
+# caller (which ran `eps1lon/actions-label-merge-conflict` to label + comment
+# on conflicting PRs) with Mergify. The inherited central rule `Label
+# conflicting pull requests` already toggles the `conflicts` label; the local
+# additive rule below restores the contributor-facing "please resolve" comment
+# the GHA used to post. (The GHA's clean-side "conflicts resolved" comment has
+# no Mergify equivalent — there is no "was-conflicting-now-clean" predicate —
+# so it is intentionally not replicated.)
 
 extends: mergify
 merge_protections_settings:
   reporting_method: check-runs
+
+pull_request_rules:
+  # Additive (distinct name from the inherited `Label conflicting pull
+  # requests` rule, so both fire): post a one-time comment when a PR enters
+  # conflict, mirroring the retired eps1lon GHA's dirty-side notice. Mergify's
+  # comment action dedupes per rule+message, so it posts once when the PR
+  # becomes conflicting, not on every re-evaluation.
+  - name: Comment on conflicting pull requests
+    description: Notify the author when their PR develops a merge conflict.
+    conditions:
+      - conflict
+      - '-closed'
+    actions:
+      comment:
+        message: >-
+          @{{author}} this pull request has conflicts. Please resolve them
+          before we can evaluate the pull request.
