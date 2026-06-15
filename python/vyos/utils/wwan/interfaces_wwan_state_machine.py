@@ -7176,7 +7176,10 @@ class ModemStateMachine:
             rf = await _qmicli('--nas-get-rf-band-info')
             if rf:
                 # Split into per-interface chunks on the "Radio interface:" key.
-                chunks = re.split(r"Radio interface:", rf)
+                # NOTE: qmicli emits "Radio Interface:" (capitalised) on this
+                # firmware, so the split MUST be case-insensitive or no chunk
+                # is produced and nothing parses.
+                chunks = re.split(r"Radio interface:", rf, flags=re.IGNORECASE)
                 lte_chunk = nr_chunk = None
                 for ch in chunks[1:]:
                     low = ch.lower()
@@ -7195,7 +7198,7 @@ class ModemStateMachine:
                     if m_band:
                         info['serving_band'] = m_band.group(1).lower()
                     m_chan = re.search(
-                        r"Active channel:\s*'?(\d+)'?", chosen)
+                        r"Active channel:\s*'?(\d+)'?", chosen, re.IGNORECASE)
                     if m_chan:
                         info['serving_earfcn'] = m_chan.group(1)
                         # Derive band from EARFCN if the band name was absent.
@@ -7209,11 +7212,11 @@ class ModemStateMachine:
             # via EARFCN when rf-band-info did not yield one.
             cell = await _qmicli('--nas-get-cell-location-info')
             if cell:
-                lte_idx = cell.find('Intrafrequency LTE Info')
+                lte_idx = cell.lower().find('intrafrequency lte info')
                 if lte_idx != -1:
                     seg = cell[lte_idx:]
                     m_earfcn = re.search(
-                        r"EUTRA Absolute RF Channel Number:\s*'(\d+)'", seg)
+                        r"EUTRA Absolute RF Channel Number:\s*'(\d+)'", seg, re.IGNORECASE)
                     if m_earfcn and not info.get('serving_earfcn'):
                         info.setdefault('serving_cell_type', 'lte')
                         info['serving_earfcn'] = m_earfcn.group(1)
@@ -7221,18 +7224,18 @@ class ModemStateMachine:
                             band = self._lte_earfcn_to_band(m_earfcn.group(1))
                             if band:
                                 info['serving_band'] = band.lower()
-                    m_tac = re.search(r"Tracking Area Code:\s*'(\d+)'", seg)
+                    m_tac = re.search(r"Tracking Area Code:\s*'(\d+)'", seg, re.IGNORECASE)
                     if m_tac:
                         info['serving_tac'] = m_tac.group(1)
-                    m_gcid = re.search(r"Global Cell ID:\s*'(\d+)'", seg)
+                    m_gcid = re.search(r"Global Cell ID:\s*'(\d+)'", seg, re.IGNORECASE)
                     if m_gcid:
                         info['serving_cell_id'] = m_gcid.group(1)
-                    m_scid = re.search(r"Serving Cell ID:\s*'(\d+)'", seg)
+                    m_scid = re.search(r"Serving Cell ID:\s*'(\d+)'", seg, re.IGNORECASE)
                     if m_scid:
                         info['serving_physical_ci'] = m_scid.group(1)
                 # Pure-NR camp: no LTE block, grab the NR channel.
                 if 'serving_cell_type' not in info:
-                    m_nr = re.search(r"5GNR ARFCN:\s*'(\d+)'", cell)
+                    m_nr = re.search(r"5GNR ARFCN:\s*'(\d+)'", cell, re.IGNORECASE)
                     if m_nr:
                         info['serving_cell_type'] = 'nr5g'
                         info['serving_earfcn'] = m_nr.group(1)
