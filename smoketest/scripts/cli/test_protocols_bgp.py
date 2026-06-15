@@ -1841,6 +1841,40 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  rt vpn import {ASN}:300', frrconfig)
         self.assertNotIn('route-target vpn', frrconfig)
 
+    def test_bgp_34_interface_neighbor(self):
+        peer_group = 'TESTPG'
+        interface = 'eth0'
+        self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', ASN])
+
+        # Setting peer-group directly on an interface neighbor must be rejected
+        self.cli_set(base_path + ['neighbor', interface, 'peer-group', peer_group])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['neighbor', interface, 'peer-group'])
+
+        # Correct syntax: peer-group under the interface sub-node must succeed
+        self.cli_set(
+            base_path + ['neighbor', interface, 'interface', 'peer-group', peer_group]
+        )
+        self.cli_commit()
+
+        # Remove remote-as from peer-group so the neighbor resolves it via interface node
+        self.cli_delete(base_path + ['peer-group', peer_group, 'remote-as'])
+
+        # remote-as set directly on an interface neighbor must be rejected
+        self.cli_set(base_path + ['neighbor', interface, 'remote-as', ASN])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['neighbor', interface, 'remote-as'])
+
+        # Correct syntax: remote-as under the interface sub-node must succeed
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'remote-as', ASN])
+        self.cli_commit()
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(
+            f' neighbor {interface} interface peer-group {peer_group}', frrconfig
+        )
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'

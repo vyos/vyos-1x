@@ -26,7 +26,6 @@ from vyos.configverify import verify_vrf
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.template import is_ip
-from vyos.template import is_interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import is_addr_assigned
@@ -382,11 +381,21 @@ def verify(config_dict):
 
                 if is_ip(peer) and is_addr_assigned(peer, vrf):
                     raise ConfigError(f'Cannot configure local address as neighbor "{peer}"{vrf_error_msg}')
-                elif is_interface(peer):
+                elif not is_ip(peer):
+                    # T5526: Neighbor is not an IP address — treat as interface name
+                    # regardless of whether the interface currently exists on the system.
+                    # Checking physical existence would silently skip validation during
+                    # boot or config restore, allowing invalid config to reach FRR.
                     if 'peer_group' in peer_config:
-                        raise ConfigError(f'peer-group must be set under the interface node of "{peer}"')
+                        raise ConfigError(
+                            f'To assign a peer-group to an interface-based neighbor, use: '
+                            f'"set protocols bgp neighbor {peer} interface peer-group <name>"'
+                        )
                     if 'remote_as' in peer_config:
-                        raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
+                        raise ConfigError(
+                            f'To set remote-as for an interface-based neighbor, use: '
+                            f'"set protocols bgp neighbor {peer} interface remote-as <asn>"'
+                        )
                     if 'source_interface' in peer_config['interface']:
                         raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
 
