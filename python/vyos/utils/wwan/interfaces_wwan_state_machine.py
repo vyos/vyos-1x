@@ -4209,6 +4209,38 @@ class ModemStateMachine:
             return True
         return False
 
+    async def _present_eligible_alternate_exists(self) -> bool:
+        """Presence-aware companion to ``_signal_failover_possible()``.
+
+        ``_signal_failover_possible()`` is a cheap *config-only* gate: it is
+        satisfied as soon as a configured, enabled, non-active slot exists —
+        it does NOT confirm a SIM is physically in that slot.  That is correct
+        for the cooldown-guarded switch path (presence is verified at switch
+        time), but it means weak-signal failover keeps ARMING its timer and
+        emitting attempts even when the only alternate slot is physically
+        empty (e.g. right after a hot-eject failover, where the just-vacated
+        slot is still configured+enabled but now holds no SIM).
+
+        This probes ModemManager ``SimSlots`` for each eligible slot and
+        returns True only when at least one actually has a SIM present, so the
+        signal-loss path can stay quiet when there is nowhere to switch.
+        Slightly more expensive (one D-Bus read per eligible slot), so callers
+        invoke it only at decision points (arming / firing), never per poll.
+        """
+        if not self._signal_failover_possible():
+            return False
+        active = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+        primary = self.config.get('primary_sim_slot', 1)
+        for slot in self.config.get('sim_slots', []):
+            slot_num = slot.get('slot')
+            if slot_num == active or not slot.get('enabled', True):
+                continue
+            if slot_num == primary and self.failback_suppressed_by_data_limit:
+                continue
+            if await self._check_primary_sim_available(slot_num):
+                return True
+        return False
+
     def _record_failover(self):
         """Record that a SIM failover was performed"""
         self.last_failover_time = time.time()
@@ -9329,6 +9361,20 @@ class ModemStateMachine:
         # Below threshold — start or continue the weak-signal window.
         now = time.time()
         if self._signal_failover_below_since is None:
+            # Only arm the timer if there is actually somewhere to switch to.
+            # The cheap _signal_failover_possible() gate above is config-only;
+            # confirm a SIM is physically present in an eligible slot before
+            # arming so we don't spin the timer (and emit attempts) into an
+            # empty slot — e.g. right after a hot-eject failover where the
+            # just-vacated slot is still configured+enabled but now empty.
+            if not await self._present_eligible_alternate_exists():
+                logger.debug("Weak signal but no present alternate SIM — "
+                             "not arming signal-loss failover",
+                             extra={'interface_number': self.interface_number,
+                                    'metric': metric_name,
+                                    'metric_dbm': metric_dbm,
+                                    'threshold_dbm': threshold})
+                return
             self._signal_failover_below_since = now
             logger.warning("Signal dropped below sim-failover threshold — "
                           "starting signal-loss timer",
@@ -9341,6 +9387,19 @@ class ModemStateMachine:
 
         elapsed = now - self._signal_failover_below_since
         if elapsed >= loss_timer:
+            # Re-confirm a present alternate before firing: the alternate SIM
+            # could have been removed during the loss window, in which case we
+            # silently reset rather than launch a doomed switch.
+            if not await self._present_eligible_alternate_exists():
+                logger.debug("Sustained weak signal but no present alternate "
+                             "SIM — skipping signal-loss failover",
+                             extra={'interface_number': self.interface_number,
+                                    'metric': metric_name,
+                                    'metric_dbm': metric_dbm,
+                                    'threshold_dbm': threshold,
+                                    'elapsed_seconds': round(elapsed, 1)})
+                self._signal_failover_below_since = None
+                return
             logger.warning("Sustained weak signal — triggering SIM failover",
                           extra={'interface_number': self.interface_number,
                                  'metric': metric_name,
