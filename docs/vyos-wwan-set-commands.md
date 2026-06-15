@@ -32,7 +32,7 @@ interfaces
         ├── mtu <576-1500>                                # fallback MTU if carrier does not provide one (default: 1420); also ceiling
         ├── vrf <name>                                    # VRF instance name
         ├── connection-mode <always-on|connect-on-demand|dial-on-demand>
-        ├── network-mode <auto|lte|5g|3g|2g>              # modem-level RAT selection
+        ├── network-mode <auto|lte|5g|5g-only|3g|2g>      # modem-level RAT selection
         │
         ├── ip                                            # IPv4 routing parameters (kernel-level)
         │     ├── adjust-mss <bytes|clamp-mss-to-pmtu>
@@ -1119,6 +1119,23 @@ set interfaces wwan wwan0 failed-retry escalation-threshold 3
 > because different carriers use different frequencies.
 > Use per-SIM `supported-bands` for carrier-specific band restrictions.
 > The final active band set is: per-SIM ∩ modem-supported.
+>
+> **`network-mode` values and how they map to the modem.**  The selection is
+> *capability-driven*: the value expresses intent, and the service writes the
+> matching `(allowed, preferred)` tuple from the modem's own `SupportedModes`
+> (so it is never rejected, and unsupported RATs degrade gracefully).
+>
+> | Value | RATs enabled | Preferred | Notes |
+> |---|---|---|---|
+> | `auto` | everything the modem supports | none | default |
+> | `lte` | 4G only | none | |
+> | `5g` | 4G + 5G NR | 5G | NSA + SA — keeps the LTE anchor; this is the right choice for most 5G deployments |
+> | `5g-only` | 5G NR only | 5G | **SA only**, no LTE anchor — requires the modem (and network) to support 5G standalone; if the modem only does NSA the service falls back to the closest supported tuple and logs it |
+> | `3g` | 3G only | none | |
+> | `2g` | 2G only | none | |
+>
+> Note `5g` is *not* "5G only" — it is 5G-preferred with a 4G anchor (the
+> standard NSA arrangement).  Use `5g-only` for true standalone NR.
 >
 > **Changing bands (or SIM slot / network-mode) at runtime triggers a full
 > graceful restart.** These are modem-level parameters that can only be

@@ -157,7 +157,7 @@
             <properties>
               <help>Modem radio access technology selection</help>
               <completionHelp>
-                <list>auto lte 5g 3g 2g</list>
+                <list>auto lte 5g 5g-only 3g 2g</list>
               </completionHelp>
               <valueHelp>
                 <format>auto</format>
@@ -169,7 +169,11 @@
               </valueHelp>
               <valueHelp>
                 <format>5g</format>
-                <description>5G NR only</description>
+                <description>5G NR preferred with LTE anchor (NSA + SA)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>5g-only</format>
+                <description>5G NR standalone only (no LTE anchor; requires SA support)</description>
               </valueHelp>
               <valueHelp>
                 <format>3g</format>
@@ -180,9 +184,9 @@
                 <description>2G GSM/GPRS/EDGE only</description>
               </valueHelp>
               <constraint>
-                <regex>^(auto|lte|5g|3g|2g)$</regex>
+                <regex>^(auto|lte|5g|5g-only|3g|2g)$</regex>
               </constraint>
-              <constraintErrorMessage>Network mode must be auto, lte, 5g, 3g, or 2g</constraintErrorMessage>
+              <constraintErrorMessage>Network mode must be auto, lte, 5g, 5g-only, 3g, or 2g</constraintErrorMessage>
             </properties>
             <defaultValue>auto</defaultValue>
           </leafNode>
