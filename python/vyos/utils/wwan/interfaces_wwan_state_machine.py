@@ -6960,7 +6960,16 @@ class ModemStateMachine:
         old_config = getattr(self, '_previous_config', {})
         needs_disconnect = self._requires_disconnection(old_config, self.config)
 
-        if needs_disconnect and self.machine.current_state == ModemState.CONNECTED.value:
+        # apply_config() always fires RECONFIGURE before scheduling this
+        # coroutine, so by the time we run the FSM has already left its prior
+        # stable state (CONNECTED / USAGE_MONITORING / REGISTERED_IDLE / ...)
+        # and is parked in CONFIGURING.  Capture the real bearer state up-front
+        # so we can both decide whether a disconnect is meaningful (the old
+        # `current_state == CONNECTED` guard could never be true here) and
+        # restore a correct stable state afterwards.
+        bearer_up = await self._is_bearer_connected()
+
+        if needs_disconnect and bearer_up:
             logger.info("Disconnecting for connection parameter changes",
                        extra={'interface_number': self.interface_number})
             await self._disconnect_bearer()
@@ -6976,16 +6985,78 @@ class ModemStateMachine:
         else:
             logger.info("Configuration updated without disconnection - only monitoring/timer changes",
                        extra={'interface_number': self.interface_number})
-            # For non-connection changes, just update internal state
-            # The FSM will continue in its current state with updated parameters
+            # For non-connection changes, just update internal state.
             # Reconcile downstream-LAN features (ip-passthrough, ipv6-bridging)
             # immediately rather than waiting for the next bearer event —
             # disabling these features should take effect on commit, not at
             # the next IP-change.
             await self._reconcile_downstream_features()
 
+        # The preceding RECONFIGURE parked the FSM in CONFIGURING.  A
+        # monitoring-only change (e.g. connection-mode) does not bounce the
+        # bearer, so no ModemManager state-change signal will fire to move us
+        # out of CONFIGURING — settle the FSM back to a stable state here so
+        # the modem does not get stuck reporting CONFIGURING while connected.
+        await self._settle_after_reconfigure()
+
         # Store current config for future comparisons
         self._previous_config = self.config.copy() if self.config else {}
+
+    async def _settle_after_reconfigure(self):
+        """Drive the FSM out of the transient CONFIGURING state after a
+        runtime reconfigure.
+
+        ``apply_config()`` fires ``RECONFIGURE`` before ``_reconfigure_modem()``
+        runs, which moves the FSM from its prior stable state into
+        ``CONFIGURING``.  A monitoring-only change (such as ``connection-mode``)
+        does not bounce the bearer, so no ModemManager state-change signal
+        fires to advance the FSM and it would otherwise remain in
+        ``CONFIGURING`` indefinitely even though the bearer is up and traffic
+        flows.  Reconcile the FSM with the real bearer state here.
+
+        Idempotent and safe: when another path (an MM signal or the connection
+        cascade) has already advanced the FSM past ``CONFIGURING`` this is a
+        no-op.
+        """
+        if self.machine.current_state != ModemState.CONFIGURING.value:
+            # Another path already advanced the FSM — nothing to settle.
+            return
+
+        bearer_up = await self._is_bearer_connected()
+
+        if bearer_up:
+            # Bearer is still up: return to CONNECTED and resume monitoring.
+            logger.info("Reconfigure complete — bearer still up, returning to CONNECTED",
+                       extra={'interface_number': self.interface_number})
+            self.transition(ModemEvent.CONNECT)    # CONFIGURING -> CONNECTING
+            self.transition(ModemEvent.CONNECTED)  # CONNECTING  -> CONNECTED
+            try:
+                await self._apply_bearer_ip_configuration()
+                if self.ensure_link_up_on_connect:
+                    self._safe_create_task(self._ensure_interface_up())
+            except Exception as e:
+                logger.warning("Post-reconfigure bearer re-apply failed: %s", e,
+                              extra={'interface_number': self.interface_number})
+            self._ensure_usage_monitoring_started('reconfigure_settle')
+            return
+
+        # No bearer up.  Honour the connection mode and any standing user
+        # disconnect: on-demand modes park at REGISTERED_IDLE until a connect
+        # trigger arrives; always-on drives a fresh connection.
+        if self.user_disconnected or (
+                self.connection_mode in ('connect-on-demand', 'dial-on-demand')
+                and not self.bearer_requested):
+            logger.info("Reconfigure complete — parking at REGISTERED_IDLE",
+                       extra={'interface_number': self.interface_number,
+                              'connection_mode': self.connection_mode,
+                              'user_disconnected': self.user_disconnected})
+            self.transition(ModemEvent.ENTER_IDLE)  # CONFIGURING -> REGISTERED_IDLE
+        else:
+            logger.info("Reconfigure complete — driving fresh connection",
+                       extra={'interface_number': self.interface_number,
+                              'connection_mode': self.connection_mode})
+            self.transition(ModemEvent.CONNECT)     # CONFIGURING -> CONNECTING
+            await self.apply_modem_configuration()
 
     async def _reconcile_downstream_features(self):
         """Reconcile passthrough + ipv6-bridging state with the live config.

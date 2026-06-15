@@ -34,6 +34,23 @@ Documentation=man:igos-wwan-manager(8)
 # happen to be activating, ordering ourselves after it avoids a startup
 # race with MM's D-Bus name acquisition.
 #
+# LOAD-BEARING FOR GRACEFUL SHUTDOWN -- do NOT remove
+# After=ModemManager.service:
+#
+#   systemd reverses ordering dependencies at stop time, so ordering
+#   ourselves After= MM means systemd stops *us* before MM (and before
+#   dbus.service) in any full-system shutdown/reboot transaction.  That
+#   is precisely what lets fsm.shutdown() issue its Simple.Disconnect()
+#   D-Bus call to tear the bearer down gracefully while MM and the bus
+#   are still alive.  Plain After= ordering is honored on the stop side
+#   even without Wants=/Requires=, as long as both units stop in the
+#   same transaction.  Drop this line and shutdown races MM -- MM may go
+#   down first and the bearer never gets a clean disconnect.
+#
+#   (This does not cover a standalone `systemctl stop ModemManager` or
+#   an MM crash; those are handled at runtime by the MM-restart recovery
+#   path, and the shutdown disconnect is try/except-wrapped + bounded.)
+#
 # NOTE: do NOT add After=vyos-router.service.  This service is started
 # *by* the conf_mode script that runs inside vyos-router, so adding it
 # here would either deadlock or be silently ignored (systemd cannot
