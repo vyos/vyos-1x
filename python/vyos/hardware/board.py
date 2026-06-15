@@ -756,25 +756,33 @@ class IgosBoard(Board):
     def modem_signal_level(self, level: int, modem: Optional[str] = None) -> None:
         """Display modem signal level on RGB STAT LEDs.
 
-        ``level`` is clamped to 0..7 and converted to RGB output by policy:
+        ``level`` is clamped to 0..7 and converted to RGB output by policy.
+        The ladder is monotonic and follows the universal "amber = weak,
+        green = good" convention so a strong signal never looks alarming:
         - 0: all off (no signal)
-        - 1..7: progressively more vivid combinations
-        - red-only is intentionally never used (commonly interpreted as fault)
+        - 1: amber (weakest usable — caution, but NOT a fault)
+        - 2..4: cool transitional colours as signal improves
+        - 5..6: green (the strong / "good" zone — reassuring)
+        - 7: white (maximum)
+        - red is intentionally never used: it universally reads as a fault,
+          which a low-but-working signal is not.
         """
         level = max(0, min(7, int(level)))
 
         # NOTE: with simple GPIO on/off RGB channels there are only 7 non-off
-        # combinations total; levels 6 and 7 intentionally share white as the
-        # "max strength" state unless board-specific PWM is added later.
+        # combinations total and red is deliberately excluded (fault colour),
+        # leaving amber/magenta/blue/cyan/green/white.  Green spans levels 5-6
+        # so the strong zone clearly reads "good"; white is reserved for the
+        # absolute maximum.  Add board-specific PWM later for finer gradients.
         palette = {
-            0: (0, 0, 0),  # off
-            1: (0, 0, 1),  # blue
-            2: (0, 1, 0),  # green
-            3: (0, 1, 1),  # cyan
-            4: (1, 0, 1),  # magenta (avoid red-only)
-            5: (1, 1, 0),  # yellow/amber
-            6: (1, 1, 1),  # white
-            7: (1, 1, 1),  # white (max)
+            0: (0, 0, 0),  # off      — no signal
+            1: (1, 1, 0),  # amber    — barely usable (weakest usable)
+            2: (1, 0, 1),  # magenta  — very poor
+            3: (0, 0, 1),  # blue     — poor
+            4: (0, 1, 1),  # cyan     — fair
+            5: (0, 1, 0),  # green    — good
+            6: (0, 1, 0),  # green    — very good (green dominates strong zone)
+            7: (1, 1, 1),  # white    — excellent / maximum
         }
 
         prefix = self._resolve_modem_stat_prefix(modem)
