@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from shlex import quote
+
 from vyos.qos.base import QoSBase
 
 class Limiter(QoSBase):
@@ -20,7 +22,7 @@ class Limiter(QoSBase):
     qostype = 'limiter'
 
     def update(self, config, direction):
-        tmp = f'tc qdisc add dev {self._interface} handle {self._parent:x}: {direction}'
+        tmp = f'tc qdisc add dev {quote(self._interface)} handle {self._parent:x}: {quote(direction)}'
         self._cmd(tmp)
 
         # base class must be called last
