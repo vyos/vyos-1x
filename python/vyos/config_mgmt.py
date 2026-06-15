@@ -38,7 +38,6 @@ from vyos.configtree import ConfigTreeError
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.configtree import diff_compare
-from vyos.configtree import DiffTree
 from vyos.load_config import load
 from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
@@ -451,80 +450,6 @@ Proceed ?"""
             r2 = int(options[1])
 
         return self.compare(commands=cmnds, rev1=r1, rev2=r2)
-
-    def _format_remote_diff(self, diff_tree: DiffTree, path: list, commands: bool):
-        add_tree = diff_tree.add
-        del_tree = diff_tree.delete
-        command_prefix = ' '.join(path)
-
-        result_lines = []
-        if commands:
-            # Process the deleted elements into command format and filter based on prefix (path)
-            for line in del_tree.to_commands(op='delete').splitlines():
-                if line.startswith(f'delete {command_prefix}'):
-                    result_lines.append(line)
-
-            # Process the added elements into command format and filter based on prefix (path)
-            for line in add_tree.to_commands(op='set').splitlines():
-                if line.startswith(f'set {command_prefix}'):
-                    result_lines.append(line)
-        else:
-            with_node = len(path) > 1
-            # Retrieve subtrees for the specified path from both added and deleted trees
-            del_tree = del_tree.get_subtree(path, with_node=with_node)
-            add_tree = add_tree.get_subtree(path, with_node=with_node)
-
-            # Convert the subtrees to string lines for further processing
-            del_tree_lines = str(del_tree).splitlines()
-            add_tree_lines = str(add_tree).splitlines()
-
-            # Format the lines with a prefix ('-', '+') and filter out empty lines
-            del_lines = [f'- {l}' for l in del_tree_lines if l.strip()]
-            add_lines = [f'+ {l}' for l in add_tree_lines if l.strip()]
-
-            if del_lines or add_lines:
-                # Adjust command prefix if a node is present in the path
-                command_prefix = ' '.join(path[:-1]) if with_node else command_prefix
-                if command_prefix:
-                    result_lines.append(f'[{command_prefix}]')
-
-                # Combine both deleted and added lines and process them
-                result_lines.extend(del_lines + add_lines)
-
-        # Join the result lines into a single string, excluding empty lines
-        return '\n'.join((line for line in result_lines if line.strip()))
-
-    def remote_compare(
-        self,
-        source: str,
-        remote_tree: ConfigTree,
-        path: Optional[list] = None,
-        commands: bool = False,
-    ) -> str:
-        """
-        Compares a local configuration tree with a remote
-        configuration tree based on the specified source ('running', 'candidate', 'saved').
-        """
-        path = path or []
-
-        # Determine the correct local configuration tree based on the 'source' parameter
-        if source == 'running':
-            local_tree = self.active_config
-        elif source == 'candidate':
-            local_tree = self.working_config
-        elif source == 'saved':
-            local_tree = self._get_saved_config_tree()
-        else:
-            raise ConfigMgmtError(
-                'Invalid source, must be one of: running, candidate, saved'
-            )
-
-        try:
-            diff_tree = DiffTree(remote_tree, local_tree)
-        except ConfigTreeError as e:
-            raise ConfigMgmtError(e) from e
-
-        return self._format_remote_diff(diff_tree, path, commands)
 
     # Initialization and post-commit hooks for conf-mode
     #

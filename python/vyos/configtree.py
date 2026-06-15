@@ -19,6 +19,8 @@ import logging
 
 from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
 from typing import TYPE_CHECKING
+from pathlib import Path
+
 
 # https://peps.python.org/pep-0484/#forward-references
 # for type 'ConfigDict'
@@ -264,6 +266,19 @@ class ConfigTree:
         self.__migration = os.environ.get('VYOS_MIGRATION')
         if self.__migration:
             self.migration_log = logging.getLogger('vyos.migrate')
+
+    @classmethod
+    def load_file(cls, location):
+        # pylint: disable=raise-missing-from
+        config_file = Path(location)
+        if not config_file.exists():
+            raise ConfigTreeError(f'Missing config file at {location}')
+        try:
+            config_tree = cls(config_file.read_text())
+        except (OSError, ValueError, TypeError) as e:
+            raise ConfigTreeError(f'Corrupted config file at {location}: {e}')
+
+        return config_tree
 
     def __del__(self):
         if self.__config is not None:
