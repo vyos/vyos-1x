@@ -6892,6 +6892,97 @@ class ModemStateMachine:
         self._cached_qmi_band_capability = constants
         return constants
 
+    async def _qmi_get_serving_cell_info(self, modem_props) -> dict:
+        """Read live serving-cell info (band, channel, cell IDs) via ``qmicli``.
+
+        Fallback for status reporting when ModemManager's
+        ``Modem.CellInfo.GetCellInfo()`` returns no serving cell — a common
+        gap on QMI modems / older MM where the CellInfo interface is present
+        but unpopulated.  Reads NAS Get Cell Location Info, whose
+        ``Intrafrequency LTE Info`` block exposes the serving cell's EARFCN
+        (→ band via :meth:`_lte_earfcn_to_band`), the global / serving cell
+        IDs and the tracking area code.
+
+        Runs over the shared ModemManager ``qmi-proxy`` (``-p``) read-only so
+        it does not disturb MM's QMI session.  Never raises — returns ``{}``
+        when QMI is unavailable or nothing could be parsed.
+
+        :returns: dict with any of ``serving_cell_type``, ``serving_band``,
+            ``serving_earfcn``, ``serving_cell_id``, ``serving_tac``,
+            ``serving_physical_ci`` — or ``{}``.
+        """
+        info = {}
+        try:
+            device = self._qmi_control_device(modem_props)
+            if not device or not shutil.which('qmicli'):
+                return {}
+
+            proc = await asyncio.create_subprocess_exec(
+                'qmicli', '-d', device, '-p', '--nas-get-cell-location-info',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            out, _err = await asyncio.wait_for(proc.communicate(), timeout=10)
+            if proc.returncode != 0:
+                return {}
+            text = out.decode(errors='replace')
+
+            # --- LTE serving cell (Intrafrequency LTE Info block) ---
+            # The fields immediately under the "Intrafrequency LTE Info"
+            # header describe the serving cell, e.g.:
+            #   Tracking Area Code: '30175'
+            #   Global Cell ID: '9109320'
+            #   EUTRA Absolute RF Channel Number: '3050' (E-UTRA band 7: 2600)
+            #   Serving Cell ID: '146'
+            lte_idx = text.find('Intrafrequency LTE Info')
+            if lte_idx != -1:
+                seg = text[lte_idx:]
+                m_earfcn = re.search(
+                    r"EUTRA Absolute RF Channel Number:\s*'(\d+)'", seg)
+                if m_earfcn:
+                    earfcn = m_earfcn.group(1)
+                    info['serving_cell_type'] = 'lte'
+                    info['serving_earfcn'] = earfcn
+                    band = self._lte_earfcn_to_band(earfcn)
+                    if band:
+                        info['serving_band'] = band
+                m_tac = re.search(r"Tracking Area Code:\s*'(\d+)'", seg)
+                if m_tac:
+                    info['serving_tac'] = m_tac.group(1)
+                m_gcid = re.search(r"Global Cell ID:\s*'(\d+)'", seg)
+                if m_gcid:
+                    info['serving_cell_id'] = m_gcid.group(1)
+                m_scid = re.search(r"Serving Cell ID:\s*'(\d+)'", seg)
+                if m_scid:
+                    info['serving_physical_ci'] = m_scid.group(1)
+
+            # --- NR5G fallback ---
+            # Only when no LTE serving cell was found.  NR-ARFCN → band
+            # derivation is firmware-specific, so only the channel is
+            # reported.  (An "5GNR ARFCN" line can also appear next to an LTE
+            # serving cell under EN-DC — in that case LTE is the serving RAT
+            # and the block above already won.)
+            if 'serving_cell_type' not in info:
+                m_nr = re.search(r"5GNR ARFCN:\s*'(\d+)'", text)
+                if m_nr:
+                    info['serving_cell_type'] = 'nr5g'
+                    info['serving_earfcn'] = m_nr.group(1)
+
+            if info:
+                logger.info("Read serving-cell info over QMI",
+                            extra={'interface_number': self.interface_number,
+                                   'device': device,
+                                   'serving_band': info.get('serving_band', ''),
+                                   'serving_earfcn': info.get('serving_earfcn', '')})
+        except asyncio.TimeoutError:
+            logger.info("qmicli serving-cell query timed out",
+                        extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.info("Serving-cell info not readable over QMI",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
+        return info
+
     def _requires_disconnection(self, old_config, new_config):
         """Determine if configuration changes require bearer disconnection"""
         if not old_config:
@@ -9042,6 +9133,12 @@ class ModemStateMachine:
 
         status = {}
 
+        # Modem.GetAll() properties — populated in section 4/5 below, but
+        # initialised here at function scope so later sections (e.g. the QMI
+        # serving-cell fallback) can safely read the QMI control port even if
+        # that GetAll never ran or failed.
+        modem_props = {}
+
         # ── 1. FSM / interface identity ──────────────────────────────────
         current_state = (
             getattr(self.machine, 'current_state', 'UNKNOWN')
@@ -9425,6 +9522,20 @@ class ModemStateMachine:
         except Exception:
             # CellInfo interface unavailable (older MM) or no serving cell yet
             pass
+
+        # Fallback: ModemManager's CellInfo returned nothing usable — common
+        # on QMI modems / older MM builds where the interface is present but
+        # the serving cell is never populated.  Read the serving band,
+        # channel and cell IDs straight from the modem over QMI.  Only fills
+        # fields the MM path left blank, so a populated CellInfo always wins.
+        if not status.get('serving_band'):
+            try:
+                qmi_cell = await self._qmi_get_serving_cell_info(modem_props)
+                for k, v in qmi_cell.items():
+                    if v and not status.get(k):
+                        status[k] = v
+            except Exception:
+                pass
 
         # ── 7. IP configuration (live from interface) ────────────────────
         try:
