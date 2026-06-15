@@ -505,12 +505,20 @@
             </standalone>
             <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4"</command>
             <children>
-              <leafNode name="pem">
+              <node name="pem">
                 <properties>
                   <help>Show x509 CA certificate in PEM format</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4" --pem</command>
-              </leafNode>
+                <children>
+                  <leafNode name="full-chain">
+                    <properties>
+                      <help>Show x509 CA certificate with parent CA chain in PEM format</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4" --pem --full-chain</command>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </tagNode>
           <tagNode name="certificate">
@@ -526,12 +534,20 @@
             </standalone>
             <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4"</command>
             <children>
-              <leafNode name="pem">
+              <node name="pem">
                 <properties>
                   <help>Show x509 certificate in PEM format</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --pem</command>
-              </leafNode>
+                <children>
+                  <leafNode name="full-chain">
+                    <properties>
+                      <help>Show x509 certificate with parent CA chain in PEM format</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --pem --full-chain</command>
+                  </leafNode>
+                </children>
+              </node>
               <tagNode name="fingerprint">
                 <properties>
                   <help>Show x509 certificate fingerprint</help>
@@ -549,12 +565,20 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  <leafNode name="pem">
+                  <node name="pem">
                     <properties>
                       <help>Show x509 certificate private key in PEM format</help>
                     </properties>
                     <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --private --pem</command>
-                  </leafNode>
+                    <children>
+                      <leafNode name="full-chain">
+                        <properties>
+                          <help>Show x509 certificate private key with parent CA chain in PEM format</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --private --pem --full-chain</command>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </node>
             </children>
