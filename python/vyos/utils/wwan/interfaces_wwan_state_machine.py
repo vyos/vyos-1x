@@ -107,15 +107,19 @@ class SignalStrengthTracker:
 
     Maintains a FIFO history of signal samples (in dBm) and detects when the
     signal "level bin" changes to trigger periodic LED indicator updates.
-    Uses 8 levels (0-7) like smartphone signal bars for fine-grained indication:
-      - 0: No signal (< -110 dBm)
-      - 1: Very poor (-110 to -100 dBm)
-      - 2: Poor (-100 to -90 dBm)
-      - 3: Fair (-90 to -80 dBm)
-      - 4: Good (-80 to -70 dBm)
-      - 5: Very good (-70 to -60 dBm)
-      - 6: Excellent (-60 to -50 dBm)
-      - 7: Maximum (>= -50 dBm)
+    Uses 8 levels (0-7) like smartphone signal bars for fine-grained
+    indication.  All thresholds are on the 3GPP RSRP coverage scale; every
+    reading is normalized to RSRP by ``_to_rsrp_scale`` (RSRP used as-is, RSSI
+    shifted ~20 dB) before classification, so one consistent ruler applies no
+    matter which metric the modem reported:
+      - 0: No signal     (< -125 dBm or no reading)
+      - 1: Barely usable (-125 to -116 dBm)
+      - 2: Very poor     (-115 to -109 dBm)
+      - 3: Weak          (-108 to -103 dBm)
+      - 4: Fair          (-102 to -96 dBm)
+      - 5: Good          (-95 to -86 dBm)
+      - 6: Very good     (-85 to -76 dBm)
+      - 7: Excellent     (>= -75 dBm)
     """
 
     def __init__(self, window_size: int = 12, led_callback=None):
@@ -133,30 +137,80 @@ class SignalStrengthTracker:
         self.current_level = None  # Current level: 0-7
         self.last_update_time = 0
 
+    @staticmethod
+    def _to_rsrp_scale(signal_dbm, signal_detail) -> float:
+        """Normalize a reading to the RSRP scale so one ruler fits every RAT.
+
+        RSRP is the 3GPP per-resource-element coverage metric and is used as
+        the canonical scale.  RSSI (wideband, reported by 2G/3G and as the LTE
+        fallback) sits roughly 20 dB ABOVE RSRP for the same conditions, so an
+        RSSI reading is shifted down ~20 dB to land on the RSRP ruler.  Returns
+        None when nothing usable is available.
+        """
+        RSSI_TO_RSRP_OFFSET = 20  # RSSI is ~20 dB higher than RSRP
+
+        def _num(value):
+            try:
+                if value is None or value == '':
+                    return None
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        detail = signal_detail or {}
+        technology = (detail.get('technology') or '').upper()
+        rsrp = _num(detail.get('rsrp'))
+        rssi = _num(detail.get('rssi'))
+
+        # Prefer a real RSRP reading (LTE / 5G-NR) verbatim.
+        if rsrp is not None:
+            return rsrp
+        # Only RSSI exposed (2G/3G, or LTE without RSRP) -> shift onto RSRP.
+        if rssi is not None:
+            return rssi - RSSI_TO_RSRP_OFFSET
+        # No per-metric detail: treat the collapsed value as RSSI-like for
+        # LTE/5G (the extractor is RSSI-first there); leave others as-is.
+        if signal_dbm is None:
+            return None
+        if technology in ('LTE', '5G NR', 'NR5G', '5G'):
+            return signal_dbm - RSSI_TO_RSRP_OFFSET
+        return signal_dbm
+
     def _classify_level(self, avg_dbm: float) -> int:
-        """Classify signal dBm into an 8-level band (0=no signal, 7=maximum)."""
-        if avg_dbm is None or avg_dbm < -110:
+        """Classify a normalized RSRP-scale dBm into an 8-level band.
+
+        The input MUST already be normalized by ``_to_rsrp_scale`` so a single
+        set of thresholds is valid regardless of the reported metric.  Bands
+        follow the 3GPP RSRP coverage convention (see class docstring).
+        """
+        if avg_dbm is None or avg_dbm < -125:
             return 0  # No signal
-        if avg_dbm < -100:
-            return 1  # Very poor
-        if avg_dbm < -90:
-            return 2  # Poor
-        if avg_dbm < -80:
-            return 3  # Fair
-        if avg_dbm < -70:
-            return 4  # Good
-        if avg_dbm < -60:
-            return 5  # Very good
-        if avg_dbm < -50:
-            return 6  # Excellent
-        return 7  # Maximum
+        if avg_dbm < -115:
+            return 1  # Barely usable
+        if avg_dbm < -108:
+            return 2  # Very poor
+        if avg_dbm < -102:
+            return 3  # Weak
+        if avg_dbm < -95:
+            return 4  # Fair
+        if avg_dbm < -85:
+            return 5  # Good
+        if avg_dbm < -75:
+            return 6  # Very good
+        return 7  # Excellent / maximum
 
     async def update(self, signal_dbm: float, signal_detail: dict = None) -> None:
-        """Add a new signal sample and check for level change; trigger LED if changed."""
-        if signal_dbm is None:
+        """Add a new signal sample and check for level change; trigger LED if changed.
+
+        The incoming reading is first normalized to the RSRP scale (RSRP as-is,
+        RSSI shifted ~20 dB) so the rolling average and level bands are computed
+        on one consistent ruler regardless of which metric the modem reported.
+        """
+        norm_dbm = self._to_rsrp_scale(signal_dbm, signal_detail)
+        if norm_dbm is None:
             return
 
-        self.samples.append(signal_dbm)
+        self.samples.append(norm_dbm)
         avg_dbm = sum(self.samples) / len(self.samples)
         new_level = self._classify_level(avg_dbm)
 
@@ -165,7 +219,7 @@ class SignalStrengthTracker:
             self.current_level = new_level
             self.last_update_time = time.monotonic()
 
-            level_names = ['no-signal', 'very-poor', 'poor', 'fair', 'good', 'very-good', 'excellent', 'maximum']
+            level_names = ['no-signal', 'barely-usable', 'very-poor', 'weak', 'fair', 'good', 'very-good', 'excellent']
             level_name = level_names[new_level] if 0 <= new_level < len(level_names) else 'unknown'
 
             logger.info(
@@ -9307,7 +9361,7 @@ class ModemStateMachine:
             avg_dbm: Rolling average signal in dBm.
             signal_detail: Dict with {rssi, rsrp, rsrq, snr, technology}.
         """
-        level_names = ['no-signal', 'very-poor', 'poor', 'fair', 'good', 'very-good', 'excellent', 'maximum']
+        level_names = ['no-signal', 'barely-usable', 'very-poor', 'weak', 'fair', 'good', 'very-good', 'excellent']
         level_name = level_names[level] if 0 <= level <= 7 else 'unknown'
 
         # Map wwanN interface to MODEMN naming expected by hw API.
