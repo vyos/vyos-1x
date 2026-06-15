@@ -267,6 +267,15 @@ class ModemStateMachine:
         # once per service lifetime. None = not yet attempted; [] = attempted
         # but unavailable (no QMI port / qmicli missing / query failed).
         self._cached_qmi_band_capability = None
+        # In-process dedupe for the 5G NR band preference write.  The NR
+        # selection is written with POWER_CYCLE duration, so the modem forgets
+        # it on every power cycle and the FSM MUST re-assert it on each startup.
+        # This cache therefore lives only for the process lifetime (NOT
+        # persisted): it suppresses redundant helper spawns during a runtime
+        # reconfigure where the NR bands did not change, while a crash/reboot/
+        # modem reset clears it so the startup write always fires.  None = not
+        # yet written this process; a list = the band numbers last written.
+        self._last_nr_bands_written = None
         self.modem_path = None
         self.bearer_path = None
         self.user_disconnected = False
@@ -6328,46 +6337,48 @@ class ModemStateMachine:
                     target_bands = modem_bands_list
                     target_band_names = modem_band_names
 
-                    # Check if target bands are already enabled
-                    if set(current_bands_list) == set(target_bands):
-                        logger.info("Requested bands already configured correctly",
-                                   extra={'interface_number': self.interface_number,
-                                          'enabled_bands': current_band_names})
-                        return
-
-                # Apply band configuration using MM numeric constants
-                logger.info("Setting new band configuration",
-                           extra={'interface_number': self.interface_number,
-                                  'from_bands': current_band_names,
-                                  'to_bands': target_band_names,
-                                  'from_constants': current_bands_list,
-                                  'to_constants': target_bands})
-
-                # Use ModemManager API to set bands (uint32 array)
-                band_variants = [Variant('u', band) for band in target_bands]
-                await props.call_set(MODEM_INTERFACE, "CurrentBands", Variant('au', band_variants))
-
-                # Brief wait for band configuration to take effect
-                await asyncio.sleep(3)
-
-                # Verify band configuration
-                new_bands_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
-                new_bands = new_bands_variant.value if new_bands_variant else []
-                new_bands_list = [band.value for band in new_bands] if new_bands else []
-                new_band_names = [self._mm_constant_to_band_name(band) for band in new_bands_list]
-
-                if set(new_bands_list) == set(target_bands):
-                    logger.info("Band configuration successful",
+                # Apply band configuration using MM numeric constants — but only
+                # when the modem is not already on exactly this set.  Writing
+                # CurrentBands can trigger a brief deregister/reattach on some
+                # modems, so a redundant write is disruptive, not free.  Skip it
+                # when it would be a no-op; NR enforcement below still runs.
+                if set(current_bands_list) == set(target_bands):
+                    logger.info("Bands already configured correctly — skipping CurrentBands write",
                                extra={'interface_number': self.interface_number,
-                                      'applied_bands': new_band_names,
-                                      'applied_constants': new_bands_list})
+                                      'enabled_bands': current_band_names})
                 else:
-                    logger.warning("Band configuration verification failed",
-                                  extra={'interface_number': self.interface_number,
-                                         'target_bands': target_band_names,
-                                         'actual_bands': new_band_names,
-                                         'target_constants': target_bands,
-                                         'actual_constants': new_bands_list})
+                    logger.info("Setting new band configuration",
+                               extra={'interface_number': self.interface_number,
+                                      'from_bands': current_band_names,
+                                      'to_bands': target_band_names,
+                                      'from_constants': current_bands_list,
+                                      'to_constants': target_bands})
+
+                    # Use ModemManager API to set bands (uint32 array)
+                    band_variants = [Variant('u', band) for band in target_bands]
+                    await props.call_set(MODEM_INTERFACE, "CurrentBands", Variant('au', band_variants))
+
+                    # Brief wait for band configuration to take effect
+                    await asyncio.sleep(3)
+
+                    # Verify band configuration
+                    new_bands_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
+                    new_bands = new_bands_variant.value if new_bands_variant else []
+                    new_bands_list = [band.value for band in new_bands] if new_bands else []
+                    new_band_names = [self._mm_constant_to_band_name(band) for band in new_bands_list]
+
+                    if set(new_bands_list) == set(target_bands):
+                        logger.info("Band configuration successful",
+                                   extra={'interface_number': self.interface_number,
+                                          'applied_bands': new_band_names,
+                                          'applied_constants': new_bands_list})
+                    else:
+                        logger.warning("Band configuration verification failed",
+                                      extra={'interface_number': self.interface_number,
+                                             'target_bands': target_band_names,
+                                             'actual_bands': new_band_names,
+                                             'target_constants': target_bands,
+                                             'actual_constants': new_bands_list})
 
             except Exception as band_e:
                 # Many modems don't support runtime band configuration
@@ -6466,6 +6477,19 @@ class ModemStateMachine:
                     desired_nr = supported_nr
 
             nr_csv = ','.join(str(b) for b in desired_nr)
+
+            # In-process dedupe: skip the helper when this exact NR set was
+            # already written earlier in *this* process (a runtime reconfigure
+            # that didn't change the NR bands).  The cache is wiped on any
+            # restart, so the POWER_CYCLE-duration write is still re-asserted on
+            # every fresh start / reboot / modem reset.
+            if self._last_nr_bands_written == desired_nr:
+                logger.info("5G NR band preference unchanged this session — "
+                            "skipping QMI write",
+                            extra={'interface_number': self.interface_number,
+                                   'nr_bands': desired_nr})
+                return
+
             logger.info("Enforcing 5G NR band preference over QMI",
                         extra={'interface_number': self.interface_number,
                                'device': device,
@@ -6480,6 +6504,8 @@ class ModemStateMachine:
             out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
             detail = (err or out or b'').decode(errors='replace').strip()
             if proc.returncode == 0:
+                # Record only on success so a failed write is retried next time.
+                self._last_nr_bands_written = list(desired_nr)
                 logger.info("5G NR band preference applied",
                             extra={'interface_number': self.interface_number,
                                    'nr_bands': desired_nr, 'detail': detail})
