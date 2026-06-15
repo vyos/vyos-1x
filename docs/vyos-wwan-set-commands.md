@@ -191,6 +191,47 @@ interfaces
 
 ---
 
+## Runtime Changes: Live-Apply vs Full Restart
+
+When you commit a change to a wwan interface that is already running, the
+service classifies it into one of two buckets:
+
+**Live-apply (no impact to the running connection).** The change takes effect
+immediately without bouncing the bearer — the modem stays connected and traffic
+is uninterrupted. This covers everything that does not alter how the *active*
+bearer is established:
+
+- all timers and intervals (`timeouts`, `reconnection`, `interface-management`
+  delays, `data-usage monitoring-interval`, `network-scan timeout`, …)
+- `data-usage` / per-SIM `data-limit` thresholds, actions, billing-date, warnings
+- `connectivity-monitoring`, `reconnection`, `failed-retry`, `hardware-reset`,
+  `sim-failover` / `sim-failback` policy, `apn-discovery`, `logging`
+- `ip-passthrough` and `ipv6-bridging` (reconciled in place)
+- **edits to the SIM slot you are *not* currently running on** — e.g.
+  provisioning the backup SIM, fixing its APN, setting its PIN. These touch the
+  standby slot only and are picked up naturally if/when failover switches to it.
+
+**Full graceful restart (impacts the running connection).** These are
+modem-level parameters that can only be written while the modem is disabled, and
+a mistaken value can leave the modem unable to register at all. Committing one
+tears the session down gracefully (drop bearer, remove ip-passthrough /
+ipv6-bridging LAN state, stop monitoring) and re-runs the **same startup
+sequence used at boot**, returning to the connection-mode's fresh-boot state
+(`always-on` / `dial-on-demand` → connected; `connect-on-demand` →
+`REGISTERED_IDLE`). Any prior runtime `disconnect_bearer()` is intentionally
+discarded — the change is treated as "rebuild from scratch":
+
+- `sim primary-slot` (switches which SIM is in service)
+- `network-mode` (modem RAT selection)
+- the **active** SIM slot's connection parameters: `apn`, `username`,
+  `password`, `auth-type`, `pdp-type`, `roaming`, `supported-bands`
+
+> In short: only the parameters of the bearer *currently in service* force a
+> restart. Tuning knobs, monitoring/limits, and standby-SIM provisioning are all
+> applied live.
+
+---
+
 ## Default Behavior — Zero Configuration
 
 If no `set interfaces wwan wwanN …` commands are issued beyond bringing the
@@ -1078,6 +1119,22 @@ set interfaces wwan wwan0 failed-retry escalation-threshold 3
 > because different carriers use different frequencies.
 > Use per-SIM `supported-bands` for carrier-specific band restrictions.
 > The final active band set is: per-SIM ∩ modem-supported.
+>
+> **Changing bands (or SIM slot / network-mode) at runtime triggers a full
+> graceful restart.** These are modem-level parameters that can only be
+> written while the modem is *disabled*, and a mistaken value can leave the
+> modem unable to register at all. Rather than patch the change onto a live
+> modem, committing one of these edits makes the service tear the whole
+> session down gracefully (drop the bearer, remove any ip-passthrough /
+> ipv6-bridging LAN state, stop monitoring) and then re-run the **exact same
+> startup sequence it performs at boot** — gentle-reset → disable →
+> SIM/bands/mode → enable → unlock → connect. The modem therefore returns to
+> its connection-mode's fresh-boot state: `always-on` and `dial-on-demand`
+> come back **connected**, `connect-on-demand` parks at `REGISTERED_IDLE`.
+> Any prior runtime `disconnect_bearer()` is intentionally discarded for the
+> always-on family — a band change is treated as "rebuild from scratch", not
+> "honour the last state". This makes the outcome predictable and recoverable
+> even if the band value was wrong.
 >
 > **2G/3G/LTE** band restrictions are applied via ModemManager's
 > `CurrentBands` property.  **5G NR** band restrictions are applied separately

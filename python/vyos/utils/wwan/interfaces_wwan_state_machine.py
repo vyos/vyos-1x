@@ -6984,61 +6984,77 @@ class ModemStateMachine:
         return info
 
     def _requires_disconnection(self, old_config, new_config):
-        """Determine if configuration changes require bearer disconnection"""
+        """Determine whether a config change impacts the *running* connection.
+
+        Returns True only for changes that affect the bearer currently in
+        service, so the caller performs a full graceful restart.  Everything
+        else (timers, data-limits, interface-management, connectivity probes,
+        logging, and edits to a SIM slot we are NOT currently running on —
+        e.g. adding/provisioning the backup SIM) is applied live without
+        bouncing the connection.
+
+        Restart-worthy changes:
+          * ``primary_sim_slot`` — switches which SIM is in service;
+          * ``network_mode``     — modem-level RAT selection (SetCurrentModes);
+          * connection parameters (APN, auth, pdp-type, roaming, bands) of the
+            **active** SIM slot only.
+        """
         if not old_config:
             return False  # First-time configuration doesn't need disconnection
 
-        # Connection-affecting parameters that require disconnection
-        connection_params = [
-            'primary_sim_slot',
-            'sim_slots',  # APN, auth, roaming changes within sim_slots
-            'network_mode'
-        ]
-
-        # Check basic connection parameters
-        for param in connection_params:
+        # primary_sim_slot / network_mode are modem-level and always impact the
+        # running session when changed.
+        for param in ('primary_sim_slot', 'network_mode'):
             if old_config.get(param) != new_config.get(param):
-                # For sim_slots, check if connection parameters changed
-                if param == 'sim_slots':
-                    if self._sim_connection_params_changed(old_config.get('sim_slots', []), new_config.get('sim_slots', [])):
-                        logger.info("SIM connection parameters changed - disconnection required",
-                                   extra={'interface_number': self.interface_number})
-                        return True
-                else:
-                    logger.info(f"Connection parameter '{param}' changed - disconnection required",
-                               extra={'interface_number': self.interface_number, 'param': param})
-                    return True
+                logger.info(f"Connection parameter '{param}' changed - restart required",
+                           extra={'interface_number': self.interface_number, 'param': param})
+                return True
 
-        logger.info("Only monitoring/timer parameters changed - no disconnection needed",
+        # SIM-slot connection params: only a change to the slot we are actually
+        # running on matters.  Edits to the other slot (provisioning a second
+        # SIM, fixing its APN, etc.) do not touch the live bearer and are
+        # applied live; they take effect naturally on the next failover.
+        active_slot = self.current_active_sim or new_config.get('primary_sim_slot', 1)
+        if self._sim_connection_params_changed(
+                old_config.get('sim_slots', []),
+                new_config.get('sim_slots', []),
+                active_slot):
+            logger.info("Active-SIM connection parameters changed - restart required",
+                       extra={'interface_number': self.interface_number,
+                              'active_slot': active_slot})
+            return True
+
+        logger.info("Only live-apply parameters changed - no restart needed",
                    extra={'interface_number': self.interface_number})
         return False
 
-    def _sim_connection_params_changed(self, old_sim_slots, new_sim_slots):
-        """Check if SIM connection parameters (APN, auth, etc.) changed"""
-        # Convert to dict by slot for easier comparison
+    def _sim_connection_params_changed(self, old_sim_slots, new_sim_slots, active_slot):
+        """Check if the ACTIVE SIM slot's connection parameters changed.
+
+        Only the slot currently in service (``active_slot``) is compared —
+        edits to an inactive slot do not disturb the running bearer.
+        ``supported_bands`` is included so that a band-only edit on the active
+        SIM re-runs the modem-level band configuration (including 5G NR over
+        QMI) via the restart path; a band edit on the inactive slot does not,
+        because the modem only enforces the active SIM's bands.
+        """
         old_slots = {slot['slot']: slot for slot in old_sim_slots}
         new_slots = {slot['slot']: slot for slot in new_sim_slots}
 
-        # Connection-affecting SIM parameters.  ``supported_bands`` is included
-        # so that a band-only edit re-runs _configure_supported_bands() (which
-        # also enforces the 5G NR band selection over QMI) while the modem is
-        # disabled — without it, a pure band change would not be applied until
-        # the next bearer bounce.
+        old_slot = old_slots.get(active_slot, {})
+        new_slot = new_slots.get(active_slot, {})
+
         connection_sim_params = ['apn', 'username', 'password', 'auth_type',
                                  'pdp_type', 'roaming', 'supported_bands']
 
-        for slot_num in set(old_slots.keys()) | set(new_slots.keys()):
-            old_slot = old_slots.get(slot_num, {})
-            new_slot = new_slots.get(slot_num, {})
-
-            for param in connection_sim_params:
-                if old_slot.get(param) != new_slot.get(param):
-                    logger.info(f"SIM slot {slot_num} connection parameter '{param}' changed",
-                               extra={'interface_number': self.interface_number,
-                                      'slot': slot_num, 'param': param,
-                                      'old_value': old_slot.get(param),
-                                      'new_value': new_slot.get(param)})
-                    return True
+        for param in connection_sim_params:
+            if old_slot.get(param) != new_slot.get(param):
+                logger.info(f"Active SIM slot {active_slot} connection parameter '{param}' changed",
+                           extra={'interface_number': self.interface_number,
+                                  'slot': active_slot, 'param': param,
+                                  'old_value': old_slot.get(param),
+                                  'new_value': new_slot.get(param)})
+                return True
 
         return False
 
@@ -7055,39 +7071,85 @@ class ModemStateMachine:
         # coroutine, so by the time we run the FSM has already left its prior
         # stable state (CONNECTED / USAGE_MONITORING / REGISTERED_IDLE / ...)
         # and is parked in CONFIGURING.  Capture the real bearer state up-front
-        # so we can both decide whether a disconnect is meaningful (the old
-        # `current_state == CONNECTED` guard could never be true here) and
-        # restore a correct stable state afterwards.
+        # so we can decide how to settle the FSM afterwards.
         bearer_up = await self._is_bearer_connected()
 
-        if needs_disconnect and bearer_up:
-            logger.info("Disconnecting for connection parameter changes",
-                       extra={'interface_number': self.interface_number})
-            await self._disconnect_bearer()
+        if needs_disconnect:
+            # ── Modem-level change → full graceful restart ───────────────
+            # SIM slot, supported-bands and network-mode are modem-level
+            # parameters that can only be written while the modem is DISABLED,
+            # and a mistaken value (e.g. a band the serving cell doesn't use)
+            # can leave the modem unable to register at all.  The safe,
+            # predictable response is therefore to treat the change as a HARD
+            # RESTART: gracefully tear the whole session down and re-run the
+            # exact same startup sequence the service performs at boot.
+            #
+            # `_configure_modem_initial()` is that canonical sequence —
+            # gentle-reset (if still connected) → disable → SIM/bands/mode →
+            # enable → unlock → connect-or-park.  Crucially it ends by honouring
+            # `connection_mode` the same way it does at boot:
+            #   * always-on / dial-on-demand  → reconnect (comes back CONNECTED)
+            #   * connect-on-demand           → park at REGISTERED_IDLE
+            # so any runtime disconnect_bearer() intent is intentionally
+            # discarded for the always-on family — exactly like a reboot.  This
+            # is the behaviour an operator expects from a band change: rebuild
+            # from scratch rather than honour a stale, possibly-mistaken state.
+            logger.info(
+                "Modem-level parameter change (SIM/bands/network-mode) — "
+                "performing a full graceful restart of the modem session",
+                extra={'interface_number': self.interface_number,
+                       'connection_mode': self.connection_mode,
+                       'bearer_up': bearer_up})
 
-            # Reconfigure connection-affecting parameters
-            await self._configure_sim_slot()
-            await self._configure_supported_bands()
+            # Graceful teardown: stop monitoring, drop the bearer (if up), and
+            # remove all downstream LAN state (ip-passthrough dnsmasq/routes,
+            # ipv6-bridging prefix/radvd) so nothing stale survives the
+            # restart.  Each step is best-effort and idempotent.
+            try:
+                await self._stop_network_interface_monitoring()
+            except Exception as e:
+                logger.debug(f"Monitoring stop during restart failed: {e}",
+                            extra={'interface_number': self.interface_number})
+            if bearer_up:
+                try:
+                    await self._disconnect_bearer()
+                except Exception as e:
+                    logger.debug(f"Bearer disconnect during restart failed: {e}",
+                                extra={'interface_number': self.interface_number})
+            try:
+                await self._teardown_downstream_features()
+            except Exception as e:
+                logger.debug(f"Downstream teardown during restart failed: {e}",
+                            extra={'interface_number': self.interface_number})
 
-            # After reconfiguration, attempt reconnection
-            logger.info("Reconnecting with updated configuration",
-                       extra={'interface_number': self.interface_number})
-            await self.apply_modem_configuration()
-        else:
-            logger.info("Configuration updated without disconnection - only monitoring/timer changes",
-                       extra={'interface_number': self.interface_number})
-            # For non-connection changes, just update internal state.
-            # Reconcile downstream-LAN features (ip-passthrough, ipv6-bridging)
-            # immediately rather than waiting for the next bearer event —
-            # disabling these features should take effect on commit, not at
-            # the next IP-change.
-            await self._reconcile_downstream_features()
+            # Persist config for future diffs BEFORE the restart so a
+            # subsequent reconfigure compares against what we just applied.
+            self._previous_config = self.config.copy() if self.config else {}
+
+            # Re-run the canonical startup.  It owns
+            # initial_configuration_in_progress and drives the final
+            # connect/park transition itself, so we must NOT also run
+            # _settle_after_reconfigure() — return straight after.  The FSM is
+            # already parked in CONFIGURING (from RECONFIGURE), which is exactly
+            # the state _configure_modem_initial() finalises from at boot.
+            await self._configure_modem_initial()
+            return
+
+        # ── Monitoring-only change (e.g. connection-mode, timers) ────────
+        logger.info("Configuration updated without disconnection - only monitoring/timer changes",
+                   extra={'interface_number': self.interface_number})
+        # For non-connection changes, just update internal state.
+        # Reconcile downstream-LAN features (ip-passthrough, ipv6-bridging)
+        # immediately rather than waiting for the next bearer event —
+        # disabling these features should take effect on commit, not at
+        # the next IP-change.
+        await self._reconcile_downstream_features()
 
         # The preceding RECONFIGURE parked the FSM in CONFIGURING.  A
-        # monitoring-only change (e.g. connection-mode) does not bounce the
-        # bearer, so no ModemManager state-change signal will fire to move us
-        # out of CONFIGURING — settle the FSM back to a stable state here so
-        # the modem does not get stuck reporting CONFIGURING while connected.
+        # monitoring-only change does not bounce the bearer, so no
+        # ModemManager state-change signal will fire to move us out of
+        # CONFIGURING — settle the FSM back to a stable state here so the
+        # modem does not get stuck reporting CONFIGURING while connected.
         await self._settle_after_reconfigure()
 
         # Store current config for future comparisons
@@ -9589,9 +9651,27 @@ class ModemStateMachine:
                 status['mtu_source'] = 'interface'
             status['mtu_interface'] = interface_mtu
             status['mtu_per_sim'] = sim_mtu
+
+            # Configured bands for the active SIM — the value the operator
+            # typed under `sim slot N supported-bands`.  Surfaced separately
+            # from MM's effective CurrentBands ('current_bands') so the show
+            # command can confirm a restriction was registered even when the
+            # effective view cannot reflect it — most importantly for 5G NR,
+            # which is enforced over QMI and never appears in CurrentBands.
+            cfg_bands_raw = sim_config.get('supported_bands', 'all')
+            if isinstance(cfg_bands_raw, str):
+                cfg_bands = [b.strip() for b in cfg_bands_raw.split(',') if b.strip()]
+            else:
+                cfg_bands = [str(b).strip() for b in (cfg_bands_raw or []) if str(b).strip()]
+            # Normalise an empty / unset selection to the 'all' sentinel.
+            if not cfg_bands or cfg_bands == ['all']:
+                status['configured_bands'] = ['all']
+            else:
+                status['configured_bands'] = cfg_bands
         else:
             for k in ('mtu_effective', 'mtu_source', 'mtu_interface', 'mtu_per_sim'):
                 status[k] = ''
+            status['configured_bands'] = ['all']
 
         # ── 8. Bearer stats (session data, uptime) ───────────────────────
         try:

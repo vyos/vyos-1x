@@ -110,6 +110,7 @@ def _raw_status(status: dict) -> dict:
         'signal_percent': status.get('signal_percent', 0),
         'signal_dbm': status.get('signal_dbm', 0),
         'current_bands': _normalize_list_field(status.get('current_bands', [])),
+        'configured_bands': _normalize_list_field(status.get('configured_bands', [])),
         'session_rx_bytes': status.get('session_rx_bytes', 0),
         'session_tx_bytes': status.get('session_tx_bytes', 0),
         'session_duration': status.get('session_duration_seconds', 0),
@@ -190,6 +191,7 @@ def _raw_signal(status: dict) -> dict:
         'serving_tac': status.get('serving_tac', ''),
         'serving_cell_type': status.get('serving_cell_type', ''),
         'current_bands': _normalize_list_field(status.get('current_bands', [])),
+        'configured_bands': _normalize_list_field(status.get('configured_bands', [])),
     }
 
 
@@ -257,6 +259,9 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_kv('Strength:', f"{d['signal_dbm']} dBm"))
     serving_band = status.get('serving_band', '')
     lines.append(_kv('Serving band:', serving_band or 'unavailable'))
+    configured = d.get('configured_bands') or []
+    if configured and configured != ['all']:
+        lines.extend(_kv_wrapped('Configured bands:', ', '.join(configured)))
     bands = d['current_bands']
     if bands:
         lines.extend(_kv_wrapped('Enabled bands:', ', '.join(bands)))
@@ -365,6 +370,16 @@ def _format_signal(status: dict, interface: str) -> str:
     if bands:
         lines.append(_section('Enabled Bands'))
         for band in bands:
+            lines.append(f'  {band}')
+
+    # Configured bands — the operator's `supported-bands` selection.  Shown
+    # only when a restriction is set (not the 'all' default) so it is clear
+    # the request registered, especially for 5G NR which never appears under
+    # Enabled Bands (enforced over QMI, not visible in MM CurrentBands).
+    configured = d.get('configured_bands') or []
+    if configured and configured != ['all']:
+        lines.append(_section('Configured Bands'))
+        for band in configured:
             lines.append(f'  {band}')
 
     return '\n'.join(line for line in lines if line)
