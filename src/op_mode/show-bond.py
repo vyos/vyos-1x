@@ -47,7 +47,7 @@ TMPL_INDIVIDUAL_BOND = """Interface        RX: bytes  packets     TX: bytes  pac
 """
 
 if args.slaves and args.interface:
-    exit('Cannot use both --slaves and --interfaces option at the same time')
+    exit('Cannot use both --slaves and --interface option at the same time')
     parser.print_help()
 
 elif args.slaves:
