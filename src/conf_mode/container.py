@@ -633,7 +633,7 @@ def generate(container):
             file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
             run_args = generate_run_arguments(name, container_config, host_ident)
             render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args, },
-                   formater=lambda _: _.replace("&quot;", '"').replace("&apos;", "'"))
+                   formatter=lambda _: _.replace("&quot;", '"').replace("&apos;", "'"))
 
     return None
 

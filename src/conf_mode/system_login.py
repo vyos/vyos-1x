@@ -401,14 +401,14 @@ def apply(login):
                 # always re-render SSH keys with appropriate permissions
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
-                       formater=lambda _: _.replace("&quot;", '"'),
+                       formatter=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
 
                 principals_file = f'{home_dir}/.ssh/authorized_principals'
                 if dict_search('authentication.principal', user_config):
                     render(principals_file, 'login/authorized_principals.j2',
                            user_config, permission=0o600,
-                           formater=lambda _: _.replace("&quot;", '"'),
+                           formatter=lambda _: _.replace("&quot;", '"'),
                            user=user, group='users')
                 else:
                     if os.path.exists(principals_file):

@@ -802,11 +802,11 @@ def generate(openvpn):
     # we need to support quoting of raw parameters from OpenVPN CLI
     # see https://vyos.dev/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.j2', openvpn,
-           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+           formatter=lambda _: _.replace("&quot;", '"'), user=user, group=group)
 
     # Render 20-override.conf for OpenVPN service
     render(service_file.format(**openvpn), 'openvpn/service-override.conf.j2', openvpn,
-           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+           formatter=lambda _: _.replace("&quot;", '"'), user=user, group=group)
     # Reload systemd services config to apply an override
     call(f'systemctl daemon-reload')
 
