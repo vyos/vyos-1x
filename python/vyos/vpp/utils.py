@@ -194,7 +194,7 @@ def vpp_ip_addresses_by_index(vpp_api, index: int, is_ipv6: bool = False) -> lis
     ip_address_dump = vpp_api.ip_address_dump(sw_if_index=index, is_ipv6=is_ipv6)
     while ip_address_dump:
         ip_address_details = ip_address_dump.pop()
-        ip_addresses_list.append(str(ip_address_details._asdict().get('prefix')))
+        ip_addresses_list.append(str(ip_address_details.prefix))
     return ip_addresses_list
 
 

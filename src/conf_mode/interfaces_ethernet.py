@@ -45,6 +45,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
+from vyos.utils.network import get_vrf_tableid
 from vyos.utils.process import is_systemd_service_running
 from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.control_vpp import VPPControl
@@ -473,7 +474,35 @@ def apply(ethernet):
             mtu = e.get_mtu()
             vpp_api.set_iface_mtu(lcp_name, mtu)
 
+        sync_vpp_lcp_vrf_tables(ethernet, vpp_api)
+
     return None
+
+
+def sync_vpp_lcp_vrf_tables(ethernet: dict, vpp_api: VPPControl) -> None:
+    """Synchronize VyOS VRF assignment to VPP IP FIB table binding."""
+
+    def iter_vpp_lcp_vrf_targets() -> list[tuple[str, int]]:
+        interfaces = [ethernet['ifname']]
+        for vif in ethernet.get('vif', {}).values():
+            interfaces.append(vif['ifname'])
+        for vif_s in ethernet.get('vif_s', {}).values():
+            interfaces.append(vif_s['ifname'])
+            for vif_c in vif_s.get('vif_c', {}).values():
+                interfaces.append(vif_c['ifname'])
+        return [(iface, get_vrf_tableid(iface) or 0) for iface in interfaces]
+
+    lcp_vpp_ifaces = {
+        pair.get('vpp_name_hw')
+        for pair in vpp_api.lcp_pairs_list()
+        if pair.get('vpp_name_hw')
+    }
+
+    for ifname, table_id in iter_vpp_lcp_vrf_targets():
+        if ifname not in lcp_vpp_ifaces:
+            continue
+
+        vpp_api.move_interface_to_ip_table_preserve_addresses(ifname, table_id)
 
 if __name__ == '__main__':
     try:
