@@ -167,6 +167,7 @@ def certbot_renew(config: dict, force: bool=False) -> None:
 
     # Determine services using ACME based certificates
     pre_hook_services = []
+    stop_services = []
     for used_by, _ in dict_search_recursive(config, 'used_by'):
         pre_hook_services.extend(used_by)
     # Remove duplicate items from list
@@ -174,16 +175,21 @@ def certbot_renew(config: dict, force: bool=False) -> None:
     # Automatically add services in use to pre_hook_services depending on service
     # name in vyos.defaults.systemd_services
     if pre_hook_services:
-        services = []
         for service in pre_hook_services:
             if service in systemd_services:
-                services.append(systemd_services[service])
-        tmp += ' --pre-hook "systemctl stop ' + ' '.join(services) + '"'
+                stop_services.append(systemd_services[service])
+        tmp += ' --pre-hook "systemctl stop ' + ' '.join(stop_services) + '"'
 
     if force:
         tmp += ' --force-renewal'
 
-    print(cmd(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
+    try:
+        print(cmd(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
+    except ConfigError as e:
+        print(e)
+        for service in stop_services:
+            print(f'Restarting "{service}" with non-renewed certificate...')
+            cmd(f'systemctl restart {service}')
     return None
 
 def get_config(config=None):
