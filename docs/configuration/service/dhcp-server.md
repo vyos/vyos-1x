@@ -23,11 +23,62 @@ address.
 ```
 
 
+#### Shared network options
+
+
+The following DHCP options apply to an entire shared network. All subnets
+inherit these values unless the same option is set locally.
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option bootfile-name \<filename\>
+
+Bootstrap file name (DHCP Option 67).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option bootfile-server \<address\>
+
+Server from which the initial boot file is to be loaded (DHCP siaddr
+field).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option bootfile-size \<size\>
+
+Bootstrap file size in 512-octet blocks (DHCP Option 13).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option captive-portal \<url\>
+
+Captive portal API endpoint (DHCP Option 114).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option capwap-controller \<address\>
+
+IP address of CAPWAP access controller (DHCP Option 138).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option client-prefix-length \<prefix-length\>
+
+Specifies the client subnet mask as per RFC 950. If unset, the subnet
+declaration is used (DHCP Option 1).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option default-router \<address\>
+
+IP address of default router (DHCP Option 3).
+```
+
+
 ```{cfgcmd} set service dhcp-server shared-network-name \<name\> option domain-name \<domain-name\>
 
 The domain-name parameter should be the domain name that will be appended to
 the client's hostname to form a fully-qualified domain-name (FQDN) (DHCP
-Option 015).
+Option 15).
 
 This is the configuration parameter for the entire shared network definition.
 All subnets will inherit this configuration item if not specified locally.
@@ -45,9 +96,28 @@ All subnets will inherit this configuration item if not specified locally.
 ```
 
 
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option interface-mtu \<mtu\>
+
+Client interface MTU (DHCP Option 26).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option ip-forwarding
+
+Enable IP forwarding on the client (DHCP Option 19).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option ipv6-only-preferred \<seconds\>
+
+Disable IPv4 on IPv6-only hosts for the specified number of seconds
+(RFC 8925, DHCP Option 108).
+```
+
+
 ```{cfgcmd} set service dhcp-server shared-network-name \<name\> option name-server \<address\>
 
-Inform client that the DNS server can be found at `<address>`.
+Inform client that the DNS server can be found at `<address>` (DHCP Option 6).
 
 This is the configuration parameter for the entire shared network definition.
 All subnets will inherit this configuration item if not specified locally.
@@ -55,12 +125,73 @@ Multiple DNS servers can be defined.
 ```
 
 
-```{cfgcmd} set service dhcp-server shared-network-name \<name\> option vendor-option \<option-name\>
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option ntp-server \<address\>
+
+IP address of NTP server (DHCP Option 42). This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option pop-server \<address\>
+
+IP address of POP3 server (DHCP Option 70). This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option server-identifier \<address\>
+
+Address for DHCP server identifier (DHCP Option 54).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option smtp-server \<address\>
+
+IP address of SMTP server (DHCP Option 69). This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option static-route \<subnet\> next-hop \<address\>
+
+Classless static route destination subnet (DHCP Options 121 and 249). This
+option can be specified multiple times.
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option tftp-server-name \<server-name\>
+
+TFTP server name (DHCP Option 66).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option time-offset \<seconds\>
+
+Client subnet offset in seconds from Coordinated Universal Time (UTC)
+(DHCP Option 2).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option time-server \<address\>
+
+IP address of time server (DHCP Option 4). This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option time-zone \<timezone\>
+
+Time zone to send to clients (DHCP Options 100 and 101, `pcode` and
+`tcode`, RFC 4833).
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option vendor-option \<vendor\> \<option-name\> \<value\>
 
 This configuration parameter lets you specify a vendor-option for the
 entire shared network definition. All subnets will inherit this
-configuration item if not specified locally. An example for Ubiquiti is
-shown below:
+configuration item if not specified locally (DHCP Option 43). An example
+for Ubiquiti is shown below:
 ```
 
 **Example:**
@@ -70,7 +201,20 @@ Pass address of Unifi controller at `172.16.100.1` to all clients of `NET1`
 
 ```none
 set service dhcp-server shared-network-name 'NET1' option vendor-option
-ubiquiti '172.16.100.1'
+ubiquiti unifi-controller '172.16.100.1'
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option wins-server \<address\>
+
+IP address for Windows Internet Name Service (WINS) server (DHCP Option 44).
+This option can be specified multiple times.
+```
+
+
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> option wpad-url \<url\>
+
+Web Proxy Autodiscovery (WPAD) URL (DHCP Option 252).
 ```
 
 
@@ -110,14 +254,15 @@ It is required to map subnets to lease file entries.
 
 This is a configuration parameter for the `<subnet>`, saying that as part of
 the response, tell the client that the default gateway can be reached at
-`<address>`.
+`<address>` (DHCP Option 3).
 ```
 
 
 ```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> option name-server \<address\>
 
 This is a configuration parameter for the subnet, saying that as part of the
-response, tell the client that the DNS server can be found at `<address>`.
+response, tell the client that the DNS server can be found at `<address>`
+(DHCP Option 6).
 
 Multiple DNS servers can be defined.
 ```
@@ -158,7 +303,7 @@ This option can be specified multiple times.
 
 The domain-name parameter should be the domain name that will be appended to
 the client's hostname to form a fully-qualified domain-name (FQDN) (DHCP
-Option 015).
+Option 15).
 ```
 
 
@@ -170,11 +315,11 @@ if you need multiple search domains (DHCP Option 119).
 ```
 
 
-```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> option vendor-option \<option-name\>
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> option vendor-option \<vendor\> \<option-name\> \<value\>
 
 This configuration parameter lets you specify a vendor-option for the
-subnet specified within the shared network definition. An example for
-Ubiquiti is shown below:
+subnet specified within the shared network definition (DHCP Option 43).
+An example for Ubiquiti is shown below:
 ```
 
 **Example:**
@@ -185,7 +330,7 @@ Unifi controller at `172.16.100.1` to clients of that subnet.
 
 ```none
 set service dhcp-server shared-network-name 'NET1' subnet
-'172.18.201.0/24' option vendor-option ubiquiti '172.16.100.1'
+'172.18.201.0/24' option vendor-option ubiquiti unifi-controller '172.16.100.1'
 ```
 
 #### Dynamic DNS Update (RFC 2136)
@@ -211,7 +356,7 @@ Enables DDNS globally.
 These settings can be configured on the global level and overridden on the scope
 level, i.e. for individual shared networks or subnets. See examples below.
 
-```{cfgcmd} set service dhcp-server dynamic-dns-update send-updates [ enable | disable ]
+```{cfgcmd} set service dhcp-server dynamic-dns-update send-updates \<enable | disable\>
 
 If set to ``enable`` on global level, updates for all scopes will be enabled,
 except if explicitly set to ``disable`` on the scope level. If set to ``disable``,
@@ -224,28 +369,28 @@ parent scope setting by setting the option explicitly.
 ```
 
 
-```{cfgcmd} set service dhcp-server dynamic-dns-update override-no-update [ enable | disable ]
+```{cfgcmd} set service dhcp-server dynamic-dns-update override-no-update \<enable | disable\>
 
 VyOS will ignore client request not to update DNS records and send DDNS
 update requests regardless.
 ```
 
 
-```{cfgcmd} set service dhcp-server dynamic-dns-update override-client-update [ enable | disable ]
+```{cfgcmd} set service dhcp-server dynamic-dns-update override-client-update \<enable | disable\>
 
 VyOS will override client DDNS request settings and always update both
 forward and reverse DNS records.
 ```
 
 
-```{cfgcmd} set service dhcp-server dynamic-dns-update update-on-renew [ enable | disable ]
+```{cfgcmd} set service dhcp-server dynamic-dns-update update-on-renew \<enable | disable\>
 
 Issue DDNS update requests on DHCP lease renew. In busy networks this may
 generate a lot of traffic.
 ```
 
 
-```{cfgcmd} set service dhcp-server dynamic-dns-update conflict-resolution [ enable | disable ]
+```{cfgcmd} set service dhcp-server dynamic-dns-update conflict-resolution \<enable | disable\>
 
 Use RFC-4703 conflict resolution. This algorithm helps in situation when
 multiple clients reserve same IP addresses or advertise identical hostnames.
@@ -457,34 +602,36 @@ to ensure that the HA partnership is immune to disruption
 :::
 ```
 
+(dhcp-server-v4-static-mapping)=
+
 #### Static mappings
 
 
-You can specify a static DHCP assignment on a per host basis. You will need the
-MAC address of the station and your desired IP address. The address must be
-inside the subnet definition but can be outside of the range statement.
+You can specify a static DHCP assignment on a per-host basis (DHCP Reservations).
+You will need the MAC address of the station and your desired IP address. The
+address must be inside the subnet definition but can be outside the range statement.
 
-```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> static-mapping \<description\> mac \<address\>
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> static-mapping \<hostname\> mac \<address\>
 
-Create a new DHCP static mapping named `<description>` which is valid for
+Create a new DHCP static mapping named `<hostname>` which is valid for
 the host identified by its MAC `<address>`.
 ```
 
 
-```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> static-mapping \<description\> duid \<identifier\>
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> static-mapping \<hostname\> duid \<identifier\>
 
-Create a new DHCP static mapping named `<description>` which is valid for
+Create a new DHCP static mapping named `<hostname>` which is valid for
 the host identified by its DHCP unique identifier (DUID) `<identifier>`.
 ```
 
 
-```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> static-mapping \<description\> ip-address \<address\>
+```{cfgcmd} set service dhcp-server shared-network-name \<name\> subnet \<subnet\> static-mapping \<hostname\> ip-address \<address\>
 
-Static DHCP IP address assign to host identified by `<description>`. IP
-address must be inside the `<subnet>` which is defined but can be outside
-the dynamic range created with {cfgcmd}`set service dhcp-server
+Static DHCP IP address assigned to the host identified by `<hostname>`.
+IP address must be inside the `<subnet>` which is defined but can be outside
+the dynamic range created with `{cfgcmd} set service dhcp-server
 shared-network-name <name> subnet <subnet> range <n>`. If no ip-address is
-specified, an IP from the dynamic pool is used.
+specified, an IP address from the dynamic pool is used.
 
 This is useful, for example, in combination with hostfile update.
 
@@ -631,7 +778,15 @@ service {
 }
 ```
 
+(dhcp-server-v4-options)=
+
 ### Options
+
+
+The following DHCP options can be set under
+`set service dhcp-server shared-network-name <name> option ...` or
+`set service dhcp-server shared-network-name <name> subnet <subnet> option ...`.
+
 
 
 :::{list-table}
@@ -641,131 +796,136 @@ service {
 
 * - Setting name
   - Option number
-  - ISC-DHCP Option name
+  - DHCP option name
   - Option description
   - Multi
+* - bootfile-name
+  - 67
+  - boot-file-name
+  - Bootstrap file name
+  - N
+* - bootfile-server
+  - siaddr
+  - next-server
+  - Server from which the initial boot file is to be loaded
+  - N
+* - bootfile-size
+  - 13
+  - boot-size
+  - Bootstrap file size
+  - N
+* - captive-portal
+  - 114
+  - v4-captive-portal
+  - Captive portal API endpoint
+  - N
+* - capwap-controller
+  - 138
+  - capwap-ac-v4
+  - IPv4 address of CAPWAP access controller
+  - N
 * - client-prefix-length
   - 1
   - subnet-mask
   - Specifies the clients subnet mask as per RFC 950. If unset,
     subnet declaration is used.
   - N
-* - time-offset
-  - 2
-  - time-offset
-  - Offset of the client's subnet in seconds from Coordinated
-    Universal Time (UTC)
-  - N
 * - default-router
   - 3
   - routers
   - IPv4 address of router on the client's subnet
   - N
-* - time-server
-  - 4
-  - time-servers
-  - RFC 868 time server IPv4 address
-  - Y
-* - name-server
-  - 6
-  - domain-name-servers
-  - DNS server IPv4 address
-  - Y
 * - domain-name
   - 15
   - domain-name
   - Client domain name
+  - N
+* - domain-search
+  - 119
+  - domain-search
+  - Client domain name search list
   - Y
+* - interface-mtu
+  - 26
+  - interface-mtu
+  - Client interface MTU
+  - N
 * - ip-forwarding
   - 19
   - ip-forwarding
   - Enable IP forwarding on client
   - N
+* - ipv6-only-preferred
+  - 108
+  - v6-only-preferred
+  - Disable IPv4 on IPv6-only hosts (RFC 8925)
+  - N
+* - name-server
+  - 6
+  - domain-name-servers
+  - Domain Name Servers (DNS) addresses
+  - Y
 * - ntp-server
   - 42
   - ntp-servers
-  - IP address of NTP server
-  - Y
-* - wins-server
-  - 44
-  - netbios-name-servers
-  - NetBIOS over TCP/IP name server
-  - Y
-* - server-identifier
-  - 54
-  - dhcp-server-identifier
-  - IP address for DHCP server identifier
-  - N
-* - bootfile-server
-  - siaddr
-  - next-server
-  - IPv4 address of next bootstrap server
-  - N
-* - tftp-server-name
-  - 66
-  - tftp-server-name
-  - Name or IPv4 address of TFTP server
-  - N
-* - bootfile-name
-  - 67
-  - bootfile-name, filename
-  - Bootstrap file name
-  - N
-* - bootfile-size
-  - 13
-  - boot-size
-  - Boot image length in 512-octet blocks
-  - N
-* - smtp-server
-  - 69
-  - smtp-server
-  - IP address of SMTP server
+  - IPv4 address of NTP server
   - Y
 * - pop-server
   - 70
   - pop-server
-  - IP address of POP3 server
+  - IPv4 address of POP3 server
   - Y
-* - domain-search
-  - 119
-  - domain-search
-  - Client domain search
+* - server-identifier
+  - 54
+  - dhcp-server-identifier
+  - IPv4 address for DHCP server identifier
+  - N
+* - smtp-server
+  - 69
+  - smtp-server
+  - IPv4 address of SMTP server
   - Y
 * - static-route
   - 121, 249
-  - rfc3442-static-route, windows-static-route
-  - Classless static route
+  - classless-static-route, ms-classless-static-route
+  - Classless static route destination subnet
+  - Y
+* - tftp-server-name
+  - 66
+  - tftp-server-name
+  - TFTP server name
   - N
+* - time-offset
+  - 2
+  - time-offset
+  - Client subnet offset in seconds from Coordinated Universal Time
+    (UTC)
+  - N
+* - time-server
+  - 4
+  - time-servers
+  - IPv4 address of time server
+  - Y
+* - time-zone
+  - 100, 101
+  - pcode, tcode
+  - Time zone to send to clients (RFC 4833)
+  - N
+* - vendor-option
+  - 43
+  - vendor-encapsulated-options
+  - Vendor-specific options
+  - Y
+* - wins-server
+  - 44
+  - netbios-name-servers
+  - IPv4 address for Windows Internet Name Service (WINS) server
+  - Y
 * - wpad-url
   - 252
-  - wpad-url, wpad-url code 252 = text
+  - wpad-url
   - Web Proxy Autodiscovery (WPAD) URL
   - N
-* - lease
-  -
-  - default-lease-time, max-lease-time
-  - Lease timeout in seconds (default: 86400)
-  - N
-* - range
-  -
-  - range
-  - DHCP lease range
-  - Y
-* - exclude
-  -
-  -
-  - IP address to exclude from DHCP lease range
-  - Y
-* - failover
-  -
-  -
-  - DHCP failover parameters
-  -
-* - static-mapping
-  -
-  -
-  - Name of static mapping
-  - Y
 :::
 
 
@@ -944,16 +1104,21 @@ free, expired, released, abandoned, reset, backup (default = active)
 
 ## IPv6 server
 
-VyOS also provides DHCPv6 server functionality which is described in this
-section.
+The network topology is declared by shared-network-name and subnet
+declarations. The DHCPv6 service can serve multiple shared networks, with each
+shared network having one or more subnets. Each subnet must be present on an
+interface. A range can be declared inside a subnet to define a pool of dynamic
+addresses. Prefix delegation and static mappings can assign prefixes or fixed
+addresses to clients based on their DUID.
+
 (dhcp-server-v6-config)=
 
 ### Configuration
 
 ```{cfgcmd} set service dhcpv6-server preference \<preference value\>
 
-   Clients receiving advertise messages from multiple servers choose the server
-   with the highest preference value. The range for this value is ``0...255``.
+Clients receiving advertise messages from multiple servers choose the server
+with the highest preference value. The range for this value is ``0...255``.
 ```
 
 ```{cfgcmd} set service dhcpv6-server log-level \<fatal | error | warn | info | debug\>
@@ -963,57 +1128,138 @@ Set the logging verbosity of the Kea DHCPv6 server. The default level is
 ```
 
 
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<subnet\> subnet-id \<id\>
+#### Shared network options
+
+
+The following DHCPv6 options apply to an entire shared network. All subnets
+inherit these values unless the same option is set locally.
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option captive-portal \<url\>
+
+Captive portal API endpoint (DHCPv6 Option 103).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option capwap-controller \<address\>
+
+IP address of CAPWAP access controller (DHCPv6 Option 52).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option domain-search \<domain-name\>
+
+Domain name used when completing DNS requests where no full FQDN is passed.
+This option can be given multiple times if you need multiple search domains
+(DHCPv6 Option 24).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option info-refresh-time \<seconds\>
+
+Time in seconds that stateless clients should wait between refreshing the
+information they were given (DHCPv6 Option 32).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option name-server \<address\>
+
+Inform the client that the DNS server can be found at `<address>` (DHCPv6
+Option 23). Multiple DNS servers can be defined.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option nis-domain \<domain-name\>
+
+A {abbr}`NIS (Network Information Service)` domain name for clients to use
+(DHCPv6 Option 29).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option nis-server \<address\>
+
+IPv6 address of a NIS server (DHCPv6 Option 27). This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option nisplus-domain \<domain-name\>
+
+A {abbr}`NIS+ (Network Information Service Plus)` domain name for clients to
+use (DHCPv6 Option 30).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option nisplus-server \<address\>
+
+IPv6 address of a NIS+ server (DHCPv6 Option 28). This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option sip-server \<address\>
+
+IPv6 address of {abbr}`SIP (Session Initiation Protocol)` server (DHCPv6
+Option 21 and 22, `sip-server-dns` and `sip-server-addr`). This option can be
+specified multiple times.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option sntp-server \<address\>
+
+IPv6 address of an SNTP server for clients to use (DHCPv6 Option 31). This
+option can be specified multiple times.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option time-zone \<timezone\>
+
+Time zone to send to clients (DHCPv6 Options 41 and 42,
+`new-posix-timezone` and `new-tzdb-timezone`, RFC 4833).
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> option vendor-option \<vendor\> \<option-name\> \<value\>
+
+Specify a vendor-specific DHCPv6 option for the shared network (DHCPv6
+Option 17). This option can be specified multiple times.
+```
+
+
+#### Individual Client Subnet
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> interface \<interface\>
+
+Bind shared network `<name>` to `<interface>`.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> subnet-id \<id\>
 
 This configuration parameter is required and must be unique to each subnet.
 It is required to map subnets to lease file entries.
 ```
 
 
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> lease-time {default | maximum | minimum}
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> lease-time {default | maximum | minimum} \<seconds\>
 
 The default lease time for DHCPv6 leases is 24 hours. This can be changed by
-supplying a ``default-time``, ``maximum-time`` and ``minimum-time``. All
+supplying a ``default``, ``maximum`` and ``minimum``. All
 values need to be supplied in seconds.
 ```
 
 
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> option nis-domain \<domain-name\>
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> range \<n\> start \<address\>
 
-A {abbr}`NIS (Network Information Service)` domain can be set to be used for
-DHCPv6 clients.
+Create DHCPv6 address range with a range id of `<n>`. DHCPv6 leases are taken
+from this pool. The pool starts at address `<address>`.
 ```
 
 
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> option nisplus-domain \<domain-name\>
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> range \<n\> stop \<address\>
 
-The procedure to specify a {abbr}`NIS+ (Network Information Service Plus)`
-domain is similar to the NIS domain one:
-```
-
-
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> option nis-server \<address\>
-
-Specify a NIS server address for DHCPv6 clients.
-```
-
-
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> option nisplus-server \<address\>
-
-Specify a NIS+ server address for DHCPv6 clients.
-```
-
-
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> option sip-server \<address | fqdn\>
-
-Specify a {abbr}`SIP (Session Initiation Protocol)` server by IPv6
-address of Fully Qualified Domain Name for all DHCPv6 clients.
-```
-
-
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> option sntp-server-address \<address\>
-
-A SNTP server address can be specified for DHCPv6 clients.
+Create DHCPv6 address range with a range id of `<n>`. DHCPv6 leases are taken
+from this pool. The pool stops at address `<address>`.
 ```
 
 #### Prefix Delegation
@@ -1040,6 +1286,8 @@ in subnet `<prefix>` when the request for prefix delegation.
 
 Exclude `<exclude-prefix>` from `<pd-prefix>`.
 ```
+
+
 ```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> prefix-delegation prefix \<pd-prefix\> excluded-prefix-length \<length\>
 
 Define length of exclude prefix in `<pd-prefix>`.
@@ -1103,7 +1351,26 @@ show service dhcpv6-server
 #### Static mappings
 
 In order to map specific IPv6 addresses to specific hosts static mappings can
-be created. The following example explains the process.
+be created (DHCPv6 Reservations). The following example explains the process.
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> static-mapping \<hostname\> duid \<identifier\>
+
+Create a new DHCPv6 static mapping named `<hostname>` which is valid for
+the host identified by its DHCP unique identifier (DUID) `<identifier>`.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> static-mapping \<hostname\> ipv6-address \<address\>
+
+Static IPv6 address assigned to the host identified by `<hostname>`. This option can be specified
+multiple times.
+```
+
+
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> static-mapping \<hostname\> ipv6-prefix \<delegated-prefix\>
+
+Static IPv6 prefix assigned to the host identified by `<hostname>`.
+```
 
 **Example:**
 - IPv6 address `2001:db8::101` shall be statically mapped
@@ -1134,6 +1401,137 @@ show service dhcpv6-server shared-network-name NET1
          ipv6-prefix 2001:db8:0:101::/64
      }
  }
+```
+
+(dhcp-server-v6-options)=
+
+### Options
+
+
+The following DHCPv6 options can be set under
+`set service dhcpv6-server shared-network-name <name> option ...` or under
+`subnet <prefix> option ...` within the same shared network.
+
+
+
+:::{list-table}
+:header-rows: 1
+:stub-columns: 0
+:widths: 12 7 23 40 20
+
+* - Setting name
+  - Option number
+  - DHCP option name
+  - Option description
+  - Multi
+* - captive-portal
+  - 103
+  - v6-captive-portal
+  - Captive portal API endpoint
+  - N
+* - capwap-controller
+  - 52
+  - capwap-ac-v6
+  - IPv6 address of CAPWAP access controller
+  - N
+* - domain-search
+  - 24
+  - domain-search
+  - Client domain name search list
+  - Y
+* - info-refresh-time
+  - 32
+  - information-refresh-time
+  - Time in seconds that stateless clients should wait between
+    refreshing information
+  - N
+* - name-server
+  - 23
+  - dns-servers
+  - Domain Name Servers (DNS) addresses
+  - Y
+* - nis-domain
+  - 29
+  - nis-domain-name
+  - NIS domain name for client to use
+  - N
+* - nis-server
+  - 27
+  - nis-servers
+  - IPv6 address of a NIS server
+  - Y
+* - nisplus-domain
+  - 30
+  - nisp-domain-name
+  - NIS+ domain name for client to use
+  - N
+* - nisplus-server
+  - 28
+  - nisp-servers
+  - IPv6 address of a NIS+ server
+  - Y
+* - sip-server
+  - 21, 22
+  - sip-server-dns, sip-server-addr
+  - IPv6 address of SIP server
+  - Y
+* - sntp-server
+  - 31
+  - sntp-servers
+  - IPv6 address of an SNTP server for client to use
+  - Y
+* - time-zone
+  - 41, 42
+  - new-posix-timezone, new-tzdb-timezone
+  - Time zone to send to clients (RFC 4833)
+  - N
+* - vendor-option
+  - 17
+  - vendor-opts
+  - Vendor-specific options
+  - Y
+:::
+
+
+Multi: can be specified multiple times.
+
+
+### Example
+
+
+DHCPv6 address pools must be configured for the system to act as a DHCPv6
+server. The following example describes a common scenario.
+
+- A shared network named `NET1` serves subnet `2001:db8::/64`
+- It is connected to `eth1`
+- DNS server is located at `2001:db8::ffff`
+- Address pool shall be `2001:db8::100` through `2001:db8::199`.
+- Lease time will be left at the default value which is 24 hours
+
+```none
+set service dhcpv6-server shared-network-name 'NET1' interface 'eth1'
+set service dhcpv6-server shared-network-name 'NET1' subnet 2001:db8::/64 range 1 start 2001:db8::100
+set service dhcpv6-server shared-network-name 'NET1' subnet 2001:db8::/64 range 1 stop 2001:db8::199
+set service dhcpv6-server shared-network-name 'NET1' subnet 2001:db8::/64 option name-server 2001:db8::ffff
+set service dhcpv6-server shared-network-name 'NET1' subnet 2001:db8::/64 subnet-id 1
+```
+
+The configuration will look as follows:
+
+```none
+show service dhcpv6-server
+    shared-network-name NET1 {
+        subnet 2001:db8::/64 {
+           range 1 {
+              start 2001:db8::100
+              stop 2001:db8::199
+           }
+           option {
+              name-server 2001:db8::ffff
+           }
+           subnet-id 1
+        }
+    }
 ```
 
 (dhcp-server-v6-op-cmd)=
