@@ -6964,8 +6964,12 @@ class ModemStateMachine:
 
         Reads ModemManager's ``Ports`` property (an array of
         ``(name, MMModemPortType)`` tuples) and returns the first QMI port
-        (``MM_MODEM_PORT_TYPE_QMI == 5``).  Returns ``None`` when the modem
+        (``MM_MODEM_PORT_TYPE_QMI == 6``).  Returns ``None`` when the modem
         exposes no QMI port (e.g. an MBIM- or AT-only modem).
+
+        The ``MMModemPortType`` enum is 1-based:
+        ``UNKNOWN=1, NET=2, AT=3, QCDM=4, GPS=5, QMI=6, MBIM=7, AUDIO=8,
+        IGNORED=9`` — so QMI is 6 (5 is GPS).
         """
         try:
             ports = modem_props.get('Ports', []) or []
@@ -6974,7 +6978,7 @@ class ModemStateMachine:
                     name, ptype = entry[0], int(entry[1])
                 except (TypeError, IndexError, ValueError):
                     continue
-                if ptype != 5:  # MM_MODEM_PORT_TYPE_QMI
+                if ptype != 6:  # MM_MODEM_PORT_TYPE_QMI
                     continue
                 if hasattr(name, 'value'):
                     name = name.value
