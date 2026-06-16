@@ -41,7 +41,7 @@ def migrate(config: ConfigTree) -> None:
         # Set default certname based on domain-name
         cert_name = 'https-' + domain_names[0].split('.')[0]
         # Overwrite certname from previous certbot calls if available
-        # We can not use python code like os.scandir due to filesystem permissions.
+        # We cannot use python code like os.scandir due to filesystem permissions.
         # This must be run as root
         certbot_live = f'{vyos_certbot_dir}/live/' # we need the trailing /
         if os.path.exists(certbot_live):

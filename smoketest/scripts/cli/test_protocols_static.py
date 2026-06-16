@@ -256,7 +256,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     self.cli_set(base + ['reject', 'tag', route_config['reject']['tag']])
 
             if {'blackhole', 'reject'} <= set(route_config):
-                # Can not use blackhole and reject at the same time
+                # Cannot use blackhole and reject at the same time
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
                 self.cli_delete(base + ['blackhole'])
@@ -315,7 +315,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, frrconfig)
 
             if {'blackhole', 'reject'} <= set(route_config):
-                # Can not use blackhole and reject at the same time
+                # Cannot use blackhole and reject at the same time
                 # Config error validated above - skip this route
                 continue
 

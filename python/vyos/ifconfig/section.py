@@ -130,7 +130,7 @@ class Section:
                 value *= 100
                 value += (ord(n) - ord('a'))
             value += number
-            # vlan are 16 bits, so this can not overflow
+            # vlan are 16 bits, so this cannot overflow
             value = (value << 16) + vlan
             value = (value << 16) + qinq
             return value

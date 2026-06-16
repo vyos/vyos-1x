@@ -154,7 +154,7 @@ def verify(proxy):
 
     for address, config in proxy['listen_address'].items():
         if ldap_auth and 'disable_transparent' not in config:
-            raise ConfigError('Authentication can not be configured when ' \
+            raise ConfigError('Authentication cannot be configured when ' \
                               'proxy is in transparent mode')
 
     if 'outgoing_address' in proxy:
@@ -176,11 +176,11 @@ def verify(proxy):
 
             if 'password' in ldap_config and 'bind_dn' not in ldap_config:
                 raise ConfigError(
-                    'LDAP password can not be set when base-dn is undefined!')
+                    'LDAP password cannot be set when base-dn is undefined!')
 
             if 'bind_dn' in ldap_config and 'password' not in ldap_config:
                 raise ConfigError(
-                    'LDAP bind DN can not be set without password!')
+                    'LDAP bind DN cannot be set without password!')
 
             if 'base_dn' not in ldap_config:
                 raise ConfigError('LDAP base-dn must be set!')

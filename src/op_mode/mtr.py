@@ -137,7 +137,7 @@ options = {
     'tcp': {
         'mtr': '{command} --tcp',
         'type': 'noarg',
-        'help': ' Use TCP SYN packets instead of ICMP ECHO. PACKETSIZE is ignored, since SYN packets can not contain data.',
+        'help': ' Use TCP SYN packets instead of ICMP ECHO. PACKETSIZE is ignored, since SYN packets cannot contain data.',
     },
     'sctp': {
         'mtr': '{command} --sctp',

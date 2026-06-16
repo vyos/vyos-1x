@@ -47,7 +47,7 @@ def migrate(config: ConfigTree) -> None:
             config.set(base + ['default-pool'], value=range_pool_name)
         else:
             Warning(
-                f'PPTP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} can not be migrated.')
+                f'PPTP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} cannot be migrated.')
 
         config.delete(pool_base + ['start'])
         config.delete(pool_base + ['stop'])

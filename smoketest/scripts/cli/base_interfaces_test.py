@@ -448,7 +448,7 @@ class BasicInterfaceTest:
                     self.cli_set(self._base_path + [interface] + option.split())
                 self.cli_set(self._base_path + [interface, 'vrf', 'invalid'])
 
-            # check validate() - can not use a non-existing VRF
+            # check validate() - cannot use a non-existing VRF
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
 
@@ -645,7 +645,7 @@ class BasicInterfaceTest:
                     self.cli_set(base + option.split())
                 self.cli_set(base + ['mtu', self._mtu])
 
-            # check validate() - can not set low MTU if 'no-default-link-local'
+            # check validate() - cannot set low MTU if 'no-default-link-local'
             # is not set on CLI
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()

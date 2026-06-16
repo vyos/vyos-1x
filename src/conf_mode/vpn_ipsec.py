@@ -442,14 +442,14 @@ def verify(ipsec):
 
                 if 'pool' in ra_conf:
                     if {'dhcp', 'radius'} <= set(ra_conf['pool']):
-                        raise ConfigError(f'Can not use both DHCP and RADIUS for address allocation '\
+                        raise ConfigError(f'Cannot use both DHCP and RADIUS for address allocation '\
                                           f'at the same time for "{name}"!')
 
                     if 'dhcp' in ra_conf['pool'] and len(ra_conf['pool']) > 1:
-                        raise ConfigError(f'Can not use DHCP and a predefined address pool for "{name}"!')
+                        raise ConfigError(f'Cannot use DHCP and a predefined address pool for "{name}"!')
 
                     if 'radius' in ra_conf['pool'] and len(ra_conf['pool']) > 1:
-                        raise ConfigError(f'Can not use RADIUS and a predefined address pool for "{name}"!')
+                        raise ConfigError(f'Cannot use RADIUS and a predefined address pool for "{name}"!')
 
                     for pool in ra_conf['pool']:
                         if pool == 'dhcp':

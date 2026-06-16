@@ -219,7 +219,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             for member in self._members:
                 self.cli_set(self._base_path + [interface, 'member', 'interface', member])
 
-        # check validate() - can not use the same member interfaces multiple times
+        # check validate() - cannot use the same member interfaces multiple times
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         # only keep the first bond interface configuration
@@ -242,7 +242,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [bond, 'member', 'interface', member])
         self.cli_set(['interfaces', 'pppoe', pppoe, 'source-interface', member])
 
-        # check validate() - can not add interface to bond, it is the source-interface of ...
+        # check validate() - cannot add interface to bond, it is the source-interface of ...
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
@@ -262,7 +262,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [bond, 'member', 'interface', member])
         self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', member])
 
-        # check validate() - can not add interface to bond, it is a member of bridge ...
+        # check validate() - cannot add interface to bond, it is a member of bridge ...
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 

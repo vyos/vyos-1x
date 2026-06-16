@@ -66,7 +66,7 @@ def verify(console):
             # to its dynamic device file - and create a new dict entry for it.
             by_bus_device = f'{by_bus_dir}/{device}'
             # If the device name still starts with usbXXX no matching tty was found
-            # and it can not be used as a serial interface
+            # and it cannot be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
                 raise ConfigError(f'Device "{device}" does not support being used as tty')
         if not is_tty(device, warning=True):

@@ -56,7 +56,7 @@ def verify(igmp_proxy):
         return None
 
     if 'igmp_configured' in igmp_proxy or 'pim_configured' in igmp_proxy:
-        raise ConfigError('Can not configure both IGMP proxy and PIM '\
+        raise ConfigError('Cannot configure both IGMP proxy and PIM '\
                           'at the same time')
 
     # at least two interfaces are required, one upstream and one downstream

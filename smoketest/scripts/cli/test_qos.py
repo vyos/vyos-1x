@@ -851,7 +851,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         interface = self._interfaces[0]
         self.cli_set(['qos', 'interface', interface])
 
-        # Can not use both IPv6 and IPv4 in one match
+        # Cannot use both IPv6 and IPv4 in one match
         self.cli_set(['qos', 'traffic-match-group', '1', 'match', 'one', 'ip', 'dscp', 'EF'])
         self.cli_set(['qos', 'traffic-match-group', '1', 'match', 'one', 'ipv6', 'dscp', 'EF'])
         with self.assertRaises(ConfigSessionError) as e:

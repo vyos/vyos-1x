@@ -124,7 +124,7 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['interface', dummy_if, 'password', 'plaintext-password', f'{password}-{dummy_if}'])
         self.cli_set(path + ['interface', dummy_if, 'password', 'md5', f'{password}-{dummy_if}'])
 
-        # verify() - can not use both md5 and plaintext-password for password for the interface
+        # verify() - cannot use both md5 and plaintext-password for password for the interface
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(path + ['interface', dummy_if, 'password', 'md5'])
@@ -132,7 +132,7 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['domain-password', 'plaintext-password', password])
         self.cli_set(path + ['domain-password', 'md5', password])
 
-        # verify() - can not use both md5 and plaintext-password for domain-password
+        # verify() - cannot use both md5 and plaintext-password for domain-password
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(path + ['domain-password', 'md5'])

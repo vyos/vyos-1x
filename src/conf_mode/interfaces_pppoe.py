@@ -86,7 +86,7 @@ def verify(pppoe):
     verify_mirror_redirect(pppoe)
 
     if {'connect_on_demand', 'vrf'} <= set(pppoe):
-        raise ConfigError('On-demand dialing and VRF can not be used at the same time')
+        raise ConfigError('On-demand dialing and VRF cannot be used at the same time')
 
     # both MTU and MRU have default values, thus we do not need to check
     # if the key exists

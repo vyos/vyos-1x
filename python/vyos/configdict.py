@@ -340,7 +340,7 @@ def is_source_interface(conf, interface, intftype=None):
         raise ValueError(f'Interface type "{type(intftype)}" must be either str or list!')
 
     if not all(x in intftypes for x in intftype):
-        raise ValueError(f'unknown interface type "{intftype}" or it can not '
+        raise ValueError(f'unknown interface type "{intftype}" or it cannot '
             'have a source-interface')
 
     for it in intftype:

@@ -119,7 +119,7 @@ def verify(lb):
         if 'http_check' in back_config:
             http_check = back_config['http_check']
             if 'expect' in http_check and 'status' in http_check['expect'] and 'string' in http_check['expect']:
-                raise ConfigError('"expect status" and "expect string" can not be configured together!')
+                raise ConfigError('"expect status" and "expect string" cannot be configured together!')
 
         if 'health_check' in back_config:
             if back_config['mode'] != 'tcp':

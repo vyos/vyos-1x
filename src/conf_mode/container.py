@@ -190,9 +190,9 @@ def verify(container):
                         if ip_address(address) not in ip_network(network):
                             raise ConfigError(f'Used container address "{address}" not in network "{network}"!')
 
-                        # We can not use the first IP address of a network prefix as this is used by podman
+                        # We cannot use the first IP address of a network prefix as this is used by podman
                         if ip_address(address) == ip_network(network)[1]:
-                            raise ConfigError(f'IP address "{address}" can not be used for a container, ' \
+                            raise ConfigError(f'IP address "{address}" cannot be used for a container, ' \
                                               'reserved for the container engine!')
 
                         if address in net_dict['address'].keys():
@@ -268,7 +268,7 @@ def verify(container):
             if 'allow_host_networks' not in container_config and 'network' not in container_config:
                 raise ConfigError(f'Must either set "network" or "allow-host-networks" for container "{name}"!')
 
-            # Can not set both allow-host-networks and network at the same time
+            # Cannot set both allow-host-networks and network at the same time
             if {'allow_host_networks', 'network'} <= set(container_config):
                 raise ConfigError(
                     f'"allow-host-networks" and "network" for "{name}" cannot be both configured at the same time!')
@@ -337,12 +337,12 @@ def verify(container):
             # Verify VRF exists
             verify_vrf(network_config)
 
-    # A network attached to a container can not be deleted
+    # A network attached to a container cannot be deleted
     if {'network_remove', 'name'} <= set(container):
         for network in container['network_remove']:
             for c, c_config in container['name'].items():
                 if 'network' in c_config and network in c_config['network']:
-                    raise ConfigError(f'Can not remove network "{network}", used by container "{c}"!')
+                    raise ConfigError(f'Cannot remove network "{network}", used by container "{c}"!')
 
     if 'registry' in container:
         for registry, registry_config in container['registry'].items():

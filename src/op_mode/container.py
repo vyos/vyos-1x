@@ -107,7 +107,7 @@ def delete_image(name: str, force: typing.Optional[bool] = False):
     if name == 'all':
         # gather list of all images and pass them to the removal list
         name = cmd('sudo podman image ls --quiet')
-        # If there are no container images left, we can not delete them all
+        # If there are no container images left, we cannot delete them all
         if not name: return
         # replace newline with whitespace
         name = name.replace('\n', ' ')

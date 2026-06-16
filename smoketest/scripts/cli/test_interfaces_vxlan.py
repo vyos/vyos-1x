@@ -146,7 +146,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'parameters', 'external'])
         self.cli_set(self._base_path + [interface, 'source-address', source_address])
 
-        # Both 'VNI' and 'external' can not be specified at the same time.
+        # Both 'VNI' and 'external' cannot be specified at the same time.
         self.cli_set(self._base_path + [interface, 'vni', '111'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()

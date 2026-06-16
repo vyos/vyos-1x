@@ -196,7 +196,7 @@ def verify(config_dict):
                     raise ConfigError(f'Cannot delete VRF instance "{vrf}", ' \
                                       'unconfigure "import vrf" commands!')
         else:
-            # We are running in the default VRF context, thus we can not delete
+            # We are running in the default VRF context, thus we cannot delete
             # our main BGP instance if there are dependent BGP VRF instances.
             if 'dependent_vrfs' in bgp:
                 for vrf, vrf_options in bgp['dependent_vrfs'].items():
@@ -276,24 +276,24 @@ def verify(config_dict):
                 if len(peer_config['local_as']) > 1:
                     raise ConfigError(f'Only one local-as number can be specified for peer "{peer}"!')
 
-                # Neighbor local-as override can not be the same as the local-as
+                # Neighbor local-as override cannot be the same as the local-as
                 # we use for this BGP instance!
                 asn = list(peer_config['local_as'].keys())[0]
                 if asn == bgp['system_as']:
                     raise ConfigError('Cannot have local-as same as system-as number')
 
-                # Neighbor AS specified for local-as and remote-as can not be the same
+                # Neighbor AS specified for local-as and remote-as cannot be the same
                 if dict_search('remote_as', peer_config) == asn and neighbor != 'peer_group':
                      raise ConfigError(f'Neighbor "{peer}" has local-as specified which is '\
                                         'the same as remote-as, this is not allowed!')
 
             # ttl-security and ebgp-multihop can't be used in the same configuration
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
-                raise ConfigError('You can not set both ebgp-multihop and ttl-security hops')
+                raise ConfigError('You cannot set both ebgp-multihop and ttl-security hops')
 
             # interface and ebgp-multihop can't be used in the same configuration
             if 'ebgp_multihop' in peer_config and 'interface' in peer_config:
-                raise ConfigError(f'Ebgp-multihop can not be used with directly connected '\
+                raise ConfigError(f'Ebgp-multihop cannot be used with directly connected '\
                                   f'neighbor "{peer}"')
 
             # Check if neighbor has both override capability and strict capability match
@@ -361,7 +361,7 @@ def verify(config_dict):
                     vrf_error_msg = f' in VRF "{vrf}"!'
 
                 if is_ip(peer) and is_addr_assigned(peer, vrf):
-                    raise ConfigError(f'Can not configure local address as neighbor "{peer}"{vrf_error_msg}')
+                    raise ConfigError(f'Cannot configure local address as neighbor "{peer}"{vrf_error_msg}')
                 elif is_interface(peer):
                     if 'peer_group' in peer_config:
                         raise ConfigError(f'peer-group must be set under the interface node of "{peer}"')
@@ -405,7 +405,7 @@ def verify(config_dict):
                                           'conditionally-advertise is in use!')
 
                     if {'exist_map', 'non_exist_map'} <= set(afi_config['conditionally_advertise']):
-                        raise ConfigError('Can not specify both exist-map and non-exist-map for ' \
+                        raise ConfigError('Cannot specify both exist-map and non-exist-map for ' \
                                           'conditionally-advertise!')
 
                     if 'exist_map' in afi_config['conditionally_advertise']:
@@ -455,7 +455,7 @@ def verify(config_dict):
 
     # Throw an error if a peer group is not configured for allow range
     for prefix in dict_search('listen.range', bgp) or []:
-        # we can not use dict_search() here as prefix contains dots ...
+        # we cannot use dict_search() here as prefix contains dots ...
         if 'peer_group' not in bgp['listen']['range'][prefix]:
             raise ConfigError(f'Listen range for prefix "{prefix}" has no peer group configured.')
 

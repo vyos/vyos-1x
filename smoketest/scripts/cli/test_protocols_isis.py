@@ -178,12 +178,12 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['domain-password', 'plaintext-password', password])
         self.cli_set(base_path + ['domain-password', 'md5', password])
 
-        # verify() - can not use both md5 and plaintext-password for area-password
+        # verify() - cannot use both md5 and plaintext-password for area-password
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['area-password', 'md5', password])
 
-        # verify() - can not use both md5 and plaintext-password for domain-password
+        # verify() - cannot use both md5 and plaintext-password for domain-password
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['domain-password', 'md5', password])

@@ -286,7 +286,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 ]
             )
 
-        # verify() - first IP address of a prefix can not be used by a container
+        # verify() - first IP address of a prefix cannot be used by a container
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
@@ -332,7 +332,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 ]
             )
 
-        # verify() - first IP address of a prefix can not be used by a container
+        # verify() - first IP address of a prefix cannot be used by a container
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
@@ -391,7 +391,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 ]
             )
 
-        # verify() - first IP address of a prefix can not be used by a container
+        # verify() - first IP address of a prefix cannot be used by a container
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 

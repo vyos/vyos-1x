@@ -27,11 +27,11 @@ class SSTPCIf(Interface):
     }
 
     def _create(self):
-        # we can not create this interface as it is managed outside
+        # we cannot create this interface as it is managed outside
         pass
 
     def _delete(self):
-        # we can not create this interface as it is managed outside
+        # we cannot create this interface as it is managed outside
         pass
 
     def get_mac(self):

@@ -188,7 +188,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         system_user = 'backup'
         self.cli_set(base_path + ['user', system_user, 'authentication', 'plaintext-password', system_user])
 
-        # check validate() - can not add username which exists on the Debian
+        # check validate() - cannot add username which exists on the Debian
         # base system (UID < 1000)
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()

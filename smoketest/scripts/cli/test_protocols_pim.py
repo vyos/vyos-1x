@@ -139,7 +139,7 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path)
         self.cli_set(igmp_proxy)
 
-        # check validate() - can not set both IGMP proxy and PIM
+        # check validate() - cannot set both IGMP proxy and PIM
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 

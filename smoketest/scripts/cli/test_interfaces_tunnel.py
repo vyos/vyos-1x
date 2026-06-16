@@ -74,7 +74,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_set(self._base_path + [interface, 'remote', remote_ip4])
             self.cli_set(self._base_path + [interface, 'source-interface', source_if])
 
-            # Source interface can not be used with sit and gretap
+            # Source interface cannot be used with sit and gretap
             if encapsulation in ['sit', 'gretap']:
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
@@ -122,7 +122,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
 
             # Configure Tunnel Source interface
             self.cli_set(self._base_path + [interface, 'source-interface', source_if])
-            # Source interface can not be used with ip6gretap
+            # Source interface cannot be used with ip6gretap
             if encapsulation in ['ip6gretap']:
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
@@ -404,7 +404,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
 
         for dynamic_interface in ['l2tp0', 'ppp4220', 'sstpc0', 'ipoe654']:
             self.cli_set(self._base_path + [interface, 'source-interface', dynamic_interface])
-            # verify() - we can not source from dynamic interfaces
+            # verify() - we cannot source from dynamic interfaces
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
         self.cli_set(self._base_path + [interface, 'source-interface', 'eth0'])

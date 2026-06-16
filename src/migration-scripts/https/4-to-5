@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# T5762: http: api: smoketests fail as they can not establish IPv6 connection
+# T5762: http: api: smoketests fail as they cannot establish IPv6 connection
 #        to uvicorn backend server, always make the UNIX domain socket the
 #        default way of communication
 

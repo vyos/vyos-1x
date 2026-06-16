@@ -33,12 +33,12 @@ class LoopbackIf(Interface):
     }
 
     def _create(self):
-        # we can not create this interface as it is managed by the Kernel
+        # we cannot create this interface as it is managed by the Kernel
         pass
 
     def remove(self):
         """
-        Loopback interface can not be deleted from operating system. We can
+        Loopback interface cannot be deleted from operating system. We can
         only remove all assigned IP addresses.
 
         Example:

@@ -77,7 +77,7 @@ def verify(config_dict):
                         verify_vrf(interface_config)
 
             if {'blackhole', 'reject'} <= set(prefix_options):
-                raise ConfigError(f'Can not use both blackhole and reject for '\
+                raise ConfigError(f'Cannot use both blackhole and reject for '\
                                   f'prefix "{prefix}"!')
 
     if 'multicast' in static and 'route' in static['multicast']:

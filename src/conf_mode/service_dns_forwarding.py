@@ -249,7 +249,7 @@ def verify(dns):
     if 'allow_from' not in dns:
         raise ConfigError('DNS forwarding requires an allow-from network')
 
-    # we can not use dict_search() when testing for domain servers
+    # we cannot use dict_search() when testing for domain servers
     # as a domain will contains dot's which is out dictionary delimiter.
     if 'domain' in dns:
         for domain in dns['domain']:

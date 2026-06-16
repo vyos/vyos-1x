@@ -600,7 +600,7 @@ def configure_authentication(config_file: str, password: str) -> None:
         config_file (str): path of target config file
         password (str): plaintext password
 
-    N.B. this can not be deferred by simply setting the plaintext password
+    N.B. this cannot be deferred by simply setting the plaintext password
     and relying on the config mode script to process at boot, as the config
     will not automatically be saved in that case, thus leaving the
     plaintext exposed

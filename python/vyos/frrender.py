@@ -778,7 +778,7 @@ class FRRender:
             return output
 
         debug('FRR:        START CONFIGURATION RENDERING')
-        # we can not reload an empty file, thus we always embed the marker
+        # we cannot reload an empty file, thus we always embed the marker
         output = '!\n'
 
         # FRR profile configuration

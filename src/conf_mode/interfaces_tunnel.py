@@ -85,7 +85,7 @@ def verify(tunnel):
         verify_bridge_delete(tunnel)
 
         if 'nhrp' in tunnel and tunnel['ifname'] in tunnel['nhrp']:
-            raise ConfigError('Tunnel used for NHRP, it can not be deleted!')
+            raise ConfigError('Tunnel used for NHRP, it cannot be deleted!')
 
         return None
     if 'nhrp' in tunnel:
@@ -148,7 +148,7 @@ def verify(tunnel):
                 their_source_if = dict_search('source_interface', o_tunnel_conf)
                 our_remote = dict_search('remote', tunnel)
                 their_remote = dict_search('remote', o_tunnel_conf)
-                # If no IP GRE key is defined we can not have more then one GRE tunnel
+                # If no IP GRE key is defined we cannot have more then one GRE tunnel
                 # bound to any one interface/IP address and the same remote. This will
                 # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
                 if our_remote == their_remote:
@@ -186,7 +186,7 @@ def verify(tunnel):
         if dict_search('parameters.ip.ttl', tunnel) != '0':
             raise ConfigError('Disabled PMTU requires TTL set to "0"!')
         if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
-            raise ConfigError('Can not disable PMTU discovery for given encapsulation')
+            raise ConfigError('Cannot disable PMTU discovery for given encapsulation')
 
     if dict_search('parameters.ip.ignore_df', tunnel) != None:
         if tunnel['encapsulation'] not in ['gretap']:
@@ -201,7 +201,7 @@ def generate(tunnel):
 
 def apply(tunnel):
     interface = tunnel['ifname']
-    # If a gretap tunnel is already existing we can not "simply" change local or
+    # If a gretap tunnel is already existing we cannot "simply" change local or
     # remote addresses. This returns "Operation not supported" by the Kernel.
     # There is no other solution to destroy and recreate the tunnel.
     encap = ''
