@@ -26,6 +26,8 @@ from typing import TypeVar, ParamSpec, Literal
 from vpp_papi import VPPApiClient
 from vpp_papi import VPPIOError, VPPValueError
 
+from vyos.vpp.utils import vpp_ip_addresses_by_index
+
 # define types for static type checkers
 AnyType = TypeVar('AnyType')
 AnyParam = ParamSpec('AnyParam')
@@ -300,6 +302,110 @@ class VPPControl:
         based on the current state of the kernel.
         """
         return self.__vpp_api_client.api.lcp_nl_resync()
+
+    @_Decorators.api_call
+    def get_interface_ip_table(self, ifname: str, is_ipv6: bool = False) -> int | None:
+        """Return the IP FIB table ID assigned to an interface.
+
+        Args:
+            ifname (str): Interface name in VPP.
+            is_ipv6 (bool, optional): Return IPv6 table ID if True. Defaults to False.
+
+        Returns:
+            int | None: FIB table ID or None if the interface is not found.
+        """
+        iface_index = self.get_sw_if_index(ifname)
+        if iface_index is None:
+            return None
+
+        response = self.__vpp_api_client.api.sw_interface_get_table(
+            sw_if_index=iface_index,
+            is_ipv6=is_ipv6,
+        )
+        if response.retval != 0:
+            return None
+
+        return response.vrf_id
+
+    @_Decorators.api_call
+    def set_interface_ip_table(
+        self, ifname: str, table_id: int, is_ipv6: bool = False
+    ) -> None:
+        """Assign an interface to an IP FIB table.
+
+        Args:
+            ifname (str): Interface name in VPP.
+            table_id (int): FIB table ID.
+            is_ipv6 (bool, optional): Set IPv6 table if True. Defaults to False.
+        """
+        iface_index = self.get_sw_if_index(ifname)
+        if iface_index is None:
+            return None
+
+        self.__vpp_api_client.api.sw_interface_set_table(
+            sw_if_index=iface_index,
+            is_ipv6=is_ipv6,
+            vrf_id=table_id,
+        )
+
+    @_Decorators.api_call
+    def add_del_interface_ip_address(
+        self, ifname: str, address: str, is_add: bool = True
+    ) -> None:
+        """Add or delete an interface IP address in VPP.
+
+        Args:
+            ifname (str): Interface name in VPP.
+            address (str): Interface prefix, for example "192.0.2.1/24".
+            is_add (bool, optional): Add address if True, delete if False.
+                Defaults to True.
+        """
+        iface_index = self.get_sw_if_index(ifname)
+        if iface_index is None:
+            return None
+
+        self.__vpp_api_client.api.sw_interface_add_del_address(
+            sw_if_index=iface_index,
+            is_add=is_add,
+            del_all=False,
+            prefix=address,
+        )
+
+    def move_interface_to_ip_table_preserve_addresses(
+        self, ifname: str, table_id: int
+    ) -> None:
+        """Move an interface to an IP FIB table while preserving its addresses.
+
+        VPP keeps connected routes in the interface IP table that was active when
+        addresses were added. Re-adding the same addresses after the table move
+        recreates connected routes in the target table.
+
+        Args:
+            ifname (str): Interface name in VPP.
+            table_id (int): Target FIB table ID.
+        """
+
+        iface_index = self.get_sw_if_index(ifname)
+        if iface_index is None:
+            return None
+
+        for is_ipv6 in [False, True]:
+            current_table = self.get_interface_ip_table(ifname, is_ipv6=is_ipv6)
+            if current_table is None or current_table == table_id:
+                continue
+
+            addresses = vpp_ip_addresses_by_index(
+                self.__vpp_api_client.api,
+                iface_index,
+                is_ipv6=is_ipv6,
+            )
+            for address in addresses:
+                self.add_del_interface_ip_address(ifname, address, is_add=False)
+
+            self.set_interface_ip_table(ifname, table_id, is_ipv6=is_ipv6)
+
+            for address in addresses:
+                self.add_del_interface_ip_address(ifname, address)
 
     @_Decorators.check_retval
     @_Decorators.api_call

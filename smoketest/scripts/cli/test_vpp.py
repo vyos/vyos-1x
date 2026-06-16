@@ -35,6 +35,7 @@ from vyos.utils.system import sysctl_read
 from vyos.utils.network import interface_exists
 from vyos.system import image
 from vyos.vpp import VPPControl
+from vyos.vpp.utils import vpp_ip_addresses_by_index
 from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 
@@ -1512,6 +1513,93 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(
             list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
         )
+
+    def test_24_vpp_lcp_vrf_table_sync(self):
+        vlan = '20'
+        subif = f'{interface}.{vlan}'
+        address = '100.100.100.1/24'
+        fib_route = '100.100.100.1/32'
+        mgmt_vrf = 'mgmt'
+        test_vrf = 'test1'
+
+        def assert_vpp_lcp_table(table_id):
+            vpp = VPPControl()
+            subif_index = vpp.get_sw_if_index(subif)
+            self.assertIsNotNone(subif_index)
+            self.assertEqual(vpp.get_interface_ip_table(subif), table_id)
+            self.assertIn(address, vpp_ip_addresses_by_index(vpp.api, subif_index))
+
+        def assert_fib_route(table_id, expected=True):
+            _, out = rc_cmd(f'sudo vppctl show ip fib table {table_id}')
+            if expected:
+                self.assertIn(fib_route, out)
+            else:
+                self.assertNotIn(fib_route, out)
+
+        self.cli_set(['vrf', 'name', mgmt_vrf, 'table', '1000'])
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'address', address]
+        )
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'vrf', mgmt_vrf]
+        )
+        self.cli_commit()
+
+        assert_vpp_lcp_table(1000)
+        assert_fib_route(0, expected=False)
+        assert_fib_route(1000)
+
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan, 'address'])
+        self.cli_commit()
+
+        vpp = VPPControl()
+        subif_index = vpp.get_sw_if_index(subif)
+        self.assertIsNotNone(subif_index)
+        self.assertEqual(vpp.get_interface_ip_table(subif), 1000)
+        self.assertNotIn(address, vpp_ip_addresses_by_index(vpp.api, subif_index))
+        assert_fib_route(0, expected=False)
+        assert_fib_route(1000, expected=False)
+
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'address', address]
+        )
+        self.cli_commit()
+
+        assert_vpp_lcp_table(1000)
+        assert_fib_route(0, expected=False)
+        assert_fib_route(1000)
+
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan, 'vrf'])
+        self.cli_commit()
+
+        assert_vpp_lcp_table(0)
+        assert_fib_route(0)
+        assert_fib_route(1000, expected=False)
+
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'vrf', mgmt_vrf]
+        )
+        self.cli_commit()
+
+        assert_vpp_lcp_table(1000)
+        assert_fib_route(0, expected=False)
+        assert_fib_route(1000)
+
+        self.cli_set(['vrf', 'name', test_vrf, 'table', '2000'])
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'vrf', test_vrf]
+        )
+        self.cli_commit()
+
+        assert_vpp_lcp_table(2000)
+        assert_fib_route(0, expected=False)
+        assert_fib_route(1000, expected=False)
+        assert_fib_route(2000)
+
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_delete(['vrf', 'name', test_vrf])
+        self.cli_delete(['vrf', 'name', mgmt_vrf])
+        self.cli_commit()
 
 
 if __name__ == '__main__':
