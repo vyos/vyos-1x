@@ -672,6 +672,25 @@ class IgosBoard(Board):
         """
         return list(self._resolve_modem(modem).get("sim_detect", []))  # type: ignore[arg-type]
 
+    def modem_capabilities(self, modem: Optional[str] = None) -> frozenset:
+        """
+        Return the set of hardware-control roles the pinmap declares for
+        ``modem`` (or the only modem if ``modem`` is None).
+
+        Possible members: ``"reset"``, ``"power"``, ``"sim_select"``,
+        ``"sim_detect"``. The presence of ``"sim_select"`` is what the WWAN
+        FSM uses to decide it must drive SIM switching itself (GPIO-mux
+        mode) instead of delegating to ModemManager's ``SetPrimarySimSlot``.
+        """
+        roles = self._resolve_modem(modem)
+        caps = set()
+        for role in ("reset", "power", "sim_select"):
+            if roles.get(role):
+                caps.add(role)
+        if roles.get("sim_detect"):
+            caps.add("sim_detect")
+        return frozenset(caps)
+
     # -------- semantic helpers --------
     def modem_reset(self, modem: Optional[str] = None) -> None:
         roles = self._resolve_modem(modem)
@@ -710,6 +729,19 @@ class IgosBoard(Board):
         # retains the level after release, so the slot stays selected with
         # no long-lived process required.
         self.set_pin(pin, 0 if slot == 1 else 1)  # type: ignore[arg-type]
+
+    def sim_select_state(self, modem: Optional[str] = None) -> Optional[int]:
+        """Return the slot the SIM mux is currently selecting (1 or 2).
+
+        Reads the ``sim_select`` GPIO line back (low → slot 1, high →
+        slot 2).  Returns ``None`` when the modem has no ``sim_select`` pin
+        (i.e. not a GPIO-mux board).
+        """
+        roles = self._resolve_modem(modem)
+        pin = roles.get("sim_select")
+        if pin is None:
+            return None
+        return 2 if self.get_pin(pin) else 1  # type: ignore[arg-type]
 
     def _resolve_modem_stat_prefix(self, modem: Optional[str] = None) -> str:
         """Resolve the pin prefix for RGB modem status LEDs.
@@ -858,6 +890,7 @@ class _NoPinmapBoard(Board):
     def modem_reset(self, modem=None):           self._fail()
     def modem_power(self, on, modem=None):       self._fail()
     def sim_select(self, slot, modem=None):      self._fail()
+    def sim_select_state(self, modem=None):      return None
     def modem_signal_level(self, level, modem=None): self._fail()
     def serial_protocol(self, port, proto, term=None, slr=None):
         self._fail()
@@ -879,6 +912,9 @@ class _NoPinmapBoard(Board):
 
     def sim_detect_pins(self, modem=None) -> list:
         return []
+
+    def modem_capabilities(self, modem=None) -> frozenset:
+        return frozenset()
 
 
 def _build_board() -> Board:

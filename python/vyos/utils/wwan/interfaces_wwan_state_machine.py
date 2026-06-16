@@ -33,6 +33,7 @@ from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
 from automaton import machines  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_util import modem_reset
+from vyos.utils.wwan.sim_controller import make_sim_controller
 
 # Check if Android APN lookup library is available
 try:
@@ -600,6 +601,13 @@ class ModemStateMachine:
         self.machine.initialize()
         ModemStateMachine.modem_state_machines[f"wwan{self.interface_number}"] = self
 
+        # SIM-slot control strategy. Capability-driven from the active
+        # pinmap: a board that declares a ``sim_select`` GPIO uses an
+        # external SIM mux (GPIO-mux mode); otherwise SIM switching is
+        # delegated to ModemManager (historical default). Never raises —
+        # falls back to the ModemManager-managed controller on any error.
+        self.sim_controller = make_sim_controller(self)
+
     def _setup_states(self):
         for state in ModemState:
             self.machine.add_state(state.value)
@@ -635,6 +643,18 @@ class ModemStateMachine:
 
         # Setup ModemManager signal monitoring for instant modem detection
         await self.setup_modem_manager_monitoring()
+
+        # GPIO-mux SIM presence is independent of ModemManager and the
+        # modem itself — seed the presence model from the SIM_DETECT lines
+        # (edges only report *changes*, so the initial state must be
+        # sampled) and start the debounced detect watcher. No-op for the
+        # ModemManager-managed controller.
+        try:
+            await self.sim_controller.sample_initial()
+            self.sim_controller.start_watch()
+        except Exception as e:
+            logger.warning(f"SIM controller watcher init failed: {e}",
+                          extra={'interface_number': self.interface_number})
 
         self.transition(ModemEvent.START_SCAN)
         # Start modem scanning as a background task instead of blocking
@@ -802,6 +822,28 @@ class ModemStateMachine:
                 if self.machine.current_state != ModemState.FAILED.value:
                     return
                 if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                    continue
+                # GPIO-mux: the modem can't see the non-selected slot and
+                # doesn't reliably report sim-missing, so presence comes
+                # from the SIM_DETECT model.  If any slot other than the
+                # one we're parked on now has a SIM, attempt failover.
+                if self.sim_controller.is_gpio_mux:
+                    try:
+                        active = (self.current_active_sim
+                                  or (self.config or {}).get('primary_sim_slot', 1))
+                        present = await self.sim_controller.present_slots()
+                        if any(s != active for s in present):
+                            logger.info(
+                                "sim-missing watch (GPIO): alternate SIM "
+                                "present — triggering failover",
+                                extra={'interface_number': self.interface_number,
+                                       'present_slots': sorted(present),
+                                       'active_slot': active})
+                            await self._handle_sim_missing_failover()
+                    except Exception as e:
+                        logger.debug(
+                            f"sim-missing watch (GPIO) poll error: {e}",
+                            extra={'interface_number': self.interface_number})
                     continue
                 if not self.proxy:
                     continue
@@ -3993,6 +4035,31 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'config_sim_slot': config_sim_slot})
 
+            # GPIO-mux: the slot is selected by an external mux, not by
+            # ModemManager's PrimarySimSlot.  Read the mux's current position
+            # from the sim_select line; if it does not match the configured
+            # primary, drive the mux and reboot so the modem enumerates the
+            # newly-selected SIM.
+            if self.sim_controller.is_gpio_mux:
+                current_slot = await self.sim_controller.current_selected_slot()
+                self.current_active_sim = current_slot or config_sim_slot
+                logger.info("GPIO-mux SIM slot check",
+                           extra={'interface_number': self.interface_number,
+                                  'mux_slot': current_slot,
+                                  'config_sim': config_sim_slot})
+                if current_slot is not None and current_slot != config_sim_slot:
+                    self._sim_switch_in_progress = True
+                    try:
+                        await self.sim_controller.switch_to(config_sim_slot)
+                        await self._rescan_after_sim_switch()
+                    finally:
+                        self._sim_switch_in_progress = False
+                    self.current_active_sim = config_sim_slot
+                    logger.info("GPIO-mux SIM slot selected",
+                               extra={'interface_number': self.interface_number,
+                                      'new_sim': config_sim_slot})
+                return
+
             # Check current SIM slot
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
             try:
@@ -4790,6 +4857,12 @@ class ModemStateMachine:
         Returns True if the SIM appears present, False otherwise.
         """
         try:
+            # GPIO-mux: SIM presence comes from the board SIM_DETECT lines,
+            # not ModemManager — the modem exposes only the selected slot and
+            # structurally cannot report whether the other slot is populated.
+            if self.sim_controller.is_gpio_mux:
+                return await self.sim_controller.is_present(primary_slot)
+
             if not self.proxy:
                 return False
 
@@ -5010,8 +5083,13 @@ class ModemStateMachine:
 
             # Try to set back to original SIM using the SetPrimarySimSlot method
             try:
-                iface = self.proxy.get_interface(MODEM_INTERFACE)
-                await iface.call_set_primary_sim_slot(original_sim)
+                if self.sim_controller.is_gpio_mux:
+                    # GPIO-mux: restore the mux to the original slot (this
+                    # also reboots the modem to re-enumerate that SIM).
+                    await self.sim_controller.switch_to(original_sim)
+                else:
+                    iface = self.proxy.get_interface(MODEM_INTERFACE)
+                    await iface.call_set_primary_sim_slot(original_sim)
                 await asyncio.sleep(3)
                 logger.info("Restored original SIM slot",
                            extra={'interface_number': self.interface_number,
@@ -5116,6 +5194,40 @@ class ModemStateMachine:
                        'mm_state': mm_state,
                        'failed_reason': failed_reason,
                        'failed_reason_name': reason_name})
+
+            # GPIO-mux: the modem does NOT reliably report sim-missing — it
+            # just fails generically when the active SIM is pulled.  So
+            # StateFailedReason is demoted to a hint and SIM_DETECT is the
+            # authority: if the active slot's SIM is gone (or an alternate is
+            # present), treat it as a SIM problem and route to failover;
+            # otherwise fall through to the normal connection-failure path.
+            if self.sim_controller.is_gpio_mux:
+                active = (self.current_active_sim
+                          or (self.config or {}).get('primary_sim_slot', 1))
+                active_present = await self.sim_controller.is_present(active)
+                present = await self.sim_controller.present_slots()
+                alternate_present = any(s != active for s in present)
+                if (not active_present) or alternate_present:
+                    logger.warning(
+                        "Modem FAILED and SIM_DETECT indicates a SIM problem "
+                        "(GPIO-mux) — triggering SIM failover",
+                        extra={'interface_number': self.interface_number,
+                               'active_slot': active,
+                               'active_present': active_present,
+                               'present_slots': sorted(present)})
+                    self._cancel_failed_retry()
+                    self.transition(ModemEvent.SIM_MISSING)
+                    await self._handle_sim_missing_failover()
+                    return
+                # Active SIM still present and no alternate — a genuine
+                # (non-SIM) connection failure; preserve normal recovery.
+                current_fsm_state = self.machine.current_state
+                if current_fsm_state in [ModemState.CONFIGURING.value,
+                                         ModemState.CONNECTING.value,
+                                         ModemState.CONNECTED.value,
+                                         ModemState.USAGE_MONITORING.value]:
+                    self.transition(ModemEvent.CONNECTION_FAILED)
+                return
 
             # sim-missing (2) or sim-error (3) → route through SIM failover.
             # The active SIM tray is empty (or unreadable) but the modem
@@ -5346,6 +5458,115 @@ class ModemStateMachine:
         return await self._failover_to_alternate_sim(
             'sim_missing', '_handle_sim_missing_failover')
 
+    def _on_sim_detect_event(self, slot: int, present: bool):
+        """Scheduled (thread-safe) on a debounced GPIO SIM_DETECT edge.
+
+        Called via ``loop.call_soon_threadsafe`` from the GPIO-mux detect
+        watcher thread, so it runs on the FSM's asyncio loop.  The presence
+        model is already updated by the watcher; this only decides whether
+        any action is warranted.
+
+        Policy (GPIO-mux):
+          * REMOVED — record only.  We do NOT proactively act: the modem
+            tears the network down in its own orderly way and we evaluate
+            failover once it actually reaches FAILED.
+          * INSERTED — a SIM became active in the live path or a primary
+            returned; hand off to the async insertion handler.
+        """
+        try:
+            if not self.sim_controller.is_gpio_mux:
+                return
+            if not present:
+                logger.info("SIM_DETECT removed — recorded; waiting for modem "
+                            "to fail gracefully before evaluating failover",
+                            extra={'interface_number': self.interface_number,
+                                   'slot': slot})
+                return
+            self._safe_create_task(
+                self._handle_sim_detect_insertion(slot),
+                name='sim_detect_insertion')
+        except Exception as e:
+            logger.error(f"SIM_DETECT event handler error: {e}",
+                        extra={'interface_number': self.interface_number,
+                               'slot': slot})
+
+    async def _handle_sim_detect_insertion(self, slot: int):
+        """React to a SIM being inserted (GPIO-mux), per the design model.
+
+        Reboot is only ever issued for a SIM *becoming active*:
+          * insertion into the currently-selected slot while parked
+            (FAILED / waiting) — reboot so the modem enumerates it;
+          * primary returns while on the failover SIM — hand to the
+            failback monitor (controlled switch with stability gate);
+          * otherwise — availability is recorded for the failover executor;
+            no immediate action.
+        """
+        try:
+            if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                logger.debug("SIM_DETECT insertion ignored — switch/failover in progress",
+                            extra={'interface_number': self.interface_number,
+                                   'slot': slot})
+                return
+
+            selected = (self.current_active_sim
+                        or (self.config or {}).get('primary_sim_slot', 1))
+            primary = self.primary_sim_slot or (
+                self.config or {}).get('primary_sim_slot', 1)
+            state = self.machine.current_state
+
+            # Primary SIM returned while running on the failover SIM — let the
+            # failback monitor perform the controlled switch (it honors the
+            # stability gate + cooldown and reads GPIO presence).
+            if self.is_on_failover_sim and slot == primary and slot != selected:
+                logger.info("SIM_DETECT: primary SIM returned — starting failback monitor",
+                           extra={'interface_number': self.interface_number,
+                                  'slot': slot, 'selected': selected})
+                self._start_failback_monitor()
+                return
+
+            # Insertion into the slot the modem is wired to, while parked.  The
+            # modem cannot detect the SIM on its own, so reboot to enumerate.
+            if slot == selected and state in (ModemState.FAILED.value,
+                                              ModemState.WAITING_FOR_SIM.value):
+                if not self._is_reset_allowed():
+                    logger.info("SIM_DETECT: selected-slot SIM inserted but reset "
+                               "blocked by cooldown — will retry on next event/poll",
+                               extra={'interface_number': self.interface_number,
+                                      'slot': slot})
+                    return
+                logger.info("SIM_DETECT: SIM inserted into selected slot while parked "
+                           "— rebooting modem to enumerate it",
+                           extra={'interface_number': self.interface_number,
+                                  'slot': slot, 'state': state})
+                self._cancel_failed_retry()
+                ok = await modem_reset(self.interface_number)
+                self._record_reset()
+                if not ok:
+                    logger.warning("SIM_DETECT: modem reboot after insertion found "
+                                  "no working reset method",
+                                  extra={'interface_number': self.interface_number,
+                                         'slot': slot})
+                return
+
+            # Alternate slot became populated while the active SIM is gone —
+            # attempt failover (the executor re-checks GPIO presence + gating).
+            if slot != selected and state == ModemState.FAILED.value:
+                if not await self.sim_controller.is_present(selected):
+                    logger.info("SIM_DETECT: alternate SIM inserted while active "
+                               "absent — attempting failover",
+                               extra={'interface_number': self.interface_number,
+                                      'slot': slot, 'selected': selected})
+                    await self._handle_sim_missing_failover()
+                    return
+
+            logger.debug("SIM_DETECT insertion recorded — no immediate action",
+                        extra={'interface_number': self.interface_number,
+                               'slot': slot, 'selected': selected, 'state': state})
+        except Exception as e:
+            logger.error(f"SIM_DETECT insertion handler error: {e}",
+                        extra={'interface_number': self.interface_number,
+                               'slot': slot})
+
     async def _handle_signal_loss_failover(self):
         """Fail over to the alternate SIM after sustained weak signal.
 
@@ -5500,47 +5721,52 @@ class ModemStateMachine:
             sim_slots = sim_slots_variant.value  # Extract array from Variant
 
             available_sims = []
-            for slot_num, slot_path in enumerate(sim_slots, 1):
-                if slot_path and slot_path != '/':  # Valid SIM present
-                    try:
-                        # Test if SIM is responsive
-                        sim_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, slot_path)
-                        sim_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, slot_path, sim_introspect)
-                        sim_props = sim_proxy.get_interface("org.freedesktop.DBus.Properties")
-
-                        sim_interface = "org.freedesktop.ModemManager1.Sim"
-
-                        # Try IMSI first (most reliable indicator)
+            if self.sim_controller.is_gpio_mux:
+                # GPIO-mux: ModemManager only sees the selected slot, so the
+                # alternate-SIM set comes from the SIM_DETECT presence model.
+                available_sims = sorted(await self.sim_controller.present_slots())
+            else:
+                for slot_num, slot_path in enumerate(sim_slots, 1):
+                    if slot_path and slot_path != '/':  # Valid SIM present
                         try:
-                            imsi_variant = await sim_props.call_get(sim_interface, "Imsi")
-                            imsi = imsi_variant.value
-                            if imsi:
-                                available_sims.append(slot_num)
-                                continue
+                            # Test if SIM is responsive
+                            sim_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, slot_path)
+                            sim_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, slot_path, sim_introspect)
+                            sim_props = sim_proxy.get_interface("org.freedesktop.DBus.Properties")
+
+                            sim_interface = "org.freedesktop.ModemManager1.Sim"
+
+                            # Try IMSI first (most reliable indicator)
+                            try:
+                                imsi_variant = await sim_props.call_get(sim_interface, "Imsi")
+                                imsi = imsi_variant.value
+                                if imsi:
+                                    available_sims.append(slot_num)
+                                    continue
+                            except Exception:
+                                pass
+
+                            # IMSI may be empty for non-active slots — check SimIdentifier (ICCID)
+                            try:
+                                iccid_variant = await sim_props.call_get(sim_interface, "SimIdentifier")
+                                iccid = iccid_variant.value
+                                if iccid:
+                                    available_sims.append(slot_num)
+                                    continue
+                            except Exception:
+                                pass
+
+                            # SIM object exists on D-Bus but has no IMSI/ICCID — still
+                            # treat it as available (non-active slot may not be powered)
+                            logger.info(f"SIM in slot {slot_num} has D-Bus object but no IMSI/ICCID "
+                                       f"(non-active slot not yet powered) — treating as available",
+                                       extra={'interface_number': self.interface_number,
+                                              'slot': slot_num,
+                                              'sim_path': slot_path})
+                            available_sims.append(slot_num)
+
                         except Exception:
-                            pass
-
-                        # IMSI may be empty for non-active slots — check SimIdentifier (ICCID)
-                        try:
-                            iccid_variant = await sim_props.call_get(sim_interface, "SimIdentifier")
-                            iccid = iccid_variant.value
-                            if iccid:
-                                available_sims.append(slot_num)
-                                continue
-                        except Exception:
-                            pass
-
-                        # SIM object exists on D-Bus but has no IMSI/ICCID — still
-                        # treat it as available (non-active slot may not be powered)
-                        logger.info(f"SIM in slot {slot_num} has D-Bus object but no IMSI/ICCID "
-                                   f"(non-active slot not yet powered) — treating as available",
-                                   extra={'interface_number': self.interface_number,
-                                          'slot': slot_num,
-                                          'sim_path': slot_path})
-                        available_sims.append(slot_num)
-
-                    except Exception:
-                        continue  # SIM not available
+                            continue  # SIM not available
 
             logger.info("Available SIMs detected",
                        extra={'interface_number': self.interface_number,
@@ -5672,6 +5898,19 @@ class ModemStateMachine:
             if self._sim_switch_in_progress or self._sim_failover_in_progress:
                 logger.debug("SIM insertion check skipped — SIM switch/failover in progress",
                             extra={'interface_number': self.interface_number})
+                return False
+
+            # GPIO-mux: presence comes from the SIM_DETECT model.  If the
+            # configured slot now reports a SIM, resume the normal
+            # configuration lane (the detect watcher drives instant events;
+            # this polling path is the periodic safety net).
+            if self.sim_controller.is_gpio_mux:
+                if not self.config:
+                    return False
+                config_sim_slot = self.config.get('primary_sim_slot', 1)
+                if await self.sim_controller.is_present(config_sim_slot):
+                    self._cancel_failed_retry()
+                    return await self._resume_after_sim_available()
                 return False
 
             if not self.proxy or not self.config:
@@ -5853,6 +6092,10 @@ class ModemStateMachine:
         oscillation on an unregisterable carrier (e.g. band mismatch).
         """
         try:
+            # GPIO-mux: answer from the SIM_DETECT presence model.
+            if self.sim_controller.is_gpio_mux:
+                slot = (self.config or {}).get('primary_sim_slot', 1)
+                return await self.sim_controller.is_present(slot)
             if not self.proxy or not self.config:
                 return False
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
@@ -6021,10 +6264,18 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'target_sim': self.target_sim_slot})
 
-            # Set the primary SIM slot using the SetPrimarySimSlot method
-            # (not the property setter, which is read-only on some modems like Telit LN920)
-            iface = self.proxy.get_interface(MODEM_INTERFACE)
-            await iface.call_set_primary_sim_slot(self.target_sim_slot)
+            # GPIO-mux: drive the external SIM mux and reboot the modem so it
+            # re-reads the now-selected slot.  ModemManager's
+            # SetPrimarySimSlot does not apply (only one SIM interface is
+            # exposed to the modem).  The reboot is the only one issued for a
+            # SIM becoming active.
+            if self.sim_controller.is_gpio_mux:
+                await self.sim_controller.switch_to(self.target_sim_slot)
+            else:
+                # Set the primary SIM slot using the SetPrimarySimSlot method
+                # (not the property setter, which is read-only on some modems like Telit LN920)
+                iface = self.proxy.get_interface(MODEM_INTERFACE)
+                await iface.call_set_primary_sim_slot(self.target_sim_slot)
 
             # The modem will likely disappear from D-Bus now (USB re-enumeration).
             # Wait for it to come back by rescanning.  The on_modem_removed handler
@@ -10386,6 +10637,14 @@ class ModemStateMachine:
             self._cancel_failed_retry()
         except Exception as e:
             logger.debug(f"Error cancelling failed-retry during shutdown: {e}",
+                        extra={'interface_number': self.interface_number})
+
+        # Stop the GPIO-mux SIM-detect watcher thread (no-op for the
+        # ModemManager-managed controller).
+        try:
+            self.sim_controller.stop_watch()
+        except Exception as e:
+            logger.debug(f"Error stopping SIM-detect watcher during shutdown: {e}",
                         extra={'interface_number': self.interface_number})
 
         # Cancel usage monitoring

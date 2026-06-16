@@ -151,6 +151,15 @@ def sim_select(slot: int, modem: Optional[str] = None) -> None:
     _b.sim_select(slot, modem=modem)
 
 
+def sim_select_state(modem: Optional[str] = None) -> Optional[int]:
+    """Return the slot the SIM mux currently selects (1 or 2), or None.
+
+    None means the board has no ``sim_select`` GPIO for ``modem`` (it is
+    not a GPIO-mux board).
+    """
+    return _b.sim_select_state(modem=modem)
+
+
 def modem_signal_level(level: int, modem: Optional[str] = None) -> None:
     """Map signal level (0..7) to board modem STAT LED display."""
     _b.modem_signal_level(level=level, modem=modem)
@@ -169,6 +178,21 @@ def sim_detect_pins(modem: Optional[str] = None) -> List[str]:
     insert/remove events without polling.
     """
     return _b.sim_detect_pins(modem=modem)
+
+
+def modem_capabilities(modem: Optional[str] = None) -> frozenset:
+    """
+    Return the hardware-control roles the active pinmap declares for
+    ``modem`` (or the only modem if omitted): any of ``"reset"``,
+    ``"power"``, ``"sim_select"``, ``"sim_detect"``.
+
+    The WWAN FSM calls this to decide whether a modem needs GPIO-mux SIM
+    switching: ``"sim_select"`` present means the board selects the SIM
+    slot via an external GPIO mux (only one SIM interface is exposed to
+    the modem), so the FSM must drive switching + reboot itself rather
+    than calling ModemManager's ``SetPrimarySimSlot``.
+    """
+    return _b.modem_capabilities(modem=modem)
 
 
 def watch_pins(
