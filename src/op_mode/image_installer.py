@@ -98,7 +98,7 @@ MSG_INFO_INSTALL_RAID_FOUND_DISKS: str = 'Would you like to configure RAID-1 mir
 MSG_INFO_INSTALL_RAID_CHOOSE_DISKS: str = 'Would you like to choose two disks for RAID-1 mirroring?'
 MSG_INFO_INSTALL_DISK_CONFIRM: str = 'Installation will delete all data on the drive. Continue?'
 MSG_INFO_INSTALL_RAID_CONFIRM: str = 'Installation will delete all data on both drives. Continue?'
-MSG_INFO_INSTALL_PARTITONING: str = 'Creating partition table...'
+MSG_INFO_INSTALL_PARTITIONING: str = 'Creating partition table...'
 MSG_INPUT_CONFIG_FOUND: str = 'An active configuration was found. Would you like to copy it to the new image?'
 MSG_INPUT_CONFIG_CHOICE: str = 'The following config files are available for boot:'
 MSG_INPUT_CONFIG_CHOOSE: str = 'Which file would you like as boot config?'
@@ -244,7 +244,7 @@ def create_partitions(target_disk: str, target_size: int,
     else:
         rootfs_size: int = available_size
 
-    print(MSG_INFO_INSTALL_PARTITONING)
+    print(MSG_INFO_INSTALL_PARTITIONING)
     raid.clear()
     disk.disk_cleanup(target_disk)
     disk_details: disk.DiskDetails = disk.parttable_create(target_disk,
