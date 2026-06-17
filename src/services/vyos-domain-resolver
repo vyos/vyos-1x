@@ -166,13 +166,15 @@ def update_remote_group(config):
             for line in read_file(list_file).splitlines():
                 line_first_word = line.strip().partition(' ')[0]
 
+                if not line_first_word:
+                    continue
+
                 if is_valid_ipv4_address_or_range(line_first_word):
                     ip_list.append(line_first_word)
                 elif is_valid_ipv6_address_or_range(line_first_word):
                     ip6_list.append(line_first_word)
-                else:
-                    if line_first_word[0].isalnum():
-                        invalid_list.append(line_first_word)
+                elif line_first_word[0].isalnum():
+                    invalid_list.append(line_first_word)
 
             # Load ip tables
             for table in ipv4_tables:
