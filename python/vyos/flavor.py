@@ -42,7 +42,7 @@ def get_flavor_data(fname=flavor_file):
         file (str): path to the flavor file
 
     Returns:
-        dict: flavor data, if it can not be found and empty dict
+        dict: flavor data, if it cannot be found and empty dict
 
     The optional ``file`` argument comes in handy in upgrade scripts
     that need to retrieve information from images other than the running image.

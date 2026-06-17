@@ -181,7 +181,7 @@ class VXLANIf(Interface):
 
                 vni = vlan_config['vni']
                 # The following commands must be run one after another,
-                # they can not be combined with linux 6.1 and iproute2 6.1
+                # they cannot be combined with linux 6.1 and iproute2 6.1
                 self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan}')
                 self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan} tunnel_info id {vni}')
 

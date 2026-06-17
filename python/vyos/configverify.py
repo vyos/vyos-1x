@@ -128,9 +128,9 @@ def verify_bond_bridge_member(config):
     if 'vrf' in config:
         ifname = config['ifname']
         if 'is_bond_member' in config:
-            raise ConfigError(f'Can not add interface "{ifname}" to bond, it has a VRF assigned!')
+            raise ConfigError(f'Cannot add interface "{ifname}" to bond, it has a VRF assigned!')
         if 'is_bridge_member' in config:
-            raise ConfigError(f'Can not add interface "{ifname}" to bridge, it has a VRF assigned!')
+            raise ConfigError(f'Cannot add interface "{ifname}" to bridge, it has a VRF assigned!')
 
 def verify_tunnel(config):
     """
@@ -167,11 +167,11 @@ def verify_tunnel(config):
     if config['encapsulation'] in ['sit', 'gretap', 'ip6gretap']:
         if 'source_interface' in config:
             encapsulation = config['encapsulation']
-            raise ConfigError(f'Option source-interface can not be used with ' \
+            raise ConfigError(f'Option source-interface cannot be used with ' \
                               f'encapsulation "{encapsulation}"!')
     elif config['encapsulation'] == 'gre':
         if 'source_address' in config and is_ipv6(config['source_address']):
-            raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
+            raise ConfigError('Cannot use local IPv6 address is for mGRE tunnels')
 
 def verify_mirror_redirect(config):
     """
@@ -181,12 +181,12 @@ def verify_mirror_redirect(config):
     It makes no sense to mirror traffic back at yourself!
     """
     if 'mirror' in config and 'redirect' in config:
-        raise ConfigError('Mirror and redirect can not be enabled at the same time!')
+        raise ConfigError('Mirror and redirect cannot be enabled at the same time!')
 
     if 'mirror' in config and 'qos' in config:
         # XXX: support combination of limiting and mirror - this is an artificial
         # limitation from the past
-        raise ConfigError('Can not use QoS together with mirror!')
+        raise ConfigError('Cannot use QoS together with mirror!')
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
@@ -195,7 +195,7 @@ def verify_mirror_redirect(config):
                                    'does not exist!')
 
             if mirror_interface == config['ifname']:
-                raise ConfigError(f'Can not mirror "{direction}" traffic back '\
+                raise ConfigError(f'Cannot mirror "{direction}" traffic back '\
                                    'the originating interface!')
 
     if 'redirect' in config:
@@ -322,7 +322,7 @@ def verify_source_interface(config):
     # We do not allow sourcing other interfaces (e.g. tunnel) from dynamic interfaces
     tmp = re.compile(dynamic_interface_pattern)
     if tmp.match(src_ifname):
-        raise ConfigError(f'Can not source "{ifname}" from dynamic interface "{src_ifname}"!')
+        raise ConfigError(f'Cannot source "{ifname}" from dynamic interface "{src_ifname}"!')
 
     if not interface_exists(src_ifname):
         raise ConfigError(f'Specified source-interface {src_ifname} does not exist')
@@ -339,7 +339,7 @@ def verify_source_interface(config):
 
     if 'is_source_interface' in config:
         tmp = config['is_source_interface']
-        raise ConfigError(f'Can not use source-interface "{src_ifname}", it already ' \
+        raise ConfigError(f'Cannot use source-interface "{src_ifname}", it already ' \
                           f'belongs to interface "{tmp}"!')
 
 def verify_dhcpv6(config):

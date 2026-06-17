@@ -30,7 +30,7 @@ from vyos import airbag
 airbag.enable()
 
 # Sanity checks for large-community-list regex:
-# * Require complete 3-tuples, no blank members. Catch missed & doubled colons. 
+# * Require complete 3-tuples, no blank members. Catch missed & doubled colons.
 # * Permit appropriate community separators (whitespace, underscore)
 # * Permit common regex between tuples while requiring at least one separator
 #   (eg, "1:1:1_.*_4:4:4", matching "1:1:1 4:4:4" and "1:1:1 2:2:2 4:4:4",
@@ -276,7 +276,7 @@ def verify(config_dict):
     # When routing protocols are active some use prefix-lists, route-maps etc.
     # to apply the systems routing policy to the learned or redistributed routes.
     # When the "routing policy" changes and policies, route-maps etc. are deleted,
-    # it is our responsibility to verify that the policy can not be deleted if it
+    # it is our responsibility to verify that the policy cannot be deleted if it
     # is used by any routing protocol
     # Check if any routing protocol is activated
     if 'protocol' in policy:
@@ -293,7 +293,7 @@ def verify(config_dict):
                 if not found:
                     tmp = policy_type.replace('_', '-')
                     raise ConfigError(
-                        f'Can not delete {tmp} "{policy_name}", still in use!')
+                        f'Cannot delete {tmp} "{policy_name}", still in use!')
 
     return None
 

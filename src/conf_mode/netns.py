@@ -74,7 +74,7 @@ def verify(netns):
     if 'netns_remove' in netns:
         for name, config in netns['netns_remove'].items():
             if 'interface' in config:
-                raise ConfigError(f'Can not remove network namespace "{name}", it '\
+                raise ConfigError(f'Cannot remove network namespace "{name}", it '\
                                   f'still has member interfaces!')
 
     if 'name' in netns:

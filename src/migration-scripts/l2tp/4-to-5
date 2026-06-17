@@ -50,7 +50,7 @@ def migrate(config: ConfigTree) -> None:
             default_pool = range_pool_name
         else:
             Warning(
-                f'L2TP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} can not be migrated.')
+                f'L2TP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} cannot be migrated.')
 
         config.delete(pool_base + ['start'])
         config.delete(pool_base + ['stop'])

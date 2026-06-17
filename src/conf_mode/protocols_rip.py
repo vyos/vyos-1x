@@ -62,10 +62,10 @@ def verify(config_dict):
         for interface, interface_options in rip['interface'].items():
             if 'authentication' in interface_options:
                 if {'md5', 'plaintext_password'} <= set(interface_options['authentication']):
-                    raise ConfigError('Can not use both md5 and plaintext-password at the same time!')
+                    raise ConfigError('Cannot use both md5 and plaintext-password at the same time!')
             if 'split_horizon' in interface_options:
                 if {'disable', 'poison_reverse'} <= set(interface_options['split_horizon']):
-                    raise ConfigError(f'You can not have "split-horizon poison-reverse" enabled ' \
+                    raise ConfigError(f'You cannot have "split-horizon poison-reverse" enabled ' \
                                       f'with "split-horizon disable" for "{interface}"!')
 
 def generate(config_dict):

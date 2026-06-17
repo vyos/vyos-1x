@@ -225,7 +225,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         table = str(int(table) + 1)
         self.cli_set(base + ['table', table])
-        # check validate() - table ID can not be altered!
+        # check validate() - table ID cannot be altered!
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 

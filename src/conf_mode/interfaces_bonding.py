@@ -211,7 +211,7 @@ def verify(bond):
             error_msg = f'Cannot add interface "{interface}" to bond, '
 
             if interface == 'lo':
-                raise ConfigError('Loopback interface "lo" can not be added to a bond')
+                raise ConfigError('Loopback interface "lo" cannot be added to a bond')
 
             if not interface_exists(interface):
                 raise ConfigError(error_msg + 'it does not exist!')

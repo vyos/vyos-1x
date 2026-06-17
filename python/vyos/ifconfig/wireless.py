@@ -47,7 +47,7 @@ class WiFiIf(Interface):
         interface setup code and provide a single point of entry when working
         on any interface. """
 
-        # We can not call add_to_bridge() until wpa_supplicant is running, thus
+        # We cannot call add_to_bridge() until wpa_supplicant is running, thus
         # we will remove the key from the config dict and react to this special
         # case in this derived class.
         # re-add ourselves to any bridge we might have fallen out of

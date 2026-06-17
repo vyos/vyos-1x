@@ -136,7 +136,7 @@ def dhcp_slice_range(exclude_list, range_dict):
             # the exclude address
             range_start = str(ip_address(e) + 1)
 
-            # on subsequent exclude addresses we can not
+            # on subsequent exclude addresses we cannot
             # append them to our output
             if not (ip_address(r['start']) > ip_address(r['stop'])):
                 # Everything is fine, add range to result

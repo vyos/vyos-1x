@@ -361,7 +361,7 @@ class BridgeIf(Interface):
                 self.add_port(interface)
 
                 if not interface.startswith('wlan'):
-                    # always set private-vlan/port isolation - this can not be
+                    # always set private-vlan/port isolation - this cannot be
                     # done when lower link is a wifi link, as it will trigger:
                     # RTNETLINK answers: Operation not supported
                     tmp = dict_search('isolated', interface_config)

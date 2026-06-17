@@ -114,7 +114,7 @@ def verify(vxlan):
 
     if dict_search('parameters.external', vxlan) != None:
         if 'vni' in vxlan:
-            raise ConfigError('Can not specify both "external" and "VNI"!')
+            raise ConfigError('Cannot specify both "external" and "VNI"!')
 
         if 'other_tunnels' in vxlan:
             # When multiple VXLAN interfaces are defined and "external" is used,
@@ -173,7 +173,7 @@ def verify(vxlan):
             protocol = 'ipv4'
 
     if 'remote' in vxlan:
-        error_msg = 'Can not mix both IPv4 and IPv6 for VXLAN underlay'
+        error_msg = 'Cannot mix both IPv4 and IPv6 for VXLAN underlay'
         for remote in vxlan['remote']:
             if is_ipv6(remote):
                 if protocol == 'ipv4':

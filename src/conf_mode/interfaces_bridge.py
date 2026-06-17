@@ -159,7 +159,7 @@ def verify(bridge):
             error_msg = f'Cannot add interface "{interface}" to bridge, '
 
             if interface == 'lo':
-                raise ConfigError('Loopback interface "lo" can not be added to a bridge')
+                raise ConfigError('Loopback interface "lo" cannot be added to a bridge')
 
             if 'is_bridge_member' in interface_config:
                 tmp = next(iter(interface_config['is_bridge_member']))
@@ -188,7 +188,7 @@ def verify(bridge):
             else:
                 for option in ['allowed_vlan', 'native_vlan']:
                     if option in interface_config:
-                        raise ConfigError('Can not use VLAN options on non VLAN aware bridge')
+                        raise ConfigError('Cannot use VLAN options on non VLAN aware bridge')
 
             if interface.startswith('vtun') and not interface_config['valid_ovpn']:
                 raise ConfigError(error_msg + 'OpenVPN device-type must be set to "tap"')

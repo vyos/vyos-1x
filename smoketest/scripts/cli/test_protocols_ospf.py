@@ -356,7 +356,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' passive-interface default', frrconfig)
 
         for interface in interfaces:
-            # Can not use daemon for getFRRconfig() as bandwidth parameter belongs to zebra process
+            # Cannot use daemon for getFRRconfig() as bandwidth parameter belongs to zebra process
             config = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf authentication-key {password}', config)
@@ -388,7 +388,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface, 'area', area])
 
-        # we can not have bot area network and interface area set
+        # we cannot have bot area network and interface area set
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['area', area, 'network'])
@@ -586,7 +586,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['area', area0, 'network', network])
 
-        # we can not have the same network defined on two areas
+        # we cannot have the same network defined on two areas
         self.cli_set(base_path + ['area', area1, 'network', network])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()

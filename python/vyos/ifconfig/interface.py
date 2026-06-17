@@ -355,7 +355,7 @@ class Interface(Control):
             # In case a subclass does not define it, we use get to set the default to True
             if self.config.get('create', True):
                 self._create()
-            # If we can not connect to the interface then let the caller know
+            # If we cannot connect to the interface then let the caller know
             # as the class could not be correctly initialised
             else:
                 raise Exception(f'interface "{ifname}" not found!')
@@ -394,7 +394,7 @@ class Interface(Control):
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
-        # can not delete ALL interfaces, see below.
+        # cannot delete ALL interfaces, see below.
         #
         # This will internally stop DHCP(v6) if running
         self.flush_addrs()
@@ -1592,7 +1592,7 @@ class Interface(Control):
 
         config_base = directories['dhcp6_client_dir']
         config_file = f'{config_base}/dhcp6c.{self.ifname}.conf'
-        script_file = f'/etc/wide-dhcpv6/dhcp6c.{self.ifname}.script' # can not live under /run b/c of noexec mount option
+        script_file = f'/etc/wide-dhcpv6/dhcp6c.{self.ifname}.script' # cannot live under /run b/c of noexec mount option
         systemd_override_file = f'/run/systemd/system/dhcp6c@{self.ifname}.service.d/10-override.conf'
         systemd_service = f'dhcp6c@{self.ifname}.service'
 
@@ -2159,7 +2159,7 @@ class VLANIf(Interface):
         lower_interface = glob(f'/sys/class/net/{self.ifname}/lower*/flags')[0]
         with open(lower_interface, 'r') as f:
             flags = f.read()
-        # If parent is not up - bail out as we can not bring up the VLAN.
+        # If parent is not up - bail out as we cannot bring up the VLAN.
         # Flags are defined in kernel source include/uapi/linux/if.h
         if not int(flags, 16) & 1:
             return None

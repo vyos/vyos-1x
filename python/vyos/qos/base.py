@@ -199,7 +199,7 @@ class QoSBase:
             speed = 1000
             default_speed = speed
             # Not all interfaces have valid entries in the speed file. PPPoE
-            # interfaces have the appropriate speed file, but you can not read it:
+            # interfaces have the appropriate speed file, but you cannot read it:
             # cat: /sys/class/net/pppoe7/speed: Invalid argument
             try:
                 speed = read_file(f'/sys/class/net/{self._interface}/speed')

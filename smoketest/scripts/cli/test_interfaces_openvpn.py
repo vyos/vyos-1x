@@ -176,7 +176,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
         self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
 
-        # check validate() - can not have auth username without a password
+        # check validate() - cannot have auth username without a password
         self.cli_set(path + ['authentication', 'username', 'vyos'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()

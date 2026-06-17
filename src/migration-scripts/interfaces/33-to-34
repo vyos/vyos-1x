@@ -33,7 +33,7 @@ def migrate(config: ConfigTree) -> None:
             config.delete(cc_path)
 
             # There can be only ONE wireless country-code per device, everything
-            # else makes no sense as a WIFI router can not operate in two
+            # else makes no sense as a WIFI router cannot operate in two
             # different countries
             if not installed:
                 config.set(['system', 'wireless', 'country-code'], value=tmp)

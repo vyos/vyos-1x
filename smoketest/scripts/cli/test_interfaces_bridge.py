@@ -165,7 +165,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
             for member in self._members:
                 self.cli_set(self._base_path + [interface, 'member', 'interface', member])
 
-        # check validate() - can not use the same member interfaces multiple times
+        # check validate() - cannot use the same member interfaces multiple times
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         # only keep the first bond interface configuration

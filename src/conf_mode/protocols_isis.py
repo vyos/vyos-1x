@@ -92,7 +92,7 @@ def verify(config_dict):
                 raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
 
         # Fast reroute validation
-        # LFA and TI-LFA of the same level can not be configured on the same interface
+        # LFA and TI-LFA of the same level cannot be configured on the same interface
         # To configure Remote LFA, LFA of the same level should be configured on this interface.
         if 'fast_reroute' in interface_config:
             isis_frr_config = interface_config['fast_reroute']
@@ -103,7 +103,7 @@ def verify(config_dict):
                             and (dict_search(f'ti_lfa.{isis_level}', isis_frr_config) is not None)):
                         raise ConfigError(
                             f'LFA and TI-LFA at the "{str(isis_level).replace("_","-")}" '
-                            f'can not be configured on the same interface "{interface}"!')
+                            f'cannot be configured on the same interface "{interface}"!')
             if 'remote_lfa' in isis_frr_config:
                 for isis_level in levels:
                     if ((dict_search(f'remote_lfa.{isis_level}', isis_frr_config) is not None)
@@ -146,7 +146,7 @@ def verify(config_dict):
                 for redistr_level, redistr_config in proto_config.items():
                     if proc_level and proc_level != 'level_1_2' and proc_level != redistr_level:
                         raise ConfigError(f'"protocols isis redistribute {afi} {proto} {redistr_level}" ' \
-                                          f'can not be used with \"protocols isis level {proc_level}\"!')
+                                          f'cannot be used with \"protocols isis level {proc_level}\"!')
 
     # Segment routing checks
     if dict_search('segment_routing.global_block', isis):

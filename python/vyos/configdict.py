@@ -340,7 +340,7 @@ def is_source_interface(conf, interface, intftype=None):
         raise ValueError(f'Interface type "{type(intftype)}" must be either str or list!')
 
     if not all(x in intftypes for x in intftype):
-        raise ValueError(f'unknown interface type "{intftype}" or it can not '
+        raise ValueError(f'unknown interface type "{intftype}" or it cannot '
             'have a source-interface')
 
     for it in intftype:
@@ -547,7 +547,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
 
-        # Check if any DHCP options changed which require a client restat
+        # Check if any DHCP options changed which require a client restart
         dhcp = is_node_changed(config, base + [ifname, 'vif', vif, 'dhcp-options'])
         if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : {}})
         dhcpv6 = is_node_changed(config, base + [ifname, 'vif', vif, 'dhcpv6-options'])
@@ -575,7 +575,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
 
-        # Check if any DHCP options changed which require a client restat
+        # Check if any DHCP options changed which require a client restart
         dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'dhcp-options'])
         if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : {}})
         dhcpv6 = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'dhcpv6-options'])
@@ -605,7 +605,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
             if bridge: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
                 {'is_bridge_member' : bridge})
 
-            # Check if any DHCP options changed which require a client restat
+            # Check if any DHCP options changed which require a client restart
             dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'])
             if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : {}})
             dhcpv6 = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'dhcpv6-options'])

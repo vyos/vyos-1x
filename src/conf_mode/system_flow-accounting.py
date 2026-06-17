@@ -136,7 +136,7 @@ def verify(flow_config):
             regex_filter = re.compile(v9v10_filter)
             if not regex_filter.search(flow_config['netflow']['engine_id']):
                 raise ConfigError(
-                    f'Can not use NetFlow engine-id "{engine_id}" together '
+                    f'Cannot use NetFlow engine-id "{engine_id}" together '
                     f'with NetFlow protocol version "{version}"!'
                 )
 

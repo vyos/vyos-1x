@@ -17,7 +17,7 @@
 # This is a Python hook script which is invoked whenever a SSTP client session
 # goes "ip-up". It will call into our vyos.ifconfig library and will then
 # execute common tasks for the SSTP interface. The reason we have to "hook" this
-# is that we can not create a sstpcX interface in advance in linux and then
+# is that we cannot create a sstpcX interface in advance in linux and then
 # connect pppd to this already existing interface.
 
 from sys import argv

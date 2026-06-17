@@ -51,7 +51,7 @@ def get_version_data(fname=version_file):
         file (str): path to the version file
 
     Returns:
-        dict: version data, if it can not be found and empty dict
+        dict: version data, if it cannot be found and empty dict
 
     The optional ``file`` argument comes in handy in upgrade scripts
     that need to retrieve information from images other than the running image.

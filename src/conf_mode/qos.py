@@ -208,12 +208,12 @@ def _verify_match(cls_config: dict) -> None:
             filters = set(match_config)
             if {'ip', 'ipv6'} <= filters:
                 raise ConfigError(
-                    f'Can not use both IPv6 and IPv4 in one match ({match})!')
+                    f'Cannot use both IPv6 and IPv4 in one match ({match})!')
 
             if {'interface', 'vif'} & filters:
                 if {'ip', 'ipv6', 'ether'} & filters:
                     raise ConfigError(
-                        f'Can not combine protocol and interface or vlan tag match ({match})!')
+                        f'Cannot combine protocol and interface or vlan tag match ({match})!')
 
 
 def _verify_match_group_exist(cls_config, qos):

@@ -27,7 +27,7 @@ class WWANIf(Interface):
     }
 
     def _create(self):
-        # we can not create this interface as it is managed by the Kernel
+        # we cannot create this interface as it is managed by the Kernel
         pass
 
     def remove(self):

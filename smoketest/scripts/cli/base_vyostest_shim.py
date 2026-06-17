@@ -37,7 +37,7 @@ save_config = '/tmp/vyos-smoketest-save'
 # the Python UnitTest framework. Before every test is loaded, we dump the current
 # system configuration and reload it after the test - despite the test results.
 #
-# Using this approach we can not render a live system useless while running any
+# Using this approach we cannot render a live system useless while running any
 # kind of smoketest. In addition it adds debug capabilities like printing the
 # command used to execute the test.
 

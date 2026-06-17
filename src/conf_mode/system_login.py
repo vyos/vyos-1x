@@ -138,11 +138,11 @@ def verify(login):
     if 'user' in login:
         system_users = get_local_passwd_entries()
         for user, user_config in login['user'].items():
-            # Linux system users range up until UID 1000, we can not create a
+            # Linux system users range up until UID 1000, we cannot create a
             # VyOS CLI user which already exists as system user
             for s_user in system_users:
                 if s_user.pw_name == user and s_user.pw_uid < MIN_USER_UID:
-                    raise ConfigError(f'User "{user}" can not be created, conflict with local system account!')
+                    raise ConfigError(f'User "{user}" cannot be created, conflict with local system account!')
 
             plaintext_password = dict_search('authentication.plaintext_password', user_config)
             if plaintext_password == DEFAULT_PASSWORD:
@@ -401,14 +401,14 @@ def apply(login):
                 # always re-render SSH keys with appropriate permissions
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
-                       formater=lambda _: _.replace("&quot;", '"'),
+                       formatter=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
 
                 principals_file = f'{home_dir}/.ssh/authorized_principals'
                 if dict_search('authentication.principal', user_config):
                     render(principals_file, 'login/authorized_principals.j2',
                            user_config, permission=0o600,
-                           formater=lambda _: _.replace("&quot;", '"'),
+                           formatter=lambda _: _.replace("&quot;", '"'),
                            user=user, group='users')
                 else:
                     if os.path.exists(principals_file):

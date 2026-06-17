@@ -90,19 +90,19 @@ def verify(config_dict):
     if 'interface' in ospf:
         for interface, interface_config in ospf['interface'].items():
             verify_interface_exists(ospf, interface)
-            # One can not use dead-interval and hello-multiplier at the same
+            # One cannot use dead-interval and hello-multiplier at the same
             # time. FRR will only activate the last option set via CLI.
             if {'hello_multiplier', 'dead_interval'} <= set(interface_config):
-                raise ConfigError(f'Can not use hello-multiplier and dead-interval ' \
+                raise ConfigError(f'Cannot use hello-multiplier and dead-interval ' \
                                   f'concurrently for {interface}!')
 
-            # One can not use the "network <prefix> area <id>" command and an
+            # One cannot use the "network <prefix> area <id>" command and an
             # per interface area assignment at the same time. FRR will error
             # out using: "Please remove all network commands first."
             if 'area' in ospf and 'area' in interface_config:
                 for area, area_config in ospf['area'].items():
                     if 'network' in area_config:
-                        raise ConfigError('Can not use OSPF "interface area" and ' \
+                        raise ConfigError('Cannot use OSPF "interface area" and ' \
                                           '"area network" configuration at the same time!')
 
             # FRR only allows a single authentication mode (MD5, NULL or plaintext)
@@ -111,7 +111,7 @@ def verify(config_dict):
                 auth_keys = set(interface_config['authentication'])
                 exclusive_auth_keys = {'md5', 'null', 'plaintext_password'}
                 if len(auth_keys & exclusive_auth_keys) >= 2:
-                    raise ConfigError('Can not use multiple authentication modes '
+                    raise ConfigError('Cannot use multiple authentication modes '
                                       f'simultaneously for interface "{interface}"!')
 
             # If interface specific options are set, we must ensure that the
@@ -192,7 +192,7 @@ def verify(config_dict):
     if 'summary_address' in ospf:
         for prefix, prefix_options in ospf['summary_address'].items():
             if {'tag', 'no_advertise'} <= set(prefix_options):
-                raise ConfigError(f'Can not set both "tag" and "no-advertise" for Type-5 '\
+                raise ConfigError(f'Cannot set both "tag" and "no-advertise" for Type-5 '\
                                   f'and Type-7 route summarisation of "{prefix}"!')
 
     return None

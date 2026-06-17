@@ -105,7 +105,7 @@ def get_config(config=None):
         if wifi.from_defaults(['security', 'wpa']): # if not set by user
             del wifi['security']['wpa']
 
-    # XXX: Jinja2 can not operate on a dictionary key when it starts of with a number
+    # XXX: Jinja2 cannot operate on a dictionary key when it starts of with a number
     if '40mhz_incapable' in (dict_search('capabilities.ht', wifi) or []):
         wifi['capabilities']['ht']['fourtymhz_incapable'] = wifi['capabilities']['ht']['40mhz_incapable']
         del wifi['capabilities']['ht']['40mhz_incapable']

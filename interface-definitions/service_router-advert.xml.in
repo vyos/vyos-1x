@@ -283,13 +283,13 @@
                 <children>
                   <leafNode name="no-autonomous-flag">
                     <properties>
-                      <help>Prefix can not be used for stateless address auto-configuration</help>
+                      <help>Prefix cannot be used for stateless address auto-configuration</help>
                       <valueless/>
                     </properties>
                   </leafNode>
                   <leafNode name="no-on-link-flag">
                     <properties>
-                      <help>Prefix can not be used for on-link determination</help>
+                      <help>Prefix cannot be used for on-link determination</help>
                       <valueless/>
                     </properties>
                   </leafNode>

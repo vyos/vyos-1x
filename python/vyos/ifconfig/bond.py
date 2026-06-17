@@ -257,7 +257,7 @@ class BondIf(Interface):
         """
         # As this function might also be called from update() of a VLAN interface
         # we must check if the bond_arp_ip_target retrieval worked or not - as this
-        # can not be set for a bond vif interface
+        # cannot be set for a bond vif interface
         try:
             return self.get_interface('bond_arp_ip_target')
         except FileNotFoundError:
@@ -434,7 +434,7 @@ class BondIf(Interface):
         # Some interface options can only be changed if the interface is
         # administratively down
         #
-        # We can not move the upper "shutdown_required" code path here - as this
+        # We cannot move the upper "shutdown_required" code path here - as this
         # would break initial bond creation and initial mode assignment during
         # interface creation!
         if self.get_admin_state() == 'down':

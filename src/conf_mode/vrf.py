@@ -161,7 +161,7 @@ def verify(vrf):
     # ensure VRF is not assigned to any interface
     if 'vrf_remove' in vrf:
         for name, config in vrf['vrf_remove'].items():
-            err = f'Can not remove VRF "{name}",'
+            err = f'Cannot remove VRF "{name}",'
             if 'interface' in config:
                 raise ConfigError(f'{err} it still has member interfaces!')
             if 'route' in config:

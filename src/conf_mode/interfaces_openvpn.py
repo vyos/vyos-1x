@@ -146,7 +146,7 @@ def get_config(config=None):
         openvpn['client_only_changed'] = _only_client_config_changed(conf, base, ifname)
 
     # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
-    # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
+    # as 'get_interface_dict' merges the defaults in, so we cannot check for defaults in there.
     tmp = conf.get_config_dict(base + [openvpn['ifname']], get_first_key=True)
 
     # We have to cleanup the config dict, as default values could enable features
@@ -379,7 +379,7 @@ def verify(openvpn):
                 raise ConfigError('"local-address" cannot be the same as "local-host"')
 
             if dict_search('remote_host', openvpn) in dict_search('remote_address', openvpn):
-                raise ConfigError('"remote-address" and "remote-host" can not be the same')
+                raise ConfigError('"remote-address" and "remote-host" cannot be the same')
 
         if openvpn['device_type'] == 'tap' and 'local_address' in openvpn:
             # we can only have one local_address, this is ensured above
@@ -802,11 +802,11 @@ def generate(openvpn):
     # we need to support quoting of raw parameters from OpenVPN CLI
     # see https://vyos.dev/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.j2', openvpn,
-           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+           formatter=lambda _: _.replace("&quot;", '"'), user=user, group=group)
 
     # Render 20-override.conf for OpenVPN service
     render(service_file.format(**openvpn), 'openvpn/service-override.conf.j2', openvpn,
-           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+           formatter=lambda _: _.replace("&quot;", '"'), user=user, group=group)
     # Reload systemd services config to apply an override
     call(f'systemctl daemon-reload')
 

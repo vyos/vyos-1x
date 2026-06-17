@@ -158,7 +158,7 @@ def verify(snmp):
         return None
 
     if {'deleted', 'lldp_snmp'} <= set(snmp):
-        raise ConfigError('Can not delete SNMP service, as LLDP still uses SNMP!')
+        raise ConfigError('Cannot delete SNMP service, as LLDP still uses SNMP!')
 
     ### check if the configured script actually exist
     if 'script_extensions' in snmp and 'extension_name' in snmp['script_extensions']:
@@ -235,13 +235,13 @@ def verify(snmp):
                 raise ConfigError(f'Must specify one of authentication encrypted-password or plaintext-password for trap "{trap}"!')
 
             if {'plaintext_password', 'encrypted_password'} <= set(trap_config['auth']):
-                raise ConfigError(f'Can not specify both authentication encrypted-password and plaintext-password for trap "{trap}"!')
+                raise ConfigError(f'Cannot specify both authentication encrypted-password and plaintext-password for trap "{trap}"!')
 
             if 'plaintext_password' not in trap_config['privacy'] and 'encrypted_password' not in trap_config['privacy']:
                 raise ConfigError(f'Must specify one of privacy encrypted-password or plaintext-password for trap "{trap}"!')
 
             if {'plaintext_password', 'encrypted_password'} <= set(trap_config['privacy']):
-                raise ConfigError(f'Can not specify both privacy encrypted-password and plaintext-password for trap "{trap}"!')
+                raise ConfigError(f'Cannot specify both privacy encrypted-password and plaintext-password for trap "{trap}"!')
 
             if 'type' not in trap_config:
                 raise ConfigError('SNMP v3 trap "type" must be specified!')

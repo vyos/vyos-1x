@@ -74,7 +74,7 @@ def verify(ndpp):
                 continue
 
             if prefix_interface:
-                raise ConfigError(f'Prefix "{prefix}" does not use interface mode, thus interface can not be defined!')
+                raise ConfigError(f'Prefix "{prefix}" does not use interface mode, thus interface cannot be defined!')
 
     return None
 

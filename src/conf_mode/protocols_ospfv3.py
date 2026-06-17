@@ -75,7 +75,7 @@ def verify(config_dict):
             if 'ifmtu' in interface_config:
                 mtu = Interface(interface).get_mtu()
                 if int(interface_config['ifmtu']) > int(mtu):
-                    raise ConfigError(f'OSPFv3 ifmtu can not exceed physical MTU of "{mtu}"')
+                    raise ConfigError(f'OSPFv3 ifmtu cannot exceed physical MTU of "{mtu}"')
 
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS

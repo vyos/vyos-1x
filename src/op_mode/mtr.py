@@ -137,7 +137,7 @@ options = {
     'tcp': {
         'mtr': '{command} --tcp',
         'type': 'noarg',
-        'help': ' Use TCP SYN packets instead of ICMP ECHO. PACKETSIZE is ignored, since SYN packets can not contain data.',
+        'help': ' Use TCP SYN packets instead of ICMP ECHO. PACKETSIZE is ignored, since SYN packets cannot contain data.',
     },
     'sctp': {
         'mtr': '{command} --sctp',
@@ -201,7 +201,7 @@ def completion_failure(option: str) -> None:
     sys.exit(1)
 
 
-def expension_failure(option, completions):
+def expansion_failure(option, completions):
     reason = 'Ambiguous' if completions else 'Invalid'
     sys.stderr.write(
         '\n\n  {} command: {} [{}]\n\n'.format(reason, ' '.join(sys.argv), option)
@@ -224,7 +224,7 @@ def convert(command, args):
         shortname = args.first()
         longnames = complete(shortname)
         if len(longnames) != 1:
-            expension_failure(shortname, longnames)
+            expansion_failure(shortname, longnames)
         longname = longnames[0]
         if longname == 'json':
             to_json = True

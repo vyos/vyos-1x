@@ -124,12 +124,12 @@ def register_clever_function(name, func=None):
     _CLEVER_FUNCTIONS[name] = func
     return func
 
-def render_to_string(template, content, formater=None, location=None):
+def render_to_string(template, content, formatter=None, location=None):
     """Render a template from the template directory, raise on any errors.
 
     :param template: the path to the template relative to the template folder
     :param content: the dictionary of variables to put into rendering context
-    :param formater:
+    :param formatter:
         if given, it has to be a callable the rendered string is passed through
 
     The parsed template files are cached, so rendering the same file multiple times
@@ -141,8 +141,8 @@ def render_to_string(template, content, formater=None, location=None):
     """
     template = _get_environment(location).get_template(template)
     rendered = template.render(content)
-    if formater is not None:
-        rendered = formater(rendered)
+    if formatter is not None:
+        rendered = formatter(rendered)
     return rendered
 
 
@@ -150,7 +150,7 @@ def render(
     destination,
     template,
     content,
-    formater=None,
+    formatter=None,
     permission=None,
     user=None,
     group=None,
@@ -171,7 +171,7 @@ def render(
 
     # As we are opening the file with 'w', we are performing the rendering before
     # calling open() to not accidentally erase the file if rendering fails
-    rendered = render_to_string(template, content, formater, location)
+    rendered = render_to_string(template, content, formatter, location)
     # Remove any trailing character and always add a new line at the end
     rendered = rendered.rstrip() + "\n"
 

@@ -210,7 +210,7 @@ def verify(options):
 
         if {'source_address', 'source_interface'} <= set(config):
             raise ConfigError(
-                'Can not define both HTTP source-interface and source-address'
+                'Cannot define both HTTP source-interface and source-address'
             )
 
         if 'source_address' in config:

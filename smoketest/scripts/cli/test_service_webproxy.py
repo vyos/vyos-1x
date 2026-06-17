@@ -157,7 +157,7 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_set(base_path + ['authentication', 'ldap', 'server', ldap_server])
 
-        # check validate() - LDAP password can not be set when bind-dn is not define
+        # check validate() - LDAP password cannot be set when bind-dn is not define
         self.cli_set(base_path + ['authentication', 'ldap', 'password', ldap_password])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
