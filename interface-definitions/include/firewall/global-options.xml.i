@@ -171,6 +171,8 @@
             <valueless/>
           </properties>
         </leafNode>
+        #include <include/source-address-ipv4-ipv6.xml.i>
+        #include <include/interface/vrf.xml.i>
       </children>
     </node>
     <leafNode name="ip-src-route">

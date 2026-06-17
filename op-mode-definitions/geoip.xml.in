@@ -6,17 +6,6 @@
         <properties>
           <help>Update GeoIP database and firewall sets</help>
         </properties>
-        <children>
-          <tagNode name="vrf">
-            <properties>
-              <help>VRF to use for GeoIP update</help>
-              <completionHelp>
-                <path>vrf name</path>
-              </completionHelp>
-            </properties>
-            <command>sudo ip vrf exec $4 ${vyos_libexec_dir}/geoip-update.py</command>
-          </tagNode>
-        </children>
         <command>sudo ${vyos_libexec_dir}/geoip-update.py</command>
       </node>
     </children>
