@@ -1474,7 +1474,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_23_vpp_acl_subinterface(self):
+    def test_23_1_vpp_acl_subinterface(self):
         base_acl = base_path + ['acl', 'ip']
         vlan = '200'
         subif = f'{interface}.{vlan}'
@@ -1510,6 +1510,70 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         ]
         self.assertEqual(len(acl_interfaces), 1)
         self.assertEqual(acl_interfaces[0].n_input, 1)
+        self.assertEqual(
+            list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
+        )
+
+    def test_23_2_vpp_acl_bond_with_vif(self):
+        base_acl = base_path + ['acl', 'ip']
+        base_bond = interfaces_path + ['bonding']
+        bond = 'vppbond0'
+        acl_name = 'TEST_ACL'
+        vif = '111'
+        bond_vif = f'{bond}.{vif}'
+        bond_vif_vpp = vpp_iface_name_transform(bond_vif)
+
+        self.cli_set(base_bond + [bond, 'member', 'interface', interface])
+        self.cli_set(base_bond + [bond, 'vif', vif])
+
+        self.cli_set(
+            base_acl + ['tag-name', acl_name, 'rule', '10', 'action', 'permit']
+        )
+        self.cli_set(
+            base_acl
+            + ['interface', bond_vif, 'input', 'acl-tag', '10', 'tag-name', acl_name]
+        )
+        self.cli_commit()
+
+        # Verify the VIF interface exists in VPP and the ACL was created
+        vpp = VPPControl()
+        iface_index = vpp.get_sw_if_index(bond_vif_vpp)
+        self.assertIsNotNone(iface_index)
+
+        acl_index = None
+        for acl in vpp.api.acl_dump(acl_index=0xFFFFFFFF):
+            if acl.tag == acl_name:
+                acl_index = acl.acl_index
+                break
+        self.assertIsNotNone(acl_index)
+
+        # Verify the ACL is assigned to the VIF interface
+        acl_interfaces = [
+            entry
+            for entry in vpp.api.acl_interface_list_dump()
+            if entry.sw_if_index == iface_index and entry.count != 0
+        ]
+        self.assertEqual(len(acl_interfaces), 1)
+        self.assertEqual(
+            list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
+        )
+
+        # Change bond mode — this recreates the bond interface and must re-trigger
+        # the ACL dependency so the ACL is reapplied to the VIF
+        self.cli_set(base_bond + [bond, 'mode', '802.3ad'])
+        self.cli_commit()
+
+        # Verify the ACL is still correctly assigned after bond reconfiguration
+        vpp = VPPControl()
+        iface_index = vpp.get_sw_if_index(bond_vif_vpp)
+        self.assertIsNotNone(iface_index)
+
+        acl_interfaces = [
+            entry
+            for entry in vpp.api.acl_interface_list_dump()
+            if entry.sw_if_index == iface_index and entry.count != 0
+        ]
+        self.assertEqual(len(acl_interfaces), 1)
         self.assertEqual(
             list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
         )

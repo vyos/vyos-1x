@@ -25,11 +25,10 @@ from vyos.configdict import node_changed
 from vyos.config import Config
 from vyos.utils.network import get_protocol_by_name
 
-from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.vpp.acl import Acl
 from vyos.vpp.config_verify import verify_vpp_interface_not_a_member
-
 
 # TCP flag names to bit values
 TCP_FLAGS = {
@@ -185,11 +184,7 @@ def get_config(config=None) -> dict:
         {
             'changed_ip_ifaces': changed_ip_ifaces,
             'changed_mac_ifaces': changed_mac_ifaces,
-            'vpp_ifaces': list(
-                dict.fromkeys(
-                    cli_ifaces_list(conf) + cli_ethernet_with_vifs_ifaces(conf)
-                )
-            ),
+            'vpp_ifaces': cli_ifaces_list(conf, include_vifs=True),
         }
     )
 
@@ -226,7 +221,12 @@ def verify(config):
                     if 'action' not in rule_config:
                         raise ConfigError(f'{err_msg} action must be defined')
 
+            not_allowed_prefixes = ('vppbr', 'vppxcon')
             for iface, iface_config in acl.get('interface', {}).items():
+                if iface.startswith(not_allowed_prefixes):
+                    raise ConfigError(
+                        f'Interface {iface} is not allowed in ACL {acl_type} configuration'
+                    )
                 if iface not in config.get('vpp_ifaces'):
                     raise ConfigError(
                         f'{iface} must be a VPP interface for ACL interface'
@@ -332,6 +332,8 @@ def verify(config):
                     f'ACL with tag-name {name} does not exist. Cannot use it for interface {iface}'
                 )
 
+    return None
+
 
 def generate(config):
     pass
@@ -350,7 +352,7 @@ def apply(config):
 
             # Delete ACL interfaces
             for interface in config.get('changed_ip_ifaces'):
-                acl.delete_acl_interface(interface)
+                acl.delete_acl_interface(vpp_iface_name_transform(interface))
 
             # Delete ACLs
             for acl_name in remove_config_ip.get('tag_name'):
@@ -363,7 +365,7 @@ def apply(config):
 
             # Delete ACL interfaces
             for interface in config.get('changed_mac_ifaces'):
-                acl.delete_acl_mac_interface(interface)
+                acl.delete_acl_mac_interface(vpp_iface_name_transform(interface))
 
             # Delete ACL mac
             for acl_name in remove_config_mac.get('tag_name'):
@@ -390,7 +392,7 @@ def apply(config):
             v['tag_name']
             for v in iface_config.get('output', {}).get('acl_tag', {}).values()
         ]
-        acl.add_acl_interface(iface, input_tags, output_tags)
+        acl.add_acl_interface(vpp_iface_name_transform(iface), input_tags, output_tags)
 
     # Add or replace ACL mac
     config_mac = config.get('mac', {})
@@ -401,7 +403,12 @@ def apply(config):
         acl.add_replace_acl_mac(acl_name, rules)
 
     for iface, iface_config in config_mac.get('interface', {}).items():
-        acl.add_acl_mac_interface(iface, iface_config.get('tag_name'))
+        acl.add_acl_mac_interface(
+            vpp_iface_name_transform(iface),
+            iface_config.get('tag_name'),
+        )
+
+    return None
 
 
 if __name__ == '__main__':
