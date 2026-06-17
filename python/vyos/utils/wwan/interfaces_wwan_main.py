@@ -23,6 +23,7 @@ from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_service_manager import ConfigServiceManager
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
+from vyos.utils.wwan import interfaces_wwan_diag as wwan_diag
 from vyos.utils.wwan.wwan_logging import setup_logging
 
 
@@ -89,6 +90,16 @@ class ModemManagerMonitor:
         logger.info("Attempting ModemManager restart",
                    extra={'restart_attempt': self.restart_attempts,
                           'max_attempts': self.max_restart_attempts})
+
+        # Boot-scoped diagnostic counter: total MM crashes recovered since
+        # power on (distinct from restart_attempts, which is a backoff counter
+        # that resets once MM is stable again).
+        try:
+            mm_restarts = wwan_diag.increment('modemmanager_restart_count')
+            logger.info("ModemManager crash-recovery restart recorded",
+                       extra={'modemmanager_restart_count': mm_restarts})
+        except Exception:
+            pass
 
         # Try to restart ModemManager
         if await self.restart_modemmanager():
@@ -385,6 +396,15 @@ class ModemManagerMonitor:
 async def main():
     logger.info("Starting WWAN Interface Manager",
                extra={'software': 'vyos-wwan', 'version': '1.0'})
+
+    # Boot-scoped diagnostic counter: a value >1 since power on means the
+    # manager previously crashed or was restarted.
+    try:
+        start_count = wwan_diag.increment('service_start_count')
+        logger.info("WWAN manager start recorded",
+                   extra={'service_start_count': start_count})
+    except Exception:
+        pass
 
     # Check and start ModemManager if needed
     if not await ModemManagerMonitor.check_and_start_modemmanager():

@@ -443,7 +443,7 @@ def _format_detail(status: dict, interface: str) -> str:
                 lines.append(_kv('Last updated:', last_updated))
 
     lines.append(_section('Failover History'))
-    lines.append(_kv('Failover count:', status.get('failover_count', 0)))
+    lines.append(_kv('Failover count:', status.get('lifetime_failover_count', 0)))
     lines.append(_kv('Last failover:', status.get('last_failover_time', '')))
     lines.append(_kv('Recovery attempts:', status.get('connectivity_recovery_attempts', 0)))
 
@@ -459,6 +459,12 @@ def _format_detail(status: dict, interface: str) -> str:
         lines.append(_kv('Current downtime:', f'{current_down}s'))
     lines.append(_kv('Last disconnect:', status.get('last_disconnect_time', '')))
     lines.append(_kv('Last reason:', status.get('last_disconnect_reason', '')))
+
+    lines.append(_section('Diagnostics (since power on)'))
+    lines.append(_kv('Service starts:', status.get('service_start_count', 0)))
+    lines.append(_kv('ModemManager restarts:', status.get('modemmanager_restart_count', 0)))
+    lines.append(_kv('Modem hardware resets:', status.get('hardware_reset_count', 0)))
+    lines.append(_kv('Modem nuclear resets:', status.get('modem_nuclear_reset_count', 0)))
 
     lines.append(_section('Configuration'))
     lines.append(_kv('Network mode:', status.get('network_mode', '')))

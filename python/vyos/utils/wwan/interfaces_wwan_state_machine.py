@@ -33,6 +33,7 @@ from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
 from automaton import machines  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_util import modem_reset
+from vyos.utils.wwan import interfaces_wwan_diag as wwan_diag
 from vyos.utils.wwan.sim_controller import make_sim_controller
 
 # Check if Android APN lookup library is available
@@ -386,6 +387,7 @@ class ModemStateMachine:
         # SIM failover cooldown tracking to prevent ping-pong
         self.last_failover_time = 0          # Timestamp of last SIM failover
         self.failover_count = 0              # Number of failovers since last stable connection
+        self.lifetime_failover_count = 0     # Total failovers since boot (never reset by stable connection)
         self.failover_cooldown_seconds = 600 # 10 minute cooldown between failovers (carrier-friendly)
         self.max_failovers_before_backoff = 3 # Max failovers before extended backoff
         self.failover_backoff_seconds = 3600 # 1 hour extended backoff after max failovers (carrier-friendly)
@@ -436,6 +438,17 @@ class ModemStateMachine:
         self.reconnect_attempt_count = 0    # Automatic bearer re-establishment attempts since boot
         self.reconnect_success_count = 0    # Successful reconnects after downtime since boot
         self.sim_switch_count = 0           # Runtime SIM slot changes since boot
+        # Dedupe so a single switch is not counted twice when both the
+        # reset-based switch executor and the PrimarySimSlot PropertiesChanged
+        # signal report the same slot change.
+        self._last_sim_switch_key = None    # (from_slot, to_slot) of last recorded switch
+        self._last_sim_switch_ts = 0.0      # Timestamp of last recorded switch
+        # Baseline for per-SIM usage accounting — cumulative bytes persisted
+        # before the current bearer session began.  Lets us flush in-flight
+        # session usage to the outgoing SIM before a switch without double
+        # counting against what monitor_data_usage() already persisted.
+        self._usage_baseline_bytes = None   # Cumulative bytes at start of current session
+        self._usage_baseline_slot = None    # Slot the baseline was captured for
         self.total_bearer_downtime_seconds = 0  # Accumulated bearer downtime since boot
         self._bearer_down_since = None      # Timestamp when current downtime window started
         self.last_disconnect_time = 0       # Timestamp of last bearer drop / disconnect
@@ -473,6 +486,14 @@ class ModemStateMachine:
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
         self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
         self.last_scan_results = []          # Cached network scan results for status reporting
+        # A configuration that arrives while the FSM is in a transitional state
+        # (CONNECTING / DISCONNECTING / SIM_*) cannot be reconfigured in place —
+        # apply_config() only stores it.  This flag records that a deferred
+        # reconfigure is owed so it is applied once the FSM settles into a
+        # stable state (otherwise an active-slot band/APN/etc. change is
+        # silently dropped: the modem is never disabled and the new bands are
+        # never written).
+        self._pending_reconfigure = False
 
         # Failed-state periodic retry — automatically reattempt connection from
         # FAILED state using exponential backoff.  Covers data-plan top-up,
@@ -1896,6 +1917,97 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number,
                                   'registration_state': f"{reg_state} ({reg_state_name})"})
 
+    def _handle_connected_registration_drop(self, mm_state, reason='registration_loss'):
+        """Recover when a CONNECTED modem falls below REGISTERED.
+
+        ModemManager only emits the ``CONNECTED → REGISTERED`` ("bearer lost
+        but still camped") transition for some deactivations.  When the modem
+        instead drops straight to ``SEARCHING`` (7) or ``ENABLED`` (6) — e.g.
+        the active ``supported-bands`` set no longer matches any serving cell,
+        or coverage was lost — there is no camped cell and the bearer is dead.
+        These sub-registered states had no CONNECTED-state handler, so the FSM
+        used to stay stuck reporting CONNECTED with no signal and never
+        recover.
+
+        Mirrors the ``CONNECTED → REGISTERED`` recovery: stamp the disconnect
+        reason, stop interface monitoring, transition to DISCONNECTING and kick
+        the standard disconnection-recovery path (which re-waits for
+        registration and reconnects, or fails over / parks FAILED).
+        """
+        if self.user_disconnected:
+            logger.info("Modem dropped below REGISTERED while CONNECTED but user "
+                       "requested disconnect — not auto-recovering",
+                       extra={'interface_number': self.interface_number,
+                              'modem_state': mm_state})
+            return
+        if self.initial_configuration_in_progress:
+            logger.debug("Modem dropped below REGISTERED during initial config — "
+                        "deferring to config flow",
+                        extra={'interface_number': self.interface_number,
+                               'modem_state': mm_state})
+            return
+        self._disconnect_reason_override = reason
+        logger.warning("Modem dropped to %s while FSM CONNECTED — registration "
+                      "lost, triggering reconnection",
+                      'SEARCHING' if mm_state == 7 else 'ENABLED',
+                      extra={'interface_number': self.interface_number,
+                             'modem_state': mm_state,
+                             'fsm_state': self.machine.current_state})
+        try:
+            self._safe_create_task(self._stop_network_interface_monitoring())
+        except RuntimeError:
+            pass
+        self.transition(ModemEvent.DISCONNECT)
+        self._safe_create_task(self.handle_disconnection_recovery())
+
+    async def _finalize_connected_from_signal(self):
+        """Finalise a connection that reached CONNECTED via the MM state-11 signal.
+
+        This is the async counterpart to the connected-side bringup in the
+        inline ``_configure_modem_initial`` success block, used by the
+        fresh-rebuild retry path (failed-retry loop → apply_modem_configuration
+        → APN cascade), where the FSM advances to CONNECTED through
+        ``handle_modem_event`` rather than inline.
+
+        Applies bearer IP behind the same data-path gate: if the bearer
+        registered but cannot route (a dead path that survives the patient
+        link-up retry), ``_apply_bearer_ip_or_fail`` tears the session down,
+        drives CONNECTION_FAILED and offers SIM failover, and we stop here so
+        the dead SIM is not finalised as CONNECTED.  On the normal (good) path
+        the first apply succeeds immediately, so there is no added latency.
+        """
+        # The FSM may have already moved on (e.g. a fast disconnect) by the
+        # time this task runs — only finalise if we are still CONNECTED.
+        if self.machine.current_state not in (ModemState.CONNECTED.value,
+                                              ModemState.USAGE_MONITORING.value):
+            logger.debug("Skipping connected finalise — FSM no longer CONNECTED",
+                        extra={'interface_number': self.interface_number,
+                               'current_state': self.machine.current_state})
+            return
+
+        if not await self._apply_bearer_ip_or_fail('modem_state_connected'):
+            return
+
+        # Start network interface management
+        try:
+            if self.ensure_link_up_on_connect:
+                self._safe_create_task(self._ensure_interface_up())
+            self._safe_create_task(self._start_network_interface_monitoring())
+        except RuntimeError:
+            # No event loop running (e.g., during tests) - ignore
+            pass
+
+        # Reset failover counters — connection is stable
+        self._reset_failover_counters()
+        self._record_bearer_up('modem_state_connected')
+        self._ensure_usage_monitoring_started('handle_modem_event')
+
+        # Start connectivity monitoring (ping tests) if configured
+        self._safe_create_task(self.start_connectivity_monitoring())
+
+        # Start failback monitor if we're on the failover SIM
+        self._start_failback_monitor()
+
     def handle_modem_event(self, mm_state, _):
         """Handle ModemManager state changes with enhanced hot-swap support"""
         logger.info("Modem state changed",
@@ -1965,6 +2077,21 @@ class ModemStateMachine:
                 logger.info("Modem enabled, continuing configuration",
                            extra={'interface_number': self.interface_number})
                 # Don't transition - let configuration continue
+            elif current_fsm_state in [ModemState.CONNECTED.value,
+                                       ModemState.USAGE_MONITORING.value]:
+                # CONNECTED → ENABLED: registration dropped below SEARCHING — the
+                # modem lost the network entirely (deeper drop than SEARCHING).
+                # Treat as a registration loss and recover, but only when this
+                # is NOT a service-initiated disable / reset window (those are
+                # the legitimate ways the service itself takes the modem down
+                # to ENABLED during reconfiguration).
+                if (not self.service_initiated_disable
+                        and not self._is_in_reset_grace_period()):
+                    self._handle_connected_registration_drop(mm_state)
+                else:
+                    logger.debug("Modem dropped to ENABLED while CONNECTED during "
+                                "service-initiated disable / reset — not recovering",
+                                extra={'interface_number': self.interface_number})
 
         elif mm_state == 7:  # SEARCHING
             if current_fsm_state == ModemState.CONFIGURING.value:
@@ -1978,6 +2105,18 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number})
                     # Transition to CONNECTING state
                     self.transition(ModemEvent.CONNECT)
+
+            elif current_fsm_state in [ModemState.CONNECTED.value,
+                                       ModemState.USAGE_MONITORING.value]:
+                # CONNECTED → SEARCHING: the modem lost its serving cell and is
+                # re-scanning (e.g. the active supported-bands set was changed
+                # to a band the current cell does not use, coverage was lost, or
+                # the carrier dropped registration without passing through
+                # REGISTERED/DISCONNECTING).  Unlike CONNECTED → REGISTERED
+                # there is no camped cell, so the bearer is effectively dead.
+                # Without this branch the FSM would stay CONNECTED with no
+                # signal and never recover.
+                self._handle_connected_registration_drop(mm_state)
 
         elif mm_state == 8:  # REGISTERED
             if current_fsm_state in [ModemState.CONNECTING.value, ModemState.CONFIGURING.value]:
@@ -2099,25 +2238,14 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number})
                     self.transition(ModemEvent.CONNECTED)
 
-                    # Start network interface management
-                    try:
-                        if self.ensure_link_up_on_connect:
-                            self._safe_create_task(self._ensure_interface_up())
-                        self._safe_create_task(self._start_network_interface_monitoring())
-                    except RuntimeError:
-                        # No event loop running (e.g., during tests) - ignore
-                        pass
-
-                    # Reset failover counters — connection is stable
-                    self._reset_failover_counters()
-                    self._record_bearer_up('modem_state_connected')
-                    self._ensure_usage_monitoring_started('handle_modem_event')
-
-                    # Start connectivity monitoring (ping tests) if configured
-                    self._safe_create_task(self.start_connectivity_monitoring())
-
-                    # Start failback monitor if we're on the failover SIM
-                    self._start_failback_monitor()
+                    # Finalise the connection — including a data-path validation
+                    # gate — off the event-loop.  This is the fresh-rebuild
+                    # retry path (failed-retry loop → apply_modem_configuration →
+                    # APN cascade), which reaches CONNECTED via this MM signal
+                    # rather than the inline _configure_modem_initial success
+                    # block.  Mirror that block's gate so a registered-but-
+                    # unroutable SIM does not stay declared CONNECTED here either.
+                    self._safe_create_task(self._finalize_connected_from_signal())
 
             elif current_fsm_state == ModemState.CONNECTED.value:
                 # Already connected - connection is stable
@@ -2295,6 +2423,18 @@ class ModemStateMachine:
                     failed_apn=self.last_failed_apn or '',
                     configured_apn_rejected=bool(self.configured_apn_rejected),
                 )
+                # Take the data session down on entry to FAILED.  A failed
+                # connection attempt can leave a stale/degraded bearer up
+                # (e.g. a band-mismatched SIM that registers and gets a
+                # half-working IPv4-only bearer MM still reports as Connected).
+                # Nothing else tears it down until the failed-retry timer's
+                # first cycle ("clearing stale bearer before reconnect"), which
+                # may be up to the first retry interval (e.g. 600s) away — so
+                # the phantom session lingers.  _disconnect_bearer() is
+                # idempotent (unconditional Simple.Disconnect('/') sweep) and a
+                # safe no-op when the modem is already idle, so it is always
+                # correct here regardless of how FAILED was reached.
+                self._safe_create_task(self._disconnect_bearer())
                 # Start periodic retry from FAILED state — but not if the
                 # retry loop itself caused the re-entry (it manages its own
                 # continuation).
@@ -2308,6 +2448,26 @@ class ModemStateMachine:
                 current_task = asyncio.current_task()
                 if current_task is not self._failed_retry_task:
                     self._cancel_failed_retry()
+
+            # Apply any configuration that was deferred because it arrived while
+            # the FSM was mid-transition (CONNECTING / DISCONNECTING / SIM_*).
+            # apply_config() only stored it; now that we have settled into a
+            # stable state, run the reconfigure so an active-slot band/APN/etc.
+            # change performs its full disable→set→enable restart instead of
+            # being silently dropped.
+            _settle_states = (
+                ModemState.CONNECTED.value,
+                ModemState.USAGE_MONITORING.value,
+                ModemState.REGISTERED_IDLE.value,
+                ModemState.DISCONNECTED.value,
+                ModemState.FAILED.value,
+            )
+            if self._pending_reconfigure and new_state in _settle_states:
+                self._pending_reconfigure = False
+                logger.info("Applying configuration deferred during transition",
+                           extra={'interface_number': self.interface_number,
+                                  'settled_state': new_state})
+                self._safe_create_task(self._apply_deferred_reconfigure())
         except Exception as e:
             logger.error(f"FSM transition error on event '{event.value}': {e}",
                         extra={'interface_number': self.interface_number,
@@ -2330,6 +2490,58 @@ class ModemStateMachine:
                     except Exception as recovery_error:
                         logger.error(f"Failed to recover from FAILED state: {recovery_error}",
                                     extra={'interface_number': self.interface_number})
+
+    async def _apply_deferred_reconfigure(self):
+        """Run a reconfigure that was deferred while the FSM was mid-transition.
+
+        Mirrors the stable-state reconfigure branch of ``apply_config()``: the
+        new configuration is already stored in ``self.config`` (with the prior
+        config preserved in ``self._previous_config`` for the diff), so here we
+        only need to clear stale failure tracking, fire ``RECONFIGURE`` to move
+        the FSM into ``CONFIGURING``, and run ``_reconfigure_modem()`` — which
+        compares old vs new and performs a full disable→set-bands→enable restart
+        when an active-slot band/APN/pdp/roaming/SIM/network-mode parameter
+        changed.
+
+        Runs as its own task (scheduled from ``transition()``), so the
+        ``RECONFIGURE`` transition below is not reentrant with the transition
+        that triggered it.
+        """
+        # Only meaningful from a stable state that supports RECONFIGURE.  If the
+        # FSM has already moved on (e.g. another transition fired first), skip —
+        # the flag will have been re-set by any newer queued config.
+        if self.machine.current_state not in (
+                ModemState.CONNECTED.value,
+                ModemState.USAGE_MONITORING.value,
+                ModemState.REGISTERED_IDLE.value,
+                ModemState.DISCONNECTED.value,
+                ModemState.FAILED.value,
+                ModemState.CONFIGURING.value):
+            logger.info("Deferred reconfigure skipped — FSM no longer in a "
+                       "stable state",
+                       extra={'interface_number': self.interface_number,
+                              'current_state': self.machine.current_state})
+            return
+
+        logger.info("Running deferred reconfigure after transition settled",
+                   extra={'interface_number': self.interface_number,
+                          'current_state': self.machine.current_state})
+
+        # Cancel failed-state retry — new config supersedes it
+        self._cancel_failed_retry()
+        # Clear failure tracking — new configuration means a fresh attempt
+        self.last_failure_reason = ''
+        self.last_failure_time = 0
+        self.last_failed_apn = ''
+        self.configured_apn_rejected = False
+        if self.failback_suppressed_by_connection_failure:
+            logger.info("New configuration received — lifting failback "
+                       "suppression for primary SIM",
+                       extra={'interface_number': self.interface_number})
+            self.failback_suppressed_by_connection_failure = False
+
+        self.transition(ModemEvent.RECONFIGURE)
+        await self._reconfigure_modem()
 
     def apply_config(self, config: dict):
         """Apply configuration - handles all states properly"""
@@ -2433,7 +2645,9 @@ class ModemStateMachine:
                 logger.info("New configuration received while in FAILED state — "
                            "retrying connection",
                            extra={'interface_number': self.interface_number})
-            # Normal reconfiguration
+            # Normal reconfiguration — applied now, so clear any deferred-
+            # reconfigure debt from an earlier mid-transition config.
+            self._pending_reconfigure = False
             self.transition(ModemEvent.RECONFIGURE)
             self._safe_create_task(self._reconfigure_modem())
 
@@ -2448,7 +2662,10 @@ class ModemStateMachine:
             logger.info("Configuration queued - SIM switch in progress",
                        extra={'interface_number': self.interface_number,
                               'current_state': current})
-            # Config is stored, SIM switch completion will pick up new config
+            # Config is stored; a deferred reconfigure is owed once the SIM
+            # switch settles so any active-slot band/APN change is actually
+            # written to the modem (full disable→set→enable restart).
+            self._pending_reconfigure = True
 
         elif current in (
             ModemState.CONNECTING.value,
@@ -2458,7 +2675,11 @@ class ModemStateMachine:
             logger.info("Configuration queued - connection transition in progress",
                        extra={'interface_number': self.interface_number,
                               'current_state': current})
-            # Will be handled when transition completes
+            # Config is stored; a deferred reconfigure is owed once the
+            # transition settles.  Without this an active-slot band/APN change
+            # committed mid-transition is silently dropped — the modem is never
+            # disabled and the new bands are never written.
+            self._pending_reconfigure = True
 
         else:
             # Unknown/unhandled state
@@ -3088,15 +3309,45 @@ class ModemStateMachine:
                 # Transition to CONNECTED and stay there for event-driven monitoring
                 if self.machine.current_state == ModemState.CONNECTING.value:
                     self.transition(ModemEvent.CONNECTED)
-                else:
-                    logger.info("Skipping connected transition - FSM already advanced",
+                elif self.machine.current_state in (ModemState.CONNECTED.value,
+                                                    ModemState.USAGE_MONITORING.value):
+                    # FSM already advanced to a genuine connected state via an
+                    # MM CONNECTED (11) signal that raced ahead of us — fine,
+                    # proceed with the connected-side bringup below.
+                    logger.info("FSM already in connected state - proceeding",
                                extra={'interface_number': self.interface_number,
                                       'current_state': self.machine.current_state})
+                else:
+                    # MM reported a bearer up, but the FSM is NOT in a connected
+                    # state (typically FAILED: an earlier non-APN failure in this
+                    # same cascade already fired CONNECTION_FAILED).  Adopting
+                    # this bearer here would leave a half-up, possibly dead
+                    # session (e.g. SIM cannot carry data on the registered band:
+                    # pdn-ipv6-call-disallowed + uninstallable IPv4 route) that
+                    # nothing tears down until the failed-retry timer fires much
+                    # later.  Take the session down now and leave the FSM in its
+                    # current (FAILED) state so its retry / failover logic owns
+                    # recovery.
+                    logger.warning(
+                        "Bearer came up but FSM is not in a connected state — "
+                        "tearing the session down instead of adopting it",
+                        extra={'interface_number': self.interface_number,
+                               'current_state': self.machine.current_state})
+                    try:
+                        await self._disconnect_bearer()
+                    except Exception as e:
+                        logger.debug(f"Bearer teardown after stale connect failed: {e}",
+                                    extra={'interface_number': self.interface_number})
+                    return
                 logger.info("Connected - staying in CONNECTED state for event-driven monitoring",
                            extra={'interface_number': self.interface_number})
 
-                # Apply bearer IP configuration to interface (VyOS responsibility)
-                await self._apply_bearer_ip_configuration()
+                # Apply bearer IP configuration to interface (VyOS responsibility).
+                # If the bearer registered but cannot route (dead data path),
+                # fail over instead of declaring CONNECTED on a SIM that cannot
+                # carry data on the registered band/network.
+                if not await self._apply_bearer_ip_or_fail('configure_modem_initial'):
+                    return
 
                 # Start network interface management
                 try:
@@ -4312,10 +4563,12 @@ class ModemStateMachine:
         """Record that a SIM failover was performed"""
         self.last_failover_time = time.time()
         self.failover_count += 1
+        self.lifetime_failover_count += 1
         self.is_on_failover_sim = True
         logger.info(f"SIM failover #{self.failover_count} recorded",
                    extra={'interface_number': self.interface_number,
                           'failover_count': self.failover_count,
+                          'lifetime_failover_count': self.lifetime_failover_count,
                           'failover_time': self.last_failover_time,
                           'primary_sim': self.primary_sim_slot})
         self._emit_alert(
@@ -4339,6 +4592,11 @@ class ModemStateMachine:
 
         if self._bearer_down_since is None:
             self._bearer_down_since = now
+
+        # The current session is over — invalidate the usage baseline so it is
+        # not reused for a different session/slot.
+        self._usage_baseline_bytes = None
+        self._usage_baseline_slot = None
 
         logger.info("Recorded bearer disconnect",
                    extra={'interface_number': self.interface_number,
@@ -4402,6 +4660,16 @@ class ModemStateMachine:
         """Record a runtime SIM slot change."""
         if from_sim in (None, 0) or to_sim in (None, 0) or from_sim == to_sim:
             return
+
+        # Dedupe: reset-based modems re-enumerate on SetPrimarySimSlot, so the
+        # same switch can be reported both by the switch executor and by a
+        # later PrimarySimSlot PropertiesChanged signal.  Count it once.
+        key = (from_sim, to_sim)
+        now = time.time()
+        if self._last_sim_switch_key == key and (now - self._last_sim_switch_ts) < 30:
+            return
+        self._last_sim_switch_key = key
+        self._last_sim_switch_ts = now
 
         self.sim_switch_count += 1
         logger.info("Recorded SIM switch",
@@ -5377,6 +5645,11 @@ class ModemStateMachine:
             logger.info("Disconnecting for SIM switch",
                        extra={'interface_number': self.interface_number,
                               'bearer_path': self.bearer_path})
+
+            # Fold the outgoing SIM's in-flight session usage into its persisted
+            # total before we tear the bearer down, so a short-lived session
+            # (e.g. a quick failover) is not lost.
+            await self._flush_active_usage('sim_switch')
 
             if self.bearer_path and self.proxy:
                 simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
@@ -6528,6 +6801,14 @@ class ModemStateMachine:
 
                 # Reset failover counters — connection is stable on new SIM
                 self._reset_failover_counters()
+                # Close the bearer-downtime window opened when the old bearer
+                # dropped for the switch, and count the slot change (reset-based
+                # modems never emit a PrimarySimSlot PropertiesChanged signal).
+                self._record_bearer_up('sim_switch')
+                self._record_sim_switch(
+                    self.previous_sim_slot,
+                    self.current_active_sim,
+                    self.sim_switch_reason or 'sim_switch')
 
                 # Start connectivity monitoring if configured
                 self._safe_create_task(self.start_connectivity_monitoring())
@@ -7584,9 +7865,69 @@ class ModemStateMachine:
                                   'slot': active_slot, 'param': param,
                                   'old_value': old_slot.get(param),
                                   'new_value': new_slot.get(param)})
+                if param == 'supported_bands':
+                    # Make it unambiguous which radio families changed — most
+                    # importantly 5G NR, whose band write goes over QMI (not
+                    # ModemManager's CurrentBands), so the MM band-write step
+                    # logs "skipping CurrentBands write" even though the bearer
+                    # IS being rebuilt for the NR change.  This line names the
+                    # changed family so a 5G-only edit is clearly attributed.
+                    changed_families = self._band_families_changed(
+                        old_slot.get(param), new_slot.get(param))
+                    logger.info(
+                        "Active-SIM supported-bands change spans %s — bearer "
+                        "will be rebuilt (5G NR applied over QMI while the "
+                        "modem is disabled)",
+                        ', '.join(changed_families) if changed_families else 'unknown',
+                        extra={'interface_number': self.interface_number,
+                               'slot': active_slot,
+                               'changed_band_families': changed_families})
                 return True
 
         return False
+
+    @staticmethod
+    def _band_families_changed(old_bands, new_bands) -> list:
+        """Return the radio families whose band membership changed.
+
+        Classifies each band token into its family (5G NR, LTE, 3G, 2G) and
+        returns the families that differ between ``old_bands`` and
+        ``new_bands``.  ``all`` is treated as its own pseudo-family so a
+        switch to/from unrestricted is reported too.  Purely diagnostic — used
+        to make a 5G-NR-only band change obvious in the journal, since NR bands
+        are written over QMI rather than ModemManager.
+        """
+        def _families(value):
+            if isinstance(value, str):
+                tokens = [t.strip().lower() for t in value.split(',') if t.strip()]
+            elif value:
+                tokens = [str(t).strip().lower() for t in value if str(t).strip()]
+            else:
+                tokens = []
+            fam = {}
+            for tok in tokens:
+                if tok == 'all':
+                    fam.setdefault('all', set()).add('all')
+                elif tok.startswith('ngran-'):
+                    fam.setdefault('5G NR', set()).add(tok)
+                elif tok.startswith('eutran-'):
+                    fam.setdefault('LTE', set()).add(tok)
+                elif tok.startswith(('umts-', 'utran-')):
+                    fam.setdefault('3G', set()).add(tok)
+                elif tok.startswith(('gsm-', 'egsm-', 'dcs-', 'pcs-', 'g')):
+                    fam.setdefault('2G', set()).add(tok)
+                else:
+                    fam.setdefault('other', set()).add(tok)
+            return fam
+
+        old_fam = _families(old_bands)
+        new_fam = _families(new_bands)
+        changed = []
+        # Preserve a stable, human-friendly ordering.
+        for family in ('5G NR', 'LTE', '3G', '2G', 'all', 'other'):
+            if old_fam.get(family, set()) != new_fam.get(family, set()):
+                changed.append(family)
+        return changed
 
     async def _reconfigure_modem(self):
         """Reconfigure modem with new settings"""
@@ -7924,8 +8265,11 @@ class ModemStateMachine:
             if is_already_connected:
                 logger.info("Bearer already connected - transitioning to CONNECTED state instead of creating new connection",
                            extra={'interface_number': self.interface_number})
-                # Apply IP configuration from existing bearer
-                await self._apply_bearer_ip_configuration()
+                # Apply IP configuration from existing bearer.  If the bearer
+                # registered but cannot route (dead data path), fail over rather
+                # than declaring CONNECTED on a SIM that cannot carry data.
+                if not await self._apply_bearer_ip_or_fail('apply_modem_configuration'):
+                    return
                 # Set interface UP
                 await self._ensure_interface_up()
                 # Transition to CONNECTED state
@@ -8723,6 +9067,11 @@ class ModemStateMachine:
 
         # Load persisted cumulative usage for this SIM
         cumulative_bytes = self._load_persisted_usage()
+        # Record the baseline so _flush_active_usage() can persist in-flight
+        # session bytes to this slot (e.g. before a SIM switch) using the same
+        # cumulative + session formula, without double counting.
+        self._usage_baseline_bytes = cumulative_bytes
+        self._usage_baseline_slot = self._current_usage_slot()
         warnings_logged = set()   # tracks which pct thresholds have been logged
         limit_logged = False
 
@@ -8990,6 +9339,52 @@ class ModemStateMachine:
         except Exception as e:
             logger.warning(f"Could not persist usage data: {e}",
                           extra={'interface_number': self.interface_number})
+
+    async def _flush_active_usage(self, reason: str = 'flush'):
+        """Persist the in-flight session bytes to the active SIM's usage record.
+
+        monitor_data_usage() only persists on its polling interval, so a SIM
+        that is active only briefly (e.g. during a quick failover/failback)
+        can lose its whole session because the monitor never polled before the
+        bearer was torn down.  Call this while still on the outgoing SIM (with
+        a valid bearer) to fold the current session into that slot's total.
+
+        Uses the same ``baseline + session`` formula as monitor_data_usage()
+        so repeated flushes / a subsequent monitor poll do not double count.
+        """
+        if not self.bearer_path:
+            return
+        slot = self._current_usage_slot()
+        # Prefer the baseline captured by the running monitor; fall back to the
+        # on-disk value (monitor has not persisted this session yet, so disk
+        # still holds the pre-session cumulative).
+        if self._usage_baseline_slot == slot and self._usage_baseline_bytes is not None:
+            baseline = self._usage_baseline_bytes
+        else:
+            baseline = self._load_persisted_usage()
+
+        try:
+            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.bearer_path)
+            proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.bearer_path, introspect)
+            props = proxy.get_interface("org.freedesktop.DBus.Properties")
+            stats_variant = await props.call_get(BEARER_INTERFACE, "Stats")
+            if not (stats_variant and stats_variant.value):
+                return
+            stats = stats_variant.value
+            session_bytes = stats.get('rx-bytes', 0) + stats.get('tx-bytes', 0)
+        except Exception as e:
+            logger.debug(f"Could not read bearer stats to flush usage: {e}",
+                        extra={'interface_number': self.interface_number})
+            return
+
+        total_bytes = baseline + session_bytes
+        self._persist_usage(total_bytes)
+        logger.info("Flushed in-flight session usage to active SIM",
+                   extra={'interface_number': self.interface_number,
+                          'reason': reason,
+                          'usage_tracking_slot': slot,
+                          'session_bytes': session_bytes,
+                          'total_bytes': total_bytes})
 
     @staticmethod
     def _billing_cycle_crossed(last_dt, now_dt, billing_day: int) -> bool:
@@ -10326,6 +10721,7 @@ class ModemStateMachine:
 
         # ── 10. Failover / recovery stats ────────────────────────────────
         status['failover_count'] = self.failover_count
+        status['lifetime_failover_count'] = self.lifetime_failover_count
         status['last_failover_time'] = (
             datetime.datetime.fromtimestamp(self.last_failover_time).isoformat()
             if self.last_failover_time else ''
@@ -10338,9 +10734,17 @@ class ModemStateMachine:
         status['reconnect_success_count'] = self.reconnect_success_count
         status['sim_switch_count'] = self.sim_switch_count
         status['total_bearer_downtime_seconds'] = self.total_bearer_downtime_seconds
+        # A bearer-downtime window must never be reported while the bearer is
+        # actually up: if a reconnect path forgot to call _record_bearer_up(),
+        # the window would otherwise grow forever.  Treat any connected state as
+        # "no current downtime".
+        _connected_states = (ModemState.CONNECTED.value,
+                             ModemState.USAGE_MONITORING.value)
         status['current_bearer_downtime_seconds'] = (
             max(0, int(time.time() - self._bearer_down_since))
-            if self._bearer_down_since else 0
+            if self._bearer_down_since
+            and self.machine.current_state not in _connected_states
+            else 0
         )
         status['last_disconnect_time'] = (
             datetime.datetime.fromtimestamp(self.last_disconnect_time).isoformat()
@@ -10352,6 +10756,19 @@ class ModemStateMachine:
             datetime.datetime.fromtimestamp(self.last_reset_time).isoformat()
             if self.last_reset_time else ''
         )
+
+        # Boot-scoped diagnostic counters (reset on power cycle, survive
+        # service/MM crashes — see interfaces_wwan_diag).
+        try:
+            status['service_start_count'] = wwan_diag.get('service_start_count')
+            status['modemmanager_restart_count'] = wwan_diag.get('modemmanager_restart_count')
+            status['modem_nuclear_reset_count'] = wwan_diag.get('modem_nuclear_reset_count')
+            status['hardware_reset_count'] = wwan_diag.get(
+                f'hardware_reset_count_{self.interface_number}')
+        except Exception:
+            for k in ('service_start_count', 'modemmanager_restart_count',
+                      'modem_nuclear_reset_count', 'hardware_reset_count'):
+                status.setdefault(k, 0)
 
         # ── 11. SIM slot details from config + physical SIM identity ────
         if self.config:
@@ -14267,21 +14684,44 @@ class ModemStateMachine:
         return False
 
     async def _apply_bearer_ip_configuration(self):
-        """Apply bearer IP configuration to the interface (VyOS responsibility)"""
+        """Apply bearer IP configuration to the interface (VyOS responsibility).
+
+        Returns True when the bearer produced a usable data path, and False
+        only when ModemManager handed us address(es) but no default route
+        could be installed for any address family (a registered-but-unroutable
+        session, e.g. a band/PLMN-mismatched SIM: pdn-ipv6-call-disallowed with
+        an unreachable IPv4 gateway).  Indeterminate cases (no bearer path, no
+        IP config yet, unexpected exception) return True so timing races never
+        trigger a false failover; callers that care escalate only on an
+        explicit False via _apply_bearer_ip_or_fail().
+        """
         try:
             if not hasattr(self, 'bearer_path') or not self.bearer_path:
                 logger.warning("No bearer path available for IP configuration",
                              extra={'interface_number': self.interface_number})
-                return
+                return True
 
             # Get bearer IP configuration from ModemManager
             bearer_ips = await self._get_bearer_expected_ips()
             if not bearer_ips:
                 logger.warning("No IP configuration available from bearer",
                              extra={'interface_number': self.interface_number})
-                return
+                return True
 
             interface_name = f"wwan{self.interface_number}"
+
+            # Track whether the bearer gave us any address and whether each
+            # address family ended up with a working default route.  Both
+            # families are first-class here: this product runs dual-stack
+            # (IPv4 + IPv6), so a usable path means *at least one* family
+            # routes.  Used by the return value so callers can distinguish a
+            # usable session from a registered-but-unroutable one.
+            had_ipv4 = bool(bearer_ips.get('ipv4'))
+            had_ipv6 = bool(bearer_ips.get('ipv6'))
+            had_ip = had_ipv4 or had_ipv6
+            ipv4_routed = False
+            ipv6_routed = False
+
 
             # Ensure interface is UP before applying IP configuration
             # Routes cannot be installed on a DOWN interface (causes "Nexthop has invalid gateway")
@@ -14400,7 +14840,8 @@ class ModemStateMachine:
                 if not ipv4_gateway:
                     logger.info("No IPv4 gateway from carrier, adding device route",
                                extra={'interface_number': self.interface_number})
-                await self._install_default_route(4, ipv4_gateway, interface_name)
+                ipv4_routed = await self._install_default_route(
+                    4, ipv4_gateway, interface_name)
 
             # ── IPv4 source enforcement: unblock egress now that new IP + route are live ──
             if ipv4_changed:
@@ -14446,7 +14887,8 @@ class ModemStateMachine:
                 if not ipv6_gateway:
                     logger.info("No IPv6 gateway from carrier, adding device route",
                                extra={'interface_number': self.interface_number})
-                await self._install_default_route(6, ipv6_gateway, interface_name)
+                ipv6_routed = await self._install_default_route(
+                    6, ipv6_gateway, interface_name)
 
             # ── IPv6 source enforcement: persistent egress prefix whitelist ──
             if new_ipv6:
@@ -14566,9 +15008,127 @@ class ModemStateMachine:
             # recreated during USB re-enumeration or modem reset.
             await self._reapply_vyos_infrastructure(interface_name)
 
+            # Usable data path = the bearer gave us address(es) and at least
+            # one address family installed a working default route.  Both IPv4
+            # and IPv6 are considered equally: a dual-stack bearer is usable if
+            # *either* family routes, and only a bearer that had address(es) but
+            # routes on NEITHER family is treated as a dead path.  Anything else
+            # (a healthy single family, or a transient/racy state) is reported
+            # usable so legitimate connections never trigger a spurious
+            # failover.
+            route_installed = ipv4_routed or ipv6_routed
+            if had_ip and not route_installed:
+                logger.error(
+                    "Bearer has address(es) but no usable default route for "
+                    "either IPv4 or IPv6 — data path is dead",
+                    extra={'interface_number': self.interface_number,
+                           'had_ipv4': had_ipv4, 'had_ipv6': had_ipv6,
+                           'ipv4_routed': ipv4_routed,
+                           'ipv6_routed': ipv6_routed})
+                return False
+            return True
+
         except Exception as e:
             logger.error(f"Failed to apply bearer IP configuration: {e}",
                         extra={'interface_number': self.interface_number})
+            return True
+
+    async def _apply_bearer_ip_or_fail(self, source: str) -> bool:
+        """Apply bearer IP config and verify a usable data path exists.
+
+        Returns True when the bearer produced a usable data path.  Returns
+        False only for a *persistent* registered-but-unroutable session — the
+        bearer reported connected and handed us address(es) but no default
+        route could be installed for any address family even after the
+        interface came up and we retried (e.g. a band/PLMN-mismatched SIM:
+        pdn-ipv6-call-disallowed with an unreachable IPv4 gateway).  In that
+        case it stamps a failure reason, tears the session down, drives
+        CONNECTION_FAILED, and offers SIM failover (a no-op without an
+        eligible alternate).
+
+        TIMING SAFETY — the single most common cause of a first-pass route
+        failure is NOT a dead SIM but a local race: the bearer just came up
+        and ``wwanN`` is admin-up but not yet operationally up (no carrier),
+        so ``ip route`` fails with "Nexthop device is not up" even though MM
+        gave us a valid address + gateway.  In normal operation a later
+        Ip4Config/Ip6Config PropertiesChanged signal re-installs the route a
+        beat later, which is why this path "never fails" in the field.  We
+        therefore wait for the interface to become operational and retry the
+        apply several times before ever concluding the path is dead, so a slow
+        bearer / slow link-up can never trigger a spurious failover.
+
+        Honours a standing user disconnect: if the operator asked us down
+        mid-connect, we do not override that by re-driving failover.
+        """
+        usable = await self._apply_bearer_ip_configuration()
+        if usable:
+            return True
+
+        # First pass reported no usable route.  Before treating this as a dead
+        # SIM, give the interface time to come operationally up and retry — the
+        # overwhelmingly common case is a link-up race, not an unroutable SIM.
+        interface_name = f"wwan{self.interface_number}"
+        max_retries = 6          # ~ up to 6 * 5s = 30s of patience
+        retry_delay = 5
+        for attempt in range(1, max_retries + 1):
+            if self.user_disconnected:
+                logger.info("Stopping data-path retry — user requested disconnect",
+                           extra={'interface_number': self.interface_number,
+                                  'source': source})
+                return False
+            # Bail out early if the bearer dropped underneath us — that is a
+            # different failure handled by the disconnect path, not here.
+            if not await self._is_bearer_connected():
+                logger.info("Bearer dropped while waiting for a usable route — "
+                           "leaving recovery to the disconnect path",
+                           extra={'interface_number': self.interface_number,
+                                  'source': source,
+                                  'attempt': attempt})
+                return False
+            await self._ensure_interface_up()
+            await asyncio.sleep(retry_delay)
+            usable = await self._apply_bearer_ip_configuration()
+            if usable:
+                logger.info("Usable default route installed on retry — data path OK",
+                           extra={'interface_number': self.interface_number,
+                                  'source': source,
+                                  'attempt': attempt})
+                return True
+            logger.warning("Still no usable default route after retry",
+                          extra={'interface_number': self.interface_number,
+                                 'source': source,
+                                 'attempt': attempt,
+                                 'max_retries': max_retries})
+
+        if self.user_disconnected:
+            logger.info("Dead data path detected but user requested disconnect "
+                       "— not escalating to failover",
+                       extra={'interface_number': self.interface_number,
+                              'source': source})
+            return False
+
+        logger.error(
+            "Bearer reported connected but has no usable data path after "
+            "%ds of retries — treating as a failed connection and offering "
+            "SIM failover", max_retries * retry_delay,
+            extra={'interface_number': self.interface_number, 'source': source})
+        self.last_failure_reason = (
+            "ModemManager reported the bearer connected, but no usable default "
+            "route could be installed for any address family. The SIM may not "
+            "be permitted to carry data on the registered band/network "
+            "(e.g. pdn-ipv6-call-disallowed with an unreachable IPv4 gateway)."
+        )
+        self.last_failure_time = time.time()
+        try:
+            await self._disconnect_bearer()
+        except Exception as e:
+            logger.debug(f"Bearer teardown after dead data path failed: {e}",
+                        extra={'interface_number': self.interface_number})
+        self.transition(ModemEvent.CONNECTION_FAILED)
+        # No-op when no eligible/ present alternate SIM, failover disabled, or
+        # cooldown active — same contract as the other connection-failure sites.
+        await self._handle_sim_missing_failover()
+        return False
 
     async def _reapply_vyos_infrastructure(self, interface_name):
         """Re-apply VyOS infrastructure settings after bearer IP configuration.

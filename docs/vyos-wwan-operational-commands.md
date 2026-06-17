@@ -280,7 +280,7 @@ igos@igos:~$ show interfaces wwan wwan0 detail
 | | Data limit | Configured data limit in bytes (if set) |
 | | Usage | Percentage of data limit consumed |
 | | Limit action | Action when limit reached (`none`, `disable`, `sim-failover`, `sim-failover-sticky`) |
-| **Failover History** | Failover count | Number of SIM failover events |
+| **Failover History** | Failover count | Number of SIM failover events since power on |
 | | Last failover | Timestamp of last failover |
 | | Recovery attempts | Number of connectivity recovery attempts |
 | **Runtime Counters** | Bearer drops | Number of bearer-down events since boot |
@@ -292,6 +292,10 @@ igos@igos:~$ show interfaces wwan wwan0 detail
 | | Current downtime | Current bearer downtime if the interface is presently disconnected |
 | | Last disconnect | Timestamp of the last bearer-down event |
 | | Last reason | Reason recorded for the last bearer-down event |
+| **Diagnostics (since power on)** | Service starts | WWAN manager starts since power on (a value >1 indicates a manager crash/restart) |
+| | ModemManager restarts | ModemManager crashes the manager recovered from since power on |
+| | Modem hardware resets | Successful modem hardware/soft resets on this interface since power on |
+| | Modem nuclear resets | ModemManager-restart recoveries deliberately triggered by the FSM since power on |
 | **Configuration** | Network mode | Configured RAT selection mode |
 | | Reconnection | Enhanced reconnection status |
 | | Monitoring | Connectivity monitoring status |

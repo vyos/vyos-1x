@@ -27,8 +27,17 @@ import time
 from pathlib import Path
 
 from vyos.hardware import api as hw_api
+from vyos.utils.wwan import interfaces_wwan_diag as wwan_diag
 
 logger = logging.getLogger(__name__)
+
+
+def _count_hardware_reset(interface_number: int) -> None:
+    """Record a successful modem hardware reset in the boot-scoped counters."""
+    try:
+        wwan_diag.increment(f'hardware_reset_count_{interface_number}')
+    except Exception:
+        pass
 
 
 async def _bring_interface_down_safe(interface_name: str) -> bool:
@@ -145,6 +154,7 @@ async def modem_reset(interface_number: int) -> bool:
         # Method 1: Try ModemManager reset command
         if await _try_modemmanager_reset(interface_number):
             logger.info(f"ModemManager reset successful for interface {interface_number}")
+            _count_hardware_reset(interface_number)
             return True
 
         # Method 2: Try board hardware API reset using the modem naming
@@ -153,6 +163,7 @@ async def modem_reset(interface_number: int) -> bool:
         # owns, so WWAN does not need to guess at GPIO details itself.
         if await _try_board_modem_reset(interface_number):
             logger.info(f"Board hardware reset successful for interface {interface_number}")
+            _count_hardware_reset(interface_number)
             return True
 
         # Method 3: Nuclear option - restart ModemManager
@@ -592,6 +603,10 @@ async def modem_reset_nuclear(interface_number: int) -> bool:
 
         if await _wait_for_modemmanager_reenumeration(interface_number):
             logger.info(f"Nuclear reset completed for interface {interface_number}")
+            try:
+                wwan_diag.increment('modem_nuclear_reset_count')
+            except Exception:
+                pass
             return True
 
         logger.warning(f"Modem did not re-enumerate after ModemManager restart for interface {interface_number}")
