@@ -533,3 +533,27 @@ html {
 		bottom: 85px;
 	}
 }
+
+/* Cookiebot consent dialog — safety net (defense-in-depth).
+   Cookiebot delivers its dialog styling as a constructed stylesheet on
+   document.adoptedStyleSheets. The adoptedStyleSheets shim in layout.html keeps that
+   sheet from being dropped by another library (e.g. ReadTheDocs' readthedocs-addons.js,
+   which reassigns the whole list with a destructive replace). As a backstop, these
+   rules live in a regular stylesheet — which cascades *before* adopted stylesheets, so
+   Cookiebot's own CSS overrides every one of them whenever its sheet is present, and
+   they have no effect on the normal styled banner. They only take effect if that sheet
+   is ever absent, keeping the dialog a contained, scrollable, centered panel instead of
+   falling back to position:static and expanding to full page height. Only properties
+   Cookiebot itself sets are used here, so there is verifiably no leak into the good state. */
+#CybotCookiebotDialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	max-width: 920px;
+	max-height: 90vh;
+	overflow: auto;
+	background: #fff;
+	box-shadow: 0 0 24px rgba(0, 0, 0, 0.25);
+	z-index: 2147483631;
+}

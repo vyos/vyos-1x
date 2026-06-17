@@ -2,6 +2,46 @@
 {%- set current_version = "1.5.x circinus" %}
 {% block extrahead %}
     {% if gtm_id and cookiebot_id %}
+    {# Keep Cookiebot's consent dialog from rendering unstyled and breaking the page.
+       Cookiebot delivers its dialog CSS as a constructed stylesheet via
+       document.adoptedStyleSheets. That property holds the *whole* sheet list, and
+       ReadTheDocs' readthedocs-addons.js reassigns it with a destructive replace; when
+       that lands after Cookiebot's (network-gated) adoption it drops Cookiebot's sheet,
+       leaving #CybotCookiebotDialog at position:static, expanded to full page height.
+       This shim makes assignment preserve Cookiebot's sheet specifically. It must run
+       before the first adoptedStyleSheets write, so it is the first thing in <head>. #}
+    <script>
+    (function () {
+      try {
+        var desc = Object.getOwnPropertyDescriptor(Document.prototype, "adoptedStyleSheets");
+        if (!desc || !desc.get || !desc.set) return;
+        var guarded = null;
+        var isCookiebot = function (sheet) {
+          try {
+            var rules = sheet.cssRules;
+            for (var i = 0; i < rules.length; i++) {
+              if (rules[i].selectorText && rules[i].selectorText.indexOf("CybotCookiebotDialog") !== -1) return true;
+            }
+          } catch (e) {}
+          return false;
+        };
+        Object.defineProperty(document, "adoptedStyleSheets", {
+          configurable: true,
+          get: function () { return desc.get.call(document); },
+          set: function (sheets) {
+            for (var i = 0; i < sheets.length; i++) {
+              if (isCookiebot(sheets[i])) { guarded = sheets[i]; break; }
+            }
+            if (guarded && Array.prototype.indexOf.call(sheets, guarded) === -1) {
+              sheets = Array.prototype.slice.call(sheets).concat(guarded);
+            }
+            desc.set.call(document, sheets);
+          }
+        });
+      } catch (e) {}
+    })();
+    </script>
+
     {# Cookiebot CMP — must load first so its auto-blocker can scan/block other tags #}
     <script id="Cookiebot"
             src="https://consent.cookiebot.com/uc.js"
