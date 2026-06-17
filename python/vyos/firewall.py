@@ -37,6 +37,9 @@ def conntrack_required(conf):
     firewall = conf.get_config_dict(['firewall'], key_mangling=('-', '_'),
                                     no_tag_node_value_mangle=True, get_first_key=True)
 
+    if dict_search_args(firewall, 'global_options', 'state_policy'):
+        return True
+
     for rules, path in dict_search_recursive(firewall, 'rule'):
         if any(('state' in rule_conf or 'connection_status' in rule_conf or 'offload_target' in rule_conf) for rule_conf in rules.values()):
             return True

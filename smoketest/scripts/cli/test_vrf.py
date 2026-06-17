@@ -662,9 +662,6 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for chain, rule in nftables_rules.items():
             self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=True)
 
-        # conntrack is only enabled once NAT, NAT66 or firewalling is enabled
-        self.cli_set(['nat'])
-
         for vrf in vrfs:
             base = base_path + ['name', vrf]
             self.cli_set(base + ['table', table])
@@ -672,17 +669,27 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             # We need the commit inside the loop to trigger the bug in T6603
             self.cli_commit()
 
-        # Conntrack rules should now be present
-        for chain, rule in nftables_rules.items():
-            self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=False)
+        check_paths = [
+            ['nat'],
+            ['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept']
+        ]
 
-        # T6603: there should be only ONE entry for the iifname/oifname in the chains
-        tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
-        num_rules = len(search("nftables[].rule[].chain", tmp))
-        # ['vrf_zones_ct_in', 'vrf_zones_ct_out']
-        self.assertEqual(num_rules, 2)
+        # conntrack is only enabled once NAT, NAT66 or firewalling is enabled
+        for path in check_paths:
+            self.cli_set(path)
+            self.cli_commit()
 
-        self.cli_delete(['nat'])
+            # Conntrack rules should now be present
+            for chain, rule in nftables_rules.items():
+                self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=False)
+
+            # T6603: there should be only ONE entry for the iifname/oifname in the chains
+            tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+            num_rules = len(search("nftables[].rule[].chain", tmp))
+            # ['vrf_zones_ct_in', 'vrf_zones_ct_out']
+            self.assertEqual(num_rules, 2)
+
+            self.cli_delete([path[0]])
 
     def test_vrf_policy_based_route(self):
         vrf_name = 'test-pbr_123'
