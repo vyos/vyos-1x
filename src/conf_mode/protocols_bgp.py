@@ -214,6 +214,26 @@ def verify(config_dict):
     if 'system_as' not in bgp:
         raise ConfigError('BGP system-as number must be defined!')
 
+    # FRR #9405 blocks "advertise-all-vni" in named VRFs if a default
+    # BGP instance is initialized first (regardless of default EVPN config).
+    # On boot the default instance starts first, so if a named VRF also has
+    # the flag FRR silently rejects it, causing config divergence. Block the
+    # combination here even when the VRF node is not part of the current commit.
+    # Could be removed when FRR fixes it upstream.
+    if not vrf:
+        for dep_vrf, dep_config in bgp.get('dependent_vrfs', {}).items():
+            if dep_vrf == 'default':
+                continue
+            dep_evpn = dict_search(
+                'protocols.bgp.address_family.l2vpn_evpn', dep_config
+            )
+            if dep_evpn and 'advertise_all_vni' in dep_evpn:
+                raise ConfigError(
+                    f'BGP EVPN "advertise-all-vni" is configured in named VRF "{dep_vrf}". '
+                    f'Remove it from the VRF before adding a default BGP instance, '
+                    f'or move it to the default BGP instance instead.'
+                )
+
     # Verify BMP
     if 'bmp' in bgp:
         # check bmp flag "bgpd -d -F traditional --daemon -A 127.0.0.1 -M rpki -M bmp"
@@ -580,6 +600,37 @@ def verify(config_dict):
 
             # Checks only required for L2VPN EVPN
             if afi in ['l2vpn_evpn']:
+                # T8223: FRR #9405 — only one BGP instance may hold "advertise-all-vni"
+                # at a time. When a default BGP instance coexists with a named VRF that
+                # has the flag, FRR silently rejects the VRF's copy on every boot because
+                # the default instance is always started first.
+                if 'advertise_all_vni' in afi_config:
+                    if vrf:
+                        # Named VRF: block whenever a default BGP instance exists.
+                        default_bgp = dict_search(
+                            'dependent_vrfs.default.protocols.bgp', bgp
+                        )
+                        if default_bgp is not None and 'deleted' not in default_bgp:
+                            raise ConfigError(
+                                f'BGP EVPN "advertise-all-vni" is not supported in named VRF "{vrf}" '
+                                f'when a default BGP instance exists. '
+                                f'Configure it in the default BGP instance instead.'
+                            )
+
+                    # Block if multiple BGP instances have advertise-all-vni simultaneously.
+                    advertise_all_vni_vrfs = [vrf if vrf else 'default']
+                    for dep_vrf, dep_config in bgp.get('dependent_vrfs', {}).items():
+                        dep_evpn = dict_search(
+                            'protocols.bgp.address_family.l2vpn_evpn', dep_config
+                        )
+                        if dep_evpn and 'advertise_all_vni' in dep_evpn:
+                            advertise_all_vni_vrfs.append(dep_vrf)
+                    if len(advertise_all_vni_vrfs) > 1:
+                        raise ConfigError(
+                            f'BGP EVPN "advertise-all-vni" cannot be configured in multiple '
+                            f'VRFs simultaneously: {", ".join(advertise_all_vni_vrfs)}.'
+                        )
+
                 if 'vni' in afi_config:
                     for vni, vni_config in afi_config['vni'].items():
                         if 'rd' in vni_config and 'advertise_all_vni' not in afi_config:

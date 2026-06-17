@@ -1,0 +1,58 @@
+# Copyright (C) VyOS Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8223: remove "advertise-all-vni" from named VRFs where it conflicts with
+# a default BGP instance or another named VRF
+
+from vyos.configtree import ConfigTree
+
+base = ['vrf', 'name']
+bgp_base = ['protocols', 'bgp']
+bgp_l2vpn_evpn = bgp_base + ['address-family', 'l2vpn-evpn']
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    def _cleanup_address_family(config: ConfigTree, vrf) -> None:
+        """Remove advertise-all-vni from the named VRF and clean up any
+        empty parent nodes left behind."""
+        config.delete(base + [vrf] + bgp_l2vpn_evpn + ['advertise-all-vni'])
+        if len(config.list_nodes(base + [vrf] + bgp_l2vpn_evpn)) == 0:
+            config.delete(base + [vrf] + bgp_l2vpn_evpn)
+            if len(config.list_nodes(base + [vrf] + ['protocols', 'bgp', 'address-family'])) == 0:
+                config.delete(base + [vrf] + ['protocols', 'bgp', 'address-family'])
+
+    # Collect named VRFs that have advertise-all-vni configured.
+    advertise_all_vni_vrfs = []
+
+    for vrf in config.list_nodes(base):
+        if config.exists(base + [vrf] + bgp_l2vpn_evpn + ['advertise-all-vni']):
+            if config.exists(bgp_base):
+                # A default BGP instance exists. FRR always starts it before
+                # named VRFs, so the named VRF's advertise-all-vni would be
+                # silently rejected on every boot. Remove it.
+                _cleanup_address_family(config, vrf)
+            else:
+                advertise_all_vni_vrfs.append(vrf)
+
+    # No default BGP instance, but multiple named VRFs hold advertise-all-vni.
+    # FRR only allows one instance to hold it at a time. Keep the first VRF
+    # and remove it from the rest.
+    if len(advertise_all_vni_vrfs) > 1:
+        for vrf in advertise_all_vni_vrfs[1:]:
+            _cleanup_address_family(config, vrf)

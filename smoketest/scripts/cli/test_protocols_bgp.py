@@ -1018,6 +1018,78 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for route_target in route_targets:
             self.assertIn(f'  ead-es-route-target export {route_target}', frrconfig)
 
+    def test_bgp_08_l2vpn_evpn_advertise_all_vni_restriction(self):
+        # T8223: FRR only allows advertise-all-vni in one BGP instance at a time
+        # (FRR issue #9405).
+        vrf = 'VRF-A'
+        vrf2 = 'VRF-B'
+        vrf_path = ['vrf', 'name', vrf]
+        vrf2_path = ['vrf', 'name', vrf2]
+
+        # advertise-all-vni in default BGP is valid
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
+        self.cli_commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn('  advertise-all-vni', frrconfig)
+
+        # delete advertise-all-vni
+        self.cli_delete(
+            base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni']
+        )
+        self.cli_commit()
+
+        # advertise-all-vni in a named VRF is rejected when default BGP exists
+        self.cli_set(vrf_path + ['table', '1001'])
+        self.cli_set(vrf_path + ['protocols', 'bgp', 'system-as', ASN])
+        self.cli_set(
+            vrf_path
+            + ['protocols', 'bgp', 'address-family', 'l2vpn-evpn', 'advertise-all-vni']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_delete(vrf_path)
+        self.cli_commit()
+
+        # reapply VRF and advertise-all-vni in VRF
+        self.cli_set(vrf_path + ['table', '1001'])
+        self.cli_set(vrf_path + ['protocols', 'bgp', 'system-as', ASN])
+        self.cli_set(
+            vrf_path
+            + ['protocols', 'bgp', 'address-family', 'l2vpn-evpn', 'advertise-all-vni']
+        )
+        self.cli_commit()
+
+        # Verify BGP VRF configuration
+        frr_vrf_config = self.getFRRconfig(
+            f'router bgp {ASN} vrf {vrf}', stop_section='^exit'
+        )
+        self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
+        self.assertIn(' advertise-all-vni', frr_vrf_config)
+
+        # two named VRFs cannot both have advertise-all-vni simultaneously
+        self.cli_set(vrf2_path + ['table', '1002'])
+        self.cli_set(vrf2_path + ['protocols', 'bgp', 'system-as', ASN])
+        self.cli_set(
+            vrf2_path
+            + ['protocols', 'bgp', 'address-family', 'l2vpn-evpn', 'advertise-all-vni']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(vrf2_path)
+
+        # default BGP is rejected when a named VRF has advertise-all-vni
+        self.cli_set(base_path + ['system-as', ASN])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # delete advertise-all-vni from VRF and verify default BGP can be created
+        self.cli_delete(vrf_path + ['protocols', 'bgp', 'address-family'])
+        self.cli_commit()
 
     def test_bgp_09_distance_and_flowspec(self):
         distance_external = '25'
