@@ -318,20 +318,6 @@ class ModemStateMachine:
         self.proxy = None
         self.config = None
         self._previous_config = None        # Track previous config for selective disconnection
-        # Cache for the modem's hardware band capability read via qmicli.
-        # Band capability is immutable hardware info, so it is read at most
-        # once per service lifetime. None = not yet attempted; [] = attempted
-        # but unavailable (no QMI port / qmicli missing / query failed).
-        self._cached_qmi_band_capability = None
-        # In-process dedupe for the 5G NR band preference write.  The NR
-        # selection is written with POWER_CYCLE duration, so the modem forgets
-        # it on every power cycle and the FSM MUST re-assert it on each startup.
-        # This cache therefore lives only for the process lifetime (NOT
-        # persisted): it suppresses redundant helper spawns during a runtime
-        # reconfigure where the NR bands did not change, while a crash/reboot/
-        # modem reset clears it so the startup write always fires.  None = not
-        # yet written this process; a list = the band numbers last written.
-        self._last_nr_bands_written = None
         self.modem_path = None
         self.bearer_path = None
         self.user_disconnected = False
@@ -423,6 +409,8 @@ class ModemStateMachine:
         self.last_known_sim_info = None     # Store SIM info from last successful connection
         self.sim_changed = False            # Flag to indicate SIM card change detected
         self.connected_apn = self._restore_connected_apn()   # Last successful APN (persisted across reboots)
+        self.requested_apn = ''             # APN name we asked MM to connect with (this session)
+        self.negotiated_apn = ''            # APN the carrier actually activated (read over QMI)
         self.current_sim_path = None        # Last observed Modem.Sim object path
         # Debounce noisy Sim path churn during modem reboot/re-enumeration.
         # This is intentionally narrow: it only suppresses rapid duplicate
@@ -2952,11 +2940,23 @@ class ModemStateMachine:
             # Step 5: Unlock SIM if needed after enabling
             await self._unlock_sim_if_needed()
 
-            # Step 5.5: Validate ICCID lock (SIM must be enabled + unlocked for identity to be readable)
-            await self._validate_sim_iccid()
-
-            # Step 6: 🆕 Configure preferred carrier if specified
+            # Step 6: Lock onto the preferred carrier BEFORE the modem settles
+            # on an automatic PLMN choice. _ensure_modem_enabled returns as soon
+            # as the modem reaches ENABLED/SEARCHING (state >= 6) — i.e. before
+            # automatic registration has completed — so issuing manual network
+            # selection here makes the modem attach directly to the configured
+            # PLMN instead of registering on one operator and then visibly
+            # flapping over to another. Customers who set a preferred carrier
+            # want a hard lock; dual-SIM provides the recovery path when that
+            # carrier is unavailable. SIM unlock must precede this (a PIN-locked
+            # SIM cannot register at all), so it stays at Step 5.
             await self._configure_preferred_carrier()
+
+            # Step 7: Validate ICCID lock (SIM must be enabled + unlocked for
+            # identity to be readable). Runs after carrier selection so the
+            # manual-PLMN lock is applied at the earliest possible moment and
+            # does not race the modem's automatic attach.
+            await self._validate_sim_iccid()
 
             logger.info("Initial modem configuration complete",
                        extra={'interface_number': self.interface_number})
@@ -3282,10 +3282,43 @@ class ModemStateMachine:
                 cm_apn = getattr(self.connection_manager, 'connected_apn', None)
                 if cm_apn:
                     self.connected_apn = cm_apn.copy()
+                    self.requested_apn = cm_apn.get('name', '')
                     self._persist_connected_apn(cm_apn)
                     logger.info("Stored connected APN for fast reconnection",
                                extra={'interface_number': self.interface_number,
                                       'apn_name': cm_apn.get('name', '')})
+
+                # Capture the APN the *carrier actually activated* over QMI.
+                # MM only echoes the requested APN, so this is the only way to
+                # learn the real one when the network assigned it (auto/empty
+                # APN path) or silently overrode our request.  Adopting it as
+                # the fast-reconnect hint means the next connect requests the
+                # APN that is known to work instead of re-running the cascade.
+                # Both the requested and negotiated names are kept for
+                # troubleshooting (surfaced in status).
+                try:
+                    negotiated_apn = await self._qmi_get_current_apn()
+                except Exception:
+                    negotiated_apn = ''
+                self.negotiated_apn = negotiated_apn
+                if negotiated_apn:
+                    requested_name = self.requested_apn
+                    if negotiated_apn != requested_name:
+                        # Network assigned/overrode the APN.  Credentials we
+                        # held were tied to the requested name, so drop them —
+                        # a network-default APN typically needs no auth.
+                        real_apn = {
+                            'name': negotiated_apn,
+                            'username': '',
+                            'password': '',
+                            'auth_type': 'none',
+                        }
+                        self.connected_apn = real_apn
+                        self._persist_connected_apn(real_apn)
+                        logger.info("Captured carrier-negotiated APN over QMI",
+                                   extra={'interface_number': self.interface_number,
+                                          'requested_apn': requested_name,
+                                          'negotiated_apn': negotiated_apn})
 
                 # Update SIM info after successful connection for future change detection
                 if sim_info:
@@ -6932,16 +6965,17 @@ class ModemStateMachine:
                     target_bands = [b for b in per_sim_band_constants if b in modem_bands_list]
                     target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
 
-                    # Warn about NGRAN bands that MM doesn't expose (common on MM < 1.22)
+                    # NR bands the modem doesn't advertise are dropped by the
+                    # intersection above.  RedCap-only bands are not exposed in
+                    # SupportedBands until registration and cannot be set, so
+                    # they are silently ignored here.
                     requested_ngran = [b for b in per_sim_band_constants if b >= 301]
                     modem_ngran = [b for b in modem_bands_list if b >= 301]
                     if requested_ngran and not modem_ngran:
-                        logger.warning("5G NR bands were requested but ModemManager does not report "
-                                      "any NGRAN bands in SupportedBands. This is a known limitation "
-                                      "of ModemManager < 1.22 with QMI modems. 5G band restrictions "
-                                      "will be ignored — the modem may still use 5G NR via NSA mode.",
-                                      extra={'interface_number': self.interface_number,
-                                             'requested_ngran': [self._mm_constant_to_band_name(b) for b in requested_ngran]})
+                        logger.info("Requested 5G NR bands are not advertised by the modem "
+                                    "and will be ignored",
+                                    extra={'interface_number': self.interface_number,
+                                           'requested_ngran': [self._mm_constant_to_band_name(b) for b in requested_ngran]})
 
                     logger.info("Applying per-SIM ∩ modem band filter",
                                extra={'interface_number': self.interface_number,
@@ -7005,140 +7039,12 @@ class ModemStateMachine:
                                   'error': str(band_e),
                                   'per_sim_bands': per_sim_bands_cfg})
 
-            # Enforce the 5G NR band selection separately.  ModemManager's
-            # CurrentBands write path does not cover NR on QMI modems, so this
-            # is applied over QMI (libqmi) regardless of whether the MM write
-            # above succeeded.
-            await self._configure_nr_band_preference()
-
         except Exception as e:
             logger.error(f"Band configuration error: {e}",
                         extra={'interface_number': self.interface_number})
             # Don't fail the entire configuration for band issues
             logger.warning("Continuing configuration without band changes",
                           extra={'interface_number': self.interface_number})
-
-    async def _configure_nr_band_preference(self):
-        """Enforce the per-SIM 5G NR band selection over QMI.
-
-        ModemManager's ``CurrentBands`` write path does not cover 5G NR on
-        QMI modems, so NR band selection from ``supported-bands`` is applied
-        here via the ``igos-wwan-qmi-band-set`` helper (libqmi GI bindings).
-
-        The selection is written with change-duration POWER_CYCLE so the modem
-        does not persist it — VyOS config stays authoritative and this runs on
-        every startup / SIM change / config change while the modem is disabled.
-        ``all`` (or an empty / over-restrictive selection) writes the modem's
-        full supported NR set, clearing any prior restriction.  Never raises.
-        """
-        try:
-            if not self.config or not self.proxy:
-                return
-
-            # Resolve per-SIM band configuration (same source as MM bands).
-            primary_sim_slot = self.config.get('primary_sim_slot', 1)
-            sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next(
-                (sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
-            per_sim_bands_raw = active_sim_config.get('supported_bands', 'all')
-            if isinstance(per_sim_bands_raw, str):
-                per_sim_bands_cfg = [b.strip() for b in per_sim_bands_raw.split(',') if b.strip()]
-            else:
-                per_sim_bands_cfg = list(per_sim_bands_raw)
-            per_sim_is_all = (per_sim_bands_cfg == ['all'] or not per_sim_bands_cfg)
-
-            # The helper must be installed (it pulls in the libqmi GI typelib).
-            helper = shutil.which('igos-wwan-qmi-band-set') or \
-                '/usr/bin/igos-wwan-qmi-band-set'
-            if not os.path.exists(helper):
-                logger.info("igos-wwan-qmi-band-set helper not installed — "
-                            "skipping 5G NR band enforcement",
-                            extra={'interface_number': self.interface_number})
-                return
-
-            # QMI control device for this modem.
-            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-            modem_all_raw = await props.call_get_all(MODEM_INTERFACE)
-            modem_props = {k: (v.value if hasattr(v, 'value') else v)
-                           for k, v in modem_all_raw.items()}
-            device = self._qmi_control_device(modem_props)
-            if not device:
-                return  # MBIM/AT-only modem — no QMI port to write NR bands on
-
-            # Modem's supported NR set as band numbers (QMI caps use base 300).
-            caps = await self._qmi_get_band_capability_constants(modem_props)
-            supported_nr = sorted({c - 300 for c in caps if c >= 301})
-            if not supported_nr:
-                # Modem reports no 5G NR capability — nothing to enforce.
-                return
-
-            # Compute the desired NR band numbers.
-            if per_sim_is_all:
-                desired_nr = supported_nr
-            else:
-                requested_nr = sorted({
-                    self._band_name_to_mm_constant(name) - 300
-                    for name in per_sim_bands_cfg
-                    if (self._band_name_to_mm_constant(name) or 0) >= 301
-                })
-                desired_nr = [b for b in requested_nr if b in supported_nr]
-                if not desired_nr:
-                    # None of the requested NR bands are supported (or none
-                    # were requested) — write the full supported set so no
-                    # stale restriction lingers, mirroring the LTE/MM
-                    # "empty intersection" fallback.
-                    logger.info("No supported 5G NR band in per-SIM selection — "
-                                "writing full supported NR set",
-                                extra={'interface_number': self.interface_number,
-                                       'requested_nr': requested_nr,
-                                       'supported_nr': supported_nr})
-                    desired_nr = supported_nr
-
-            nr_csv = ','.join(str(b) for b in desired_nr)
-
-            # In-process dedupe: skip the helper when this exact NR set was
-            # already written earlier in *this* process (a runtime reconfigure
-            # that didn't change the NR bands).  The cache is wiped on any
-            # restart, so the POWER_CYCLE-duration write is still re-asserted on
-            # every fresh start / reboot / modem reset.
-            if self._last_nr_bands_written == desired_nr:
-                logger.info("5G NR band preference unchanged this session — "
-                            "skipping QMI write",
-                            extra={'interface_number': self.interface_number,
-                                   'nr_bands': desired_nr})
-                return
-
-            logger.info("Enforcing 5G NR band preference over QMI",
-                        extra={'interface_number': self.interface_number,
-                               'device': device,
-                               'nr_bands': desired_nr})
-
-            proc = await asyncio.create_subprocess_exec(
-                helper, '--device', device, '--nr-bands', nr_csv,
-                '--duration', 'power-cycle',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
-            detail = (err or out or b'').decode(errors='replace').strip()
-            if proc.returncode == 0:
-                # Record only on success so a failed write is retried next time.
-                self._last_nr_bands_written = list(desired_nr)
-                logger.info("5G NR band preference applied",
-                            extra={'interface_number': self.interface_number,
-                                   'nr_bands': desired_nr, 'detail': detail})
-            else:
-                logger.warning("5G NR band preference not applied",
-                               extra={'interface_number': self.interface_number,
-                                      'returncode': proc.returncode,
-                                      'detail': detail})
-        except asyncio.TimeoutError:
-            logger.warning("5G NR band preference helper timed out",
-                           extra={'interface_number': self.interface_number})
-        except Exception as e:
-            logger.info("5G NR band enforcement skipped",
-                        extra={'interface_number': self.interface_number,
-                               'error': str(e)})
 
     async def _configure_network_mode(self):
         """Configure network mode (access technology) on the modem.
@@ -7522,122 +7428,6 @@ class ModemStateMachine:
             pass
         return None
 
-    async def _qmi_get_band_capability_constants(self, modem_props):
-        """Read the modem's hardware band capability via ``qmicli``.
-
-        ModemManager does not enumerate 5G NR bands in ``SupportedBands``
-        for QMI modems, so this fills the gap for status reporting by reading
-        the capability straight from the modem via ``qmicli``:
-
-        * **LTE** comes from DMS Get Band Capabilities
-          (``LTE bands (extended):``).
-        * **NR5G** comes from NAS Get System Selection Preference
-          (``NR5G SA/NSA band preference:``).  The DMS message has an
-          optional NR TLV, but it is left unpopulated on many QMI modems
-          (e.g. Telit FN920); NAS exposes the NR list as the band
-          *preference*, which with an unrestricted registration equals the
-          modem's supported NR set.
-
-        Runs over the shared ModemManager ``qmi-proxy`` (``-p``) so it does
-        not disturb MM's own QMI session, and only ever *reads* (no state
-        change).  Band capability is immutable hardware info, so the result
-        is cached for the life of the service.  Never raises.
-
-        :returns: list of MM band constants (``300 + N`` for NR, ``30 + N``
-            for LTE), or ``[]`` when QMI is unavailable.
-        """
-        if self._cached_qmi_band_capability is not None:
-            return self._cached_qmi_band_capability
-
-        constants = []
-        try:
-            device = self._qmi_control_device(modem_props)
-            if not device:
-                self._cached_qmi_band_capability = []
-                return []
-            if not shutil.which('qmicli'):
-                logger.info("qmicli not installed — cannot read 5G NR band "
-                            "capability via QMI",
-                            extra={'interface_number': self.interface_number})
-                self._cached_qmi_band_capability = []
-                return []
-
-            async def _qmicli(*args):
-                """Run a read-only qmicli command over MM's qmi-proxy.
-
-                Returns stdout text, or ``None`` on non-zero exit.
-                """
-                proc = await asyncio.create_subprocess_exec(
-                    'qmicli', '-d', device, '-p', *args,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                out, err = await asyncio.wait_for(proc.communicate(), timeout=10)
-                if proc.returncode != 0:
-                    logger.info("qmicli query failed",
-                                extra={'interface_number': self.interface_number,
-                                       'device': device,
-                                       'args': ' '.join(args),
-                                       'error': err.decode(errors='replace').strip()})
-                    return None
-                return out.decode(errors='replace')
-
-            def _collect(pattern, base, text):
-                """Append ``base + N`` for every band number N matched by
-                ``pattern`` (group 1 is a comma-separated list).  Non-numeric
-                values such as ``'none'`` are skipped."""
-                for match in re.finditer(pattern, text, re.IGNORECASE):
-                    for tok in match.group(1).split(','):
-                        digits = re.search(r'\d+', tok)
-                        if digits:
-                            constants.append(base + int(digits.group()))
-
-            # --- LTE capability via DMS Get Band Capabilities ---
-            # Labels are stable; only the bare-number lines are parsed (the
-            # name-form lines duplicate MM's SupportedBands and are awkward to
-            # parse reliably):
-            #   LTE bands (extended): '1, 3, 7, ...'  ← bare band numbers
-            #   NR5G bands: '1, 3, 78, ...'           ← bare band numbers (rare)
-            dms = await _qmicli('--dms-get-band-capabilities')
-            if dms is None:
-                self._cached_qmi_band_capability = []
-                return []
-            _collect(r"LTE bands \(extended\):\s*'([^']*)'", 30, dms)
-            # Some modems populate NR here; most (e.g. Telit FN920) do not.
-            _collect(r"NR5G bands:\s*'([^']*)'", 300, dms)
-
-            # --- NR capability via NAS Get System Selection Preference ---
-            # The DMS message's optional NR TLV is unpopulated on many QMI
-            # modems, so NAS is the real NR source.  It reports the NR list as
-            # the band *preference*; with an unrestricted registration that
-            # preference equals the modem's supported NR set.  Only consult NAS
-            # when DMS yielded no NR constants, so a modem that does report NR
-            # in DMS keeps that authoritative value.
-            #   NR5G SA band preference: '1, 3, 78, ...'   ← bare band numbers
-            #   NR5G NSA band preference: '1, 3, 78, ...'  ← bare band numbers
-            if not any(c >= 300 for c in constants):
-                nas = await _qmicli('--nas-get-system-selection-preference')
-                if nas:
-                    _collect(
-                        r"NR5G (?:SA |NSA )?band preference(?: \(extended\))?:"
-                        r"\s*'([^']*)'", 300, nas)
-
-            constants = sorted(set(constants))
-            logger.info("Read band capability over QMI",
-                        extra={'interface_number': self.interface_number,
-                               'device': device,
-                               'qmi_band_constants': constants})
-        except asyncio.TimeoutError:
-            logger.info("qmicli band-capability query timed out",
-                        extra={'interface_number': self.interface_number})
-        except Exception as e:
-            logger.info("Band capability not readable over QMI",
-                        extra={'interface_number': self.interface_number,
-                               'error': str(e)})
-
-        self._cached_qmi_band_capability = constants
-        return constants
-
     async def _qmi_get_serving_cell_info(self, modem_props) -> dict:
         """Read live serving-cell info (band, channel, cell IDs) via ``qmicli``.
 
@@ -7793,6 +7583,68 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number,
                                'error': str(e)})
         return info
+
+    async def _qmi_get_current_apn(self, modem_props=None) -> str:
+        """Read the carrier-negotiated APN of the live session via ``qmicli``.
+
+        ModemManager's ``Bearer.Properties.apn`` only echoes back the value we
+        passed to ``Simple.Connect()`` — including the empty string on the
+        automatic-assignment path — so it cannot tell us which APN the network
+        actually activated.  The genuinely-negotiated APN is exposed by QMI
+        ``WDS Get Current Settings`` for the running packet session.
+
+        Runs over the shared ModemManager ``qmi-proxy`` (``-p``, read-only) so
+        it does not disturb MM's own QMI session.  Never raises.
+
+        :param modem_props: optional pre-fetched Modem property dict; fetched
+            from the live modem when omitted.
+        :returns: the negotiated APN name, or ``''`` when unavailable.
+        """
+        try:
+            if modem_props is None:
+                if not self.proxy:
+                    return ''
+                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                modem_all_raw = await props.call_get_all(MODEM_INTERFACE)
+                modem_props = {k: (v.value if hasattr(v, 'value') else v)
+                               for k, v in modem_all_raw.items()}
+
+            device = self._qmi_control_device(modem_props)
+            if not device:
+                return ''  # MBIM/AT-only modem — no QMI port
+            if not shutil.which('qmicli'):
+                return ''
+
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    'qmicli', '-d', device, '-p', '--wds-get-current-settings',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                out, err = await asyncio.wait_for(proc.communicate(), timeout=8)
+            except asyncio.TimeoutError:
+                logger.info("qmicli current-APN query timed out",
+                            extra={'interface_number': self.interface_number})
+                return ''
+            if proc.returncode != 0:
+                logger.info("qmicli current-APN query failed",
+                            extra={'interface_number': self.interface_number,
+                                   'device': device,
+                                   'error': err.decode(errors='replace').strip()})
+                return ''
+
+            # Output carries one "APN: 'name'" line per active WDS session
+            # (IPv4/IPv6 share the same APN).  Take the first non-empty value.
+            text = out.decode(errors='replace')
+            for match in re.finditer(r"APN:\s*'([^']*)'", text, re.IGNORECASE):
+                apn = match.group(1).strip()
+                if apn:
+                    return apn
+        except Exception as e:
+            logger.info("Negotiated APN not readable over QMI",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
+        return ''
 
     def _requires_disconnection(self, old_config, new_config):
         """Determine whether a config change impacts the *running* connection.
@@ -8736,7 +8588,12 @@ class ModemStateMachine:
             try:
                 bearer_properties_variant = await props.call_get(BEARER_INTERFACE, "Properties")
                 bearer_properties = bearer_properties_variant.value if bearer_properties_variant else {}
-                assigned_apn = bearer_properties.get('apn', 'Unknown')
+                assigned_apn = bearer_properties.get('apn', '')
+
+                # MM only echoes the requested APN (empty on this path), so ask
+                # the modem over QMI for the APN the carrier actually activated.
+                if not assigned_apn:
+                    assigned_apn = await self._qmi_get_current_apn() or 'Unknown'
 
                 logger.info("Detected automatically assigned APN",
                            extra={'interface_number': self.interface_number,
@@ -10238,6 +10095,11 @@ class ModemStateMachine:
         status['connected_apn'] = apn.get('name', '')
         status['connected_apn_auth'] = apn.get('auth_type', '')
         status['connected_apn_username'] = apn.get('username', '')
+        # APN we asked MM to connect with, and the one the carrier actually
+        # activated (read over QMI).  A mismatch flags a network override —
+        # surfaced separately so troubleshooting can see both.
+        status['requested_apn'] = self.requested_apn or ''
+        status['negotiated_apn'] = self.negotiated_apn or ''
 
         # ── 4 & 5. Modem hardware + registration (batched GetAll) ────────
         # A single GetAll on MODEM_INTERFACE replaces ~12 individual
@@ -10296,10 +10158,9 @@ class ModemStateMachine:
                     status['current_bands'] = []
 
                 # Supported (capability) bands — every band the modem reports
-                # it can operate on.  ModemManager's SupportedBands omits 5G NR
-                # on many QMI modems (a known MM < 1.22 limitation), so when no
-                # NGRAN band is present we fall back to qmicli's DMS band
-                # capability to recover the 5G NR (and LTE) list.
+                # it can operate on, as exposed by ModemManager's SupportedBands
+                # (this includes 5G NR; RedCap-only bands are not advertised
+                # until registration and cannot be set, so they are absent here).
                 supported_constants = []
                 supported_list = modem_props.get('SupportedBands', [])
                 if supported_list and hasattr(supported_list, '__iter__'):
@@ -10309,11 +10170,6 @@ class ModemStateMachine:
                             supported_constants.append(int(bv))
                         except (TypeError, ValueError):
                             continue
-                # MM exposes no 5G NR capability → ask the modem over QMI.
-                if not any(300 <= c <= 1000 for c in supported_constants):
-                    for c in await self._qmi_get_band_capability_constants(modem_props):
-                        if c not in supported_constants:
-                            supported_constants.append(c)
                 seen_band_names = set()
                 supported_band_names = []
                 for c in sorted(supported_constants):

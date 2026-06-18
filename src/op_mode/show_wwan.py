@@ -100,6 +100,8 @@ def _raw_status(status: dict) -> dict:
         'operator_code': status.get('operator_code', ''),
         'registration_state': status.get('registration_state', ''),
         'apn': status.get('connected_apn', ''),
+        'requested_apn': status.get('requested_apn', ''),
+        'negotiated_apn': status.get('negotiated_apn', ''),
         'ipv4_address': status.get('ipv4_address', ''),
         'ipv6_address': status.get('ipv6_address', ''),
         'ipv4_gateway': status.get('ipv4_gateway', ''),
@@ -240,6 +242,12 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_kv('Operator:', d['operator']))
     lines.append(_kv('Operator code:', d['operator_code']))
     lines.append(_kv('APN:', d['apn']))
+    # When the carrier activated a different APN than we requested, show both
+    # so the override is obvious during troubleshooting.
+    if d['negotiated_apn'] and d['requested_apn'] \
+            and d['negotiated_apn'] != d['requested_apn']:
+        lines.append(_kv('Requested APN:', d['requested_apn']))
+        lines.append(_kv('Negotiated APN:', d['negotiated_apn']))
     if d['failure_reason']:
         lines.append(_kv('Failure reason:', d['failure_reason']))
     lines.append(_kv('Log level:', d['log_level']))

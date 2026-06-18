@@ -1153,17 +1153,13 @@ set interfaces wwan wwan0 failed-retry escalation-threshold 3
 > "honour the last state". This makes the outcome predictable and recoverable
 > even if the band value was wrong.
 >
-> **2G/3G/LTE** band restrictions are applied via ModemManager's
-> `CurrentBands` property.  **5G NR** band restrictions are applied separately
-> over QMI (libqmi) because ModemManager does not expose an NR band write path
-> on QMI modems.  The NR selection is written with change-duration
-> `POWER_CYCLE`, so the modem does **not** persist it — VyOS configuration
-> stays authoritative and the selection is re-applied on every startup, SIM
-> change and configuration change.  Selecting `all` (or a selection that
-> matches no supported NR band) writes the modem's full supported NR set,
-> clearing any prior restriction.  NR enforcement requires a QMI modem and the
-> `gir1.2-qmi-1.0` typelib (installed by the `igos-wwan-qmi-band-set` helper's
-> dependency); on non-QMI modems it is silently skipped.
+> **2G/3G/LTE and 5G NR** band restrictions are all applied via ModemManager's
+> `CurrentBands` property.  ModemManager exposes the modem's supported 5G NR
+> bands in `SupportedBands`, so no separate QMI write path is needed.  Any
+> requested band the modem does not advertise (for example RedCap-only bands,
+> which are not exposed until registration and cannot be set) is silently
+> ignored.  Selecting `all` (or a selection that matches no supported band)
+> enables the modem's full supported band set, clearing any prior restriction.
 >
 > `preferred-carrier` and `enable-network-scan` are **per-SIM only** settings
 > because each SIM has its own carrier.  Configure them under
