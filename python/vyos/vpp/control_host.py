@@ -444,8 +444,10 @@ def flush_ip(iface_name: str) -> None:
     Args:
         iface_name (str): name of an interface
     """
-    iproute = IPRoute()
-    iproute.flush_addr(label=iface_name)
+    with IPRoute() as iproute:
+        index = iproute.link_lookup(ifname=iface_name)
+        if index:
+            iproute.flush_addr(index=index[0])
 
 
 def get_eth_channels(iface_name: str) -> dict:
