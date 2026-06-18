@@ -3189,16 +3189,25 @@ class ModemStateMachine:
                         connection_successful = True
                     elif reason == 'connection_failed':
                         logger.warning(
-                            "Configured APN attempt failed for non-APN reason; restarting full connection flow",
+                            "Configured APN attempt failed for non-APN reason; "
+                            "a non-APN failure means trying other APNs is pointless — "
+                            "failing the connection and offering SIM failover",
                             extra={'interface_number': self.interface_number,
                                    'apn_name': apn_config.get('name', 'unknown'),
                                    'failure_reason': reason})
                         self.last_failure_reason = (
-                            "Non-APN modem/network failure occurred during configured APN attempt; "
-                            "restarting connection workflow from the beginning."
+                            "Non-APN modem/network failure occurred during configured APN attempt "
+                            "(e.g. the SIM could not register on the configured band/network)."
                         )
                         self.last_failure_time = time.time()
+                        self.initial_connection_failure_count += 1
                         self.transition(ModemEvent.CONNECTION_FAILED)
+                        # A non-APN connect failure usually means the modem
+                        # could not register / carry data on this SIM (e.g. a
+                        # band-restricted SIM with no matching coverage).  Offer
+                        # dual-SIM failover — no-op when no alternate SIM exists
+                        # or cooldown is active.
+                        await self._handle_sim_missing_failover()
                         return
 
             # PRIORITY 1.5: Try in-memory last-connected APN (fastest reconnection)
@@ -3219,16 +3228,23 @@ class ModemStateMachine:
                                           'apn_name': last_apn_name})
                     elif reason == 'connection_failed':
                         logger.warning(
-                            "Last-known APN failed for non-APN reason; restarting full connection flow",
+                            "Last-known APN failed for non-APN reason; "
+                            "a non-APN failure means trying other APNs is pointless — "
+                            "failing the connection and offering SIM failover",
                             extra={'interface_number': self.interface_number,
                                    'apn_name': last_apn_name,
                                    'failure_reason': reason})
                         self.last_failure_reason = (
-                            "Non-APN modem/network failure occurred during last-known APN attempt; "
-                            "restarting connection workflow from the beginning."
+                            "Non-APN modem/network failure occurred during last-known APN attempt "
+                            "(e.g. the SIM could not register on the configured band/network)."
                         )
                         self.last_failure_time = time.time()
+                        self.initial_connection_failure_count += 1
                         self.transition(ModemEvent.CONNECTION_FAILED)
+                        # See note in the configured-APN branch: a non-APN
+                        # connect failure (no registration / no data path)
+                        # warrants dual-SIM failover.  No-op when no alternate.
+                        await self._handle_sim_missing_failover()
                         return
 
             # PRIORITY 3: Try APNs from discovery service
@@ -3242,15 +3258,21 @@ class ModemStateMachine:
                         connection_successful = True
                     elif discovery_reason == 'restart_required':
                         logger.warning(
-                            "Discovery phase reported non-APN MM failure; restarting full connection flow",
+                            "Discovery phase reported non-APN MM failure; "
+                            "failing the connection and offering SIM failover",
                             extra={'interface_number': self.interface_number,
                                    'failure_reason': discovery_reason})
                         self.last_failure_reason = (
-                            "Non-APN modem/network failure occurred during APN discovery; "
-                            "restarting connection workflow from the beginning."
+                            "Non-APN modem/network failure occurred during APN discovery "
+                            "(e.g. the SIM could not register on the configured band/network)."
                         )
                         self.last_failure_time = time.time()
+                        self.initial_connection_failure_count += 1
                         self.transition(ModemEvent.CONNECTION_FAILED)
+                        # See note in the configured-APN branch: a non-APN
+                        # failure warrants dual-SIM failover.  No-op when no
+                        # alternate SIM exists or cooldown is active.
+                        await self._handle_sim_missing_failover()
                         return
                 except Exception as e:
                     logger.warning(f"APN discovery service failed: {e}",
