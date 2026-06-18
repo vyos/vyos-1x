@@ -63,6 +63,7 @@ sort_valid_inet = [
 sort_valid_inet6 = [
     'end',
     'duid',
+    'hostname',
     'ip',
     'last_communication',
     'pool',
@@ -70,7 +71,7 @@ sort_valid_inet6 = [
     'state',
     'type',
 ]
-mapping_sort_valid = ['mac', 'ip', 'pool', 'duid']
+mapping_sort_valid = ['mac', 'hostname', 'ip', 'pool', 'duid']
 
 stale_warn_msg = 'DHCP server is configured but not started. Data may be stale.'
 
@@ -91,9 +92,9 @@ def _get_raw_server_leases(
 
     if sorted:
         if sorted == 'ip':
-            mappings.sort(key=lambda x: ip_address(x['ip']))
+            mappings.sort(key=lambda x: ip_address(val) if (val := x.get('ip')) else '')
         else:
-            mappings.sort(key=lambda x: x[sorted])
+            mappings.sort(key=lambda x: x.get(sorted) or '')
     return mappings
 
 
@@ -226,9 +227,9 @@ def _get_raw_server_static_mappings(config, family='inet', pool=None, sorted=Non
 
     if sorted:
         if sorted == 'ip':
-            mappings.sort(key=lambda x: ip_address(x['ip']))
+            mappings.sort(key=lambda x: ip_address(val) if (val := x.get('ip')) else '')
         else:
-            mappings.sort(key=lambda x: x[sorted])
+            mappings.sort(key=lambda x: x.get(sorted) or '')
     return mappings
 
 
@@ -239,10 +240,11 @@ def _get_formatted_server_static_mappings(raw_data):
         pool = entry.get('pool')
         subnet = entry.get('subnet')
         hostname = entry.get('hostname')
-        ip_addr = entry.get('ip', 'N/A')
-        mac_addr = entry.get('mac', 'N/A')
-        duid = entry.get('duid', 'N/A')
-        desc = entry.get('description', 'N/A')
+        # These fields may be either None or '', display 'N/A' in both cases
+        ip_addr = entry.get('ip') or 'N/A'
+        mac_addr = entry.get('mac') or 'N/A'
+        duid = entry.get('duid') or 'N/A'
+        desc = entry.get('description') or 'N/A'
         data_entries.append([pool, subnet, hostname, ip_addr, mac_addr, duid, desc])
 
     headers = [
