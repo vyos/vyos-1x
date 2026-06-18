@@ -27,7 +27,11 @@ CF=/opt/vyatta/etc/config/config.boot
 ADMIN=vyos
 
 set_encrypted_password() {
-    local user=$1 epwd=$2 file=$3
+    local user_raw=$1 epwd=$2 file=$3
+    local user
+
+    # Escape the username before using it in awk/sed regexes
+    user=$(printf '%s' "$user_raw" | sed -e 's/\./\\&/g')
 
     # Check if encrypted-password exists within this specific user's block
     if awk "/ user $user \{/{f=1} f && /encrypted-password/{found=1; exit} f && /^        }/{exit} END{exit !found}" "$file"; then
@@ -35,15 +39,41 @@ set_encrypted_password() {
         sed -i \
            -e "/ user $user {/,/encrypted-password/s/encrypted-password .*\$/encrypted-password \"$epwd\"/" "$file"
     else
-        # Insert encrypted-password after plaintext-password
-        sed -i \
-           -e "/ user $user {/,/plaintext-password/s/\(plaintext-password .*\)\$/\1\n                encrypted-password \"$epwd\"/" "$file"
+        # Key-only account: no encrypted-password or plaintext-password line exists
+        # in this user's block (e.g. authentication via SSH key only).
+        if awk "/ user $user \{/{f=1} f && /authentication \{/{found=1; exit} f && /^        \}/{exit} END{exit !found}" "$file"; then
+            # 'authentication' block exists - insert encrypted-password inside it
+            sed -i \
+               -e "/ user $user {/,/authentication {/s/\(authentication {\)\$/\1\n                encrypted-password \"$epwd\"/" "$file"
+        else
+            # No authentication block at all. Without this branch the sed range
+            # above would overrun the block boundary and corrupt a later account's
+            # authentication block. Build the section from scratch instead.
+            sed -i \
+               -e "/ user $user {/a\\
+            authentication {\\
+                encrypted-password \"$epwd\"\\
+                plaintext-password \"\"\\
+            }" "$file"
+        fi
     fi
 }
 
 clear_plaintext_password() {
-   sed -i \
-      -e "/ user $1 {/,/plaintext-password/s/plaintext-password .*\$/plaintext-password \"\"/" $2
+    local user_raw=$1 file=$2
+    local user
+
+    # Escape the username before using it in awk/sed regexes
+    user=$(printf '%s' "$user_raw" | sed -e 's/\./\\&/g')
+
+    # Only clear if plaintext-password exists within this specific user's block.
+    # Without this guard, if the user has no plaintext-password line the sed
+    # range never closes inside their block and spills into the next account
+    # that does have one, wiping that account's plaintext-password instead.
+    if awk "/ user $user \{/{f=1} f && /plaintext-password/{found=1; exit} f && /^        \}/{exit} END{exit !found}" "$file"; then
+        sed -i \
+           -e "/ user $user {/,/plaintext-password/s/plaintext-password .*\$/plaintext-password \"\"/" "$file"
+    fi
 }
 
 
