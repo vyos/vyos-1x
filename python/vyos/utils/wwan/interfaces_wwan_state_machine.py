@@ -3065,8 +3065,15 @@ class ModemStateMachine:
                 await self._handle_sim_missing_failover()
                 return
 
-            # Get SIM config for connection parameters
-            active_slot = self.config.get('primary_sim_slot', 1) if self.config else 1
+            # Get SIM config for connection parameters.  Anchor on the slot
+            # actually active.  Normally _configure_sim_slot (Step 2) has just
+            # forced the modem onto the primary and set current_active_sim to
+            # it, so this equals primary_sim_slot — but if that switch failed
+            # and we are still on a different slot, current_active_sim reflects
+            # reality, so the connect params (pdp_type/roaming) match the SIM
+            # the modem is genuinely on.
+            active_slot = self.current_active_sim or (
+                self.config.get('primary_sim_slot', 1) if self.config else 1)
             sim_config = {'pdp_type': 'ipv4v6', 'roaming': 'enabled'}  # defaults
 
             if self.config and 'sim_slots' in self.config:
@@ -3584,10 +3591,12 @@ class ModemStateMachine:
                                   'pin_retries': self._pin_retries_remaining,
                                   'puk_retries': self._puk_retries_remaining})
 
-                primary_sim_slot = self.config.get('primary_sim_slot', 1)
+                # Anchor on the active slot so the correct SIM's PIN/PUK is
+                # used after a failover (not the configured primary's).
+                active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
                 sim_slots = self.config.get('sim_slots', [])
                 active_sim_config = next(
-                    (sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {}
+                    (sim for sim in sim_slots if sim['slot'] == active_slot), {}
                 )
 
                 if unlock_required == 1:  # MM_MODEM_LOCK_SIM_PIN
@@ -3870,10 +3879,13 @@ class ModemStateMachine:
             if not self.config:
                 return
 
-            # Get active SIM configuration
-            primary_sim_slot = self.config.get('primary_sim_slot', 1)
+            # Get active SIM configuration.  Anchor on the slot that is
+            # actually active (current_active_sim) so a failover SIM's own
+            # preferred-carrier / network-scan settings are used, not the
+            # configured primary's.  Falls back to primary before first switch.
+            active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
+            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_slot), {})
 
             preferred_carrier = active_sim_config.get('preferred_carrier', '')
             enable_network_scan = active_sim_config.get('enable_network_scan', False)
@@ -4185,6 +4197,88 @@ class ModemStateMachine:
                       extra={'interface_number': self.interface_number,
                              'timeout_seconds': timeout})
         return False
+
+    async def _force_network_reregistration(self, reason: str = 'reregister'):
+        """Nudge the modem to (re)acquire the network after a config change.
+
+        Writing CurrentBands / SetCurrentModes on an ENABLED modem changes the
+        allowed RF set, but some modems (notably Telit QMI modems) do not
+        re-evaluate registration on their own afterwards — they stay parked at
+        ENABLED/SEARCHING using the prior context, so a freshly-switched SIM can
+        sit idle until the registration timeout fires.
+
+        Two-step nudge, both best-effort and non-fatal:
+          1. Ask ModemManager for AUTOMATIC registration (``Modem3gpp.Register``
+             with an empty operator id).  This is the light "go attach now"
+             kick and is enough on most modems.
+          2. If the modem is still not registered shortly after, do a clean
+             disable→enable cycle, which forces a full PLMN/cell re-scan with
+             the new band/mode set in effect.  CurrentBands persists across the
+             cycle, so the restriction stays applied.
+
+        Returns True if the modem is registered by the end, else False.
+        """
+        if not self.proxy:
+            return False
+
+        props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+
+        async def _is_registered() -> bool:
+            try:
+                state_v = await props.call_get(MODEM_INTERFACE, "State")
+                return state_v.value in (8, 10, 11)
+            except Exception:
+                return False
+
+        # Already registered — nothing to nudge.
+        if await _is_registered():
+            return True
+
+        # Step 1: request automatic registration.
+        try:
+            gpp_iface = self.proxy.get_interface(
+                "org.freedesktop.ModemManager1.Modem.Modem3gpp")
+            logger.info("Requesting automatic network registration",
+                       extra={'interface_number': self.interface_number,
+                              'reason': reason})
+            # Register('') blocks until the modem attaches or errors; cap it so
+            # a no-coverage band can't stall the switch flow here (the caller's
+            # connection cascade has its own registration gate + failover).
+            await asyncio.wait_for(gpp_iface.call_register(''), timeout=30)
+        except asyncio.TimeoutError:
+            logger.info("Automatic registration request still pending after 30s",
+                       extra={'interface_number': self.interface_number,
+                              'reason': reason})
+        except Exception as e:
+            logger.debug(f"Automatic registration request failed (non-fatal): {e}",
+                        extra={'interface_number': self.interface_number,
+                               'reason': reason})
+
+        if await _is_registered():
+            logger.info("Modem registered after automatic-registration nudge",
+                       extra={'interface_number': self.interface_number,
+                              'reason': reason})
+            return True
+
+        # Step 2: heavier kick — disable→enable to force a full re-scan.
+        try:
+            logger.info("Modem still not registered — forcing disable/enable "
+                       "cycle to re-acquire on the new configuration",
+                       extra={'interface_number': self.interface_number,
+                              'reason': reason})
+            await self._ensure_modem_disabled_for_config()
+            await self._ensure_modem_enabled()
+        except Exception as e:
+            logger.warning(f"Disable/enable re-registration cycle failed (non-fatal): {e}",
+                          extra={'interface_number': self.interface_number,
+                                 'reason': reason})
+
+        registered = await _is_registered()
+        logger.info("Re-registration nudge complete",
+                   extra={'interface_number': self.interface_number,
+                          'reason': reason,
+                          'registered': registered})
+        return registered
 
     async def _ensure_modem_disabled_for_config(self):
         """Ensure modem is disabled for SIM/band configuration"""
@@ -6820,6 +6914,26 @@ class ModemStateMachine:
             await self._configure_supported_bands()
             await self._configure_network_mode()
 
+            # Apply the NEW SIM's preferred-carrier / network-scan policy.
+            # _configure_preferred_carrier anchors on the active slot, so the
+            # failover SIM's own preferred carrier is honored.  When a
+            # preferred carrier is configured it issues a direct
+            # Modem3gpp.Register(MCCMNC) — which is itself the re-registration
+            # kick for that case; when none is configured it returns early and
+            # the automatic-registration nudge below does the kick instead.
+            await self._configure_preferred_carrier()
+
+            # Nudge the modem to (re)register on the NEW SIM.  After a SIM
+            # switch the modem is ENABLED and we have just rewritten its
+            # allowed-band / mode set, but some modems (e.g. Telit FN920) sit
+            # idle instead of actively searching — the old SIM's registration
+            # context is gone and nothing tells the modem to attach again.
+            # Requesting automatic registration kicks off a fresh PLMN/cell
+            # search with the new band set in effect so the new SIM actually
+            # comes up instead of waiting out the registration timeout.  This is
+            # a no-op when _configure_preferred_carrier already registered us.
+            await self._force_network_reregistration('sim_switch')
+
             # SIM switch complete - transition back to normal configuration
             self.transition(ModemEvent.SIM_SWITCH_COMPLETE)
 
@@ -6940,9 +7054,16 @@ class ModemStateMachine:
                 return
 
             # ── Read per-SIM band configuration ─────────────────────────
-            primary_sim_slot = self.config.get('primary_sim_slot', 1)
+            # Use the slot that is ACTUALLY ACTIVE, not the configured primary.
+            # After a SIM failover current_active_sim is the failover slot, and
+            # we must apply THAT slot's bands — otherwise the primary's band
+            # restriction (e.g. eutran-8) gets re-applied to the failover SIM,
+            # locking it to a band it may not support and preventing it from
+            # ever registering.  Falls back to primary_sim_slot during initial
+            # configuration before current_active_sim is set.
+            active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
+            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_slot), {})
 
             per_sim_bands_raw = active_sim_config.get('supported_bands', 'all')
             if isinstance(per_sim_bands_raw, str):
@@ -6952,7 +7073,7 @@ class ModemStateMachine:
 
             logger.info("Configuring supported bands while disabled",
                        extra={'interface_number': self.interface_number,
-                              'primary_sim_slot': primary_sim_slot,
+                              'active_sim_slot': active_slot,
                               'per_sim_bands': per_sim_bands_cfg})
 
             # Get what bands the modem actually supports (MM returns numeric constants)
@@ -7003,7 +7124,7 @@ class ModemStateMachine:
                                       "These entries are ignored.",
                                       extra={'interface_number': self.interface_number,
                                              'ignored_groups': per_sim_tech_groups,
-                                             'sim_slot': primary_sim_slot})
+                                             'sim_slot': active_slot})
                     if per_sim_invalid:
                         logger.warning("Invalid per-SIM band names ignored",
                                       extra={'interface_number': self.interface_number,
@@ -8281,10 +8402,14 @@ class ModemStateMachine:
                     self.connected_apn = None
                     self._clear_persisted_apn()
 
-            # Get active SIM configuration
-            primary_sim_slot = self.config.get('primary_sim_slot', 1)
+            # Get active SIM configuration.  Anchor on the slot that is
+            # actually active (current_active_sim), not the configured primary —
+            # after a SIM failover we must use the failover slot's APN/config,
+            # not the primary's.  Falls back to primary_sim_slot before the
+            # first switch.
+            active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
+            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_slot), {})
 
             # Get normalized APN configuration
             apn_config = self._normalize_apn_config(active_sim_config.get('apn', ''))
@@ -8315,7 +8440,7 @@ class ModemStateMachine:
             # 🎯 NEW: Auto-discovery flow
             logger.info("Starting APN auto-discovery",
                        extra={'interface_number': self.interface_number,
-                              'primary_sim_slot': primary_sim_slot,
+                              'active_sim_slot': active_slot,
                               'library_available': APN_LOOKUP_AVAILABLE})
 
             # Get SIM information for lookup
