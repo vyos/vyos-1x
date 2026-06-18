@@ -3036,37 +3036,34 @@ class ModemStateMachine:
             # wrong reason. The post-FAILED path (apply_modem_configuration)
             # already has this gate; replicate it here for the startup
             # cascade in _configure_modem_initial as well.
-            try:
-                state_v = await props.call_get(MODEM_INTERFACE, "State")
-                pre_connect_state = state_v.value
-            except Exception:
-                pre_connect_state = None
-
-            if pre_connect_state is not None and pre_connect_state < 8:
-                logger.info(
-                    "Waiting for modem to reach REGISTERED before connection cascade",
-                    extra={'interface_number': self.interface_number,
-                           'modem_state': pre_connect_state})
-                registered = await self._wait_for_registered()
-                if not registered:
-                    logger.warning(
-                        "Modem did not register in time — aborting connection cascade",
-                        extra={'interface_number': self.interface_number})
-                    self.last_failure_reason = (
-                        "Modem failed to reach REGISTERED state within the "
-                        "configured registration timeout. The SIM and/or "
-                        "supported bands may not match any available carrier."
-                    )
-                    self.last_failure_time = time.time()
-                    # Bump the failure counter and route through the
-                    # standard FAILED path so dual-SIM failover can run
-                    # via the same logic used for connection failures.
-                    self.initial_connection_failure_count += 1
-                    self.transition(ModemEvent.CONNECTION_FAILED)
-                    # Give dual-SIM failover a chance — no-op when no
-                    # alternate SIM exists.
-                    await self._handle_sim_missing_failover()
-                    return
+            #
+            # Use the STABLE-registration check (two consecutive reads) rather
+            # than a single State snapshot: Step 5 just (re)applied the band
+            # restriction, which bounces registration, and a one-shot read can
+            # catch a stale REGISTERED from the band the modem just left.  A
+            # SIM that cannot register on the restricted band therefore reaches
+            # the timeout → SIM-failover branch below instead of slipping into
+            # a misleading APN connect failure with no failover.
+            registered = await self._wait_for_stable_registration()
+            if not registered:
+                logger.warning(
+                    "Modem did not reach a stable REGISTERED state — aborting connection cascade",
+                    extra={'interface_number': self.interface_number})
+                self.last_failure_reason = (
+                    "Modem failed to reach REGISTERED state within the "
+                    "configured registration timeout. The SIM and/or "
+                    "supported bands may not match any available carrier."
+                )
+                self.last_failure_time = time.time()
+                # Bump the failure counter and route through the
+                # standard FAILED path so dual-SIM failover can run
+                # via the same logic used for connection failures.
+                self.initial_connection_failure_count += 1
+                self.transition(ModemEvent.CONNECTION_FAILED)
+                # Give dual-SIM failover a chance — no-op when no
+                # alternate SIM exists.
+                await self._handle_sim_missing_failover()
+                return
 
             # Get SIM config for connection parameters
             active_slot = self.config.get('primary_sim_slot', 1) if self.config else 1
@@ -4122,6 +4119,47 @@ class ModemStateMachine:
             await asyncio.sleep(2)
 
         logger.warning("Registration wait timed out",
+                      extra={'interface_number': self.interface_number,
+                             'timeout_seconds': timeout})
+        return False
+
+    async def _wait_for_stable_registration(self):
+        """Wait until the modem is CONFIRMED registered on two consecutive reads.
+
+        A plain single ``State`` read is unreliable right after a band/mode
+        change: setting CurrentBands on an enabled modem deregisters it from
+        the old band and forces a re-acquisition on the new one, but for a
+        brief window the modem can still report a STALE ``REGISTERED`` from the
+        band it just left.  If the connection cascade trusts that stale value
+        it issues Simple.Connect() into a modem that immediately drops
+        registration — the connect fails and (worse) no SIM failover runs
+        because the modem never reached a FAILED state.
+
+        Requiring two consecutive registered reads (~3 s apart) ensures the
+        registration is real and has survived the post-band-change settle, so a
+        SIM that genuinely cannot register on the restricted band falls through
+        to the timeout → failover path instead of a misleading connect failure.
+        """
+        timeout = self._get_registration_timeout()
+        deadline = time.time() + timeout
+        consecutive = 0
+
+        while time.time() < deadline:
+            try:
+                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                state_variant = await props.call_get(MODEM_INTERFACE, "State")
+                mm_state = state_variant.value
+                if mm_state in (8, 10, 11):
+                    consecutive += 1
+                    if consecutive >= 2:
+                        return True
+                else:
+                    consecutive = 0  # lost registration — start over
+            except Exception:
+                consecutive = 0
+            await asyncio.sleep(3)
+
+        logger.warning("Stable-registration wait timed out",
                       extra={'interface_number': self.interface_number,
                              'timeout_seconds': timeout})
         return False
