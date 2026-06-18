@@ -2940,20 +2940,31 @@ class ModemStateMachine:
             # Step 1: Ensure modem is disabled for configuration
             await self._ensure_modem_disabled_for_config()
 
-            # Step 2: Configure SIM slot while disabled
+            # Step 2: Configure SIM slot while disabled.  The SIM-slot switch
+            # (SetPrimarySimSlot) is the ONLY modem-level setting that genuinely
+            # requires the DISABLED state — band and network-mode selection are
+            # backed by the QMI NAS service, which is INACTIVE while the modem
+            # is disabled, so writing them here is silently ignored on QMI
+            # modems (e.g. Telit FN920).  They are applied after enable below.
             await self._configure_sim_slot()
 
-            # Step 3: Configure supported bands while disabled
-            await self._configure_supported_bands()
-
-            # Step 3.5: Configure network mode (access technology) while disabled
-            await self._configure_network_mode()
-
-            # Step 4: Enable the modem
+            # Step 3: Enable the modem
             await self._ensure_modem_enabled()
 
-            # Step 5: Unlock SIM if needed after enabling
+            # Step 4: Unlock SIM if needed after enabling
             await self._unlock_sim_if_needed()
+
+            # Step 5: Configure supported bands now that the modem is ENABLED.
+            # SetCurrentBands goes through the QMI NAS service, which only
+            # exists once the modem is enabled — attempting it while disabled is
+            # a no-op (the modem keeps all bands enabled).  Done before the
+            # connection cascade so the restriction is in force when the modem
+            # registers/attaches.
+            await self._configure_supported_bands()
+
+            # Step 5.5: Configure network mode (access technology) — same NAS
+            # requirement as bands, so it also runs post-enable.
+            await self._configure_network_mode()
 
             # Step 6: Lock onto the preferred carrier BEFORE the modem settles
             # on an automatic PLMN choice. _ensure_modem_enabled returns as soon
@@ -2964,7 +2975,7 @@ class ModemStateMachine:
             # flapping over to another. Customers who set a preferred carrier
             # want a hard lock; dual-SIM provides the recovery path when that
             # carrier is unavailable. SIM unlock must precede this (a PIN-locked
-            # SIM cannot register at all), so it stays at Step 5.
+            # SIM cannot register at all), so it stays at Step 4.
             await self._configure_preferred_carrier()
 
             # Step 7: Validate ICCID lock (SIM must be enabled + unlocked for
@@ -6847,7 +6858,12 @@ class ModemStateMachine:
             raise
 
     async def _configure_supported_bands(self):
-        """Configure supported bands while modem is disabled.
+        """Configure supported bands.
+
+        Must run while the modem is ENABLED: SetCurrentBands is backed by the
+        QMI NAS service, which only exists once the modem is enabled, so a
+        write attempted in the DISABLED state is silently ignored (the modem
+        keeps all bands enabled).
 
         Per-SIM ``supported_bands`` accepts ``all`` or specific band names
         (e.g. eutran-7, ngran-78).  Technology-group keywords (2G, 3G, LTE, 5G)
@@ -7109,8 +7125,9 @@ class ModemStateMachine:
           * ``lte``/``4g`` → the tuple restricted to 4G
           * ``5g``       → the tuple covering 5G (+4G anchor for NSA), preferring 5G
 
-        Runs while the modem is disabled so the change takes effect before it
-        scans.  Never raises — on any problem the modem keeps its prior mode.
+        Runs after the modem is enabled (SetCurrentModes, like SetCurrentBands,
+        is backed by the QMI NAS service which is inactive while the modem is
+        disabled).  Never raises — on any problem the modem keeps its prior mode.
         """
         try:
             if not self.config:
