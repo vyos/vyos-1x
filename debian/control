@@ -441,7 +441,7 @@ Depends:
   aptitude,
   arpwatch,
   atop,
-  bgpq3,
+  bgpq4,
   dnsdist,
   dnsutils,
   exfat-fuse,
