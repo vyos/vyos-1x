@@ -242,12 +242,13 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_kv('Operator:', d['operator']))
     lines.append(_kv('Operator code:', d['operator_code']))
     lines.append(_kv('APN:', d['apn']))
-    # When the carrier activated a different APN than we requested, show both
-    # so the override is obvious during troubleshooting.
-    if d['negotiated_apn'] and d['requested_apn'] \
-            and d['negotiated_apn'] != d['requested_apn']:
-        lines.append(_kv('Requested APN:', d['requested_apn']))
-        lines.append(_kv('Negotiated APN:', d['negotiated_apn']))
+    # Always show the requested vs carrier-negotiated APN so the operator can
+    # see exactly what was asked for and what the network activated — even when
+    # they match.  When the negotiated value could not be read, show 'unknown'
+    # rather than hiding the line.
+    if d['requested_apn'] or d['negotiated_apn']:
+        lines.append(_kv('Requested APN:', d['requested_apn'] or 'unknown'))
+        lines.append(_kv('Negotiated APN:', d['negotiated_apn'] or 'unknown'))
     if d['failure_reason']:
         lines.append(_kv('Failure reason:', d['failure_reason']))
     lines.append(_kv('Log level:', d['log_level']))

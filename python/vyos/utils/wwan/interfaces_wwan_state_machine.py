@@ -7052,13 +7052,34 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
             raise
 
+    @staticmethod
+    def _band_array_to_ints(variant):
+        """Normalize a ModemManager band-array property (``au``) to ``list[int]``.
+
+        dbus-next returns the value of an ``au`` property as a plain list of
+        Python ``int``, NOT a list of Variant objects.  The band code used to do
+        ``[band.value for band in variant.value]`` which raises
+        ``AttributeError: 'int' object has no attribute 'value'`` on every call —
+        an error that was silently swallowed and mislabeled as "band
+        configuration not supported by this modem", so the configured bands were
+        NEVER actually written (a stale single-band lock survived SIM switches).
+
+        This mirrors the defensive ``x.value if hasattr(x, 'value') else x``
+        pattern already used by ``_configure_network_mode`` so both Variant-
+        wrapped and plain-int elements are handled.
+        """
+        raw = variant.value if (variant is not None and hasattr(variant, 'value')) else (variant or [])
+        out = []
+        for b in raw or []:
+            b = b.value if hasattr(b, 'value') else b
+            try:
+                out.append(int(b))
+            except (TypeError, ValueError):
+                continue
+        return out
+
     async def _configure_supported_bands(self):
         """Configure supported bands.
-
-        Must run while the modem is ENABLED: SetCurrentBands is backed by the
-        QMI NAS service, which only exists once the modem is enabled, so a
-        write attempted in the DISABLED state is silently ignored (the modem
-        keeps all bands enabled).
 
         Per-SIM ``supported_bands`` accepts ``all`` or specific band names
         (e.g. eutran-7, ngran-78).  Technology-group keywords (2G, 3G, LTE, 5G)
@@ -7103,13 +7124,11 @@ class ModemStateMachine:
             try:
                 # Get modem's supported bands (uint32 array)
                 modem_supported_bands_variant = await props.call_get(MODEM_INTERFACE, "SupportedBands")
-                modem_supported_bands = modem_supported_bands_variant.value if modem_supported_bands_variant else []
-                modem_bands_list = [band.value for band in modem_supported_bands] if modem_supported_bands else []
+                modem_bands_list = self._band_array_to_ints(modem_supported_bands_variant)
 
                 # Get currently enabled bands (uint32 array)
                 current_bands_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
-                current_bands = current_bands_variant.value if current_bands_variant else []
-                current_bands_list = [band.value for band in current_bands] if current_bands else []
+                current_bands_list = self._band_array_to_ints(current_bands_variant)
 
                 # Convert numeric constants back to human names for logging
                 modem_band_names = [self._mm_constant_to_band_name(band) for band in modem_bands_list]
@@ -7208,8 +7227,7 @@ class ModemStateMachine:
                     await asyncio.sleep(3)
 
                     cleared_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
-                    cleared = cleared_variant.value if cleared_variant else []
-                    cleared_list = [band.value for band in cleared] if cleared else []
+                    cleared_list = self._band_array_to_ints(cleared_variant)
                     cleared_names = [self._mm_constant_to_band_name(b) for b in cleared_list]
 
                     # Success = the modem widened beyond the prior narrow set.
@@ -7329,8 +7347,7 @@ class ModemStateMachine:
 
                     # Verify band configuration
                     new_bands_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
-                    new_bands = new_bands_variant.value if new_bands_variant else []
-                    new_bands_list = [band.value for band in new_bands] if new_bands else []
+                    new_bands_list = self._band_array_to_ints(new_bands_variant)
                     new_band_names = [self._mm_constant_to_band_name(band) for band in new_bands_list]
 
                     # Some QMI modems silently ignore the first restriction and
@@ -7344,8 +7361,7 @@ class ModemStateMachine:
                         await modem_iface.call_set_current_bands(target_bands)
                         await asyncio.sleep(3)
                         new_bands_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
-                        new_bands = new_bands_variant.value if new_bands_variant else []
-                        new_bands_list = [band.value for band in new_bands] if new_bands else []
+                        new_bands_list = self._band_array_to_ints(new_bands_variant)
                         new_band_names = [self._mm_constant_to_band_name(band) for band in new_bands_list]
 
                     if set(new_bands_list) == set(target_bands):
@@ -7373,11 +7389,20 @@ class ModemStateMachine:
                         )
 
             except Exception as band_e:
-                # Many modems don't support runtime band configuration
-                logger.info("Band configuration not supported by this modem or driver",
-                           extra={'interface_number': self.interface_number,
-                                  'error': str(band_e),
-                                  'per_sim_bands': per_sim_bands_cfg})
+                # Band read/write failed.  This is logged LOUDLY with the
+                # actual exception type+message in the visible text (not just
+                # the extra dict) because a swallowed error here silently
+                # leaves the modem on whatever bands it had — which is exactly
+                # how a stale single-band lock survives a SIM switch.  Most
+                # commonly this fires when SupportedBands/CurrentBands cannot be
+                # read in the current modem power/enabled state.
+                logger.warning(
+                    f"Band configuration step failed ({type(band_e).__name__}: {band_e}) "
+                    "— modem bands left unchanged",
+                    extra={'interface_number': self.interface_number,
+                           'error': str(band_e),
+                           'error_type': type(band_e).__name__,
+                           'per_sim_bands': per_sim_bands_cfg})
 
         except Exception as e:
             logger.error(f"Band configuration error: {e}",
@@ -8847,14 +8872,79 @@ class ModemStateMachine:
                              'total_candidates_tried': len(candidates)})
         return (False, 'all_apn_failed')
 
+    async def _mm_bearer_apn(self):
+        """Read the negotiated APN from ModemManager's connected data bearer.
+
+        The genuinely-effective APN is the one MM's *data* bearer is running
+        with.  A modem can expose several connected bearers at once — e.g. on
+        Verizon there is an admin/IMS bearer (``vzwadmin``) with NO net
+        interface alongside the real data bearer (``VZWINTERNET``) bound to the
+        modem's net port (``wwan0``).  The data bearer is the one with a
+        non-empty ``Interface``; the admin bearer has none.  Picking the wrong
+        one (e.g. the first listed) reports a misleading APN, so we explicitly
+        select the connected bearer that has a network interface.
+
+        This replaces the previous ``qmicli --wds-get-current-settings`` probe,
+        which allocates a fresh WDS client with no active session on an
+        MM-managed modem and therefore returns nothing.  Reading MM's own
+        bearer is reliable, in-process, and needs no external tool.  Never
+        raises; returns ``''`` when no suitable bearer/APN is found.
+        """
+        if not self.proxy:
+            return ''
+        try:
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            bearers_variant = await props.call_get(MODEM_INTERFACE, "Bearers")
+            bearers = bearers_variant.value if bearers_variant else []
+        except Exception as e:
+            logger.debug(f"Could not list bearers for APN read: {e}",
+                        extra={'interface_number': self.interface_number})
+            return ''
+
+        fallback_apn = ''  # connected bearer APN without an interface (last resort)
+        for bearer_path in bearers or []:
+            try:
+                introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, bearer_path)
+                bproxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, bearer_path, introspect)
+                bprops = bproxy.get_interface("org.freedesktop.DBus.Properties")
+
+                connected_v = await bprops.call_get(BEARER_INTERFACE, "Connected")
+                if not (connected_v.value if hasattr(connected_v, 'value') else connected_v):
+                    continue
+
+                iface_v = await bprops.call_get(BEARER_INTERFACE, "Interface")
+                iface = iface_v.value if hasattr(iface_v, 'value') else iface_v
+
+                bp_v = await bprops.call_get(BEARER_INTERFACE, "Properties")
+                bp = bp_v.value if hasattr(bp_v, 'value') else bp_v
+                apn = bp.get('apn', '') if bp else ''
+                apn = (apn.value if hasattr(apn, 'value') else apn) or ''
+                apn = apn.strip()
+                if not apn:
+                    continue
+
+                # Data bearer = connected AND bound to a net interface.
+                if iface:
+                    return apn
+                # Admin/IMS bearer (no interface) — keep only as last resort.
+                if not fallback_apn:
+                    fallback_apn = apn
+            except Exception as e:
+                logger.debug(f"Bearer APN read failed for {bearer_path}: {e}",
+                            extra={'interface_number': self.interface_number})
+                continue
+
+        return fallback_apn
+
     async def _capture_connected_apn(self):
         """Record the APN of the current successful connection.
 
         Reads the APN the ConnectionManager just connected with, persists it
-        for fast reconnection, and captures the carrier-negotiated APN over
-        QMI.  Invoked from every successful connect path (initial config,
-        runtime reconnect, SIM switch) so ``show interfaces wwan`` reports the
-        APN regardless of how the bearer was established.
+        for fast reconnection, and captures the carrier-negotiated APN from
+        ModemManager's connected data bearer.  Invoked from every successful
+        connect path (initial config, runtime reconnect, SIM switch) so
+        ``show interfaces wwan`` reports the APN regardless of how the bearer
+        was established.
         """
         # Store the connected APN for fast reconnection and status reporting
         cm_apn = getattr(self.connection_manager, 'connected_apn', None)
@@ -8866,17 +8956,21 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'apn_name': cm_apn.get('name', '')})
 
-        # Capture the APN the *carrier actually activated* over QMI.
-        # MM only echoes the requested APN, so this is the only way to learn
-        # the real one when the network assigned it (auto/empty APN path) or
-        # silently overrode our request.  Adopting it as the fast-reconnect
-        # hint means the next connect requests the APN that is known to work
-        # instead of re-running the cascade.  Both the requested and
-        # negotiated names are kept for troubleshooting (surfaced in status).
-        try:
-            negotiated_apn = await self._qmi_get_current_apn()
-        except Exception:
-            negotiated_apn = ''
+        # Capture the APN the *carrier actually activated*.  Read it from
+        # ModemManager's connected DATA bearer (the one bound to the net
+        # interface); fall back to the QMI probe only when MM exposes no usable
+        # bearer APN.  MM only echoes the requested APN in some paths, so this
+        # is how we learn the real one when the network assigned or overrode it.
+        # Adopting it as the fast-reconnect hint means the next connect requests
+        # the APN that is known to work instead of re-running the cascade.  Both
+        # the requested and negotiated names are kept for troubleshooting
+        # (surfaced in status).
+        negotiated_apn = await self._mm_bearer_apn()
+        if not negotiated_apn:
+            try:
+                negotiated_apn = await self._qmi_get_current_apn()
+            except Exception:
+                negotiated_apn = ''
         self.negotiated_apn = negotiated_apn
         if negotiated_apn:
             requested_name = self.requested_apn
