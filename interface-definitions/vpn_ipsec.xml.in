@@ -179,7 +179,7 @@
                 <properties>
                   <help>ESP Perfect Forward Secrecy</help>
                   <completionHelp>
-                    <list>enable dh-group1 dh-group2 dh-group5 dh-group14 dh-group15 dh-group16 dh-group17 dh-group18 dh-group19 dh-group20 dh-group21 dh-group22 dh-group23 dh-group24 dh-group25 dh-group26 dh-group27 dh-group28 dh-group29 dh-group30 dh-group31 dh-group32 disable</list>
+                    <list>enable dh-group1 dh-group2 dh-group5 dh-group14 dh-group15 dh-group16 dh-group17 dh-group18 dh-group19 dh-group20 dh-group21 dh-group22 dh-group23 dh-group24 dh-group25 dh-group26 dh-group27 dh-group28 dh-group29 dh-group30 dh-group31 dh-group32 dh-group33 dh-group34 dh-group35 disable</list>
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
@@ -274,11 +274,23 @@
                     <description>Use Diffie-Hellman group 32 (curve448)</description>
                   </valueHelp>
                   <valueHelp>
+                    <format>dh-group33</format>
+                    <description>Use Diffie-Hellman group 33 (mlkem512)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group34</format>
+                    <description>Use Diffie-Hellman group 34 (mlkem768)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dh-group35</format>
+                    <description>Use Diffie-Hellman group 35 (mlkem1024)</description>
+                  </valueHelp>
+                  <valueHelp>
                     <format>disable</format>
                     <description>Disable PFS</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(enable|dh-group1|dh-group2|dh-group5|dh-group14|dh-group15|dh-group16|dh-group17|dh-group18|dh-group19|dh-group20|dh-group21|dh-group22|dh-group23|dh-group24|dh-group25|dh-group26|dh-group27|dh-group28|dh-group29|dh-group30|dh-group31|dh-group32|disable)</regex>
+                    <regex>(enable|dh-group1|dh-group2|dh-group5|dh-group14|dh-group15|dh-group16|dh-group17|dh-group18|dh-group19|dh-group20|dh-group21|dh-group22|dh-group23|dh-group24|dh-group25|dh-group26|dh-group27|dh-group28|dh-group29|dh-group30|dh-group31|dh-group32|dh-group33|dh-group34|dh-group35|disable)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>enable</defaultValue>
@@ -461,7 +473,7 @@
                     <properties>
                       <help>dh-grouphelp</help>
                       <completionHelp>
-                        <list>1 2 5 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32</list>
+                        <list>1 2 5 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35</list>
                       </completionHelp>
                       <valueHelp>
                         <format>1</format>
@@ -551,8 +563,20 @@
                         <format>32</format>
                         <description>Diffie-Hellman group 32 (curve448)</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>33</format>
+                        <description>Diffie-Hellman group 33 (mlkem512)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>34</format>
+                        <description>Diffie-Hellman group 34 (mlkem768)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>35</format>
+                        <description>Diffie-Hellman group 35 (mlkem1024)</description>
+                      </valueHelp>
                       <constraint>
-                        <regex>(1|2|5|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32)</regex>
+                        <regex>(1|2|5|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>2</defaultValue>
