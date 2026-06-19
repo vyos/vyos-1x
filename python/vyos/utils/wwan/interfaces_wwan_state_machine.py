@@ -1054,6 +1054,27 @@ class ModemStateMachine:
                             f"Modem disable/enable cycle failed: {cycle_e}",
                             extra={'interface_number': self.interface_number})
 
+                # Re-apply band / network-mode configuration before the
+                # reconnect.  apply_modem_configuration() only runs the
+                # registration gate + APN cascade — it never re-writes the
+                # allowed-band set.  A modem that dropped into FAILED while
+                # camped on a single dead band (e.g. eutran-8 after a SIM
+                # switch whose registration attempt timed out) will otherwise
+                # stay parked on that band across every retry and never attach,
+                # because nothing forces a fresh PLMN/cell scan.  Re-writing the
+                # active SIM's bands (and nudging re-registration) here is the
+                # programmatic equivalent of `mmcli --set-allowed-bands`, which
+                # is what recovers the link by hand.  Anchored on
+                # current_active_sim so a post-failover slot uses its own bands.
+                try:
+                    await self._configure_supported_bands()
+                    await self._configure_network_mode()
+                    await self._force_network_reregistration('failed_retry')
+                except Exception as band_e:
+                    logger.warning(
+                        f"Failed-state retry band/mode re-apply failed (non-fatal): {band_e}",
+                        extra={'interface_number': self.interface_number})
+
                 # Clear stale failure reason before retry
                 self.last_failure_reason = ''
                 self.last_failed_apn = ''
@@ -7141,43 +7162,117 @@ class ModemStateMachine:
                 # empty intersection and (previously) silently enabled ALL bands.
                 capability_bands = set(modem_bands_list) | set(current_bands_list)
                 if per_sim_is_all:
-                    # Per-SIM unrestricted — use all modem bands
-                    target_bands = modem_bands_list
-                    target_band_names = modem_band_names
-                    logger.info("Per-SIM bands are 'all' — enabling all modem bands",
-                               extra={'interface_number': self.interface_number,
-                                      'count': len(target_bands)})
-                else:
-                    # Per-SIM restricts — intersect with modem capability
-                    # (SupportedBands ∪ CurrentBands).
-                    target_bands = [b for b in per_sim_band_constants if b in capability_bands]
-                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
+                    # Per-SIM unrestricted — the modem must be free to scan
+                    # EVERY band it supports.  Express this with
+                    # MM_MODEM_BAND_ANY (0), the canonical "no restriction"
+                    # sentinel that `mmcli --set-current-bands=any` sends,
+                    # instead of enumerating SupportedBands.
+                    #
+                    # Why not enumerate: a QMI modem (e.g. Telit FN920) can
+                    # report an INCOMPLETE SupportedBands list before it is
+                    # fully registered.  If that truncated list happened to
+                    # match the single band the modem is currently camped on,
+                    # the enumerate-then-compare path below would treat a real,
+                    # stale restriction — e.g. a previous SIM's eutran-8 lock
+                    # carried over after a SIM switch to an unrestricted SIM —
+                    # as "already correct" and skip the write, stranding the new
+                    # SIM on the old band.  ANY clears the restriction
+                    # regardless of what SupportedBands reports.
+                    MM_MODEM_BAND_ANY = 0
+                    current_set = set(current_bands_list)
+                    supported_set = set(modem_bands_list)
 
-                    # NR bands the modem doesn't advertise are dropped by the
-                    # intersection above.  RedCap-only bands are not exposed in
-                    # SupportedBands until registration and cannot be set, so
-                    # they are silently ignored here.
+                    # No restriction to clear when the modem already has every
+                    # band it supports enabled.  Require >1 current band so a
+                    # single camped band (the classic stale-lock signature) is
+                    # never mistaken for "unrestricted".
+                    already_unrestricted = (
+                        len(current_set) > 1
+                        and bool(supported_set)
+                        and supported_set.issubset(current_set))
+                    if already_unrestricted:
+                        logger.info("Per-SIM bands are 'all' and no restriction "
+                                    "is in effect — leaving bands unrestricted",
+                                   extra={'interface_number': self.interface_number,
+                                          'current_bands': current_band_names})
+                        return
+
+                    logger.info("Per-SIM bands are 'all' — clearing band "
+                                "restriction (bands = ANY) so the modem can "
+                                "scan every supported band",
+                               extra={'interface_number': self.interface_number,
+                                      'current_bands': current_band_names})
+
+                    modem_iface = self.proxy.get_interface(MODEM_INTERFACE)
+                    await modem_iface.call_set_current_bands([MM_MODEM_BAND_ANY])
+                    await asyncio.sleep(3)
+
+                    cleared_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
+                    cleared = cleared_variant.value if cleared_variant else []
+                    cleared_list = [band.value for band in cleared] if cleared else []
+                    cleared_names = [self._mm_constant_to_band_name(b) for b in cleared_list]
+
+                    # Success = the modem widened beyond the prior narrow set.
+                    # Some QMI modems reject the ANY sentinel; if the band set
+                    # did not widen, fall back to writing the explicit
+                    # supported-band list (what the modem advertises).
+                    if set(cleared_list) != current_set and len(cleared_list) >= len(current_set):
+                        logger.info("Band restriction cleared — modem now unrestricted",
+                                   extra={'interface_number': self.interface_number,
+                                          'bands': cleared_names})
+                        return
+
+                    if modem_bands_list:
+                        logger.info("ANY band sentinel not honored — falling "
+                                    "back to explicit supported-band list",
+                                   extra={'interface_number': self.interface_number,
+                                          'supported_bands': modem_band_names})
+                        await modem_iface.call_set_current_bands(modem_bands_list)
+                        await asyncio.sleep(3)
+                    return
+                else:
+                    # Per-SIM restricts to specific bands.
+                    #
+                    # Non-NR bands (LTE/UMTS/GSM) are written AS REQUESTED even
+                    # when SupportedBands does not list them.  QMI modems (e.g.
+                    # Telit FN920) report a TRUNCATED SupportedBands before the
+                    # modem is fully registered, so intersecting with capability
+                    # would silently drop bands that are actually usable — and,
+                    # worse, if the surviving intersection collapsed to exactly
+                    # the single band the modem is already camped on (e.g. a
+                    # previous SIM's eutran-8 lock carried across a switch), the
+                    # no-op equality skip below would misfire and strand this SIM
+                    # on that stale single-band lock instead of widening to its
+                    # own configured set.  The modem harmlessly rejects any band
+                    # it genuinely cannot do, so requesting the full set is safe.
+                    #
+                    # NR/NGRAN bands still require advertisement: RedCap-only
+                    # bands are not settable until registration, so an
+                    # unadvertised NR band is dropped rather than written.
+                    requested_non_ngran = [b for b in per_sim_band_constants if b < 301]
                     requested_ngran = [b for b in per_sim_band_constants if b >= 301]
                     modem_ngran = [b for b in capability_bands if b >= 301]
+                    usable_ngran = [b for b in requested_ngran if b in capability_bands]
+
+                    target_bands = requested_non_ngran + usable_ngran
+                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
+
+                    # NR bands the modem doesn't advertise are dropped above.
                     if requested_ngran and not modem_ngran:
                         logger.info("Requested 5G NR bands are not advertised by the modem "
                                     "and will be ignored",
                                     extra={'interface_number': self.interface_number,
                                            'requested_ngran': [self._mm_constant_to_band_name(b) for b in requested_ngran]})
 
-                    # Warn about any explicitly requested non-NR band that the
-                    # modem capability does not list — it is dropped from the
-                    # write but we do NOT silently widen to all bands below.
-                    dropped = [b for b in per_sim_band_constants
-                               if b not in capability_bands and b < 301]
-                    if dropped:
-                        logger.warning("Requested bands not in modem capability — dropped from filter",
+                    dropped_ngran = [b for b in requested_ngran if b not in capability_bands]
+                    if dropped_ngran:
+                        logger.warning("Requested NR bands not in modem capability — dropped from filter",
                                       extra={'interface_number': self.interface_number,
-                                             'dropped_bands': [self._mm_constant_to_band_name(b) for b in dropped]})
+                                             'dropped_bands': [self._mm_constant_to_band_name(b) for b in dropped_ngran]})
 
-                    logger.info("Applying per-SIM ∩ modem band filter",
+                    logger.info("Applying per-SIM band restriction",
                                extra={'interface_number': self.interface_number,
-                                      'per_sim_bands': [self._mm_constant_to_band_name(b) for b in per_sim_band_constants],
+                                      'requested_bands': [self._mm_constant_to_band_name(b) for b in per_sim_band_constants],
                                       'result_bands': target_band_names})
 
                 # Empty intersection handling.  CRITICAL: when the operator
