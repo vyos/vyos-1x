@@ -50,7 +50,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call
-from vyos.utils.vti_updown_db import vti_updown_db_exists
 from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
 from vyos.utils.vti_updown_db import remove_vti_updown_db
 from vyos import ConfigError
@@ -900,8 +899,7 @@ def apply(ipsec):
     systemd_service = 'strongswan.service'
     if not ipsec or 'deleted' in ipsec:
         call(f'systemctl stop {systemd_service}')
-        if vti_updown_db_exists():
-            remove_vti_updown_db()
+        remove_vti_updown_db()
     else:
         call(f'systemctl reload-or-restart {systemd_service}')
         if ipsec['enabled_vti_interfaces']:
@@ -909,7 +907,7 @@ def apply(ipsec):
                 db.removeAllOtherInterfaces(ipsec['enabled_vti_interfaces'])
                 db.setPersistentInterfaces(ipsec['persistent_vti_interfaces'])
                 db.commit(lambda interface: ipsec['vti_interface_dicts'][interface])
-        elif vti_updown_db_exists():
+        else:
             remove_vti_updown_db()
     if ipsec:
         if ipsec.get('nhrp_exists', False):
