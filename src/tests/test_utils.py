@@ -16,6 +16,37 @@ from unittest import TestCase
 from unittest.mock import patch
 
 class TestVyOSUtils(TestCase):
+    def test_cmdl_basic(self):
+        from vyos.utils.process import cmdl
+        out = cmdl(['echo', 'hello'])
+        self.assertEqual(out, 'hello')
+
+    def test_cmdl_requires_list(self):
+        from vyos.utils.process import cmdl
+        with self.assertRaises(TypeError):
+            cmdl('echo hello')
+
+    def test_cmdl_sudo_prepends(self):
+        from vyos.utils.process import cmdl
+        with patch('vyos.utils.process.popen') as mock_popen:
+            mock_popen.return_value = ('', 0)
+            cmdl(['id'], sudo=True)
+            args, kwargs = mock_popen.call_args
+            self.assertEqual(args[0][0], 'sudo')
+            self.assertEqual(args[0][1], 'id')
+
+    def test_cmdl_no_shell(self):
+        from vyos.utils.process import cmdl
+        with patch('vyos.utils.process.popen') as mock_popen:
+            mock_popen.return_value = ('', 0)
+            cmdl(['true'])
+            _, kwargs = mock_popen.call_args
+            self.assertEqual(kwargs.get('shell'), False)
+
+    def test_cmdl_raises_on_nonzero(self):
+        from vyos.utils.process import cmdl
+        with self.assertRaises(OSError):
+            cmdl(['false'])
     def test_key_mangling(self):
         from vyos.utils.dict import mangle_dict_keys
         data = {"foo-bar": {"baz-quux": None}}
