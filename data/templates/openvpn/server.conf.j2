@@ -102,7 +102,7 @@ ifconfig-pool {{ server.client_ip_pool.start }} {{ server.client_ip_pool.stop }}
 {%         if server.max_connections is vyos_defined %}
 max-clients {{ server.max_connections }}
 {%         endif %}
-{%         if server.client is vyos_defined %}
+{%         if server.client is vyos_defined or server.reject_unconfigured_clients is vyos_defined %}
 client-config-dir /run/openvpn/ccd/{{ ifname }}
 {%         endif %}
 {%     endif %}

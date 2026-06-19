@@ -900,5 +900,33 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+    def test_openvpn_server_reject_unconfigured_clients(self):
+        # T8998: reject-unconfigured-clients without server client entries
+        # must emit both client-config-dir and ccd-exclusive
+        interface = 'vtun5020'
+        path = base_path + [interface]
+        subnet = '10.20.30.0/24'
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '5'])
+        self.cli_set(path + ['keep-alive', 'interval', '5'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['server', 'subnet', subnet])
+        self.cli_set(path + ['server', 'reject-unconfigured-clients'])
+
+        self.cli_commit()
+
+        config_file = f'/run/openvpn/{interface}.conf'
+        config = read_file(config_file)
+
+        self.assertIn(f'client-config-dir /run/openvpn/ccd/{interface}', config)
+        self.assertIn('ccd-exclusive', config)
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertIn(interface, interfaces())
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
