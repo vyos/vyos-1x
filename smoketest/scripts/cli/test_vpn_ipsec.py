@@ -252,8 +252,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'life_bytes = {life_bytes}',
             f'life_packets = {life_packets}',
             f'rekey_time = 28800s', # default value
-            f'proposals = aes128-sha1-modp1024',
-            f'esp_proposals = aes128-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'life_time = 3600s', # default value
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
@@ -406,8 +406,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'life_bytes = {life_bytes}',
             f'life_packets = {life_packets}',
             f'rekey_time = 28800s',  # default value
-            f'proposals = aes128-sha1-modp1024',
-            f'esp_proposals = aes128-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'life_time = 3600s',  # default value
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
@@ -482,8 +482,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             'version = 2',
             'auth = psk',
-            'proposals = aes128-sha1-modp1024,aes256-sha1-modp1536',
-            'esp_proposals = aes128-sha1-modp2048,aes256-sha1-modp2048',
+            'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024,aes256-sha1-modp1536-noesn,aes256-sha1-modp1536',
+            'esp_proposals = aes128-sha1-modp2048-noesn,aes128-sha1-modp2048,aes256-sha1-modp2048-noesn,aes256-sha1-modp2048',
             'life_time = 3600s',
             'mode = transport',  # ensure transport mode is used
             f'{peer_name}-tunnel-{tunnel_id}',
@@ -549,8 +549,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
-            f'proposals = aes128-sha1-modp1024',
-            f'esp_proposals = aes128-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'local_addrs = {local_address} # dhcp:no',
             f'mobike = no',
             f'remote_addrs = {peer_ip}',
@@ -625,8 +625,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
-            f'proposals = aes128-sha1-modp1024',
-            f'esp_proposals = aes128-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'local_addrs = {local_address} # dhcp:no',
             f'mobike = no',
             f'remote_addrs = {peer_ip}',
@@ -765,8 +765,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'version = 2',
             f'auth = psk',
             f'rekey_time = 86400s',
-            f'proposals = aes256gcm128-sha384-prfsha384-ecp384',
-            f'esp_proposals = aes256gcm128-sha384-ecp384',
+            f'proposals = aes256gcm128-sha384-prfsha384-ecp384-noesn,aes256gcm128-sha384-prfsha384-ecp384',
+            f'esp_proposals = aes256gcm128-sha384-ecp384-noesn,aes256gcm128-sha384-ecp384',
             f'life_time = 28800s',  # default value
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
@@ -869,22 +869,24 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         swanctl_conf = read_file(swanctl_file)
         swanctl_lines = [
-            f'proposals = aes256-sha1-prfsha1-modp1024',
+            f'proposals = aes256-sha1-prfsha1-modp1024-noesn,aes256-sha1-prfsha1-modp1024',
             f'version = 1',
             f'rekey_time = {ike_lifetime}s',
             f'rekey_time = {esp_lifetime}s',
-            f'esp_proposals = aes256-sha1-modp1024,3des-md5-modp1024',
+            f'esp_proposals = aes256-sha1-modp1024-noesn,aes256-sha1-modp1024,3des-md5-modp1024-noesn,3des-md5-modp1024',
             f'local_ts = dynamic[gre]',
             f'remote_ts = dynamic[gre]',
             f'mode = transport',
             f'secret = {nhrp_secret}',
             'unique = never',
         ]
-        for line in swanctl_lines:
-            self.assertIn(line, swanctl_conf)
-
-        # There is only one NHRP test so no need to delete this globally in tearDown()
-        self.cli_delete(nhrp_path)
+        try:
+            for line in swanctl_lines:
+                self.assertIn(line, swanctl_conf)
+        finally:
+            # There is only one NHRP test so no need to delete this globally in tearDown()
+            # try/finally so that it is deleted even if test fails, otherwise we get errors
+            self.cli_delete(nhrp_path)
 
     def test_site_to_site_x509(self):
         # Enable PKI
@@ -930,8 +932,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'id = "{peer_name}"',
             f'auth = pubkey',
             f'certs = {peer_name}.pem',
-            f'proposals = aes128-sha1-modp1024',
-            f'esp_proposals = aes128-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
             f'local_ts = 0.0.0.0/0,::/0',
@@ -1186,7 +1188,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1197,7 +1199,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'certs = peer1.pem',
             f'auth = eap-mschapv2',
             f'eap_id = %any',
-            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'esp_proposals = aes256-sha512-noesn,aes256-sha512,aes256-sha384-noesn,aes256-sha384,aes256-sha256-noesn,aes256-sha256,aes256-sha1-noesn,aes256-sha1,aes128gcm128-sha256-noesn,aes128gcm128-sha256',
             f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'replay_window = 32',
@@ -1306,7 +1308,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1318,7 +1320,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'cacerts = MyVyOS-CA.pem',
             f'auth = eap-tls',
             f'eap_id = %any',
-            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'esp_proposals = aes256-sha512-noesn,aes256-sha512,aes256-sha384-noesn,aes256-sha384,aes256-sha256-noesn,aes256-sha256,aes256-sha1-noesn,aes256-sha1,aes128gcm128-sha256-noesn,aes128gcm128-sha256',
             f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'inactivity = 28800',
@@ -1422,7 +1424,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1432,7 +1434,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'auth = pubkey',
             f'certs = peer1.pem',
             f'cacerts = MyVyOS-CA.pem,MyVyOS-IntCA.pem',
-            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'esp_proposals = aes256-sha512-noesn,aes256-sha512,aes256-sha384-noesn,aes256-sha384,aes256-sha256-noesn,aes256-sha256,aes256-sha1-noesn,aes256-sha1,aes128gcm128-sha256-noesn,aes128gcm128-sha256',
             f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'inactivity = 28800',
@@ -1620,7 +1622,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = 0s',
@@ -1630,7 +1632,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'auth = pubkey',
             f'certs = peer1.pem',
             f'cacerts = MyVyOS-CA.pem,MyVyOS-IntCA.pem',
-            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'esp_proposals = aes256-sha512-noesn,aes256-sha512,aes256-sha384-noesn,aes256-sha384,aes256-sha256-noesn,aes256-sha256,aes256-sha1-noesn,aes256-sha1,aes128gcm128-sha256-noesn,aes128gcm128-sha256',
             f'life_time = {eap_lifetime}s',
             f'rekey_time = 0s',
             f'dpd_action = clear',
@@ -1733,7 +1735,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1744,7 +1746,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'certs = peer1.pem',
             f'auth = eap-mschapv2',
             f'eap_id = %any',
-            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'esp_proposals = aes256-sha512-noesn,aes256-sha512,aes256-sha384-noesn,aes256-sha384,aes256-sha256-noesn,aes256-sha256,aes256-sha1-noesn,aes256-sha1,aes128gcm128-sha256-noesn,aes128gcm128-sha256',
             f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'replay_window = 32',
@@ -1866,7 +1868,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1877,7 +1879,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'certs = peer1.pem',
             f'auth = eap-mschapv2',
             f'eap_id = %any',
-            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'esp_proposals = aes256-sha512-noesn,aes256-sha512,aes256-sha384-noesn,aes256-sha384,aes256-sha256-noesn,aes256-sha256,aes256-sha1-noesn,aes256-sha1,aes128gcm128-sha256-noesn,aes128gcm128-sha256',
             f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'replay_window = 32',
