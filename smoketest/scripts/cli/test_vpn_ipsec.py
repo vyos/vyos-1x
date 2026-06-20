@@ -1965,6 +1965,82 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             cli_value = default_value(base_path + ['options', 'retransmission', cli_option])
             self.assertEqual(config_value, cli_value)
 
+    def test_esn_settings(self):
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'hash', 'sha512'])
+
+        local_address = '192.0.2.10'
+
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_address])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', peer_ip])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
+        # Site to site
+        peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
+
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'hash', 'sha512'])
+
+        self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_base_path + ['ike-group', ike_group])
+        self.cli_set(peer_base_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_base_path + ['local-address', local_address])
+        self.cli_set(peer_base_path + ['remote-address', peer_ip])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'protocol', 'tcp'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.11.0/24'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'port', '443'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'prefix', '172.17.10.0/24'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'prefix', '172.17.11.0/24'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'port', '443'])
+
+        self.cli_set(peer_base_path + ['tunnel', '2', 'local', 'prefix', '10.1.0.0/16'])
+        self.cli_set(peer_base_path + ['tunnel', '2', 'remote', 'prefix', '10.2.0.0/16'])
+
+        # Passing the 'unique = never' for StrongSwan's `connections.<conn>.unique` parameter
+        self.cli_set(base_path + ['disable-uniqreqids'])
+
+        self.cli_commit()
+
+        # esn - default, disabled
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048',
+            f'esp_proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048',
+        ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # esn - optional
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'esn', 'optional'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'esn', 'optional'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            f'proposals = aes256-sha512-modp2048-esn-noesn,aes256-sha512-modp2048',
+            f'esp_proposals = aes256-sha512-modp2048-esn-noesn,aes256-sha512-modp2048',
+        ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # esn - required
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'esn', 'required'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'esn', 'required'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            f'proposals = aes256-sha512-modp2048-esn',
+            f'esp_proposals = aes256-sha512-modp2048-esn',
+        ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
 
 
 if __name__ == '__main__':
