@@ -15,7 +15,7 @@
             <properties>
               <help>Output log in a colored fashion</help>
             </properties>
-            <command>bash -c 'SYSTEMD_COLORS=false grc journalctl --no-hostname --follow --boot'</command>
+            <command>SYSTEMD_COLORS=true journalctl --no-hostname --follow --boot</command>
           </node>
           <leafNode name="certbot">
             <properties>
