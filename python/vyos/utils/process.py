@@ -23,7 +23,7 @@ from subprocess import STDOUT
 from subprocess import DEVNULL
 
 def get_wrapper(vrf, netns):
-    wrapper = None
+    wrapper = []
     if vrf:
         wrapper = ['ip', 'vrf', 'exec', vrf]
     elif netns:
