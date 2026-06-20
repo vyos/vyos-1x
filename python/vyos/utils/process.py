@@ -176,7 +176,7 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, decode='utf-8', raising=None, message='',
+        stdout=PIPE, stderr=PIPE, raising=None, message='',
         expect=[0], vrf=None, netns=None):
     """
     A wrapper around popen, which returns the stdout and
@@ -192,7 +192,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,
-        decode=decode,
+        decode='utf-8',
         vrf=vrf,
         netns=netns,
     )
