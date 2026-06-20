@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import importlib.util
 import re
 import sys
 import syslog
@@ -34,15 +35,23 @@ from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.commit import commit_in_progress2
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
-from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
+
+def _load_conf_mode_qos():
+    spec = importlib.util.spec_from_file_location(
+        'conf_mode_qos', '/usr/libexec/vyos/conf_mode/qos.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+_conf_mode_qos = _load_conf_mode_qos()
 
 running = True
 
 # compile regex once during startup for fast match
 IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan|pppoe|sstpc|wwan)")
-dynamic_qos_interfaces: set[str] = set()
+_dynamic_qos_interfaces: set[str] = set()
 
 # Per-interface previous operstate, used to suppress DHCP restarts on
 # UP-to-UP re-notifications (e.g. post-migration gratuitous-ARP events).
@@ -66,32 +75,30 @@ def _handle_dynamic_qos_events(event: str, ifname: str,
     if not _is_dynamic_qos_iface(ifname):
         return None
 
-    if event in ['RTM_NEWLINK', 'RTM_DELLINK']:
-        if event == 'RTM_NEWLINK' and operstate != 'DOWN':
+    match event:
+        case 'RTM_NEWLINK' if operstate != 'DOWN':
             return None
 
-        if ifname in dynamic_qos_interfaces:
-            syslog.syslog(syslog.LOG_DEBUG,
-                          f'Clearing QoS re-apply state on dynamic interface {ifname}...')
-            dynamic_qos_interfaces.discard(ifname)
+        case 'RTM_NEWLINK' | 'RTM_DELLINK':
+            if ifname in _dynamic_qos_interfaces:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              f'Clearing QoS re-apply state on dynamic interface {ifname}...')
+                _dynamic_qos_interfaces.discard(ifname)
 
-        return None
+        case 'RTM_NEWADDR':
+            if ifname in _dynamic_qos_interfaces:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              f'QoS already re-applied on dynamic interface {ifname}, skipping...')
+                return None
 
-    if event != 'RTM_NEWADDR':
-        return None
+            qos = _conf_mode_qos.get_config()
+            if not qos or 'interface' not in qos or ifname not in qos['interface']:
+                return None
 
-    if ifname in dynamic_qos_interfaces:
-        syslog.syslog(syslog.LOG_DEBUG,
-                      f'QoS already re-applied on dynamic interface {ifname}, skipping...')
-        return None
-
-    syslog.syslog(syslog.LOG_INFO,
-                  f'Re-applying QoS on dynamic interface {ifname}...')
-    call(f'/usr/libexec/vyos/conf_mode/qos.py')
-
-    dynamic_qos_interfaces.add(ifname)
-
-    return None
+            syslog.syslog(syslog.LOG_INFO,
+                          f'Re-applying QoS on dynamic interface {ifname}...')
+            _conf_mode_qos.apply_interface(qos, ifname)
+            _dynamic_qos_interfaces.add(ifname)
 
 def sigterm_handler(signo, frame):
     global running
@@ -206,9 +213,16 @@ def main():
                 ifname = attrs.get('IFLA_IFNAME', None) or attrs.get('IFA_LABEL', None)
 
                 if not ifname and 'index' in message:
-                    links = ipr.get_links(message['index'])
-                    if links:
-                        ifname = dict(links[0].get('attrs', [])).get('IFLA_IFNAME', None)
+                    try:
+                        links = ipr.get_links(message['index'])
+                        if links:
+                            ifname = dict(links[0].get('attrs', [])).get('IFLA_IFNAME', None)
+                    except NetlinkError:
+                        # Interface can disappear between the netlink event
+                        # arriving and this get_links() lookup (e.g. pppoe
+                        # teardown). Skip the message rather than breaking
+                        # the entire ipr.get() batch with an ENODEV error.
+                        continue
 
                 # Bail out early - no interface name in the message
                 if not ifname:
@@ -232,7 +246,10 @@ def main():
                     # Address added to an interface. For dynamic interfaces, this
                     # means the connection completed and QoS can be re-applied.
                     case 'RTM_NEWADDR':
-                        syslog.syslog(syslog.LOG_DEBUG, f'RTM_NEWADDR -> {ifname}')
+                        addr = attrs.get('IFA_ADDRESS', '<unknown>')
+                        prefixlen = message.get('prefixlen', '')
+                        syslog.syslog(syslog.LOG_DEBUG,
+                                      f'RTM_NEWADDR -> {ifname}, addr={addr}/{prefixlen}')
                         _handle_dynamic_qos_events(event, ifname)
 
                     # Deletion of a network link which has been previously added to the kernel
@@ -241,7 +258,7 @@ def main():
                         ifname = attrs.get('IFLA_IFNAME', None)
                         if ifname:
                             _iface_prev_operstate.pop(ifname, None)
-                        _handle_dynamic_qos_events(event, ifname)
+                            _handle_dynamic_qos_events(event, ifname)
                     case _:
                         pass
 
