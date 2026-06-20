@@ -111,6 +111,15 @@
               </node>
             </children>
           </node>
+          <tagNode name="level">
+            <properties>
+              <help>Monitor log and filter messages by minimum priority level (includes all higher severities)</help>
+              <completionHelp>
+                <list>emerg alert crit err warning notice info debug</list>
+              </completionHelp>
+            </properties>
+            <command>SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot -p $4</command>
+          </tagNode>
           <leafNode name="flow-accounting">
             <properties>
               <help>Monitor last lines of flow-accounting log</help>
