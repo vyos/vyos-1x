@@ -65,6 +65,20 @@ class Control(Section):
                 command = f'ip netns exec {self.config["netns"]} {command}'
         return cmd(command, self.debug, env=env)
 
+    def _cmdl(self, command, env=None):
+        from vyos.utils.process import cmdl
+        if not isinstance(command, list):
+            raise TypeError(f'_cmdl() requires a list, got {type(command).__name__}')
+        netns = self.config.get('netns')
+        vrf   = self.config.get('vrf')
+        # 'ip link set dev <ifname> netns <netns>' moves the interface into the
+        # namespace and must execute from the default netns — skip wrapping.
+        if (netns and command[:4] == ['ip', 'link', 'set', 'dev']
+                and 'netns' in command
+                and command[command.index('netns') + 1] == netns):
+            netns = None
+        return cmdl(command, self.debug, env=env, netns=netns, vrf=vrf)
+
     def _get_command(self, config, name):
         """
         Using the defined names, set data write to sysfs.
