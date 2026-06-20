@@ -9,7 +9,7 @@
         <properties>
           <help>Monitor last lines of messages file</help>
         </properties>
-        <command>bash -c 'SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot'</command>
+        <command>SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot</command>
         <children>
           <node name="color">
             <properties>
