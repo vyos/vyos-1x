@@ -67,19 +67,21 @@ class VXLANIf(Interface):
         # arguments used by iproute2. For more information please refer to:
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         mapping = {
-            'group'                      : 'group',
-            'gpe'                        : 'gpe',
-            'parameters.external'        : 'external',
-            'parameters.ip.df'           : 'df',
-            'parameters.ip.tos'          : 'tos',
-            'parameters.ip.ttl'          : 'ttl',
-            'parameters.ipv6.flowlabel'  : 'flowlabel',
-            'parameters.nolearning'      : 'nolearning',
-            'parameters.vni_filter'      : 'vnifilter',
-            'remote'                     : 'remote',
-            'source_address'             : 'local',
-            'source_interface'           : 'dev',
-            'vni'                        : 'id',
+            'group': 'group',
+            'gpe': 'gpe',
+            'parameters.external': 'external',
+            'parameters.ip.df': 'df',
+            'parameters.ip.tos': 'tos',
+            'parameters.ip.ttl': 'ttl',
+            'parameters.ipv6.flowlabel': 'flowlabel',
+            'parameters.nolearning': 'nolearning',
+            'parameters.no_udp_checksum_v4': 'noudpcsum',
+            'parameters.no_udp_checksum_v6': 'udp6zerocsumtx udp6zerocsumrx',
+            'parameters.vni_filter': 'vnifilter',
+            'remote': 'remote',
+            'source_address': 'local',
+            'source_interface': 'dev',
+            'vni': 'id',
         }
 
         # IPv6 flowlabels can only be used on IPv6 tunnels, thus we need to

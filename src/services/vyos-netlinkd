@@ -38,7 +38,7 @@ from vyos.utils.process import stop_systemd_unit
 running = True
 
 # compile regex once during startup for fast match
-IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan)")
+IFACE_RE = re.compile(r"^(?:eth|lan|eno|ens|enp|enx|br|bond|sw|wlan)")
 
 # Per-interface previous operstate, used to suppress DHCP restarts on
 # UP-to-UP re-notifications (e.g. post-migration gratuitous-ARP events).

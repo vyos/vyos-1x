@@ -33,6 +33,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VXLANIf
+from vyos.mlxsw import is_mlxsw
 from vyos.template import is_ipv6
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
@@ -231,6 +232,7 @@ def verify(vxlan):
     verify_vrf(vxlan)
     verify_bond_bridge_member(vxlan)
     verify_mirror_redirect(vxlan)
+    verify_mlxsw_vxlan(vxlan)
 
     # We use a defaultValue for port, thus it's always safe to use
     if vxlan['port'] == '8472':
@@ -261,6 +263,22 @@ def apply(vxlan):
         call_dependents()
 
     return None
+
+
+def verify_mlxsw_vxlan(vxlan):
+    if not is_mlxsw():
+        return None
+
+    if (
+        dict_search('parameters.no_udp_checksum_v4', vxlan) == None
+        and dict_search('parameters.no_udp_checksum_v6', vxlan) == None
+    ):
+        Warning(
+            'Must explicitly set vxlan parameter no-udp-checksum-v4 or no-udp-checksum-v6 on Mellanox switches'
+        )
+
+    return None
+
 
 if __name__ == '__main__':
     try:
