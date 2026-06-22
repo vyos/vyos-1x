@@ -22,7 +22,6 @@ from fcntl import ioctl
 from pathlib import Path
 from struct import pack
 
-
 mem_shift = {'K': 10, 'KB': 10, 'M': 20, 'MB': 20, 'G': 30, 'GB': 30}
 
 
@@ -54,29 +53,37 @@ def vpp_iface_name_transform(iface: str) -> str:
     """Convert a CLI interface name to its corresponding VPP interface name format
 
     Args:
-        iface (str): Interface name as used in VyOS configuration (e.g., "bond0").
+        iface (str): Interface name as used in VyOS configuration (e.g., "vppbond0").
 
     Returns:
         str: Interface name formatted as recognized by VPP (e.g., "BondEthernet0").
     """
-    vpp_iface_name = iface
-    if vpp_iface_name.startswith('vppbond'):
+    vpp_iface_name = iface.removeprefix('vpp')
+    if vpp_iface_name.startswith('bond'):
         # interface name in VPP is BondEthernetX
-        vpp_iface_name = vpp_iface_name.replace('vppbond', 'BondEthernet')
+        return vpp_iface_name.replace('bond', 'BondEthernet')
+    if vpp_iface_name.startswith('lo'):
+        # interface name in VPP is loopX
+        return vpp_iface_name.replace('lo', 'loop')
+    if vpp_iface_name.startswith('vxlan'):
+        # VXLAN interface names in VPP are vxlan_tunnelN
+        return iftunnel_transform(iface)
     return vpp_iface_name
 
 
-def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
+def cli_ifaces_list(
+    config_instance, mode: str = 'candidate', include_vifs: bool = False
+) -> list[str]:
     """List of all VPP interfaces (CLI names)
 
     Args:
         config_instance (VyOS Config): VyOS Config instance
         mode (str, optional): `candidate` or `running`. Defaults to 'candidate'.
+        include_vifs (bool, optional): Include VIF subinterfaces. Defaults to False.
 
     Returns:
         list[str]: list of interfaces
     """
-
     effective_mode: bool = True if mode == 'running' else False
 
     # Read a config
@@ -98,27 +105,32 @@ def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
         with_recursive_defaults=True,
     )
 
-    vpp_ifaces: list[str] = []
+    ethernet_ifaces = list(config.get('settings', {}).get('interface', {}).keys())
 
-    # Get a list of Ethernet interfaces
-    for iface in config.get('settings', {}).get('interface', {}).keys():
-        vpp_ifaces.append(iface)
+    if include_vifs:
+        vpp_ifaces = cli_ethernet_with_vifs_ifaces(config_instance, mode=mode)
+    else:
+        vpp_ifaces = ethernet_ifaces
 
-    # Get a list of interfaces VPP
-    for iface_type in interfaces_config.keys():
-        for iface in interfaces_config.get(iface_type, {}).keys():
+    for _, iface_type_config in interfaces_config.items():
+        for iface, iface_config in iface_type_config.items():
             vpp_ifaces.append(iface)
+            if include_vifs:
+                vpp_ifaces.extend(
+                    [f'{iface}.{vif}' for vif in iface_config.get('vif', {})]
+                )
 
     return vpp_ifaces
 
 
 def cli_ethernet_with_vifs_ifaces(
-    config_instance, include_nested_vifs=False
+    config_instance, mode: str = 'candidate', include_nested_vifs=False
 ) -> list[str]:
     """List of all VPP Ethernet interfaces with VIFs
 
     Args:
         config_instance (VyOS Config): VyOS Config instance
+        mode (str, optional): `candidate` or `running`. Defaults to 'candidate'.
         include_nested_vifs (bool): Include Q-in-Q/customer VIFs if True
 
     Returns:
@@ -126,10 +138,13 @@ def cli_ethernet_with_vifs_ifaces(
     """
     from vyos.configdict import get_interface_dict
 
+    effective_mode: bool = True if mode == 'running' else False
+
     # Read a config
     config = config_instance.get_config_dict(
         ['vpp'],
         key_mangling=('-', '_'),
+        effective=effective_mode,
         get_first_key=True,
         no_tag_node_value_mangle=True,
         with_recursive_defaults=True,

@@ -71,6 +71,10 @@ def get_config(config=None) -> dict:
         no_tag_node_value_mangle=True,
     )
 
+    # ACL dependency
+    if conf.exists(['vpp', 'acl']):
+        set_dependents('vpp_acl', conf)
+
     return config
 
 
