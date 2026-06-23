@@ -1,164 +1,293 @@
+---
+myst:
+  html_meta:
+    description: |
+      Config sync is a VyOS service that replicates selected sections of
+      one router's configuration to another by pushing changes from a
+      primary to a secondary over the HTTPS API.
+    keywords: config-sync, configuration synchronization, primary, secondary, https api
+---
+
 (config-sync)=
 
-# Config Sync
+# Config sync
 
-Configuration synchronization (config sync) is a feature of VyOS that
-permits synchronization of the configuration of one VyOS router to
-another in a network.
+Configuration synchronization (config-sync) is a VyOS service that
+replicates selected sections of one router's configuration to another
+router. It eliminates the need to manually mirror configuration changes
+from a primary router to a secondary.
 
-The main benefit to configuration synchronization is that it eliminates having
-to manually replicate configuration changes made on the primary router to the
-secondary (replica) router.
+Synchronization is performed by a post-commit hook on the primary
+router. The hook watches the sections selected for synchronization. When
+any of them is modified by a commit, the hook calls the HTTPS API on the
+secondary router and sends the current state of all selected sections in
+one of the following modes:
 
-The writing of the configuration to the secondary router is performed through
-the VyOS HTTP API. The user can specify which portion(s) of the configuration will
-be synchronized and the mode to use - whether to replace or add.
+- `load`: Replaces the selected sections on the secondary with the
+  primary's version. Anything that exists only on the secondary inside
+  those sections is removed.
+- `set`: Merges the primary's version of the selected sections into the
+  secondary. Conflicting values are overwritten by the primary. Entries
+  that exist only on the secondary are kept.
 
-To prevent issues with divergent configurations between the pair of routers,
-synchronization is strictly unidirectional from primary to replica. Both
-routers should be online and run the same version of VyOS.
+Synchronization is strictly unidirectional from primary to secondary;
+changes made on the secondary are not sent back.
+
+Both routers must be online during a commit on the primary that modifies
+a configured section. If the secondary is unreachable, the primary's
+commit still succeeds, but the configuration is not synchronized, and
+the failure is recorded in the system log.
 
 ## Configuration
 
-```{cfgcmd} set service config-sync secondary \<address|key|timeout|port\>
+### Secondary router parameters
 
-Specify the address, API key, timeout and port of the secondary router.
-You need to enable and configure the HTTP API service on the secondary
-router for config sync to operate.
+```{cfgcmd} set service config-sync secondary address \<address\>
+
+**Configure the address of the secondary router.**
+
+The primary router pushes the synchronized configuration to this address
+over the secondary's HTTPS API. The value can be an IPv4 address, an
+IPv6 address, or an {abbr}`FQDN (Fully Qualified Domain Name)`. This
+value is mandatory.
 ```
+
+```{note}
+The address must be set whenever `service config-sync` is configured.
+Otherwise, the commit is rejected.
+```
+
+Example:
+
+```none
+set service config-sync secondary address 192.0.2.112
+```
+
+```{cfgcmd} set service config-sync secondary port \<1-65535\>
+
+**Configure the TCP port on which the secondary router's HTTPS API
+listens.**
+
+The value must match the port configured under `service https port` on
+the secondary router. If they diverge, the primary's commit succeeds,
+but the post-commit sync fails. The secondary is not updated, and the
+primary logs the error to the system log.
+
+The default is 443, matching the default of `service https port`.
+```
+
+Example:
+
+```none
+set service config-sync secondary port 8443
+```
+
+```{cfgcmd} set service config-sync secondary key \<key\>
+
+**Configure the HTTPS API key the primary router uses to authenticate
+to the secondary router's HTTPS API.**
+
+The value must match a key configured under `service https api keys id
+<ID> key` on the secondary. If no matching key exists on the secondary,
+the primary's commit still succeeds, but the post-commit sync fails.
+The secondary is not updated, and the primary logs the error to the
+system log.
+```
+
+```{note}
+This value must be set whenever `service config-sync` is configured.
+Otherwise, the commit is rejected.
+```
+
+Example:
+
+```none
+set service config-sync secondary key 'foo'
+```
+
+```{cfgcmd} set service config-sync secondary timeout \<1-3600\>
+
+**Configure how long, in seconds, the primary router waits for an HTTPS
+response from the secondary after pushing configuration.**
+
+The default is 60 seconds.
+```
+
+Example:
+
+```none
+set service config-sync secondary timeout 120
+```
+
+### Synchronization mode
+
+```{cfgcmd} set service config-sync mode \<load | set\>
+
+**Configure how the secondary router applies the configuration pushed
+by the primary:**
+
+- `load`: Replaces the selected sections on the secondary with the
+  primary's version. Anything that exists only on the secondary inside
+  those sections is removed.
+- `set`: Merges the primary's version of the selected sections into the
+  secondary. Conflicting values are overwritten by the primary. Entries
+  that exist only on the secondary are kept.
+```
+
+```{note}
+This value must be set whenever `service config-sync` is configured.
+Otherwise, the commit is rejected.
+```
+
+Example:
+
+```none
+set service config-sync mode load
+```
+
+### Sections to synchronize
 
 ```{cfgcmd} set service config-sync section \<section\>
 
-Specify the section of the configuration to synchronize. If more than one
-section is to be synchronized, repeat the command to add additional
-sections as required.
+**Configure one or more configuration sections to be synchronized from
+the primary to the secondary router.**
+
+Repeat the command to add additional sections. If any configured
+section was modified by a commit on the primary, the hook pushes the
+current state of all configured sections to the secondary. If none of
+the configured sections were modified, the hook does nothing.
+
+Supported sections:
+
+- `firewall`
+- `interfaces <bonding | bridge | dummy | ethernet | geneve | input |
+  l2tpv3 | loopback | macsec | openvpn | pppoe | pseudo-ethernet |
+  sstpc | tunnel | virtual-ethernet | vti | vxlan | wireguard |
+  wireless | wwan>`
+- `nat`
+- `nat66`
+- `pki`
+- `policy`
+- `protocols <babel | bfd | bgp | failover | igmp-proxy | isis | mpls |
+  nhrp | ospf | ospfv3 | pim | pim6 | rip | ripng | rpki |
+  segment-routing | static>`
+- `qos <interface | policy>`
+- `service <console-server | dhcp-relay | dhcp-server | dhcpv6-relay |
+  dhcpv6-server | dns | lldp | mdns | monitoring | ndp-proxy | ntp |
+  snmp | tftp-server | webproxy>`
+- `system <conntrack | flow-accounting | login | option | sflow |
+  static-host-mapping | sysctl | time-zone>`
+- `vpn`
+- `vrf`
 ```
 
-```{cfgcmd} set service config-sync mode \<load|set\>
-
-Two options are available for *mode*: either *load* and replace or *set*
-the configuration section.
+```{note}
+At least one section must be set whenever `service config-sync` is
+configured. Otherwise, the commit is rejected.
 ```
+
+Example:
 
 ```none
-Supported options for <section> include:
-    firewall
-    interfaces <interface>
-    nat
-    nat66
-    pki
-    policy
-    protocols <protocol>
-    qos <interface|policy>
-    service <service>
-    system <conntrack| 
-    flow-accounting|option|sflow|static-host-mapping|sysctl|time-zone>
-    vpn
-    vrf
+set service config-sync section protocols ospf
+set service config-sync section system time-zone
 ```
 
+## Operation
 
-## Operational Commands
+```{opcmd} show configuration secondary sync [commands] [running | candidate | saved [\<config-node-path\>]]
 
-````{opcmd} show configuration secondary sync [commands] [running | candidate | saved] [\<config-node-path\>]
+**Show the difference between the local configuration on the primary
+and the running configuration on the secondary.**
 
-Display configuration differences between the local node and
-a config-sync secondary node.
+The command fetches the secondary's running configuration live over the
+HTTPS API, so the secondary must be reachable.
 
-This command allows operators to compare configurations across nodes
-participating in configuration synchronization (e.g., primary and
-secondary routers). It helps detect configuration drift and validate
-intended changes before synchronization.
+The local configuration defaults to `running` and can be set to
+`candidate` (uncommitted changes) or `saved` (last saved configuration).
+The remote side is always the secondary's running configuration.
 
-**Parameters:**
+By default, the difference is shown in the curly-brace configuration
+format with `-` prefixing lines that exist only on the secondary and
+`+` prefixing lines that exist only on the primary. The optional
+`commands` keyword renders the same difference as a sequence of `set`
+and `delete` configuration commands, where `set` lists paths present
+only on the primary, and `delete` lists paths present only on the
+secondary.
 
-```{eval-rst}
-.. list-table::
-   :widths: 30 70
-   :header-rows: 0
-
-   * - ``commands`` (optional)
-     - Show output as a list of configuration commands instead of raw diff.
-   * - ``running|candidate|saved`` (optional, mutually exclusive)
-     - Select which configuration to compare:
-       ``running`` (current active configuration, default),
-       ``candidate`` (uncommitted changes), or
-       ``saved`` (last saved configuration). Only one of these may be
-       specified at a time; if omitted, ``running`` is used.
+The optional `<config-node-path>` argument limits the difference to a
+single section and must be one of the sections already configured under
+`set service config-sync section`. If omitted, the difference covers
+all configured sections.
 ```
 
-**Examples:**
+Examples:
 
-:::{code-block} none
-# compare full running configuration with a secondary node
+```none
+# Compare the full running configuration against the secondary
 show configuration secondary sync
 
-# compare only interface configuration
-show configuration secondary sync running interfaces dummy
+# Compare only the OSPF protocol configuration against the secondary
+show configuration secondary sync running protocols ospf
 
-# compare candidate configuration and display as a list of commands
+# Compare the candidate configuration against the secondary,
+# rendered as commands
 show configuration secondary sync commands candidate
-:::
-````
-
-Without a built-in cross-node diff, operators may unintentionally push
-changes that conflict with the remote configuration (e.g., mismatched
-interfaces, firewall policies, or protocol settings).
-
+```
 
 ## Example
 
-- Synchronize the time-zone and OSPF configuration from Router A to Router B
-- The address of Router B is 10.0.20.112 and the port used is 8443
+The following example synchronizes the `system time-zone` and
+`protocols ospf` sections from Router A (primary, `192.0.2.1`) to
+Router B (secondary, `192.0.2.112`). Router B's HTTPS API listens on
+TCP port 8443.
 
-Configure the HTTP API service on Router B
+Enable and configure the HTTPS API service on Router B:
 
 ```none
-set service https listen-address '10.0.20.112'
+set service https listen-address '192.0.2.112'
 set service https port '8443'
-set service https api keys id KID key 'foo'
+set service https api keys id primary key 'foo'
 set service https api rest
 ```
 
-Configure the config-sync service on Router A
+Configure the config-sync service on Router A:
 
 ```none
 set service config-sync mode 'load'
-set service config-sync secondary address '10.0.20.112'
+set service config-sync secondary address '192.0.2.112'
 set service config-sync secondary port '8443'
 set service config-sync secondary key 'foo'
 set service config-sync section protocols 'ospf'
 set service config-sync section system 'time-zone'
 ```
 
-Make config-sync relevant changes to Router A's configuration
+Make changes on Router A that fall under one of the synchronized
+sections. The post-commit hook fires automatically on commit:
 
 ```none
 vyos@vyos-A# set system time-zone 'America/Los_Angeles'
 vyos@vyos-A# commit
-INFO:vyos_config_sync:Config synchronization: Mode=load, 
-Secondary=10.0.20.112
+INFO:vyos_config_sync:Config synchronization: Mode=load, Secondary=192.0.2.112
 vyos@vyos-A# save
 
-vyos@vyos-A# set protocols ospf area 0 network '10.0.48.0/30'
+vyos@vyos-A# set protocols ospf area 0 network '198.51.100.0/30'
 vyos@vyos-A# commit
-INFO:vyos_config_sync:Config synchronization: Mode=load, 
-Secondary=10.0.20.112
-yos@vyos-A# save
+INFO:vyos_config_sync:Config synchronization: Mode=load, Secondary=192.0.2.112
+vyos@vyos-A# save
 ```
 
-Verify configuration changes have been replicated to Router B
+Each commit on Router A modifies one section, but because the hook
+pushes all configured sections whenever any of them is modified, both
+commits replace the full state of `system` and `protocols ospf` on
+Router B.
+
+Verify that the changes have been applied on Router B:
 
 ```none
 vyos@vyos-B:~$ show configuration commands | match time-zone
 set system time-zone 'America/Los_Angeles'
 
 vyos@vyos-B:~$ show configuration commands | match ospf
-set protocols ospf area 0 network '10.0.48.0/30'
+set protocols ospf area 0 network '198.51.100.0/30'
 ```
-
-
-## Known issues
-
-Configuration resynchronization. With the current implementation of *service
-config-sync*, the secondary node must be online.
