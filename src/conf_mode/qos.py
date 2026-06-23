@@ -349,6 +349,32 @@ def generate(qos):
     return None
 
 
+def apply_interface(qos, ifname):
+    """ Clear and re-apply QoS for a single interface only. """
+    run(f'tc qdisc del dev {ifname} parent ffff:')
+    run(f'tc qdisc del dev {ifname} root')
+
+    if not qos or 'interface' not in qos or ifname not in qos['interface']:
+        return None
+
+    interface_config = qos['interface'][ifname]
+    if not verify_interface_exists(qos, ifname, state_required=True, warning_only=True):
+        # When shaper is bound to a dialup (e.g. PPPoE) interface it is
+        # possible that it is yet not available when the QoS code runs.
+        # Skip the configuration and inform the user via warning_only=True
+        return None
+
+    for direction in ['egress', 'ingress']:
+        # bail out early if shaper for given direction is not used at all
+        if direction not in interface_config:
+            continue
+
+        shaper_type, shaper_config = get_shaper(qos, interface_config, direction)
+        shaper_type(ifname).update(shaper_config, direction)
+
+    return None
+
+
 def apply(qos):
     # Always delete "old" shapers first
     for interface in interfaces():
@@ -361,21 +387,8 @@ def apply(qos):
     if not qos or 'interface' not in qos:
         return None
 
-    for interface, interface_config in qos['interface'].items():
-        if not verify_interface_exists(qos, interface, state_required=True, warning_only=True):
-            # When shaper is bound to a dialup (e.g. PPPoE) interface it is
-            # possible that it is yet not available when to QoS code runs.
-            # Skip the configuration and inform the user via warning_only=True
-            continue
-
-        for direction in ['egress', 'ingress']:
-            # bail out early if shaper for given direction is not used at all
-            if direction not in interface_config:
-                continue
-
-            shaper_type, shaper_config = get_shaper(qos, interface_config, direction)
-            tmp = shaper_type(interface)
-            tmp.update(shaper_config, direction)
+    for ifname in qos['interface']:
+        apply_interface(qos, ifname)
 
     return None
 

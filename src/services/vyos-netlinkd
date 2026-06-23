@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import importlib.util
 import re
 import sys
 import syslog
@@ -23,6 +24,8 @@ import select
 from pyroute2 import IPRoute # pylint: disable = no-name-in-module
 from pyroute2 import NetlinkError # pylint: disable = no-name-in-module
 from pyroute2.netlink.rtnl import RTMGRP_LINK
+from pyroute2.netlink.rtnl import RTMGRP_IPV4_IFADDR
+from pyroute2.netlink.rtnl import RTMGRP_IPV6_IFADDR
 from time import sleep
 from typing import Optional
 
@@ -35,10 +38,20 @@ from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
 
+def _load_conf_mode_qos():
+    spec = importlib.util.spec_from_file_location(
+        'conf_mode_qos', '/usr/libexec/vyos/conf_mode/qos.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+_conf_mode_qos = _load_conf_mode_qos()
+
 running = True
 
 # compile regex once during startup for fast match
-IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan)")
+IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan|pppoe|sstpc|wwan)")
+_dynamic_qos_interfaces: set[str] = set()
 
 # Per-interface previous operstate, used to suppress DHCP restarts on
 # UP-to-UP re-notifications (e.g. post-migration gratuitous-ARP events).
@@ -49,6 +62,43 @@ def match_iface(ifname: str) -> bool:
     processing (e.g. restart of DHCP(v6) client)
     """
     return IFACE_RE.match(ifname) is not None
+
+def _is_dynamic_qos_iface(ifname: str) -> bool:
+    """ Helper function returning true if interface requires QoS re-apply
+    after first address assignment.
+    """
+    return ifname.startswith(('pppoe', 'sstpc', 'wwan'))
+
+def _handle_dynamic_qos_events(event: str, ifname: str,
+                               operstate: Optional[str] = None) -> None:
+    """ Re-apply QoS for dynamic interfaces after they receive an address. """
+    if not _is_dynamic_qos_iface(ifname):
+        return None
+
+    match event:
+        case 'RTM_NEWLINK' if operstate != 'DOWN':
+            return None
+
+        case 'RTM_NEWLINK' | 'RTM_DELLINK':
+            if ifname in _dynamic_qos_interfaces:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              f'Clearing QoS re-apply state on dynamic interface {ifname}...')
+                _dynamic_qos_interfaces.discard(ifname)
+
+        case 'RTM_NEWADDR':
+            if ifname in _dynamic_qos_interfaces:
+                syslog.syslog(syslog.LOG_DEBUG,
+                              f'QoS already re-applied on dynamic interface {ifname}, skipping...')
+                return None
+
+            qos = _conf_mode_qos.get_config()
+            if not qos or 'interface' not in qos or ifname not in qos['interface']:
+                return None
+
+            syslog.syslog(syslog.LOG_INFO,
+                          f'Re-applying QoS on dynamic interface {ifname}...')
+            _conf_mode_qos.apply_interface(qos, ifname)
+            _dynamic_qos_interfaces.add(ifname)
 
 def sigterm_handler(signo, frame):
     global running
@@ -118,13 +168,13 @@ def main():
                    facility=syslog.LOG_DAEMON)
     syslog.syslog(syslog.LOG_INFO, "VyOS Netlink listener daemon started.")
 
-    # Subscribe to link notifications only (not routes/rules/neigh/addr/...).
+    # Subscribe to link and address notifications only (not routes/rules/neigh/...).
     ipr = IPRoute()
     try:
         # newer pyroute2 versions support bind group in IPRoute() constructor
-        ipr.bind(groups=RTMGRP_LINK)
+        ipr.bind(groups=RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR)
         syslog.syslog(syslog.LOG_INFO,
-            'IPRoute.bind() using groups=RTMGRP_LINK RTNL subscription')
+            'IPRoute.bind() using link and address RTNL subscriptions')
     except TypeError:
         syslog.syslog(syslog.LOG_WARNING,
             'IPRoute.bind() has no groups= support; using default RTNL subscriptions',
@@ -158,25 +208,49 @@ def main():
             # Receive and process any messages
             for message in ipr.get():
                 # Parse NETLINK message
-                match message['event']:
+                event = message['event']
+                attrs = dict(message.get('attrs', []))
+                ifname = attrs.get('IFLA_IFNAME', None) or attrs.get('IFA_LABEL', None)
+
+                if not ifname and 'index' in message:
+                    try:
+                        links = ipr.get_links(message['index'])
+                        if links:
+                            ifname = dict(links[0].get('attrs', [])).get('IFLA_IFNAME', None)
+                    except NetlinkError:
+                        # Interface can disappear between the netlink event
+                        # arriving and this get_links() lookup (e.g. pppoe
+                        # teardown). Skip the message rather than breaking
+                        # the entire ipr.get() batch with an ENODEV error.
+                        continue
+
+                # Bail out early - no interface name in the message
+                if not ifname:
+                    continue
+                # Bail out early - not interested in interface type
+                if not match_iface(ifname):
+                    continue
+
+                match event:
                     # Message received during interface creation or modification
                     # e.g. link up/down.
                     case 'RTM_NEWLINK':
-                        attrs = dict(message.get('attrs', []))
-                        ifname = attrs.get('IFLA_IFNAME', None)
                         mac = attrs.get('IFLA_ADDRESS', '<unknown>')
                         operstate = attrs.get('IFLA_OPERSTATE', None)
                         syslog.syslog(syslog.LOG_DEBUG,
                                       f'RTM_NEWLINK -> {ifname}, state={operstate}, mac={mac}')
 
-                        # Bail out early - no interface name in the message
-                        if not ifname:
-                            continue
-                        # Bail out early - not interested in interface type
-                        if not match_iface(ifname):
-                            continue
-
+                        _handle_dynamic_qos_events(event, ifname, operstate)
                         _handle_dhcp_events(operstate, ifname)
+
+                    # Address added to an interface. For dynamic interfaces, this
+                    # means the connection completed and QoS can be re-applied.
+                    case 'RTM_NEWADDR':
+                        addr = attrs.get('IFA_ADDRESS', '<unknown>')
+                        prefixlen = message.get('prefixlen', '')
+                        syslog.syslog(syslog.LOG_DEBUG,
+                                      f'RTM_NEWADDR -> {ifname}, addr={addr}/{prefixlen}')
+                        _handle_dynamic_qos_events(event, ifname)
 
                     # Deletion of a network link which has been previously added to the kernel
                     case 'RTM_DELLINK':
@@ -184,6 +258,7 @@ def main():
                         ifname = attrs.get('IFLA_IFNAME', None)
                         if ifname:
                             _iface_prev_operstate.pop(ifname, None)
+                            _handle_dynamic_qos_events(event, ifname)
                     case _:
                         pass
 

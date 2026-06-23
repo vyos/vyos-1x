@@ -18,9 +18,7 @@ import os
 import argparse
 
 from psutil import process_iter
-from time import sleep
 
-from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.network import is_wwan_connected
@@ -60,17 +58,6 @@ def connect(interface):
             call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces_wwan.py')
     else:
         print(f'Unknown interface {interface}, cannot connect. Aborting!')
-
-    # Reaply QoS configuration
-    config = ConfigTreeQuery()
-    if config.exists(f'qos interface {interface}'):
-        count = 1
-        while commit_in_progress():
-            if ( count % 60 == 0 ):
-                print(f'Commit still in progress after {count}s - waiting')
-            count += 1
-            sleep(1)
-        call('/usr/libexec/vyos/conf_mode/qos.py')
 
 def disconnect(interface):
     """ Disconnect dialer interface """
