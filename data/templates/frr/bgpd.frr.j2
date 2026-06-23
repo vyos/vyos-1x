@@ -428,14 +428,23 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {%         if afi_config.rd.vpn.export is vyos_defined %}
   rd vpn export {{ afi_config.rd.vpn.export }}
 {%         endif %}
+{# T8990: emit FRR's canonical "rt vpn" keyword (not the "route-target vpn" #}
+{# alias), and fold an identical import+export into "both" exactly as FRR #}
+{# does. FRR only folds on an identical, order-sensitive match, which is #}
+{# what the string compare below tests - so reordered or differing RT lists #}
+{# stay split on both sides too. This keeps the rendered config #}
+{# byte-identical to FRR's running config, so frr-reload produces no diff #}
+{# that would otherwise flap leaked routes on every commit. #}
 {%         if afi_config.route_target.vpn.both is vyos_defined %}
-  route-target vpn both {{ afi_config.route_target.vpn.both }}
+  rt vpn both {{ afi_config.route_target.vpn.both }}
+{%         elif afi_config.route_target.vpn.export is vyos_defined and afi_config.route_target.vpn.export == afi_config.route_target.vpn.import %}
+  rt vpn both {{ afi_config.route_target.vpn.export }}
 {%         else %}
 {%             if afi_config.route_target.vpn.export is vyos_defined %}
-  route-target vpn export {{ afi_config.route_target.vpn.export }}
+  rt vpn export {{ afi_config.route_target.vpn.export }}
 {%             endif %}
 {%             if afi_config.route_target.vpn.import is vyos_defined %}
-  route-target vpn import {{ afi_config.route_target.vpn.import }}
+  rt vpn import {{ afi_config.route_target.vpn.import }}
 {%             endif %}
 {%         endif %}
 {%         if afi_config.route_target.both is vyos_defined %}

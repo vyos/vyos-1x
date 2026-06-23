@@ -25,6 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
+from vyos.utils.file import read_file
 from vyos.frrender import bgp_daemon
 
 ASN = '64512'
@@ -1791,6 +1792,54 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {neighbor} bfd strict hold-time {bfd_hold_time}', frrconfig)
+
+    def test_bgp_33_vpn_route_target_idempotency(self):
+        # T8990: VPNv4/VPNv6 inter-VRF route-leak config must be rendered using
+        # FRR's canonical "rt vpn" keyword (not the "route-target vpn" alias),
+        # and an equal import+export route-target must be collapsed into "both"
+        # - exactly as FRR stores it. Otherwise the generated config never
+        # matches FRR's running config, frr-reload re-applies the route-target
+        # on every commit, and the leaked routes are withdrawn/reinstalled
+        # (flap) on every - even unrelated - commit.
+        #
+        # This intentionally reads the generated FRR config file instead of
+        # getFRRconfig()/vtysh: vtysh returns FRR's already-canonicalized
+        # config ("rt vpn"), so it cannot detect us emitting the
+        # "route-target vpn" alias - which is the actual T8990 defect.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        afi_path = base_path + ['address-family', 'ipv4-unicast']
+
+        self.cli_set(afi_path + ['export', 'vpn'])
+        self.cli_set(afi_path + ['import', 'vpn'])
+        self.cli_set(afi_path + ['rd', 'vpn', 'export', f'{ASN}:1'])
+
+        # symmetric route-target via "both"
+        self.cli_set(afi_path + ['route-target', 'vpn', 'both', f'{ASN}:100'])
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'  rt vpn both {ASN}:100', frrconfig)
+        self.assertNotIn('route-target vpn', frrconfig)
+        self.cli_delete(afi_path + ['route-target', 'vpn', 'both'])
+
+        # symmetric route-target via equal import + export must collapse to
+        # "both" to match FRR's canonical rendering
+        self.cli_set(afi_path + ['route-target', 'vpn', 'export', f'{ASN}:100'])
+        self.cli_set(afi_path + ['route-target', 'vpn', 'import', f'{ASN}:100'])
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'  rt vpn both {ASN}:100', frrconfig)
+        self.assertNotIn('route-target vpn', frrconfig)
+        self.cli_delete(afi_path + ['route-target', 'vpn', 'export'])
+        self.cli_delete(afi_path + ['route-target', 'vpn', 'import'])
+
+        # asymmetric route-target -> separate import/export lines
+        self.cli_set(afi_path + ['route-target', 'vpn', 'export', f'{ASN}:200'])
+        self.cli_set(afi_path + ['route-target', 'vpn', 'import', f'{ASN}:300'])
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'  rt vpn export {ASN}:200', frrconfig)
+        self.assertIn(f'  rt vpn import {ASN}:300', frrconfig)
+        self.assertNotIn('route-target vpn', frrconfig)
 
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
