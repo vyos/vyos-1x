@@ -62,6 +62,12 @@
           #include <include/interface/redirect.xml.i>
           #include <include/interface/vif-s.xml.i>
           #include <include/interface/vif.xml.i>
+          <leafNode name="anycast-gateway">
+            <properties>
+              <help>Use the interface as EVPN Anycast Gateway</help>
+              <valueless/>
+            </properties>
+          </leafNode>
         </children>
       </tagNode>
     </children>

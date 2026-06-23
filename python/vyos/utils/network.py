@@ -158,6 +158,41 @@ def get_vrf_tableid(interface: str):
         table = tmp['linkinfo']['info_slave_data']['table']
     return table
 
+
+def split_interface_vlans(interface: str) -> tuple:
+    """
+    Parse a interface name (with optional VLAN suffixes) into its
+    component parts.
+
+    Handles three input forms:
+      - 'br0'         -> root bridge interface only
+      - 'br0.100'     -> root bridge interface + one VLAN sub-interface level
+      - 'br0.100.200' -> root bridge interface + two VLAN sub-interface levels (QinQ)
+
+    Returns a tuple with the following parts on success:
+      (
+        'br0',  # root interface (always present)
+        '100',  # first VLAN suffix  (None if not present)
+        '200',  # second VLAN suffix (None if not present)
+      )
+    """
+
+    parts = interface.split('.')
+
+    # Guard: we support at most bridge + 2 VLAN levels (e.g. br0.100.200)
+    if len(parts) > 3:
+        raise ValueError(
+            f'Interface "{interface}" has too many VLAN suffixes. '
+            'Only up to two levels are supported (e.g. br0.100.200).'
+        )
+
+    iface = parts[0]
+    vlan_id = parts[1] if len(parts) >= 2 else None
+    inner_vlan_id = parts[2] if len(parts) == 3 else None
+
+    return iface, vlan_id, inner_vlan_id
+
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.

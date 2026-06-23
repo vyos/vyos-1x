@@ -68,6 +68,35 @@ def get_config(config=None):
 
     return peth
 
+def _verify_anycast_gateway(peth: dict):
+    """Validate anycast-gateway requirements."""
+
+    if 'anycast_gateway' not in peth:
+        return
+
+    ifname = peth['ifname']
+
+    # Requirement 1: MAC address must be explicitly configured
+    if 'mac' not in peth:
+        raise ConfigError(
+            f'Anycast-gateway requires an explicit MAC address to be set on interface {ifname}. '
+            f'Use: set interfaces pseudo-ethernet {ifname} mac <mac>'
+        )
+
+    # Requirement 2: source-interface must be a bridge or bridge sub-interface
+    source_iface = peth.get('source_interface')
+    if not source_iface:
+        raise ConfigError(
+            f'Anycast-gateway requires source-interface to be set on interface {ifname}'
+        )
+
+    if not source_iface.startswith('br'):
+        raise ConfigError(
+            'Anycast-gateway requires source-interface to be a bridge '
+            'or a bridge vlan interface (e.g. br0 or br0.100), but '
+            f'"{source_iface}" is neither of these two.'
+        )
+
 def verify(peth):
     if 'deleted' in peth:
         verify_bridge_delete(peth)
@@ -81,6 +110,8 @@ def verify(peth):
     verify_mirror_redirect(peth)
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
+
+    _verify_anycast_gateway(peth)
 
     return None
 
