@@ -135,6 +135,17 @@ let write_internal_reference_tree c_ptr file =
     with Internal.Write_error msg ->
         error_message := msg
 
+let read_internal_string_reference_tree s =
+    (* alert exn Internal.read_string:
+        [Internal.Read_error] caught
+     *)
+    try
+        error_message := "";
+        let rt = (IR.read_string[@alert "-exn"]) s in
+        Ctypes.Root.create rt
+    with Internal.Read_error msg ->
+        error_message := msg; Ctypes.null
+
 let create_node c_ptr path =
     (* alert exn CT.create_node:
         [Vytree.Empty_path] caught
@@ -546,6 +557,7 @@ struct
   let () = I.internal "to_json_reference_tree" ((ptr void) @-> returning string) render_json_reference_tree
   let () = I.internal "read_internal_reference_tree" (string @-> returning (ptr void)) read_internal_reference_tree
   let () = I.internal "write_internal_reference_tree" ((ptr void) @-> string @-> returning void) write_internal_reference_tree
+  let () = I.internal "read_internal_string_reference_tree" (string @-> returning (ptr void)) read_internal_string_reference_tree
   let () = I.internal "create_node" ((ptr void) @-> string @-> returning int) create_node
   let () = I.internal "set_add_value" ((ptr void) @-> string @-> string @-> returning int) set_add_value
   let () = I.internal "set_replace_value" ((ptr void) @-> string @-> string @-> returning int) set_replace_value
