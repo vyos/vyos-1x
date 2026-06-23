@@ -121,8 +121,6 @@ Depends:
   tuned,
   beep,
   wide-dhcpv6-client,
-# Generic colorizer
-  grc,
 # The package "whois" contains both a whois database client
 # that end users can find useful,
 # and the "mkpasswd" utility we use for generating hashed passwords
