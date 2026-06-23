@@ -225,6 +225,12 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="http-server-close">
+                <properties>
+                  <help>Enable HTTP/1.x connection closing on the server side</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               #include <include/haproxy/rule-backend.xml.i>
               <tagNode name="server">
                 <properties>
@@ -398,6 +404,10 @@
               #include <include/haproxy/timeout-server.xml.i>
               <leafNode name="server">
                 <defaultValue>50</defaultValue>
+              </leafNode>
+              #include <include/haproxy/timeout-tunnel.xml.i>
+              <leafNode name="tunnel">
+                <defaultValue>300</defaultValue>
               </leafNode>
             </children>
           </node>

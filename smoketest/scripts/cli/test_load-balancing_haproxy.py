@@ -335,6 +335,34 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
 
+    def test_reverse_proxy_backend_websocket(self):
+        t_tunnel = '3600'
+        opt_server_close = 'http-server-close'
+
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # Set minimal backend websocket configuration
+        self.cli_set(base_path + ['backend', haproxy_backend_name, opt_server_close])
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'timeout', 'tunnel', t_tunnel])
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'ssl', 'no-verify'])
+
+        self.cli_commit()
+
+        # Ensure 'http-server-close' is not used in tcp mode, to test config validation
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'mode', 'tcp'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'option {opt_server_close}', config)
+        self.assertIn(f'timeout tunnel {t_tunnel}s', config)
+        self.assertIn('option forwardfor', config)
+        self.assertIn(' http-request set-header X-Forwarded-Port %[dst_port]', config)
+        self.assertIn('http-request add-header X-Forwarded-Proto https if { ssl_fc }', config)
+        self.assertIn(f'server {haproxy_backend_name} 192.0.2.11:9090 send-proxy ssl verify none', config)
+
     def test_reverse_proxy_backend_http_check(self):
         # Setup base
         self.base_config()
@@ -619,10 +647,12 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         t_default_client = '50'
         t_default_connect = '10'
         t_default_server ='50'
+        t_default_tunnel ='300'
         t_check = '4'
         t_client = '300'
         t_connect = '12'
         t_server ='120'
+        t_tunnel ='600'
         t_front_client = '600'
 
         self.base_config()
@@ -633,6 +663,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
             f'timeout connect {t_default_connect}s',
             f'timeout client {t_default_client}s',
             f'timeout server {t_default_server}s',
+            f'timeout tunnel {t_default_tunnel}s'
         )
         # Check default timeout options
         config = read_file(HAPROXY_CONF)
@@ -644,6 +675,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['timeout', 'client', t_client])
         self.cli_set(base_path + ['timeout', 'connect', t_connect])
         self.cli_set(base_path + ['timeout', 'server', t_server])
+        self.cli_set(base_path + ['timeout', 'tunnel', t_tunnel])
         self.cli_set(base_path + ['service', haproxy_service_name, 'timeout', 'client', t_front_client])
 
         self.cli_commit()
@@ -654,6 +686,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
             f'timeout connect {t_connect}s',
             f'timeout client {t_client}s',
             f'timeout server {t_server}s',
+            f'timeout tunnel {t_tunnel}s',
             f'timeout client {t_front_client}s',
         )
 

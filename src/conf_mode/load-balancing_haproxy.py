@@ -149,7 +149,12 @@ def verify(lb):
     for group in ['service', 'backend']:
         for config_name, config in lb[group].items():
             if 'http_response_headers' in config and config['mode'] != 'http':
-                raise ConfigError(f'{group} {config_name} must be set to http mode to use http_response_headers!')
+                raise ConfigError(f'{group} {config_name} must be set to http mode to use http-response headers!')
+
+    # Check if http-server-close is configured in any backend where mode != http
+    for config_name, config in lb['backend'].items():
+        if 'http_server_close' in config and config['mode'] != 'http':
+            raise ConfigError(f'backend {config_name} must be set to http mode to use http-server-close!')
 
 
 def generate(lb):

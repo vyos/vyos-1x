@@ -42,6 +42,7 @@ defaults
     timeout connect {{ timeout.connect }}s
     timeout client {{ timeout.client }}s
     timeout server {{ timeout.server }}s
+    timeout tunnel {{ timeout.tunnel }}s
     errorfile 400 /etc/haproxy/errors/400.http
     errorfile 403 /etc/haproxy/errors/403.http
     errorfile 408 /etc/haproxy/errors/408.http
@@ -205,6 +206,9 @@ backend {{ back }}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
+{%             if back_config.http_server_close is vyos_defined %}
+    option http-server-close
+{%             endif %}
 {%         endif %}
 {%         if back_config.logging is vyos_defined %}
 {%             for facility, facility_config in back_config.logging.facility.items() %}
@@ -284,6 +288,9 @@ backend {{ back }}
 {%         endif %}
 {%         if back_config.timeout.server is vyos_defined %}
     timeout server {{ back_config.timeout.server }}s
+{%         endif %}
+{%         if back_config.timeout.tunnel is vyos_defined %}
+    timeout tunnel {{ back_config.timeout.tunnel }}s
 {%         endif %}
 {%     endfor %}
 {% endif %}
