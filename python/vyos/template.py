@@ -506,7 +506,10 @@ def get_esp_ike_cipher(group_config, ike_group=None):
         'dh-group29' : 'ecp384bp',
         'dh-group30' : 'ecp512bp',
         'dh-group31' : 'curve25519',
-        'dh-group32' : 'curve448'
+        'dh-group32' : 'curve448',
+        'dh-group33' : 'mlkem512',
+        'dh-group34' : 'mlkem768',
+        'dh-group35' : 'mlkem1024',
     }
 
     ciphers = []
