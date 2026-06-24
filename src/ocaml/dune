@@ -21,7 +21,7 @@
 (executable
  (name validate_value)
  (public_name validate-value)
- (modules validate_value)
+ (modules validate_value native_validators)
  (libraries pcre2 unix containers))
 
 (executable
