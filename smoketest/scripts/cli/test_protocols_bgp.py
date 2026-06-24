@@ -1852,6 +1852,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         mirror_buffer = '32000000'
         bmp_path = base_path + ['bmp']
         target_path = bmp_path + ['target', target_name]
+        source_iface = 'eth0'
 
         # by default the 'bmp' module not loaded for the bgpd expect Error
         self.cli_set(bmp_path)
@@ -1879,6 +1880,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         # config other bmp options
         self.cli_set(target_path + ['address', target_address])
+        self.cli_set(target_path + ['source-interface', source_iface])
         self.cli_set(bmp_path + ['mirror-buffer-limit', mirror_buffer])
         self.cli_set(target_path + ['port', target_port])
         self.cli_set(target_path + ['min-retry', min_retry])
@@ -1899,7 +1901,21 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'bmp monitor ipv6 unicast {monitor_ipv6}', frrconfig)
         self.assertIn(f'bmp monitor ipv4 unicast loc-rib', frrconfig)
         self.assertIn(f'bmp monitor ipv6 unicast loc-rib', frrconfig)
-        self.assertIn(f'bmp connect {target_address} port {target_port} min-retry {min_retry} max-retry {max_retry}', frrconfig)
+        self.assertIn(
+            f'bmp connect {target_address} port {target_port} min-retry {min_retry} max-retry {max_retry} source-interface {source_iface}',
+            frrconfig,
+        )
+
+        # verify source-interface is removed from FRR config after deletion
+        self.cli_delete(target_path + ['source-interface'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(
+            f'bmp connect {target_address} port {target_port} min-retry {min_retry} max-retry {max_retry}',
+            frrconfig,
+        )
+        self.assertNotIn('source-interface', frrconfig)
 
     def test_bgp_100_link_state(self):
         router_id = '127.0.0.1'

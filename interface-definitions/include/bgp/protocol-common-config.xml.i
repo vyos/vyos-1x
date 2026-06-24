@@ -874,6 +874,7 @@
       <children>
         #include <include/address-ipv4-ipv6-single.xml.i>
         #include <include/port-number.xml.i>
+        #include <include/source-interface.xml.i>
         <leafNode name="port">
           <defaultValue>5000</defaultValue>
         </leafNode>
