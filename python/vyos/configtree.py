@@ -72,7 +72,7 @@ class ConfigTreeError(Exception):
 
 
 class ConfigTree:
-    # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-statements,too-many-public-methods
+    # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-statements,too-many-public-methods,raise-missing-from
     def __init__(
         self,
         config_string=None,
@@ -232,7 +232,11 @@ class ConfigTree:
                 self.__config = address
                 self.__version = ''
             case ('internal', internal):
-                config = self.__read_internal(internal.encode())
+                try:
+                    cache_string = Path(internal).read_bytes()
+                except OSError as e:
+                    raise ValueError(f'Failed to read internal cache file: {e}')
+                config = self.__read_internal_string(cache_string)
                 if config is None:
                     msg = self.__get_error().decode()
                     raise ValueError(
@@ -299,7 +303,11 @@ class ConfigTree:
         return self.__version
 
     def write_cache(self, file_name):
-        self.__write_internal(self.get_tree(), file_name.encode())
+        cache_string = self.__write_internal_string(self.get_tree())
+        try:
+            Path(file_name).write_bytes(cache_string)
+        except OSError as e:
+            raise ValueError(f'Failed to write internal cache file: {e}')
 
     def write_internal_string(self) -> str:
         res = self.__write_internal_string(self.get_tree())
