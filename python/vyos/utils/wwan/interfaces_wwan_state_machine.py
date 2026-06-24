@@ -616,6 +616,13 @@ class ModemStateMachine:
         self.machine.initialize()
         ModemStateMachine.modem_state_machines[f"wwan{self.interface_number}"] = self
 
+        # Re-enumeration/restart race guards. A modem reset can deliver
+        # duplicate attach paths (scan loop + signal callbacks), so keep
+        # on_modem_found idempotent and avoid stacking duplicate
+        # PropertiesChanged handlers on the same proxy/path.
+        self._on_modem_found_in_progress = False
+        self._signal_handlers_bound_modem_path = None
+
         # SIM-slot control strategy. Capability-driven from the active
         # pinmap: a board that declares a ``sim_select`` GPIO uses an
         # external SIM mux (GPIO-mux mode); otherwise SIM switching is
@@ -1176,6 +1183,7 @@ class ModemStateMachine:
                     self.proxy = None
                     self.modem_path = None
                     self.bearer_path = None
+                    self._signal_handlers_bound_modem_path = None
                     return   # ← skip all the normal removal cleanup / state change
 
                 logger.warning("Current modem removed via signal, transitioning to scanning",
@@ -1221,6 +1229,7 @@ class ModemStateMachine:
                 self.proxy = None
                 self.modem_path = None
                 self.bearer_path = None
+                self._signal_handlers_bound_modem_path = None
 
                 # Cancel any ongoing initial configuration task
                 if hasattr(self, '_initial_config_task') and self._initial_config_task and not self._initial_config_task.done():
@@ -1616,64 +1625,97 @@ class ModemStateMachine:
         if not self.proxy:
             return
 
+        if self._on_modem_found_in_progress:
+            logger.debug("on_modem_found already in progress — skipping duplicate invocation",
+                        extra={'interface_number': self.interface_number,
+                               'current_state': self.machine.current_state})
+            return
+        self._on_modem_found_in_progress = True
+        try:
+
         # Set up a single PropertiesChanged handler for all interfaces on this proxy.
         # dbus_next delivers all PropertiesChanged signals through one callback;
         # registering multiple callbacks on the same interface may replace or
         # stack depending on the version, so we use one dispatcher instead.
-        try:
-            modem_properties_iface = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-            modem_properties_iface.on_properties_changed(self._dispatch_properties_changed)
-            logger.info("PropertiesChanged signal monitoring enabled (Modem + 3GPP)",
-                       extra={'interface_number': self.interface_number})
-        except Exception as e:
-            logger.error(f"Failed to set up signal handlers: {e}",
-                        extra={'interface_number': self.interface_number})
+            try:
+                if self._signal_handlers_bound_modem_path != self.modem_path:
+                    modem_properties_iface = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                    modem_properties_iface.on_properties_changed(self._dispatch_properties_changed)
+                    self._signal_handlers_bound_modem_path = self.modem_path
+                    logger.info("PropertiesChanged signal monitoring enabled (Modem + 3GPP)",
+                               extra={'interface_number': self.interface_number,
+                                      'modem_path': self.modem_path})
+                else:
+                    logger.debug("PropertiesChanged handlers already bound for modem path",
+                                extra={'interface_number': self.interface_number,
+                                       'modem_path': self.modem_path})
+            except Exception as e:
+                logger.error(f"Failed to set up signal handlers: {e}",
+                            extra={'interface_number': self.interface_number})
 
-        logger.info("Modem signal handlers registered - checking for configuration",
-                   extra={'interface_number': self.interface_number,
-                          'current_state': self.machine.current_state,
-                          'has_config': bool(self.config)})
-
-        # Always transition to WAITING_FOR_CONFIG first (valid from MODEM_FOUND)
-        self.transition(ModemEvent.WAIT_FOR_CONFIG)
-
-        # If config says the interface is admin-disabled, drive the
-        # modem to airplane mode now and stop — don't run the initial
-        # configuration cascade.  Covers the cold-start case where the
-        # FSM service restarted with cached `interface_disabled=True`.
-        if getattr(self, '_admin_disabled', False) or (
-                self.config and self.config.get('interface_disabled')):
-            logger.info("Interface is admin-disabled — driving modem to airplane mode",
-                       extra={'interface_number': self.interface_number})
-            self._admin_disabled = True
-            self.user_disconnected = True
-            self._safe_create_task(self._enter_airplane_mode())
-            # Still synthesize an initial state read so observability
-            # works, but don't run the connection cascade.
-            self._safe_create_task(self._dispatch_initial_modem_state())
-            return
-
-        # Check if config was already applied before modem was found
-        if self.config:
-            logger.info("Configuration already available, applying immediately",
+            logger.info("Modem signal handlers registered - checking for configuration",
                        extra={'interface_number': self.interface_number,
-                              'config_keys': list(self.config.keys())})
-            # Now transition to CONFIGURING (valid from WAITING_FOR_CONFIG)
-            self.transition(ModemEvent.CONFIG_UPDATE)
-            self._initial_config_task = self._safe_create_task(self._configure_modem_initial())
+                              'current_state': self.machine.current_state,
+                              'has_config': bool(self.config)})
 
-        # Start periodic SIM check if we transition to WAITING_FOR_SIM
-        if self.machine.current_state == ModemState.WAITING_FOR_SIM.value:
-            self._safe_create_task(self._periodic_sim_check())
+            # Transition to WAITING_FOR_CONFIG only when coming from MODEM_FOUND.
+            # Duplicate modem-found callbacks can occur during re-enumeration;
+            # avoid re-firing bootstrap events from CONFIGURING/active states.
+            if self.machine.current_state == ModemState.MODEM_FOUND.value:
+                self.transition(ModemEvent.WAIT_FOR_CONFIG)
+            elif self.machine.current_state not in (
+                    ModemState.WAITING_FOR_CONFIG.value,
+                    ModemState.CONFIGURING.value,
+                    ModemState.CONNECTING.value,
+                    ModemState.CONNECTED.value,
+                    ModemState.USAGE_MONITORING.value,
+                    ModemState.REGISTERED_IDLE.value,
+                    ModemState.WAITING_FOR_SIM.value,
+                    ModemState.FAILED.value):
+                logger.debug("on_modem_found in unexpected state; leaving state unchanged",
+                            extra={'interface_number': self.interface_number,
+                                   'current_state': self.machine.current_state})
 
-        # Synthesize a state event for the modem's CURRENT state.  The
-        # PropertiesChanged signal only fires on *transitions*, so if the
-        # modem is already sitting in FAILED (e.g. SIM was pulled before
-        # the FSM started, or vyos-wwan-state-machine was restarted while
-        # the modem was already in `state=failed reason=sim-missing`), our
-        # SIM-failover handler never fires.  Re-read State and dispatch it
-        # so the existing handle_modem_event() recovery path runs at boot.
-        self._safe_create_task(self._dispatch_initial_modem_state())
+            # If config says the interface is admin-disabled, drive the
+            # modem to airplane mode now and stop — don't run the initial
+            # configuration cascade.  Covers the cold-start case where the
+            # FSM service restarted with cached `interface_disabled=True`.
+            if getattr(self, '_admin_disabled', False) or (
+                    self.config and self.config.get('interface_disabled')):
+                logger.info("Interface is admin-disabled — driving modem to airplane mode",
+                           extra={'interface_number': self.interface_number})
+                self._admin_disabled = True
+                self.user_disconnected = True
+                self._safe_create_task(self._enter_airplane_mode())
+                # Still synthesize an initial state read so observability
+                # works, but don't run the connection cascade.
+                self._safe_create_task(self._dispatch_initial_modem_state())
+                return
+
+            # Check if config was already applied before modem was found.
+            # Only kick CONFIG_UPDATE from WAITING_FOR_CONFIG to avoid
+            # duplicate re-entry transition errors.
+            if self.config and self.machine.current_state == ModemState.WAITING_FOR_CONFIG.value:
+                logger.info("Configuration already available, applying immediately",
+                           extra={'interface_number': self.interface_number,
+                                  'config_keys': list(self.config.keys())})
+                self.transition(ModemEvent.CONFIG_UPDATE)
+                self._initial_config_task = self._safe_create_task(self._configure_modem_initial())
+
+            # Start periodic SIM check if we transition to WAITING_FOR_SIM
+            if self.machine.current_state == ModemState.WAITING_FOR_SIM.value:
+                self._safe_create_task(self._periodic_sim_check())
+
+            # Synthesize a state event for the modem's CURRENT state.  The
+            # PropertiesChanged signal only fires on *transitions*, so if the
+            # modem is already sitting in FAILED (e.g. SIM was pulled before
+            # the FSM started, or vyos-wwan-state-machine was restarted while
+            # the modem was already in `state=failed reason=sim-missing`), our
+            # SIM-failover handler never fires.  Re-read State and dispatch it
+            # so the existing handle_modem_event() recovery path runs at boot.
+            self._safe_create_task(self._dispatch_initial_modem_state())
+        finally:
+            self._on_modem_found_in_progress = False
 
     async def _dispatch_initial_modem_state(self):
         """Re-read modem State at startup and feed it to handle_modem_event.
@@ -4490,12 +4532,25 @@ class ModemStateMachine:
             # newly-selected SIM.
             if self.sim_controller.is_gpio_mux:
                 current_slot = await self.sim_controller.current_selected_slot()
-                self.current_active_sim = current_slot or config_sim_slot
+                # Deterministic boot policy for GPIO-mux boards: always drive
+                # the mux line to the configured/default slot while the modem
+                # is disabled, regardless of prior latch state.
+                await self.sim_controller.force_select_slot(config_sim_slot)
+                self.current_active_sim = config_sim_slot
                 logger.info("GPIO-mux SIM slot check",
                            extra={'interface_number': self.interface_number,
                                   'mux_slot': current_slot,
                                   'config_sim': config_sim_slot})
-                if current_slot is not None and current_slot != config_sim_slot:
+                # If mux state cannot be read (None), force a deterministic
+                # selection to the configured slot anyway.  Otherwise the FSM
+                # only *assumes* primary_sim_slot in software while the hardware
+                # may still be physically wired to the previous slot.
+                should_switch = (current_slot != config_sim_slot)
+                if should_switch:
+                    if current_slot is None:
+                        logger.warning("GPIO-mux selected slot unknown — forcing configured SIM selection",
+                                      extra={'interface_number': self.interface_number,
+                                             'config_sim': config_sim_slot})
                     self._sim_switch_in_progress = True
                     try:
                         await self.sim_controller.switch_to(config_sim_slot)
@@ -5674,8 +5729,36 @@ class ModemStateMachine:
                 active = (self.current_active_sim
                           or (self.config or {}).get('primary_sim_slot', 1))
                 active_present = await self.sim_controller.is_present(active)
+                active_known = self.sim_controller.slot_presence_known(active)
                 present = await self.sim_controller.present_slots()
                 alternate_present = any(s != active for s in present)
+                presence_trustworthy = self.sim_controller.has_reliable_presence()
+                if not presence_trustworthy or (not active_known and not alternate_present):
+                    # Transient GPIO read failures at startup can leave
+                    # presence "unknown" even when SIMs are inserted and
+                    # stable. Re-sample before suppressing SIM failover.
+                    await self.sim_controller.refresh_presence(attempts=3, delay=0.2)
+                    active_present = await self.sim_controller.is_present(active)
+                    active_known = self.sim_controller.slot_presence_known(active)
+                    present = await self.sim_controller.present_slots()
+                    alternate_present = any(s != active for s in present)
+                    presence_trustworthy = self.sim_controller.has_reliable_presence()
+                if not presence_trustworthy or (not active_known and not alternate_present):
+                    logger.warning(
+                        "Modem FAILED in GPIO-mux mode but SIM_DETECT presence is "
+                        "not trustworthy yet — suppressing SIM-based failover trigger",
+                        extra={'interface_number': self.interface_number,
+                               'active_slot': active,
+                               'active_known': active_known,
+                               'active_present': active_present,
+                               'present_slots': sorted(present)})
+                    current_fsm_state = self.machine.current_state
+                    if current_fsm_state in [ModemState.CONFIGURING.value,
+                                             ModemState.CONNECTING.value,
+                                             ModemState.CONNECTED.value,
+                                             ModemState.USAGE_MONITORING.value]:
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                    return
                 if (not active_present) or alternate_present:
                     logger.warning(
                         "Modem FAILED and SIM_DETECT indicates a SIM problem "
@@ -5804,7 +5887,11 @@ class ModemStateMachine:
             self._safe_create_task(self._handle_sim_missing_failover())
 
     async def _execute_sim_switch(self):
-        """Execute the complete SIM switch process with rollback on failure"""
+        """Execute the complete SIM switch process with rollback on failure.
+
+        Returns:
+            bool: True when the switch flow completed successfully, else False.
+        """
         # Save original SIM for potential rollback
         self.previous_sim_slot = self.current_active_sim
 
@@ -5826,6 +5913,7 @@ class ModemStateMachine:
                 # Skip disconnect, go straight to disable
                 self.transition(ModemEvent.SIM_DISCONNECTED)
                 await self._sim_switch_disable()
+            return True
 
         except Exception as e:
             logger.error(f"SIM switch process failed: {e}",
@@ -5836,6 +5924,7 @@ class ModemStateMachine:
             if self.previous_sim_slot is not None:
                 await self._sim_switch_cleanup(self.previous_sim_slot)
             self.transition(ModemEvent.CONNECTION_FAILED)
+            return False
         finally:
             # Always clear the flag when the switch process ends
             self._sim_switch_in_progress = False
@@ -6284,12 +6373,25 @@ class ModemStateMachine:
                 if disconnect_reason_override:
                     self._disconnect_reason_override = disconnect_reason_override
 
-                # Record the failover for cooldown tracking
-                self._record_failover()
+                # Some callers (initial-configuration failures) are not in a
+                # state from which SWITCH_SIM is valid; let them inject an
+                # intermediate transition (e.g. CONNECTION_FAILED) first.
+                if pre_switch_event is not None:
+                    self.transition(pre_switch_event)
 
-                # Emit event for observability — keep the dedicated
-                # data-limit/registration-flap event types so telemetry stays
-                # distinct.  Always include the probed available-SIM list.
+                # Start SIM switch process
+                self.transition(ModemEvent.SWITCH_SIM)
+                switched = await self._execute_sim_switch()
+                if not switched:
+                    logger.warning("SIM failover switch attempt failed — not recording cooldown/event",
+                                  extra={'interface_number': self.interface_number,
+                                         'from_sim': from_sim,
+                                         'to_sim': fallback_sim,
+                                         'reason': reason})
+                    return False
+
+                # Record cooldown and emit failover event only after success.
+                self._record_failover()
                 event_extra = {'available_sims': available_sims}
                 if extra_data:
                     event_extra.update(extra_data)
@@ -6302,16 +6404,6 @@ class ModemStateMachine:
                     reason=reason,
                     trigger=trigger,
                     extra_data=event_extra)
-
-                # Some callers (initial-configuration failures) are not in a
-                # state from which SWITCH_SIM is valid; let them inject an
-                # intermediate transition (e.g. CONNECTION_FAILED) first.
-                if pre_switch_event is not None:
-                    self.transition(pre_switch_event)
-
-                # Start SIM switch process
-                self.transition(ModemEvent.SWITCH_SIM)
-                await self._execute_sim_switch()
                 return True
 
             else:
@@ -6767,7 +6859,13 @@ class ModemStateMachine:
                               'new_modem_path': self.modem_path})
 
             # Transition to enable step
-            self.transition(ModemEvent.SIM_SWITCHED)
+            if self.machine.current_state == ModemState.SIM_DISABLING.value:
+                self.transition(ModemEvent.SIM_SWITCHED)
+            else:
+                logger.warning("Skipping SIM_SWITCHED transition due to unexpected state",
+                              extra={'interface_number': self.interface_number,
+                                     'current_state': self.machine.current_state,
+                                     'target_sim': self.target_sim_slot})
             await self._sim_switch_enable()
 
         except Exception as e:
@@ -6902,7 +7000,13 @@ class ModemStateMachine:
                 )
 
             # Transition to reconfiguration
-            self.transition(ModemEvent.SIM_ENABLED)
+            if self.machine.current_state == ModemState.SIM_ENABLING.value:
+                self.transition(ModemEvent.SIM_ENABLED)
+            else:
+                logger.warning("Skipping SIM_ENABLED transition due to unexpected state",
+                              extra={'interface_number': self.interface_number,
+                                     'current_state': self.machine.current_state,
+                                     'target_sim': self.target_sim_slot})
             await self._sim_switch_reconfigure()
 
         except Exception as e:

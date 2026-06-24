@@ -53,6 +53,7 @@ schedule SIM-detect events back onto the FSM's asyncio loop.
 import asyncio
 import os
 import threading
+import time
 
 from vyos.utils.wwan.wwan_logging import setup_logging
 
@@ -116,6 +117,14 @@ class SimController:
         await iface.call_set_primary_sim_slot(slot)
         return True
 
+    async def force_select_slot(self, slot: int) -> bool:
+        """Best-effort explicit slot selection without implying reboot.
+
+        ModemManager-managed mode has no external mux line to force, so this
+        is a no-op that reports success.
+        """
+        return True
+
     async def current_selected_slot(self):
         """Return the slot currently wired to the modem, or None.
 
@@ -128,6 +137,14 @@ class SimController:
     async def sample_initial(self) -> None:
         """No-op for ModemManager-managed modems."""
         return None
+
+    async def refresh_presence(self, attempts: int = 1, delay: float = 0.0) -> None:
+        """Best-effort refresh of SIM presence telemetry.
+
+        Base implementation delegates to ``sample_initial`` so callers can
+        safely request a refresh without branching on controller type.
+        """
+        await self.sample_initial()
 
     def start_watch(self) -> None:
         """No-op for ModemManager-managed modems."""
@@ -143,6 +160,14 @@ class SimController:
         slots = [s.get("slot") for s in cfg.get("sim_slots", [])
                  if s.get("slot")]
         return slots or [1, 2]
+
+    # Presence-confidence helpers (GPIO-mux uses SIM_DETECT; MM-managed
+    # presence probes are authoritative by construction).
+    def slot_presence_known(self, slot: int) -> bool:
+        return True
+
+    def has_reliable_presence(self) -> bool:
+        return True
 
 
 class GpioMuxSimController(SimController):
@@ -164,6 +189,8 @@ class GpioMuxSimController(SimController):
         self._hw = hw_api
         # slot -> bool present
         self._present = {}
+        # slots with at least one successful sample/event update
+        self._known_slots = set()
         # detect pin name -> slot
         self._pin_slot = {}
         self._watch_thread = None
@@ -206,24 +233,59 @@ class GpioMuxSimController(SimController):
         return {s for s, present in self._present.items() if present}
 
     async def sample_initial(self) -> None:
-        """Seed the presence model with a one-shot read of each detect line.
+        """Seed the presence model with detect-line reads.
 
         Edge events only report *changes*, so without this initial sample
         the FSM would be blind to whatever SIMs are already inserted at
         startup until one is physically moved.
         """
-        for pin, slot in self._pin_slot.items():
-            try:
-                level = await asyncio.to_thread(self._hw.get_pin, pin)
-                self._present[slot] = bool(level)
-            except Exception as e:
-                logger.warning("Initial SIM-detect sample failed for pin",
+        await self.refresh_presence(attempts=3, delay=0.2)
+
+    async def refresh_presence(self, attempts: int = 1, delay: float = 0.0) -> None:
+        """Re-sample SIM_DETECT pins with retries.
+
+        GPIO access can fail transiently during early boot or while GPIO
+        consumers settle. Retrying avoids leaving slots permanently
+        "unknown" when both SIMs were physically stable all along.
+        """
+        attempts = max(1, int(attempts))
+        delay = max(0.0, float(delay))
+
+        last_errors = {}
+        for attempt in range(1, attempts + 1):
+            any_success = False
+            for pin, slot in self._pin_slot.items():
+                try:
+                    level = await asyncio.to_thread(self._hw.get_pin, pin)
+                    self._present[slot] = bool(level)
+                    self._known_slots.add(slot)
+                    any_success = True
+                    last_errors.pop(pin, None)
+                except Exception as e:
+                    last_errors[pin] = str(e)
+                    self._present.setdefault(slot, False)
+
+            if any_success and len(self._known_slots) == len(self._pin_slot):
+                break
+
+            if attempt < attempts and delay > 0:
+                await asyncio.sleep(delay)
+
+        if last_errors:
+            for pin, error in last_errors.items():
+                slot = self._pin_slot.get(pin)
+                logger.warning("SIM-detect sample failed for pin",
                                extra={'interface_number': self.fsm.interface_number,
-                                      'pin': pin, 'slot': slot, 'error': str(e)})
-                self._present.setdefault(slot, False)
+                                      'pin': pin,
+                                      'slot': slot,
+                                      'attempts': attempts,
+                                      'error': error})
+
         logger.info("GPIO-mux initial SIM presence sampled",
                     extra={'interface_number': self.fsm.interface_number,
-                           'present': dict(self._present)})
+                           'present': dict(self._present),
+                           'known_slots': sorted(self._known_slots),
+                           'attempts': attempts})
 
     # --- switch ----------------------------------------------------------
     async def switch_to(self, slot: int) -> bool:
@@ -252,6 +314,15 @@ class GpioMuxSimController(SimController):
                                   'target_slot': slot})
         return ok
 
+    async def force_select_slot(self, slot: int) -> bool:
+        """Force the mux line to ``slot`` without rebooting the modem.
+
+        Used during boot-time deterministic setup while the modem is disabled,
+        so the selected slot is guaranteed before the modem is enabled.
+        """
+        await asyncio.to_thread(self._hw.sim_select, slot, self.modem_name)
+        return True
+
     async def current_selected_slot(self):
         """Return the slot the mux currently selects (1 or 2), or None."""
         try:
@@ -262,6 +333,12 @@ class GpioMuxSimController(SimController):
                          extra={'interface_number': self.fsm.interface_number,
                                 'error': str(e)})
             return None
+
+    def slot_presence_known(self, slot: int) -> bool:
+        return slot in self._known_slots
+
+    def has_reliable_presence(self) -> bool:
+        return bool(self._known_slots)
 
     # --- detect watcher --------------------------------------------------
     def start_watch(self) -> None:
@@ -322,6 +399,7 @@ class GpioMuxSimController(SimController):
                 # item assignment is atomic under CPython, and the FSM only
                 # ever reads this map, so no lock is needed.
                 self._present[slot] = present
+                                self._known_slots.add(slot)
                 logger.info("GPIO-mux SIM-detect event",
                             extra={'interface_number': self.fsm.interface_number,
                                    'slot': slot, 'event': event})

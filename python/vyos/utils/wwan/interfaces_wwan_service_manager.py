@@ -156,6 +156,10 @@ class ConfigServiceManager:
         self.alert_history = []
         self.control_interface = None
         self.alert_interface = None
+        # Serialize reconnection/re-export cycles. NameOwnerChanged and
+        # watchdog recovery can overlap; without a lock we can double-export
+        # paths on the same bus and/or race bus disconnects.
+        self._bus_update_lock = asyncio.Lock()
 
     _ALERT_TYPE_MAP = {
         'bearer_down': ('connectivity', 'WWAN_BEARER_DOWN'),
@@ -470,48 +474,68 @@ class ConfigServiceManager:
 
     async def update_bus_connection(self, new_bus):
         """Update the D-Bus connection after ModemManager restart"""
-        try:
-            logger.info("Updating D-Bus connection after ModemManager restart",
-                       extra={'fsm_count': len(self.modem_state_machines)})
+        async with self._bus_update_lock:
+            try:
+                logger.info("Updating D-Bus connection after ModemManager restart",
+                           extra={'fsm_count': len(self.modem_state_machines)})
 
-            # Update the bus reference
-            old_bus = self.bus
-            self.bus = new_bus
+                # Update the bus reference
+                old_bus = self.bus
+                self.bus = new_bus
 
-            # Re-request the bus name
-            await self.bus.request_name("com.igos.IgosModemManager")
+                # Ensure service name ownership on the current bus
+                await self.bus.request_name("com.igos.IgosModemManager")
 
-            # Re-export the control interface
-            self.control_interface = ControlInterface(self)
-            self.alert_interface = AlertBusInterface(self)
-            self.bus.export("/com/igos/IgosModemManager/Control", self.control_interface)
-            self.bus.export("/com/igos/IgosModemManager/AlertBus", self.alert_interface)
-
-            # Re-export any existing interface objects
-            for interface_number, iface in self.interface_objects.items():
-                object_path = f"/com/igos/IgosModemManager/Interface{interface_number}"
-                self.bus.export(object_path, iface)
-                logger.info("Re-exported interface",
-                           extra={'interface_number': interface_number, 'object_path': object_path})
-
-            # Update FSM bus connections
-            for interface_number, fsm in self.modem_state_machines.items():
+                # Best-effort cleanup before re-export in case this callback
+                # runs multiple times against the same bus object.
                 try:
-                    await fsm.update_bus_connection(new_bus)
-                except Exception as e:
-                    logger.error(f"Failed to update FSM bus connection: {e}",
-                               extra={'interface_number': interface_number})
+                    self.bus.unexport("/com/igos/IgosModemManager/Control")
+                except Exception:
+                    pass
+                try:
+                    self.bus.unexport("/com/igos/IgosModemManager/AlertBus")
+                except Exception:
+                    pass
+                for interface_number in self.interface_objects:
+                    object_path = f"/com/igos/IgosModemManager/Interface{interface_number}"
+                    try:
+                        self.bus.unexport(object_path)
+                    except Exception:
+                        pass
 
-            # Disconnect old bus
-            if old_bus:
-                old_bus.disconnect()
+                # Re-export the control interface
+                self.control_interface = ControlInterface(self)
+                self.alert_interface = AlertBusInterface(self)
+                self.bus.export("/com/igos/IgosModemManager/Control", self.control_interface)
+                self.bus.export("/com/igos/IgosModemManager/AlertBus", self.alert_interface)
 
-            logger.info("D-Bus connection updated successfully",
-                       extra={'fsm_count': len(self.modem_state_machines)})
+                # Re-export any existing interface objects
+                for interface_number, iface in self.interface_objects.items():
+                    object_path = f"/com/igos/IgosModemManager/Interface{interface_number}"
+                    self.bus.export(object_path, iface)
+                    logger.info("Re-exported interface",
+                               extra={'interface_number': interface_number, 'object_path': object_path})
 
-        except Exception as e:
-            logger.error(f"Failed to update D-Bus connection: {e}")
-            raise
+                # Update FSM bus connections
+                for interface_number, fsm in self.modem_state_machines.items():
+                    try:
+                        await fsm.update_bus_connection(new_bus)
+                    except Exception as e:
+                        logger.error(f"Failed to update FSM bus connection: {e}",
+                                   extra={'interface_number': interface_number})
+
+                # Disconnect old bus only when we actually switched objects.
+                # If old_bus == new_bus, disconnecting here would tear down the
+                # active connection and make the control interface disappear.
+                if old_bus and old_bus is not self.bus:
+                    old_bus.disconnect()
+
+                logger.info("D-Bus connection updated successfully",
+                           extra={'fsm_count': len(self.modem_state_machines)})
+
+            except Exception as e:
+                logger.error(f"Failed to update D-Bus connection: {e}")
+                raise
 
     async def shutdown(self):
         """Graceful shutdown of the service manager"""
