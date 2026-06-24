@@ -4532,35 +4532,34 @@ class ModemStateMachine:
             # newly-selected SIM.
             if self.sim_controller.is_gpio_mux:
                 current_slot = await self.sim_controller.current_selected_slot()
-                # Deterministic boot policy for GPIO-mux boards: always drive
-                # the mux line to the configured/default slot while the modem
-                # is disabled, regardless of prior latch state.
-                await self.sim_controller.force_select_slot(config_sim_slot)
+                # Deterministic boot policy for GPIO-mux boards: ensure the
+                # mux points to configured/default SIM while modem is disabled.
+                # If already correct, do not touch the line.
+                if current_slot != config_sim_slot:
+                    await self.sim_controller.force_select_slot(config_sim_slot)
                 self.current_active_sim = config_sim_slot
                 logger.info("GPIO-mux SIM slot check",
                            extra={'interface_number': self.interface_number,
                                   'mux_slot': current_slot,
                                   'config_sim': config_sim_slot})
-                # If mux state cannot be read (None), force a deterministic
-                # selection to the configured slot anyway.  Otherwise the FSM
-                # only *assumes* primary_sim_slot in software while the hardware
-                # may still be physically wired to the previous slot.
-                should_switch = (current_slot != config_sim_slot)
-                if should_switch:
-                    if current_slot is None:
-                        logger.warning("GPIO-mux selected slot unknown — forcing configured SIM selection",
-                                      extra={'interface_number': self.interface_number,
-                                             'config_sim': config_sim_slot})
-                    self._sim_switch_in_progress = True
-                    try:
-                        await self.sim_controller.switch_to(config_sim_slot)
-                        await self._rescan_after_sim_switch()
-                    finally:
-                        self._sim_switch_in_progress = False
-                    self.current_active_sim = config_sim_slot
-                    logger.info("GPIO-mux SIM slot selected",
+                # IMPORTANT: During initial configuration we already forced the
+                # mux while modem is DISABLED, so the next enable is enough for
+                # the modem to read the selected SIM. Do not call switch_to()
+                # here: that API intentionally includes a modem reboot and can
+                # trigger unnecessary reset/re-enumeration churn at startup.
+                if current_slot is None:
+                    logger.warning("GPIO-mux selected slot unknown — forced configured SIM without startup reboot",
+                                  extra={'interface_number': self.interface_number,
+                                         'config_sim': config_sim_slot})
+                elif current_slot != config_sim_slot:
+                    logger.info("GPIO-mux selected slot changed during startup (no reboot required while disabled)",
                                extra={'interface_number': self.interface_number,
+                                      'old_sim': current_slot,
                                       'new_sim': config_sim_slot})
+                else:
+                    logger.info("GPIO-mux already on configured SIM at startup (no change, no reboot)",
+                               extra={'interface_number': self.interface_number,
+                                      'config_sim': config_sim_slot})
                 return
 
             # Check current SIM slot
@@ -5640,8 +5639,14 @@ class ModemStateMachine:
                         break
 
                 # Update tracking
-                actual_sim_variant = await props.call_get(MODEM_INTERFACE, "PrimarySimSlot")
-                self.current_active_sim = actual_sim_variant.value
+                if self.sim_controller.is_gpio_mux:
+                    # In GPIO-mux mode, the mux line is the source of truth
+                    # for active slot selection.
+                    actual_sim = await self.sim_controller.current_selected_slot()
+                    self.current_active_sim = actual_sim or original_sim
+                else:
+                    actual_sim_variant = await props.call_get(MODEM_INTERFACE, "PrimarySimSlot")
+                    self.current_active_sim = actual_sim_variant.value
                 logger.info("SIM switch cleanup completed",
                            extra={'interface_number': self.interface_number,
                                   'active_sim': self.current_active_sim})
@@ -6980,9 +6985,25 @@ class ModemStateMachine:
                 raise Exception("Timeout waiting for modem to re-enable")
 
             # Verify SIM switch worked
-            actual_sim_variant = await props.call_get(MODEM_INTERFACE, "PrimarySimSlot")
-            actual_sim = actual_sim_variant.value
-            self.current_active_sim = actual_sim
+            if self.sim_controller.is_gpio_mux:
+                # GPIO-mux hardware does not rely on ModemManager's
+                # PrimarySimSlot reporting for slot truth; read the mux line.
+                # We just physically drove the mux to target_sim_slot in
+                # switch_to(), so a transient None readback must NOT be treated
+                # as a failed switch (which would needlessly roll back to the
+                # previous SIM) — trust the target we just selected instead.
+                actual_sim = await self.sim_controller.current_selected_slot()
+                if actual_sim is None:
+                    logger.warning("GPIO-mux slot readback unavailable after "
+                                  "switch — trusting target slot",
+                                  extra={'interface_number': self.interface_number,
+                                         'target_sim': self.target_sim_slot})
+                    actual_sim = self.target_sim_slot
+                self.current_active_sim = actual_sim
+            else:
+                actual_sim_variant = await props.call_get(MODEM_INTERFACE, "PrimarySimSlot")
+                actual_sim = actual_sim_variant.value
+                self.current_active_sim = actual_sim
 
             if actual_sim == self.target_sim_slot:
                 logger.info("SIM switch successful",

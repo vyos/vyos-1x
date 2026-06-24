@@ -53,7 +53,6 @@ schedule SIM-detect events back onto the FSM's asyncio loop.
 import asyncio
 import os
 import threading
-import time
 
 from vyos.utils.wwan.wwan_logging import setup_logging
 
@@ -296,17 +295,54 @@ class GpioMuxSimController(SimController):
         the board GPIO ``UNCOND_RESET`` pulse, then the nuclear option.
         This is the only place a reboot is issued on a SIM becoming active.
         """
-        logger.info("GPIO-mux switching SIM slot",
+        mux_before = None
+        try:
+            mux_before = await self.current_selected_slot()
+        except Exception:
+            mux_before = None
+
+        logger.info("GPIO-mux SIM switch start",
                     extra={'interface_number': self.fsm.interface_number,
-                           'modem': self.modem_name, 'target_slot': slot})
+                           'modem': self.modem_name,
+                           'from_slot': mux_before,
+                           'target_slot': slot})
         # 1. Select the slot on the mux (kernel GPIO controller retains the
         #    level after the libgpiod request is released).
         await asyncio.to_thread(self._hw.sim_select, slot, self.modem_name)
+
+        mux_after_select = None
+        try:
+            mux_after_select = await self.current_selected_slot()
+        except Exception:
+            mux_after_select = None
+
+        # 1.5 Allow the external mux and SIM rails to settle before reset.
+        # Some boards/modems sample the SIM very early during reboot; a short
+        # guard avoids racing the line transition.
+        settle_ms = 250
+        try:
+            if self.fsm.config:
+                settle_ms = int(self.fsm.config.get('sim_switch_settle_ms', settle_ms))
+        except (TypeError, ValueError):
+            settle_ms = 250
+        settle_ms = max(0, min(settle_ms, 5000))
+        if settle_ms > 0:
+            await asyncio.sleep(settle_ms / 1000.0)
 
         # 2. Reboot the modem so it re-reads the now-selected SIM.  Reuse the
         #    FSM's reset ladder (orderly mmcli reset → board GPIO → nuclear).
         from vyos.utils.wwan.interfaces_wwan_util import modem_reset
         ok = await modem_reset(self.fsm.interface_number)
+
+        logger.info("GPIO-mux SIM switch summary",
+                    extra={'interface_number': self.fsm.interface_number,
+                           'modem': self.modem_name,
+                           'from_slot': mux_before,
+                           'target_slot': slot,
+                           'mux_after_select': mux_after_select,
+                           'settle_ms': settle_ms,
+                           'reset_success': ok})
+
         if not ok:
             logger.warning("GPIO-mux modem reboot after SIM select reported "
                            "no working reset method",
@@ -399,7 +435,7 @@ class GpioMuxSimController(SimController):
                 # item assignment is atomic under CPython, and the FSM only
                 # ever reads this map, so no lock is needed.
                 self._present[slot] = present
-                                self._known_slots.add(slot)
+                self._known_slots.add(slot)
                 logger.info("GPIO-mux SIM-detect event",
                             extra={'interface_number': self.fsm.interface_number,
                                    'slot': slot, 'event': event})
