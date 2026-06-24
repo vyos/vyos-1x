@@ -330,9 +330,18 @@ class GpioMuxSimController(SimController):
             await asyncio.sleep(settle_ms / 1000.0)
 
         # 2. Reboot the modem so it re-reads the now-selected SIM.  Reuse the
-        #    FSM's reset ladder (orderly mmcli reset → board GPIO → nuclear).
+        #    FSM's reset ladder but in HARDWARE-FIRST, NO-NUCLEAR mode:
+        #      * prefer_hardware — the board GPIO reset is the deterministic
+        #        way to make the modem re-read the selected SIM;
+        #      * allow_nuclear=False — a SIM switch must NEVER restart
+        #        ModemManager.  An MM restart re-enumerates the modem, which
+        #        fires the FSM's reconnect-after-restart path and launches a
+        #        CONCURRENT initial-configuration that collides with this
+        #        in-progress switch (FSM transition errors, enable failures,
+        #        cascading reset storms).
         from vyos.utils.wwan.interfaces_wwan_util import modem_reset
-        ok = await modem_reset(self.fsm.interface_number)
+        ok = await modem_reset(self.fsm.interface_number,
+                               prefer_hardware=True, allow_nuclear=False)
 
         logger.info("GPIO-mux SIM switch summary",
                     extra={'interface_number': self.fsm.interface_number,

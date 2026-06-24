@@ -127,7 +127,9 @@ def _is_running_in_vm() -> bool:
     except Exception:
         return False
 
-async def modem_reset(interface_number: int) -> bool:
+async def modem_reset(interface_number: int, *,
+                       prefer_hardware: bool = False,
+                       allow_nuclear: bool = True) -> bool:
     """
     Perform hardware reset of the modem for the specified interface.
 
@@ -138,6 +140,16 @@ async def modem_reset(interface_number: int) -> bool:
 
     Args:
         interface_number: The interface number (e.g., 0 for wwan0)
+        prefer_hardware: Try the board GPIO reset BEFORE the ModemManager
+            (mmcli) reset.  Used by the GPIO-mux SIM switch, where the
+            deterministic hardware reset is the correct way to make the modem
+            re-read the newly-selected SIM.
+        allow_nuclear: Permit escalation to the nuclear option (restarting the
+            ModemManager service) as a last resort.  MUST be False for a SIM
+            switch: restarting ModemManager re-enumerates the modem, which
+            fires the FSM's reconnect-after-restart path and launches a
+            CONCURRENT initial-configuration that collides with the in-progress
+            switch (FSM transition errors, enable failures, reset storms).
 
     Returns:
         bool: True if reset was attempted, False if no reset method available
@@ -147,26 +159,42 @@ async def modem_reset(interface_number: int) -> bool:
     # VM CRASH PROTECTION: Disable hardware resets in VMs
     if _is_running_in_vm():
         logger.warning(f"VM detected - hardware reset disabled for safety (interface {interface_number})")
+        if not allow_nuclear:
+            logger.warning("Nuclear reset disallowed for this caller (e.g. SIM "
+                           "switch) — no usable reset method in VM")
+            return False
         logger.info("Using nuclear reset (ModemManager restart) instead of hardware reset")
         return await modem_reset_nuclear(interface_number)
 
     try:
-        # Method 1: Try ModemManager reset command
-        if await _try_modemmanager_reset(interface_number):
-            logger.info(f"ModemManager reset successful for interface {interface_number}")
-            _count_hardware_reset(interface_number)
-            return True
+        # Ordered standard methods.  For a SIM switch (prefer_hardware) the
+        # board GPIO reset goes first because it is the deterministic way to
+        # make the modem re-read the SIM; otherwise the historical
+        # ModemManager (mmcli) reset is tried first.
+        if prefer_hardware:
+            standard_methods = (
+                ('Board hardware', _try_board_modem_reset),
+                ('ModemManager', _try_modemmanager_reset),
+            )
+        else:
+            standard_methods = (
+                ('ModemManager', _try_modemmanager_reset),
+                ('Board hardware', _try_board_modem_reset),
+            )
 
-        # Method 2: Try board hardware API reset using the modem naming
-        # convention (modem0 -> wwan0, modem1 -> wwan1, etc.). This is the
-        # unconditional hardware reset path that the board implementation
-        # owns, so WWAN does not need to guess at GPIO details itself.
-        if await _try_board_modem_reset(interface_number):
-            logger.info(f"Board hardware reset successful for interface {interface_number}")
-            _count_hardware_reset(interface_number)
-            return True
+        for label, method in standard_methods:
+            if await method(interface_number):
+                logger.info(f"{label} reset successful for interface {interface_number}")
+                _count_hardware_reset(interface_number)
+                return True
 
-        # Method 3: Nuclear option - restart ModemManager
+        # Nuclear option - restart ModemManager (last resort, opt-out).
+        if not allow_nuclear:
+            logger.error(f"All hardware reset methods failed for interface "
+                         f"{interface_number} and nuclear reset is disallowed "
+                         "for this caller (SIM switch) — not restarting ModemManager")
+            return False
+
         logger.warning(f"All standard reset methods failed for interface {interface_number}, trying nuclear option...")
         if await modem_reset_nuclear(interface_number):
             logger.info(f"Nuclear reset (ModemManager restart) successful for interface {interface_number}")
@@ -272,7 +300,12 @@ async def _try_board_modem_reset(interface_number: int) -> bool:
         logger.info(f"Performing board hardware reset for {modem_name}")
         await asyncio.to_thread(hw_api.modem_reset, modem=modem_name)
     except Exception as e:
-        logger.debug(f"Board hardware reset failed for {modem_name}: {e}")
+        # Elevated from DEBUG to WARNING with the exception type+message in the
+        # visible text: when the board GPIO reset throws, the caller silently
+        # falls through to the next method (or nuclear), so a hidden reason
+        # here makes a broken hardware-reset path look like "no reset method".
+        logger.warning(f"Board hardware reset failed for {modem_name} "
+                       f"({type(e).__name__}: {e})")
         return False
 
     # A reset pulse alone is not enough — wait until the modem is back in a

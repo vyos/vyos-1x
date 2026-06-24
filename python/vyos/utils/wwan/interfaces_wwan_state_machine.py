@@ -380,11 +380,20 @@ class ModemStateMachine:
 
         # Signal-loss SIM-failover tracking — timestamp when the active SIM's
         # signal first dropped continuously below the configured sim-failover
-        # signal-threshold.  Reset to None whenever signal recovers or a
-        # failover attempt fires.  When the continuous below-threshold duration
-        # reaches sim_failover_signal_loss_timer, _monitor_signal_strength
-        # triggers _handle_signal_loss_failover().
+        # signal-threshold.  Reset to None whenever signal recovers, a sample
+        # is missing, or a failover attempt fires.  When the continuous
+        # below-threshold duration reaches sim_failover_signal_loss_timer AND a
+        # minimum number of consecutive below-threshold samples have been seen,
+        # _monitor_signal_strength triggers _handle_signal_loss_failover().
         self._signal_failover_below_since = None
+        # Count of consecutive below-threshold samples in the current window.
+        # Reset together with _signal_failover_below_since.  Guards against a
+        # single dip (bracketed by good or missing reads) firing on the
+        # wall-clock alone when polls are sparse.
+        self._signal_failover_below_count = 0
+        # Poll cadence of _monitor_signal_strength, recorded so the evaluator
+        # can require a sane minimum number of consecutive weak samples.
+        self._signal_poll_interval_seconds = 5
 
         # Connectivity recovery tracking for SIM escalation
         self.connectivity_recovery_attempts = 0  # Consecutive recovery attempts on same SIM
@@ -622,6 +631,23 @@ class ModemStateMachine:
         # PropertiesChanged handlers on the same proxy/path.
         self._on_modem_found_in_progress = False
         self._signal_handlers_bound_modem_path = None
+
+        # Bus generation counter — incremented every time the FSM is re-bound
+        # to a fresh ModemManager instance (update_bus_connection, fired by the
+        # NameOwnerChanged / crash-recovery reconnect path).  Long-running scan
+        # loops capture the value at entry and abort the moment it changes, so
+        # a stale in-flight scan/rescan (e.g. a SIM-switch rescan that was
+        # running when ModemManager restarted) cannot race the fresh post-
+        # restart scan and corrupt self.proxy.  This is the race that produced
+        # the "Can not transition from CONFIGURING on modem_found" cascade.
+        self._bus_generation = 0
+        # Handle to the in-flight failover/SIM-switch coroutine task (set by
+        # _failover_to_alternate_sim while a switch chain runs).  Tracked so
+        # update_bus_connection can explicitly CANCEL a mid-flight switch when
+        # ModemManager restarts under it, instead of leaving a zombie coroutine
+        # suspended on a dead-bus await.  Belt-and-suspenders alongside the
+        # generation guard, which already neutralizes the stale scan loop.
+        self._active_failover_task = None
 
         # SIM-slot control strategy. Capability-driven from the active
         # pinmap: a board that declares a ``sim_select`` GPIO uses an
@@ -1338,6 +1364,13 @@ class ModemStateMachine:
         current_interval = INITIAL_SCAN_INTERVAL
         scan_count = 0
 
+        # Capture the bus generation at entry.  If the FSM is re-bound to a
+        # fresh ModemManager (update_bus_connection) while this loop is running,
+        # the generation changes and we abort — the post-restart re-init starts
+        # its own scan, and two concurrent scanners must never both touch
+        # self.proxy.
+        my_generation = self._bus_generation
+
         logger.info("Starting continuous modem scan using Device property",
                    extra={'interface_number': self.interface_number,
                           'target_modem_id': f"modem{self.interface_number}",
@@ -1345,6 +1378,13 @@ class ModemStateMachine:
                           'max_interval': MAX_SCAN_INTERVAL})
 
         while True:  # Scan forever until modem found
+            if self._bus_generation != my_generation:
+                logger.info("Aborting modem scan — FSM re-bound to a fresh "
+                           "ModemManager (newer scan owns discovery)",
+                           extra={'interface_number': self.interface_number,
+                                  'scan_generation': my_generation,
+                                  'current_generation': self._bus_generation})
+                return
             scan_count += 1
 
             try:
@@ -5967,6 +6007,27 @@ class ModemStateMachine:
         """Step 2: Disable modem for SIM switch - with enhanced recovery"""
         max_attempts = 2
 
+        # GPIO-mux EXCEPTION: do NOT disable the modem before the switch.
+        # On a GPIO-mux board the slot change is performed by a modem REBOOT
+        # (soft reset) so it re-reads the newly-selected SIM.  ModemManager's
+        # soft reset (mmcli --reset, backed by QMI) is REJECTED with
+        # `InvalidArgument` when the modem is in the DISABLED state — which is
+        # exactly the state this step used to put it in, forcing the reset
+        # ladder to fall through to the nuclear ModemManager restart (which
+        # then races the FSM reconnect path and cascades).  Keeping the modem
+        # in its normal enabled/registered state means the soft reset succeeds,
+        # the modem cleanly reboots onto the new slot, and no nuclear restart
+        # is needed.  The bearer was already torn down in the disconnect step,
+        # so nothing is actively using the modem here.
+        if self.sim_controller.is_gpio_mux:
+            logger.info("GPIO-mux SIM switch — skipping modem disable so the "
+                       "soft reset (which needs a non-disabled modem) succeeds",
+                       extra={'interface_number': self.interface_number,
+                              'target_sim': self.target_sim_slot})
+            self.transition(ModemEvent.SIM_DISABLED)
+            await self._sim_switch_hardware()
+            return
+
         # --- retry loop covers ONLY the disable step ---
         # SIM_DISABLED and _sim_switch_hardware() are fired ONCE outside the
         # loop.  Keeping hardware-switch inside the retry caused SIM_DISABLED
@@ -6200,6 +6261,9 @@ class ModemStateMachine:
 
             async with self._sim_failover_lock:
                 self._sim_failover_in_progress = True
+                # Record this coroutine's task so update_bus_connection can
+                # cancel an in-flight switch if ModemManager restarts under it.
+                self._active_failover_task = asyncio.current_task()
                 try:
                     return await self._failover_to_alternate_sim_locked(
                         reason, trigger,
@@ -6211,6 +6275,7 @@ class ModemStateMachine:
                         disconnect_reason_override=disconnect_reason_override)
                 finally:
                     self._sim_failover_in_progress = False
+                    self._active_failover_task = None
 
         except Exception as e:
             logger.error(f"SIM failover attempt failed (outer): {e}",
@@ -6746,6 +6811,11 @@ class ModemStateMachine:
         self.proxy = None
         self.modem_path = None
 
+        # Capture bus generation — abort if ModemManager restarts mid-reset
+        # (update_bus_connection bumps it) so the fresh re-init's scan owns
+        # discovery and we don't double-scan into self.proxy.
+        my_generation = self._bus_generation
+
         # Wait for modem hardware to initialize - modems need time!
         await asyncio.sleep(15)
 
@@ -6757,6 +6827,13 @@ class ModemStateMachine:
             max_attempts = 24  # 24 attempts over ~2 minutes
 
             for attempt in range(1, max_attempts + 1):
+                if self._bus_generation != my_generation:
+                    logger.info("Aborting post-reset rescan — FSM re-bound to a "
+                               "fresh ModemManager (newer scan owns discovery)",
+                               extra={'interface_number': self.interface_number,
+                                      'scan_generation': my_generation,
+                                      'current_generation': self._bus_generation})
+                    return
                 try:
                     msg = Message(
                         destination=MODEM_MANAGER_SERVICE,
@@ -6894,12 +6971,24 @@ class ModemStateMachine:
         self.proxy = None
         self.modem_path = None
 
+        # Capture bus generation — if ModemManager restarts (update_bus_
+        # connection) mid-switch, the fresh re-init owns discovery and this
+        # stale rescan must abort rather than race it for self.proxy.
+        my_generation = self._bus_generation
+
         # Initial wait for USB re-enumeration (typically 5-15s for Telit LN920)
         await asyncio.sleep(5)
 
         target_modem_id = f"modem{self.interface_number}"
         max_attempts = 30  # Up to ~60 seconds total
         for attempt in range(1, max_attempts + 1):
+            if self._bus_generation != my_generation:
+                logger.info("Aborting SIM-switch rescan — FSM re-bound to a "
+                           "fresh ModemManager (newer scan owns discovery)",
+                           extra={'interface_number': self.interface_number,
+                                  'scan_generation': my_generation,
+                                  'current_generation': self._bus_generation})
+                return
             try:
                 msg = Message(
                     destination=MODEM_MANAGER_SERVICE,
@@ -10477,6 +10566,10 @@ class ModemStateMachine:
         # every entry to CONNECTED) so a stale timestamp from a previous
         # session can't cause an immediate failover.
         self._signal_failover_below_since = None
+        self._signal_failover_below_count = 0
+        # Record the actual poll cadence so the evaluator can require a sane
+        # minimum number of consecutive weak samples for the configured timer.
+        self._signal_poll_interval_seconds = max(1, int(interval_seconds))
         try:
             while True:
                 try:
@@ -10521,8 +10614,19 @@ class ModemStateMachine:
             return
 
         if signal_dbm is None:
-            # No reading — don't accumulate against the timer (a missing
-            # reading is not the same as confirmed weak signal).
+            # No reading — a missing sample is NOT confirmed weak signal.
+            # ModemManager frequently returns empty signal right after connect
+            # or during a band reselection, so treating "missing" as "weak"
+            # (the old behaviour: leave the timer armed) let a single transient
+            # dip followed by empty reads fire a failover on the wall-clock
+            # alone while the link was actually fine.  RESET the window so only
+            # genuinely continuous weak readings can ever reach the timer.
+            if self._signal_failover_below_since is not None:
+                logger.info("Signal reading unavailable — resetting signal-loss "
+                           "window (a missing sample is not weak signal)",
+                           extra={'interface_number': self.interface_number})
+                self._signal_failover_below_since = None
+                self._signal_failover_below_count = 0
             return
 
         rssi_threshold = self.config.get('sim_failover_signal_threshold_rssi', -90)
@@ -10541,6 +10645,7 @@ class ModemStateMachine:
                                   'metric_dbm': metric_dbm,
                                   'threshold_dbm': threshold})
                 self._signal_failover_below_since = None
+                self._signal_failover_below_count = 0
             return
 
         # Below threshold — start or continue the weak-signal window.
@@ -10561,6 +10666,7 @@ class ModemStateMachine:
                                     'threshold_dbm': threshold})
                 return
             self._signal_failover_below_since = now
+            self._signal_failover_below_count = 1
             logger.warning("Signal dropped below sim-failover threshold — "
                           "starting signal-loss timer",
                           extra={'interface_number': self.interface_number,
@@ -10570,8 +10676,20 @@ class ModemStateMachine:
                                  'signal_loss_timer': loss_timer})
             return
 
+        # Continuing window — count this consecutive below-threshold sample.
+        self._signal_failover_below_count += 1
+
         elapsed = now - self._signal_failover_below_since
-        if elapsed >= loss_timer:
+        # Require BOTH the sustained wall-clock window AND a minimum number of
+        # genuinely consecutive below-threshold samples.  The sample floor is
+        # derived from the timer and poll cadence (at least ~half the samples
+        # that should fit in the window), clamped to a sane minimum, so a
+        # sparse/stalled poll loop can't satisfy the clock with only one or two
+        # readings.
+        poll_interval = max(1, int(getattr(self, '_signal_poll_interval_seconds', 5)))
+        expected_samples = max(1, loss_timer // poll_interval)
+        min_consecutive = max(3, (expected_samples + 1) // 2)
+        if elapsed >= loss_timer and self._signal_failover_below_count >= min_consecutive:
             # Re-confirm a present alternate before firing: the alternate SIM
             # could have been removed during the loss window, in which case we
             # silently reset rather than launch a doomed switch.
@@ -10584,18 +10702,78 @@ class ModemStateMachine:
                                     'threshold_dbm': threshold,
                                     'elapsed_seconds': round(elapsed, 1)})
                 self._signal_failover_below_since = None
+                self._signal_failover_below_count = 0
                 return
-            logger.warning("Sustained weak signal — triggering SIM failover",
+
+            # Connectivity cross-check: a low RF number alone is not a reason to
+            # switch SIMs if data is still actually flowing.  Probe the bearer;
+            # if connectivity is OK, treat the weak reading as cosmetic, reset
+            # the window and stay put.  (Genuine loss of data is handled by the
+            # connectivity monitor's own recovery/escalation path.)
+            if await self._quick_connectivity_ok():
+                logger.info("Sustained weak signal but connectivity still OK — "
+                           "NOT triggering signal-loss failover",
+                           extra={'interface_number': self.interface_number,
+                                  'metric': metric_name,
+                                  'metric_dbm': metric_dbm,
+                                  'threshold_dbm': threshold,
+                                  'elapsed_seconds': round(elapsed, 1)})
+                self._signal_failover_below_since = None
+                self._signal_failover_below_count = 0
+                return
+
+            logger.warning("Sustained weak signal with failing connectivity — "
+                          "triggering SIM failover",
                           extra={'interface_number': self.interface_number,
                                  'metric': metric_name,
                                  'metric_dbm': metric_dbm,
                                  'threshold_dbm': threshold,
                                  'elapsed_seconds': round(elapsed, 1),
+                                 'consecutive_samples': self._signal_failover_below_count,
                                  'signal_loss_timer': loss_timer})
             # Require a fresh full window before another attempt (the
             # cooldown/backoff in _is_failover_allowed also applies).
             self._signal_failover_below_since = None
+            self._signal_failover_below_count = 0
             self._safe_create_task(self._handle_signal_loss_failover())
+
+    async def _quick_connectivity_ok(self) -> bool:
+        """Single-shot connectivity probe for the active bearer.
+
+        Returns True when at least one configured ping target answers over the
+        bearer interface.  Used as a cross-check before signal-loss SIM
+        failover so a low RF reading alone — while data is actually flowing —
+        does not trigger a SIM switch.
+
+        Fail-SAFE: on any error, missing bearer, or inability to test, returns
+        True (inconclusive ⇒ do NOT fail over on the signal number alone).
+        """
+        try:
+            if not self.bearer_path:
+                return True  # inconclusive — never switch on signal alone
+            interface_name = await self._get_bearer_interface_name()
+            cc = (self.config or {}).get('connectivity_monitoring', {})
+            ipv4_targets = cc.get('ipv4_targets', DEFAULT_CONNECTIVITY_CONFIG['ipv4_targets'])
+            ipv6_targets = cc.get('ipv6_targets', DEFAULT_CONNECTIVITY_CONFIG['ipv6_targets'])
+            test_ipv4 = cc.get('test_ipv4', DEFAULT_CONNECTIVITY_CONFIG['test_ipv4'])
+            test_ipv6 = cc.get('test_ipv6', DEFAULT_CONNECTIVITY_CONFIG['test_ipv6'])
+            timeout = cc.get('timeout', DEFAULT_CONNECTIVITY_CONFIG['timeout'])
+
+            results = await self._test_connectivity(
+                interface_name, ipv4_targets, ipv6_targets,
+                test_ipv4, test_ipv6, timeout, retry_count=1)
+
+            # Any working family means data flows, so weak signal is moot:
+            # evaluate with require_both=False regardless of the monitor's own
+            # require_both setting.
+            return self._evaluate_connectivity_results(
+                results, require_both=False,
+                test_ipv4=test_ipv4, test_ipv6=test_ipv6)
+        except Exception as e:
+            logger.debug("Quick connectivity probe failed — treating as "
+                         "inconclusive (not failing over): %s", e,
+                         extra={'interface_number': self.interface_number})
+            return True
 
     async def _update_signal_led(self, level: int, avg_dbm: float, signal_detail: dict) -> None:
         """Update modem STAT LEDs using hardware API signal-level mapping.
@@ -11556,14 +11734,74 @@ class ModemStateMachine:
         return ''
 
     async def update_bus_connection(self, new_bus):
-        """Update D-Bus connection after ModemManager restart"""
+        """Update D-Bus connection after ModemManager restart.
+
+        This is the per-FSM half of the manager's reconnect-after-restart
+        path (it is called for EVERY FSM instance, not just the one whose
+        operation triggered the restart).  Because a ModemManager restart
+        invalidates every proxy, this must return the FSM to a clean INITIAL
+        state with NO in-flight work — otherwise a stale operation (most
+        dangerously a SIM switch that was mid-flight when MM restarted) keeps
+        running against the dead bus and races the fresh post-restart scan,
+        which is exactly what produced the
+        "Can not transition from CONFIGURING on modem_found" cascade.
+        """
         logger.info("Updating bus connection",
                    extra={'interface_number': self.interface_number})
 
-        # Stop usage monitoring if running
-        if self.usage_monitor_task:
-            self.usage_monitor_task.cancel()
-            self.usage_monitor_task = None
+        # 1. Bump the bus generation FIRST.  Every long-running scan/rescan
+        #    loop captured the old value at entry and will abort on its next
+        #    iteration once it sees this change, so no stale scanner survives
+        #    to fight the fresh one for self.proxy.
+        self._bus_generation += 1
+
+        # 1b. Explicitly CANCEL an in-flight failover/SIM-switch chain.  The
+        #     generation guard already stops its scan loop, but the switch
+        #     coroutine itself may be suspended on a dead-bus await (disconnect,
+        #     disable, reset, reconfigure); cancelling it unwinds that zombie
+        #     immediately rather than waiting for it to throw.  Never cancel the
+        #     current task (the reconnect runs on its own task, but guard anyway).
+        switch_task = self._active_failover_task
+        if switch_task is not None and not switch_task.done():
+            try:
+                if switch_task is not asyncio.current_task():
+                    switch_task.cancel()
+                    logger.info("Cancelled in-flight SIM failover/switch due to "
+                               "ModemManager restart",
+                               extra={'interface_number': self.interface_number})
+            except Exception as e:
+                logger.debug(f"Error cancelling in-flight failover task: {e}",
+                            extra={'interface_number': self.interface_number})
+        self._active_failover_task = None
+
+        # 2. Clear ALL in-progress guards.  A switch/failover/reset/config that
+        #    was running when MM died is now meaningless (its proxy is gone);
+        #    leaving these set would block the fresh init or let a zombie
+        #    operation resume.  "Back to the beginning" — literally.
+        self._sim_switch_in_progress = False
+        self._sim_failover_in_progress = False
+        self.reset_operation_in_progress = False
+        self.service_initiated_disable = False
+        self.initial_configuration_in_progress = False
+        self.registration_handling_in_progress = False
+        self._on_modem_found_in_progress = False
+        self._signal_handlers_bound_modem_path = None
+
+        # 3. Cancel every tracked background task so nothing keeps poking the
+        #    dead bus.  Each is best-effort and guarded.
+        self._cancel_failed_retry()
+        for task_attr in ('usage_monitor_task', 'connectivity_monitor_task',
+                          'failback_task', '_initial_config_task',
+                          '_signal_poll_task', '_ip_monitoring_task'):
+            task = getattr(self, task_attr, None)
+            if task and not task.done():
+                task.cancel()
+            setattr(self, task_attr, None)
+        try:
+            await self._stop_network_interface_monitoring()
+        except Exception as e:
+            logger.debug(f"Error stopping netdev monitoring during bus update: {e}",
+                        extra={'interface_number': self.interface_number})
 
         self.bus = new_bus
         self.proxy = None
