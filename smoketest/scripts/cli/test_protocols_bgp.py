@@ -1942,6 +1942,17 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             f' neighbor {interface} interface peer-group {peer_group}', frrconfig
         )
 
+    def test_bgp_35_queue_limit(self):
+        input_queue = '20000'
+        output_queue = '30000'
+        self.cli_set(base_path + ['parameters', 'input-queue-limit', input_queue])
+        self.cli_set(base_path + ['parameters', 'output-queue-limit', output_queue])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('bgp', end_marker='')
+        self.assertIn(f'bgp input-queue-limit {input_queue}', frrconfig)
+        self.assertIn(f'bgp output-queue-limit {output_queue}', frrconfig)
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
