@@ -213,7 +213,10 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     hook_name = f'name{def_suffix}'
                 output.append(f'{ip_name} {prefix}addr {operator} @FQDN_{hook_name}_{fw_name}_{rule_id}_{prefix}')
 
-            if dict_search_args(side_conf, 'geoip', 'country_code'):
+            country_code = dict_search_args(side_conf, 'geoip', 'country_code')
+            asn = dict_search_args(side_conf, 'geoip', 'asn')
+            if country_code or asn:
+                geoip_prefix = 'CC' if country_code else 'ASN'
                 operator = ''
                 hook_name = ''
                 if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
@@ -231,7 +234,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 # for policy
                 if hook == 'route' or hook == 'route6':
                     hook_name = hook
-                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_CC{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
+                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_{geoip_prefix}{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
 
             if 'mac_address' in side_conf:
                 suffix = side_conf["mac_address"]

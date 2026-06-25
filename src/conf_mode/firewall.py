@@ -83,11 +83,17 @@ snmp_trap_name = 'mgmtEventTrap'
 def geoip_sets(firewall):
     out = {'name': [], 'ipv6_name': []}
 
-    for _, path in dict_search_recursive(firewall, 'geoip'):
+    for _, path in dict_search_recursive(firewall, 'country_code'):
         if (path[0] == 'ipv4'):
             out['name'].append(f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}')
         elif (path[0] == 'ipv6'):
             out['ipv6_name'].append(f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}')
+
+    for _, path in dict_search_recursive(firewall, 'asn'):
+        if (path[0] == 'ipv4'):
+            out['name'].append(f'GEOIP_ASN_{path[1]}_{path[2]}_{path[4]}')
+        elif (path[0] == 'ipv6'):
+            out['ipv6_name'].append(f'GEOIP_ASN6_{path[1]}_{path[2]}_{path[4]}')
 
     return out
 
@@ -365,6 +371,10 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
             if len({'address', 'fqdn', 'geoip'} & set(side_conf)) > 1:
                 raise ConfigError('Only one of address, fqdn or geoip can be specified')
+
+            if 'geoip' in side_conf:
+                if len({'asn', 'country_code'} & set(side_conf['geoip'])) > 1:
+                    raise ConfigError('Only one of asn or country-code can be specified')
 
             if 'group' in side_conf:
                 if len({'address_group', 'network_group', 'domain_group', 'remote_group'} & set(side_conf['group'])) > 1:
