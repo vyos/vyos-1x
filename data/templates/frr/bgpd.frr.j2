@@ -538,7 +538,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {%                 endif %}
 {%             endif %}
 {%             if bmp_config.address is vyos_defined %}
-  bmp connect {{ bmp_config.address }} port {{ bmp_config.port }} min-retry {{ bmp_config.min_retry }} max-retry {{ bmp_config.max_retry }}
+  bmp connect {{ bmp_config.address }} port {{ bmp_config.port }} min-retry {{ bmp_config.min_retry }} max-retry {{ bmp_config.max_retry }} {{ 'source-interface ' ~ bmp_config.source_interface if bmp_config.source_interface is vyos_defined }}
 {%             endif %}
 {%         endfor %}
  exit
