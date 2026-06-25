@@ -24,6 +24,10 @@ from vyos.utils.wwan.interfaces_wwan_service_manager import ConfigServiceManager
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
 from vyos.utils.wwan import interfaces_wwan_diag as wwan_diag
+from vyos.utils.wwan.interfaces_wwan_util import (
+    hardware_reset_all_modems,
+    system_is_stopping,
+)
 from vyos.utils.wwan.wwan_logging import setup_logging
 
 
@@ -500,6 +504,25 @@ async def main():
                     "forcing teardown")
             except Exception as e:  # noqa: BLE001 -- best-effort cleanup
                 logger.error(f"Error during manager shutdown: {e}")
+        # On a real system reboot/shutdown the modems keep power across the
+        # soft reboot and retain their internal state (e.g. a
+        # failed/sim-missing latch that orderly disconnect cannot clear).
+        # AFTER the orderly bearer disconnect above, force a GPIO reset on
+        # every declared modem so each re-enumerates clean at next boot.
+        # Gated on the SIGTERM path AND systemd actually stopping the system,
+        # so a plain `systemctl restart igos-wwan-manager` (service restart,
+        # system staying up) does NOT power-cycle the modems.
+        if stop_event.is_set() and system_is_stopping():
+            logger.info(
+                "System is stopping — GPIO-resetting all modems "
+                "after orderly disconnect"
+            )
+            try:
+                await asyncio.wait_for(hardware_reset_all_modems(), timeout=8.0)
+            except asyncio.TimeoutError:
+                logger.error("Shutdown GPIO modem reset timed out after 8s")
+            except Exception as e:  # noqa: BLE001 -- best-effort cleanup
+                logger.error(f"Shutdown GPIO modem reset error: {e}")
         if bus:
             bus.disconnect()
         logger.info("WWAN Interface Manager stopped")

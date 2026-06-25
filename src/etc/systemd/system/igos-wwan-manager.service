@@ -66,10 +66,12 @@ Restart=on-failure
 RestartSec=30
 # Backstop for graceful stop.  On SIGTERM the manager runs an in-process
 # bounded shutdown (asyncio.wait_for(manager.shutdown(), 20s)) before
-# disconnecting from D-Bus.  Keep this comfortably above that 20s cap so
-# the clean path wins, while still failing well under systemd's 90s
-# default if the process wedges entirely.
-TimeoutStopSec=30
+# disconnecting from D-Bus.  On a real system reboot/poweroff it then
+# GPIO-resets every modem after that disconnect (bounded to 8s).  Keep
+# this comfortably above that 20s + 8s worst case so the clean path wins,
+# while still failing well under systemd's 90s default if the process
+# wedges entirely.
+TimeoutStopSec=45
 User=root
 Group=vyattacfg
 

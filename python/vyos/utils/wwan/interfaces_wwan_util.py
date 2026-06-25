@@ -23,6 +23,7 @@ including hardware reset capabilities and other common operations.
 
 import asyncio
 import logging
+import subprocess
 import time
 from pathlib import Path
 
@@ -30,6 +31,71 @@ from vyos.hardware import api as hw_api
 from vyos.utils.wwan import interfaces_wwan_diag as wwan_diag
 
 logger = logging.getLogger(__name__)
+
+
+def system_is_stopping() -> bool:
+    """True when systemd is taking the whole system down (reboot/poweroff/halt).
+
+    During a system shutdown systemd transitions its manager state to
+    ``stopping`` *before* it sends SIGTERM to individual units, so by the
+    time the WWAN manager is asked to stop this already reads ``stopping``.
+
+    This is what lets the shutdown path distinguish a real reboot — where
+    the board keeps the modem powered across the soft reboot, so a GPIO
+    reset is wanted — from a plain ``systemctl restart igos-wwan-manager``,
+    where power-cycling the modem out from under a service that is about to
+    come right back would be harmful. Best-effort: any error reads as "not
+    stopping" so we never reset a modem on uncertainty.
+    """
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-system-running"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except Exception as e:  # noqa: BLE001 -- best-effort probe
+        logger.debug(f"Could not determine system running state: {e}")
+        return False
+    return result.stdout.strip() == "stopping"
+
+
+async def hardware_reset_all_modems() -> None:
+    """Pulse the board GPIO reset line on every pinmap-declared modem.
+
+    Intended for the system reboot/shutdown path. On a soft reboot the
+    board keeps each modem powered, so the modem retains its internal state
+    (e.g. a ``failed``/``sim-missing`` latch). A GPIO reset on the way down
+    guarantees every modem re-enumerates clean at the next boot.
+
+    Best-effort and self-contained: a board with no pinmap overlay, or a
+    modem with no declared reset pin, is simply skipped. Each reset is a
+    short (~200 ms) local GPIO pulse — no D-Bus, no ModemManager — so this
+    cannot stall on a wedged MM.
+    """
+    try:
+        modems = await asyncio.to_thread(hw_api.list_modems)
+    except Exception as e:  # noqa: BLE001 -- no pinmap / not a board
+        logger.debug(f"Could not enumerate modems for shutdown reset: {e}")
+        return
+
+    for modem_name in modems:
+        try:
+            caps = await asyncio.to_thread(hw_api.modem_capabilities, modem_name)
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Could not read capabilities for {modem_name}: {e}")
+            continue
+        if "reset" not in caps:
+            logger.debug(f"Skipping shutdown reset for {modem_name} (no reset pin)")
+            continue
+        try:
+            logger.info(f"Shutdown GPIO reset for {modem_name}")
+            await asyncio.to_thread(hw_api.modem_reset, modem=modem_name)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Shutdown GPIO reset failed for {modem_name} "
+                f"({type(e).__name__}: {e})"
+            )
 
 
 def _count_hardware_reset(interface_number: int) -> None:
@@ -292,9 +358,18 @@ async def _try_board_modem_reset(interface_number: int) -> bool:
 
     The board implementation owns the actual GPIO/pulse details. WWAN only
     maps its interface number to the board modem naming convention
-    (modem0 -> wwan0, modem1 -> wwan1, ...).
+    (wwan0 -> MODEM0, wwan1 -> MODEM1, ...).
+
+    The pinmap declares modems with the canonical UPPERCASE name (``MODEM0``)
+    and :meth:`Board._resolve_modem` does a case-sensitive dict lookup, so the
+    name must be produced via :func:`hw_api.wwan_to_modem`. Building it by hand
+    as ``f"modem{n}"`` yields lowercase ``modem0`` which raises
+    ``ValueError: unknown modem 'modem0'; declared: MODEM0`` — that silently
+    aborts the GPIO reset (the only reset that works while the modem is in the
+    ``failed``/``sim-missing`` state, since mmcli --disable/--reset both fail
+    with WrongState/InvalidArgument), stranding SIM failover forever.
     """
-    modem_name = f"modem{interface_number}"
+    modem_name = hw_api.wwan_to_modem(f"wwan{interface_number}")
 
     try:
         logger.info(f"Performing board hardware reset for {modem_name}")
