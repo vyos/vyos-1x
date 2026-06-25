@@ -103,6 +103,20 @@ DEFAULT_CONNECTIVITY_CONFIG = {
     'ipv6_targets': ['2001:4860:4860::8888', '2606:4700:4700::1111'],
 }
 
+# ── LED RAT-aware policy ─────────────────────────────────────────────────────
+# Radio access technologies fast enough to earn the full LED ladder (green at
+# levels 5-6, white at 7).  Everything else — 2G/3G: UMTS/HSPA/GSM/GPRS/EDGE/
+# CDMA/EVDO — is a slower RAT whose displayed level is capped below green, so a
+# strong-but-slow signal never lights the "premium" colour.  The customer then
+# reads a non-green light as "signal is fine, but you're on a slower network",
+# which heads off the "good signal yet slow speed" complaint.
+# Matching is an allow-list on the canonical technology strings emitted by the
+# signal extractor ('LTE', '5G NR', ...); an empty/unknown technology is NOT
+# capped so we never falsely dim a connection we simply couldn't classify.
+LED_FAST_RATS = frozenset({'LTE', 'LTE-A', '5G NR', 'NR5G', '5G'})
+# Highest LED level a slow (2G/3G) RAT may display (4 = cyan / "fair").
+LED_SLOW_RAT_MAX_LEVEL = 4
+
 # ── Signal strength averaging for LED indicator ──────────────────────────────
 class SignalStrengthTracker:
     """Tracks rolling-window average of signal strength with change detection.
@@ -119,9 +133,13 @@ class SignalStrengthTracker:
       - 2: Very poor     (-115 to -109 dBm)
       - 3: Weak          (-108 to -103 dBm)
       - 4: Fair          (-102 to -96 dBm)
-      - 5: Good          (-95 to -86 dBm)
-      - 6: Very good     (-85 to -76 dBm)
-      - 7: Excellent     (>= -75 dBm)
+      - 5: Good          (-95 to -89 dBm)
+      - 6: Very good     (-88 to -83 dBm)
+      - 7: Excellent     (>= -82 dBm)
+
+    The top rung (level 7 / white) is intentionally set at -82 dBm RSRP so a
+    genuinely strong real-world LTE/5G cell can reach it; the previous -75 dBm
+    cutoff was lab-only and never lit in the field.
     """
 
     def __init__(self, window_size: int = 12, led_callback=None):
@@ -195,9 +213,9 @@ class SignalStrengthTracker:
             return 3  # Weak
         if avg_dbm < -95:
             return 4  # Fair
-        if avg_dbm < -85:
+        if avg_dbm < -88:
             return 5  # Good
-        if avg_dbm < -75:
+        if avg_dbm < -82:
             return 6  # Very good
         return 7  # Excellent / maximum
 
@@ -2066,6 +2084,101 @@ class ModemStateMachine:
         self.transition(ModemEvent.DISCONNECT)
         self._safe_create_task(self.handle_disconnection_recovery())
 
+    async def _resolve_active_bearer_path(self, retries: int = 6,
+                                          delay: float = 1.0) -> 'str | None':
+        """Resolve and cache the live data bearer path, waiting out the race.
+
+        ModemManager emits the ``state → CONNECTED`` (11) signal as soon as the
+        bearer connects, which can reach ``_finalize_connected_from_signal``
+        *before* the connect coroutine has returned to set ``self.bearer_path``
+        (it is assigned only after ``try_connection_with_apn`` completes).  In
+        that window ``_apply_bearer_ip_configuration`` saw no bearer path,
+        warned, and skipped IP config — so the interface stayed unconfigured
+        until the connectivity monitor's IP-mismatch re-apply fixed it ~30 s
+        later.  That was the "took forever to connect" latency.
+
+        This resolves the path from, in order: ``self.bearer_path`` (already
+        set), the ConnectionManager's cached path, then the modem's own
+        ``Bearers`` list — selecting the connected bearer bound to a net
+        interface (the data bearer; an IMS/admin bearer has none).  It polls a
+        few times so a not-yet-populated bearer object is awaited rather than
+        treated as absent.  Caches onto ``self.bearer_path`` and returns it, or
+        ``None`` when genuinely unavailable.  Never raises.
+        """
+        if self.bearer_path:
+            return self.bearer_path
+
+        for attempt in range(1, max(1, retries) + 1):
+            # 1. ConnectionManager may already hold it (set on connect success).
+            try:
+                cm_path = self.connection_manager.get_current_bearer_path()
+            except Exception:
+                cm_path = None
+            if cm_path:
+                self.bearer_path = cm_path
+                logger.info("Resolved bearer path from connection manager",
+                           extra={'interface_number': self.interface_number,
+                                  'bearer_path': cm_path, 'attempt': attempt})
+                return cm_path
+
+            # 2. Ask the modem directly: pick the connected bearer that owns a
+            #    net interface (the data bearer).  Falls back to any connected
+            #    bearer if none expose an interface yet.
+            if self.proxy:
+                try:
+                    props = self.proxy.get_interface(
+                        "org.freedesktop.DBus.Properties")
+                    bearers_v = await props.call_get(MODEM_INTERFACE, "Bearers")
+                    bearers = bearers_v.value if bearers_v else []
+                    fallback = None
+                    for bp in bearers or []:
+                        try:
+                            introspect = await self.bus.introspect(
+                                MODEM_MANAGER_SERVICE, bp)
+                            bproxy = self.bus.get_proxy_object(
+                                MODEM_MANAGER_SERVICE, bp, introspect)
+                            bprops = bproxy.get_interface(
+                                "org.freedesktop.DBus.Properties")
+                            conn_v = await bprops.call_get(
+                                BEARER_INTERFACE, "Connected")
+                            if not (conn_v.value if hasattr(conn_v, 'value')
+                                    else conn_v):
+                                continue
+                            iface_v = await bprops.call_get(
+                                BEARER_INTERFACE, "Interface")
+                            iface = (iface_v.value if hasattr(iface_v, 'value')
+                                     else iface_v)
+                            if iface:
+                                self.bearer_path = bp
+                                logger.info("Resolved data bearer path from modem",
+                                           extra={'interface_number':
+                                                  self.interface_number,
+                                                  'bearer_path': bp,
+                                                  'attempt': attempt})
+                                return bp
+                            if fallback is None:
+                                fallback = bp
+                        except Exception:
+                            continue
+                    if fallback:
+                        self.bearer_path = fallback
+                        logger.info("Resolved bearer path (no-interface fallback)",
+                                   extra={'interface_number': self.interface_number,
+                                          'bearer_path': fallback,
+                                          'attempt': attempt})
+                        return fallback
+                except Exception as e:
+                    logger.debug(f"Bearer-path resolve query failed: {e}",
+                                extra={'interface_number': self.interface_number})
+
+            if attempt < retries:
+                await asyncio.sleep(delay)
+
+        logger.warning("Could not resolve an active bearer path",
+                      extra={'interface_number': self.interface_number,
+                             'retries': retries})
+        return None
+
     async def _finalize_connected_from_signal(self):
         """Finalise a connection that reached CONNECTED via the MM state-11 signal.
 
@@ -2090,6 +2203,16 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number,
                                'current_state': self.machine.current_state})
             return
+
+        # Close the connect→signal race: the MM CONNECTED signal can arrive
+        # before the connect coroutine set self.bearer_path.  The IP-config
+        # chokepoint (_apply_bearer_ip_configuration) now self-heals by
+        # resolving the live bearer, so the first pass configures IP instead of
+        # warning "No bearer path" and waiting ~30 s for the connectivity
+        # monitor's re-apply.  Resolving here too means signal monitoring
+        # (started below) also has the path on its first attempt.
+        if not self.bearer_path:
+            await self._resolve_active_bearer_path()
 
         if not await self._apply_bearer_ip_or_fail('modem_state_connected'):
             return
@@ -8022,10 +8145,12 @@ class ModemStateMachine:
         1. ``--nas-get-rf-band-info`` — reports the *active* radio interface,
            band and channel.  This is reliable while the modem is RRC
            **connected** (active bearer), where the cell-location serving
-           block can be empty.  Primary source for band/channel/RAT.
+           block can be empty.  Primary source for band/channel/RAT.  Handles
+           LTE, 5G NR and UMTS/WCDMA (3G) interfaces.
         2. ``--nas-get-cell-location-info`` — its ``Intrafrequency LTE Info``
            block carries the serving cell ID, global cell ID and TAC (and
-           EARFCN, used as a band fallback).  Best populated when the modem
+           EARFCN, used as a band fallback); the ``UMTS Info`` block supplies
+           the UMTS cell ID, LAC and UARFCN.  Best populated when the modem
            is idle, so used to enrich the cell-identity fields.
 
         Never raises — returns ``{}`` when QMI is unavailable or nothing
@@ -8086,20 +8211,31 @@ class ModemStateMachine:
                 # firmware, so the split MUST be case-insensitive or no chunk
                 # is produced and nothing parses.
                 chunks = re.split(r"Radio interface:", rf, flags=re.IGNORECASE)
-                lte_chunk = nr_chunk = None
+                lte_chunk = nr_chunk = umts_chunk = None
                 for ch in chunks[1:]:
-                    low = ch.lower()
-                    if lte_chunk is None and "'lte'" in low.split('\n', 1)[0]:
+                    head = ch.lower().split('\n', 1)[0]
+                    if lte_chunk is None and "'lte'" in head:
                         lte_chunk = ch
                     elif nr_chunk is None and (
-                            "'5gnr'" in low.split('\n', 1)[0]
-                            or "'nr5g'" in low.split('\n', 1)[0]):
+                            "'5gnr'" in head or "'nr5g'" in head):
                         nr_chunk = ch
-                chosen = lte_chunk or nr_chunk
+                    elif umts_chunk is None and (
+                            "'umts'" in head or "'wcdma'" in head):
+                        umts_chunk = ch
+                # Prefer LTE, then 5G NR, then UMTS/WCDMA (3G).  A 3G-only camp
+                # (no LTE/NR interface present) is the normal case where the
+                # earlier LTE/NR-only logic produced nothing.
+                chosen = lte_chunk or nr_chunk or umts_chunk
                 if chosen is not None:
-                    info['serving_cell_type'] = 'lte' if lte_chunk else 'nr5g'
+                    if lte_chunk:
+                        info['serving_cell_type'] = 'lte'
+                    elif nr_chunk:
+                        info['serving_cell_type'] = 'nr5g'
+                    else:
+                        info['serving_cell_type'] = 'umts'
                     m_band = re.search(
-                        r"Active band(?:\s*class)?:\s*'?((?:eutran|ngran|utran|gsm)-\d+)'?",
+                        r"Active band(?:\s*class)?:\s*'?"
+                        r"((?:eutran|ngran|utran|wcdma|gsm)[\w-]*)'?",
                         chosen, re.IGNORECASE)
                     if m_band:
                         info['serving_band'] = m_band.group(1).lower()
@@ -8118,8 +8254,14 @@ class ModemStateMachine:
             # via EARFCN when rf-band-info did not yield one.
             cell = await _qmicli('--nas-get-cell-location-info')
             if cell:
+                # Only trust the LTE idle-camp block when LTE is (or may be)
+                # the serving RAT.  A modem connected on UMTS still reports an
+                # "Intrafrequency LTE Info" block for reselection measurement
+                # (UE In Idle: yes); consuming its TAC / cell-id here would
+                # clobber the real UMTS serving identity that rf-band-info
+                # already established.
                 lte_idx = cell.lower().find('intrafrequency lte info')
-                if lte_idx != -1:
+                if lte_idx != -1 and info.get('serving_cell_type') in (None, 'lte'):
                     seg = cell[lte_idx:]
                     m_earfcn = re.search(
                         r"EUTRA Absolute RF Channel Number:\s*'(\d+)'", seg, re.IGNORECASE)
@@ -8139,6 +8281,30 @@ class ModemStateMachine:
                     m_scid = re.search(r"Serving Cell ID:\s*'(\d+)'", seg, re.IGNORECASE)
                     if m_scid:
                         info['serving_physical_ci'] = m_scid.group(1)
+                # UMTS/WCDMA camp: no LTE block — enrich cell ID, LAC, UARFCN
+                # and PSC from the "UMTS Info" block.  Note the modem reports a
+                # Location Area Code here (not a TAC); it is surfaced in the
+                # same field as the LTE TAC for a single "area code" view.
+                if info.get('serving_cell_type') in (None, 'umts'):
+                    umts_idx = cell.lower().find('umts info')
+                    if umts_idx != -1:
+                        seg = cell[umts_idx:]
+                        info.setdefault('serving_cell_type', 'umts')
+                        m_uarfcn = re.search(
+                            r"UTRA Absolute RF Channel Number:\s*'(\d+)'",
+                            seg, re.IGNORECASE)
+                        if m_uarfcn and not info.get('serving_earfcn'):
+                            info['serving_earfcn'] = m_uarfcn.group(1)
+                        m_lac = re.search(r"LAC:\s*'(\d+)'", seg, re.IGNORECASE)
+                        if m_lac and not info.get('serving_tac'):
+                            info['serving_tac'] = m_lac.group(1)
+                        m_cid = re.search(
+                            r"Cell ID:\s*'(\d+)'", seg, re.IGNORECASE)
+                        if m_cid and not info.get('serving_cell_id'):
+                            info['serving_cell_id'] = m_cid.group(1)
+                        m_psc = re.search(r"PSC:\s*'(\d+)'", seg, re.IGNORECASE)
+                        if m_psc and not info.get('serving_physical_ci'):
+                            info['serving_physical_ci'] = m_psc.group(1)
                 # Pure-NR camp: no LTE block, grab the NR channel.
                 if 'serving_cell_type' not in info:
                     m_nr = re.search(r"5GNR ARFCN:\s*'(\d+)'", cell, re.IGNORECASE)
@@ -10789,24 +10955,46 @@ class ModemStateMachine:
         # Map wwanN interface to MODEMN naming expected by hw API.
         modem_name = f"MODEM{self.interface_number}"
 
+        # RAT-aware cap: a strong 2G/3G signal must never light the "premium"
+        # green/white zone, otherwise the customer sees a great-looking signal
+        # and (rightly) expects LTE/5G speed.  LTE/5G keep the full ladder;
+        # slower RATs are clamped to LED_SLOW_RAT_MAX_LEVEL (cyan / "fair").
+        tech = (signal_detail.get('technology') or '').upper().strip()
+        display_level = level
+        if tech and tech not in LED_FAST_RATS and level > LED_SLOW_RAT_MAX_LEVEL:
+            display_level = LED_SLOW_RAT_MAX_LEVEL
+        display_name = (level_names[display_level]
+                        if 0 <= display_level <= 7 else 'unknown')
+
         # Keep logging explicit for operational visibility.
-        logger.info(
-            f"[LED UPDATE] Signal: {level_name} [{level}/7] (avg={avg_dbm} dBm, tech={signal_detail.get('technology', 'Unknown')})",
-            extra={'interface_number': self.interface_number,
-                   'level': level, 'avg_dbm': avg_dbm, 'level_name': level_name}
-        )
+        if display_level != level:
+            logger.info(
+                f"[LED UPDATE] Signal: {display_name} [{display_level}/7] "
+                f"(capped from {level_name} [{level}/7] on slow RAT "
+                f"{tech or 'unknown'}; avg={avg_dbm} dBm)",
+                extra={'interface_number': self.interface_number,
+                       'level': display_level, 'raw_level': level,
+                       'avg_dbm': avg_dbm, 'level_name': display_name,
+                       'technology': tech, 'rat_capped': True}
+            )
+        else:
+            logger.info(
+                f"[LED UPDATE] Signal: {level_name} [{level}/7] (avg={avg_dbm} dBm, tech={signal_detail.get('technology', 'Unknown')})",
+                extra={'interface_number': self.interface_number,
+                       'level': level, 'avg_dbm': avg_dbm, 'level_name': level_name}
+            )
 
         try:
             # Lazy import keeps FSM unit tests and non-hardware images tolerant.
             import vyos.hardware.api as hw_api
 
-            hw_api.modem_signal_level(level=level, modem=modem_name)
+            hw_api.modem_signal_level(level=display_level, modem=modem_name)
         except Exception as e:
             # Non-fatal: signal logic should continue even if LED hardware is absent.
             logger.debug("Signal LED update skipped (non-fatal): %s",
                          e,
                          extra={'interface_number': self.interface_number,
-                                'level': level,
+                                'level': display_level,
                                 'modem_name': modem_name})
 
     async def _clear_signal_led(self, reason: str = "") -> None:
@@ -13309,6 +13497,11 @@ class ModemStateMachine:
     async def _setup_bearer_signal_monitoring(self):
         """Set up D-Bus signal monitoring for bearer state changes"""
         try:
+            # Self-heal a connect→signal race: if the bearer path has not been
+            # captured yet, resolve the live data bearer before giving up so
+            # signal monitoring attaches on the first try rather than warning.
+            if not self.bearer_path:
+                await self._resolve_active_bearer_path()
             if not self.bearer_path or not self.bus:
                 logger.warning("No bearer path or bus available for signal monitoring",
                               extra={'interface_number': self.interface_number})
@@ -15495,9 +15688,18 @@ class ModemStateMachine:
         """
         try:
             if not hasattr(self, 'bearer_path') or not self.bearer_path:
-                logger.warning("No bearer path available for IP configuration",
-                             extra={'interface_number': self.interface_number})
-                return True
+                # The MM CONNECTED signal can race ahead of the connect
+                # coroutine that sets self.bearer_path, so a missing path here
+                # is usually a timing gap, not a real absence.  Try to resolve
+                # the live data bearer before giving up — this is the single
+                # chokepoint every connect/recovery path funnels through, so
+                # resolving here fixes the race for all of them at once.  Only
+                # warn + skip if no connected bearer genuinely exists yet.
+                await self._resolve_active_bearer_path()
+                if not self.bearer_path:
+                    logger.warning("No bearer path available for IP configuration",
+                                 extra={'interface_number': self.interface_number})
+                    return True
 
             # Get bearer IP configuration from ModemManager
             bearer_ips = await self._get_bearer_expected_ips()
