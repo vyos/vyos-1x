@@ -14,6 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from ctypes import cdll, c_char_p, c_void_p, c_bool
+from pathlib import Path
 
 from vyos.defaults import reference_tree_cache
 
@@ -25,7 +26,7 @@ class ReferenceTreeError(Exception):
 
 
 class ReferenceTree:
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes,raise-missing-from
     def __init__(self, cache_file=reference_tree_cache, libpath=LIBPATH):
         self.__pointer = None
         self.__lib = cdll.LoadLibrary(libpath)
@@ -35,9 +36,9 @@ class ReferenceTree:
         self.__get_error.argtypes = []
         self.__get_error.restype = c_char_p
 
-        self.__read_internal = self.__lib.read_internal_reference_tree
-        self.__read_internal.argtypes = [c_char_p]
-        self.__read_internal.restype = c_void_p
+        self.__read_internal_string = self.__lib.read_internal_string_reference_tree
+        self.__read_internal_string.argtypes = [c_char_p]
+        self.__read_internal_string.restype = c_void_p
 
         self.__write_internal = self.__lib.write_internal_reference_tree
         self.__write_internal.argtypes = [c_void_p, c_char_p]
@@ -53,7 +54,12 @@ class ReferenceTree:
         self.__equal.argtypes = [c_void_p, c_void_p]
         self.__equal.restype = c_bool
 
-        pointer = self.__read_internal(cache_file.encode())
+        try:
+            cache_string = Path(cache_file).read_bytes()
+        except OSError as e:
+            raise ValueError(f'Failed to read cache_file: {e}')
+
+        pointer = self.__read_internal_string(cache_string)
         if pointer is None:
             msg = self.__get_error().decode()
             raise ValueError(f'Failed to read internal rep: {msg}')
