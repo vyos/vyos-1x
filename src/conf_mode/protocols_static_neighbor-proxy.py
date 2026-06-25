@@ -17,10 +17,15 @@
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import leaf_node_changed
+from vyos.configdict import node_changed
 from vyos.utils.process import call
+from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
+
 
 def get_config(config=None):
     if config:
@@ -31,7 +36,18 @@ def get_config(config=None):
     base = ['protocols', 'static', 'neighbor-proxy']
     config = conf.get_config_dict(base, get_first_key=True)
 
+    if not config:
+        config = {'deleted': True}
+
+    removed_nd_interfaces = set()
+    for neighbor in node_changed(conf, base + ['nd'], recursive=True):
+        tmp = leaf_node_changed(conf, base + ['nd', neighbor, 'interface'])
+        if tmp:
+            removed_nd_interfaces.update(tmp)
+    config['removed_nd_interfaces'] = removed_nd_interfaces
+
     return config
+
 
 def verify(config):
     if 'arp' in config:
@@ -45,14 +61,21 @@ def verify(config):
         for neighbor, neighbor_conf in config['nd'].items():
             if 'interface' not in neighbor_conf:
                 raise ConfigError(
-                    f"ARP neighbor-proxy for '{neighbor}' requires an interface to be set!"
+                    f"NDP neighbor-proxy for '{neighbor}' requires an interface to be set!"
                 )
+
 
 def generate(config):
     pass
 
+
 def apply(config):
-    if not config:
+    # Disable proxy_ndp on interfaces removed from config
+    removed_nd_interfaces = config.pop('removed_nd_interfaces', set())
+    for iface in removed_nd_interfaces:
+        sysctl_write(['net', 'ipv6', 'conf', iface, 'proxy_ndp'], 0)
+
+    if 'deleted' in config:
         # Cleanup proxy
         call('ip neighbor flush proxy')
         call('ip -6 neighbor flush proxy')
@@ -73,6 +96,8 @@ def apply(config):
         for neighbor, neighbor_conf in config['nd'].items():
             for interface in neighbor_conf['interface']:
                 call(f'ip -6 neighbor add proxy {neighbor} dev {interface}')
+                sysctl_write(['net', 'ipv6', 'conf', interface, 'proxy_ndp'], 1)
+
 
 if __name__ == '__main__':
     try:
