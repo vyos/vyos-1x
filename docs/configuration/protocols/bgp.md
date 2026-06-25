@@ -781,6 +781,26 @@ installed into the kernel.
 :::
 ```
 
+##### BGP message queue limits
+
+```{cfgcmd} set protocols bgp parameters input-queue-limit \<messages\>
+
+   Set the BGP Input Queue limit for all peers during message parsing.
+   Increase this only if you have the memory to handle large queues of
+   messages at once.
+
+   The default is 10000.
+```
+
+```{cfgcmd} set protocols bgp parameters output-queue-limit \<messages\>
+
+   Set the BGP Output Queue limit for all peers during message parsing.
+   Increase this only if you have the memory to handle large queues of
+   messages at once.
+
+   The default is 10000.
+```
+
 ##### Timers
 
 ```{cfgcmd} set protocols bgp timers holdtime \<seconds\>
