@@ -306,6 +306,7 @@
                 <children>
                   #include <include/vpn-ipsec-encryption.xml.i>
                   #include <include/vpn-ipsec-hash.xml.i>
+                  #include <include/vpn-ipsec-esn.xml.i>
                 </children>
               </tagNode>
             </children>
@@ -622,6 +623,7 @@
                   </leafNode>
                   #include <include/vpn-ipsec-encryption.xml.i>
                   #include <include/vpn-ipsec-hash.xml.i>
+                  #include <include/vpn-ipsec-esn.xml.i>
                 </children>
               </tagNode>
             </children>

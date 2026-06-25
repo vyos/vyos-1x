@@ -530,6 +530,17 @@ def get_esp_ike_cipher(group_config, ike_group=None):
                     group = get_first_ike_dh_group(ike_group)
                 tmp += '-' + pfs_lut[group]
 
+            # For 'optional' and 'disabled' we need two values as
+            # proposal without '-esn'/'-noesn' is incompatible with
+            # proposals with any of them.
+            if 'esn' in proposal:
+                if proposal['esn'] == 'required':
+                    tmp += '-esn'
+                elif proposal['esn'] == 'optional':
+                    ciphers.append(tmp + '-esn-noesn')
+                elif proposal['esn'] == 'disabled':
+                    ciphers.append(tmp + '-noesn')
+
             ciphers.append(tmp)
     return ciphers
 
