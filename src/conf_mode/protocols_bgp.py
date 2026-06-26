@@ -647,6 +647,29 @@ def verify(config_dict):
                         if 'route_target' in vni_config and 'advertise_all_vni' not in afi_config:
                             raise ConfigError('BGP EVPN "route-target" requires "advertise-all-vni" to be set!')
 
+                # T8865: Detect conflict between VRF-level "vni" sub-block and global
+                # "advertise-all-vni". When advertise-all-vni is active in the default
+                # BGP instance, FRR already owns all VNIs discovered from the kernel.
+                # Attempting to create the same VNI again via a VRF BGP "vni" sub-block
+                # causes FRR to return "% Failed to create VNI" and perform an early exit
+                # from config processing.
+                if vrf and 'vni' in afi_config:
+                    default_bgp_evpn = dict_search(
+                        'dependent_vrfs.default.protocols.bgp.address_family.l2vpn_evpn',
+                        bgp,
+                    )
+                    if (
+                        default_bgp_evpn is not None
+                        and 'deleted' not in default_bgp_evpn
+                    ):
+                        if 'advertise_all_vni' in default_bgp_evpn:
+                            raise ConfigError(
+                                'BGP EVPN "vni" sub-configuration conflicts with '
+                                '"advertise-all-vni" in the default BGP instance. '
+                                'Remove "vni" from the VRF l2vpn-evpn configuration '
+                                'or disable "advertise-all-vni" for the default BGP.'
+                            )
+
     return None
 
 def generate(config_dict):

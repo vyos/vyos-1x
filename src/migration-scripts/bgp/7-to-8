@@ -1,0 +1,45 @@
+# Copyright (C) VyOS Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8865: When "address-family l2vpn-evpn advertise-all-vni" is
+# configured remove the conflicting "vni" sub-node from each affected VRF
+# because FRR returns "Failed to create VNI".
+
+from vyos.configtree import ConfigTree
+
+vrf_base = ['vrf', 'name']
+bgp_base = ['protocols', 'bgp']
+bgp_l2vpn_evpn = bgp_base + ['address-family', 'l2vpn-evpn']
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(vrf_base):
+        return  # Nothing to do
+
+    # Only act when advertise-all-vni is set in the default BGP instance
+    if not config.exists(bgp_l2vpn_evpn + ['advertise-all-vni']):
+        return
+
+    for vrf in config.list_nodes(vrf_base):
+        vni_path = vrf_base + [
+            vrf,
+            'protocols',
+            'bgp',
+            'address-family',
+            'l2vpn-evpn',
+            'vni',
+        ]
+        if config.exists(vni_path):
+            config.delete(vni_path)
