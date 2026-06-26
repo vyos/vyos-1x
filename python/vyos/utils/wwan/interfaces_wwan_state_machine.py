@@ -422,6 +422,14 @@ class ModemStateMachine:
         # Poll cadence of _monitor_signal_strength, recorded so the evaluator
         # can require a sane minimum number of consecutive weak samples.
         self._signal_poll_interval_seconds = 5
+        # Hysteresis (deadband) for the signal-loss window, in dB.  Once the
+        # window is armed (signal dropped below the configured threshold),
+        # recovery is only declared when the signal climbs this many dB ABOVE
+        # the threshold.  Without a deadband, normal sample-to-sample jitter
+        # around the threshold makes the window arm/clear on nearly every poll,
+        # producing a stream of "dropped"/"recovered" log churn (and resetting
+        # the loss timer) even though the link is fine.
+        self._signal_failover_recovery_margin = 3
 
         # Connectivity recovery tracking for SIM escalation
         self.connectivity_recovery_attempts = 0  # Consecutive recovery attempts on same SIM
@@ -10805,26 +10813,40 @@ class ModemStateMachine:
                 self._signal_failover_below_count = 0
             return
 
-        rssi_threshold = self.config.get('sim_failover_signal_threshold_rssi', -90)
-        rsrp_threshold = self.config.get('sim_failover_signal_threshold_rsrp', -110)
+        rssi_threshold = self.config.get('sim_failover_signal_threshold_rssi', -93)
+        rsrp_threshold = self.config.get('sim_failover_signal_threshold_rsrp', -113)
         loss_timer = max(1, int(self.config.get('sim_failover_signal_loss_timer', 60)))
 
         metric_name, metric_dbm, threshold = self._select_signal_metric(
             signal_detail, signal_dbm, rssi_threshold, rsrp_threshold)
 
-        if metric_dbm >= threshold:
+        # Hysteresis: once the weak-signal window is armed, require the signal
+        # to climb a margin ABOVE the threshold before declaring recovery.  The
+        # arm (drop) line stays at the configured threshold while the clear
+        # (recovery) line sits at threshold + margin, so jitter that wiggles a
+        # dB or two across the threshold no longer flaps the window — it clears
+        # only on a solid recovery and arms only on a genuine drop.
+        armed = self._signal_failover_below_since is not None
+        recovery_threshold = threshold + self._signal_failover_recovery_margin
+        recovery_line = recovery_threshold if armed else threshold
+
+        if metric_dbm >= recovery_line:
             # Signal adequate — clear any in-progress weak-signal window.
-            if self._signal_failover_below_since is not None:
+            if armed:
                 logger.info("Signal recovered above sim-failover threshold",
                            extra={'interface_number': self.interface_number,
                                   'metric': metric_name,
                                   'metric_dbm': metric_dbm,
-                                  'threshold_dbm': threshold})
+                                  'threshold_dbm': threshold,
+                                  'recovery_threshold_dbm': recovery_threshold})
                 self._signal_failover_below_since = None
                 self._signal_failover_below_count = 0
             return
 
-        # Below threshold — start or continue the weak-signal window.
+        # Below the recovery line — start or continue the weak-signal window.
+        # When the window is not yet armed this means the signal is below the
+        # configured threshold (a genuine drop); when already armed it means
+        # the signal has not yet climbed the hysteresis margin above it.
         now = time.time()
         if self._signal_failover_below_since is None:
             # Only arm the timer if there is actually somewhere to switch to.

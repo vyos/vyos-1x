@@ -573,7 +573,7 @@
                           </constraint>
                           <constraintErrorMessage>RSRP threshold must be -140 to -44 dBm</constraintErrorMessage>
                         </properties>
-                        <defaultValue>-110</defaultValue>
+                        <defaultValue>-113</defaultValue>
                       </leafNode>
                       <leafNode name="rssi">
                         <properties>
@@ -587,7 +587,7 @@
                           </constraint>
                           <constraintErrorMessage>RSSI threshold must be -120 to -50 dBm</constraintErrorMessage>
                         </properties>
-                        <defaultValue>-90</defaultValue>
+                        <defaultValue>-93</defaultValue>
                       </leafNode>
                     </children>
                   </node>

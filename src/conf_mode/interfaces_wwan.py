@@ -622,10 +622,10 @@ def build_fsm_config(wwan):
             sf, 'signal_loss_timer', 60
         ),
         'sim_failover_signal_threshold_rssi': _leaf_int(
-            sf.get('signal_threshold', {}), 'rssi', -90
+            sf.get('signal_threshold', {}), 'rssi', -93
         ),
         'sim_failover_signal_threshold_rsrp': _leaf_int(
-            sf.get('signal_threshold', {}), 'rsrp', -110
+            sf.get('signal_threshold', {}), 'rsrp', -113
         ),
 
         # SIM failback
