@@ -127,19 +127,27 @@ class SignalStrengthTracker:
     indication.  All thresholds are on the 3GPP RSRP coverage scale; every
     reading is normalized to RSRP by ``_to_rsrp_scale`` (RSRP used as-is, RSSI
     shifted ~20 dB) before classification, so one consistent ruler applies no
-    matter which metric the modem reported:
-      - 0: No signal     (< -125 dBm or no reading)
-      - 1: Barely usable (-125 to -116 dBm)
-      - 2: Very poor     (-115 to -109 dBm)
-      - 3: Weak          (-108 to -103 dBm)
-      - 4: Fair          (-102 to -96 dBm)
-      - 5: Good          (-95 to -89 dBm)
-      - 6: Very good     (-88 to -83 dBm)
-      - 7: Excellent     (>= -82 dBm)
+    matter which metric the modem reported.
 
-    The top rung (level 7 / white) is intentionally set at -82 dBm RSRP so a
-    genuinely strong real-world LTE/5G cell can reach it; the previous -75 dBm
-    cutoff was lab-only and never lit in the field.
+    The bands are deliberately tuned to track CONSUMER PHONE BARS rather than a
+    strict engineering coverage scale: a customer will glance at their phone
+    and expect the router to look about the same, so the ladder is optimistic
+    on purpose.  Anyone who wants the real numbers can read the detailed
+    status; the LED is there to make a working link FEEL good.  Phone-like
+    RSRP mapping:
+      - 0: No signal     (< -120 dBm or no reading)   — searching / dead
+      - 1: Barely usable (-120 to -116 dBm)            — ~1 bar
+      - 2: Very poor     (-115 to -113 dBm)            — low 1-2 bars
+      - 3: Poor          (-112 to -109 dBm)            — ~2 bars
+      - 4: Fair          (-108 to -105 dBm)            — 2-3 bars
+      - 5: Good          (-104 to -98 dBm)             — ~3 bars (green)
+      - 6: Very good     (-97 to -91 dBm)              — ~4 bars (green)
+      - 7: Excellent     (>= -90 dBm)                  — full bars (white)
+
+    Green now begins at -104 dBm RSRP (was -95) so a normal real-world
+    LTE/5G cell reads as "good", and full/white starts at -90 dBm (was -82),
+    matching how a phone fills its bars.  2G/3G stays capped at cyan via
+    ``LED_SLOW_RAT_MAX_LEVEL`` so a slow RAT never lights the premium zone.
     """
 
     def __init__(self, window_size: int = 12, led_callback=None):
@@ -201,23 +209,25 @@ class SignalStrengthTracker:
 
         The input MUST already be normalized by ``_to_rsrp_scale`` so a single
         set of thresholds is valid regardless of the reported metric.  Bands
-        follow the 3GPP RSRP coverage convention (see class docstring).
+        are tuned to consumer phone bars, not a strict coverage scale, so the
+        LED roughly matches what the customer sees on their phone (see class
+        docstring).
         """
-        if avg_dbm is None or avg_dbm < -125:
-            return 0  # No signal
-        if avg_dbm < -115:
-            return 1  # Barely usable
-        if avg_dbm < -108:
+        if avg_dbm is None or avg_dbm < -120:
+            return 0  # No signal / searching
+        if avg_dbm < -116:
+            return 1  # Barely usable (~1 bar)
+        if avg_dbm < -113:
             return 2  # Very poor
-        if avg_dbm < -102:
-            return 3  # Weak
-        if avg_dbm < -95:
-            return 4  # Fair
-        if avg_dbm < -88:
-            return 5  # Good
-        if avg_dbm < -82:
-            return 6  # Very good
-        return 7  # Excellent / maximum
+        if avg_dbm < -109:
+            return 3  # Poor (~2 bars)
+        if avg_dbm < -105:
+            return 4  # Fair (2-3 bars)
+        if avg_dbm < -98:
+            return 5  # Good (~3 bars, green)
+        if avg_dbm < -91:
+            return 6  # Very good (~4 bars, green)
+        return 7  # Excellent / full (white)
 
     async def update(self, signal_dbm: float, signal_detail: dict = None) -> None:
         """Add a new signal sample and check for level change; trigger LED if changed.
