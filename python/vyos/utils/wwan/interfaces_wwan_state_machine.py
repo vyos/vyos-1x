@@ -449,6 +449,17 @@ class ModemStateMachine:
         # so flapping cards never trigger failback.
         self._primary_first_seen_present_ts = None  # When SIM 1 first reappeared in this on-failover session
         self._last_failback_time = 0.0              # Cooldown anchor — prevents rapid failover/failback ping-pong
+        # Expedited-failback signal.  True when the CURRENT failover happened
+        # because the PRIMARY SIM was physically REMOVED (sim-missing /
+        # active-SIM-removal) — as opposed to signal-loss / data-limit /
+        # connection-failure, where the primary was never ejected.  An ejected
+        # primary can only return by a deliberate human re-insertion, so when
+        # this is True the failback monitor uses a short confirmation window
+        # (sim_failback_reinsert_confirm_time) instead of the full anti-flap
+        # stability gate.  Board-agnostic: set from the recorded failover
+        # reason, which is identical on GPIO-mux and ModemManager-managed
+        # boards, so the expedited behavior is the same on both.
+        self._failover_due_to_primary_removal = False
 
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
@@ -581,6 +592,14 @@ class ModemStateMachine:
         self._sim_insertion_check_in_progress = False
         self._last_sim_insertion_check_ts = 0.0
         self._sim_insertion_check_debounce_seconds = 5.0
+        # Post-registration band-clear reassert.  The per-SIM "all" clear can
+        # run while SupportedBands is transient (right after a SIM switch
+        # re-enables the modem); this single deferred retry re-runs band
+        # configuration once the modem is REGISTERED and capability is
+        # authoritative.  _in_band_clear_reassert guards against the rerun
+        # scheduling itself recursively.
+        self._band_clear_reassert_task = None
+        self._in_band_clear_reassert = False
 
         # Active-SIM removal watchdog (GPIO-mux).  When the active slot's SIM is
         # physically pulled, the GPIO SIM_DETECT edge is authoritative, so we
@@ -5306,6 +5325,8 @@ class ModemStateMachine:
             self._sticky_failover_timestamp = None
             self.failback_suppressed_by_connection_failure = False
             self._primary_first_seen_present_ts = None
+            # Back on primary — the removal-failover episode is over.
+            self._failover_due_to_primary_removal = False
             # Cancel any leftover monitor task from a previous failover
             # session so it doesn't run against the new (primary)
             # context.
@@ -5327,6 +5348,11 @@ class ModemStateMachine:
                                'primary_sim': primary,
                                'current_sim': current})
             self.is_on_failover_sim = True
+            # A modem-firmware self-failover onto the backup happens when the
+            # primary SIM is physically removed (the only thing that makes the
+            # modem abandon the primary).  Treat it as a removal episode so a
+            # subsequent re-insertion gets the expedited failback window.
+            self._failover_due_to_primary_removal = True
 
         # Suppress failback when sticky failover is active (data-limit triggered)
         # Note: we still start the monitor loop so it can detect when the
@@ -5370,6 +5396,23 @@ class ModemStateMachine:
         if self.config:
             stability_time = max(0, int(self.config.get('sim_failback_stability_time', 300)))
 
+        # Expedited window for a DELIBERATE primary re-insertion.  When the
+        # failover happened because the primary SIM was physically REMOVED, the
+        # only way it comes back is a human pushing it into the primary slot —
+        # a specific, intentional action.  Making the customer wait the full
+        # anti-flap stability_time (default 5 min) after they visibly re-seat
+        # the primary is exactly what drives "why isn't it switching back?!"
+        # panic.  So in that case require only a short confirmation window
+        # (sim_failback_reinsert_confirm_time, default 15s) to guard against a
+        # half-seated tray, then fail back.  When the failover was NOT due to
+        # removal (signal/data/connection), the primary never left, so its
+        # presence is not a user action and the full stability gate still
+        # applies.  Reason-driven, so identical on GPIO-mux and managed boards.
+        reinsert_confirm_time = 15
+        if self.config:
+            reinsert_confirm_time = max(
+                0, int(self.config.get('sim_failback_reinsert_confirm_time', 15)))
+
         # Cooldown between successive failbacks — prevents rapid
         # failover↔failback ping-pong if the user keeps cycling the SIM
         # after a successful failback.  Reuses the carrier-friendly
@@ -5390,6 +5433,11 @@ class ModemStateMachine:
         # lets the gate fire at stability_time (±poll_cadence) while
         # genuinely re-verifying continuous presence on every tick.
         poll_cadence = max(5, min(check_interval, 30))
+        # When the failover was a primary REMOVAL, the gate is the short
+        # re-insert window — poll fast enough that the gate actually fires
+        # near that window instead of being rounded up to the slow cadence.
+        if self._failover_due_to_primary_removal and reinsert_confirm_time > 0:
+            poll_cadence = max(3, min(poll_cadence, reinsert_confirm_time // 2 or 3))
 
         primary = self.primary_sim_slot
         if primary is None:
@@ -5403,13 +5451,19 @@ class ModemStateMachine:
                           'check_interval_seconds': check_interval,
                           'poll_cadence_seconds': poll_cadence,
                           'stability_time_seconds': stability_time,
+                          'reinsert_confirm_time_seconds': reinsert_confirm_time,
+                          'failover_due_to_primary_removal':
+                              self._failover_due_to_primary_removal,
                           'failback_cooldown_seconds': failback_cooldown})
 
         # First probe happens after a short settle so the SIM 2 connection
         # has a chance to stabilize and ModemManager has populated SimSlots
         # for the (possibly just re-enumerated) modem.  Subsequent
-        # iterations wake on the fine poll_cadence.
-        FIRST_CHECK_SETTLE_SECONDS = 30
+        # iterations wake on the fine poll_cadence.  For a primary-removal
+        # episode keep the settle short so a quick re-insert is honored
+        # promptly (the expedited window is the whole point).
+        FIRST_CHECK_SETTLE_SECONDS = (
+            min(5, poll_cadence) if self._failover_due_to_primary_removal else 30)
         # Reset stability tracking on monitor start — every fresh
         # on-failover session begins with no observed primary presence.
         self._primary_first_seen_present_ts = None
@@ -5504,13 +5558,21 @@ class ModemStateMachine:
                                       'required_seconds': stability_time})
                     continue
 
+                # Choose the effective gate: expedited for a deliberate primary
+                # re-insertion (primary was removed → can only return by hand),
+                # full anti-flap gate otherwise.
+                effective_gate = (reinsert_confirm_time
+                                  if self._failover_due_to_primary_removal
+                                  else stability_time)
+
                 continuous_present = now_ts - self._primary_first_seen_present_ts
-                if continuous_present < stability_time:
+                if continuous_present < effective_gate:
                     logger.debug("Primary SIM present but stability gate not yet satisfied",
                                 extra={'interface_number': self.interface_number,
                                        'primary_sim': primary,
                                        'continuous_present_seconds': int(continuous_present),
-                                       'required_seconds': stability_time})
+                                       'required_seconds': effective_gate,
+                                       'expedited': self._failover_due_to_primary_removal})
                     continue
 
                 # Cooldown gate — refuse to failback if we just failed back
@@ -5530,7 +5592,10 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number,
                                   'primary_sim': primary,
                                   'current_sim': self.current_active_sim,
-                                  'continuous_present_seconds': int(continuous_present)})
+                                  'continuous_present_seconds': int(continuous_present),
+                                  'expedited_reinsert':
+                                      self._failover_due_to_primary_removal,
+                                  'gate_seconds': effective_gate})
                 self._last_failback_time = now_ts
                 await self._execute_failback(primary)
                 break  # Failback initiated, exit loop
@@ -6815,6 +6880,19 @@ class ModemStateMachine:
                 self.sim_switch_reason = switch_reason or f'automatic_failover_{reason}'
                 self.target_sim_slot = fallback_sim
 
+                # Record WHETHER this failover was caused by the primary SIM
+                # being physically removed.  Only a sim-missing failover AWAY
+                # FROM the primary qualifies: an ejected primary can return
+                # solely via deliberate re-insertion, which the failback monitor
+                # then honors with the expedited confirmation window.  Signal /
+                # data-limit / connection failovers leave the primary inserted,
+                # so their later "primary present" is not a user action and must
+                # still pass the full anti-flap stability gate.  Reason-based, so
+                # it behaves identically on GPIO-mux and managed boards.
+                self._failover_due_to_primary_removal = (
+                    reason == 'sim_missing'
+                    and from_sim == self.primary_sim_slot)
+
                 # Optional per-trigger FSM side effects: suppress failback to a
                 # known-bad primary, and/or stamp the disconnect reason that the
                 # DISCONNECT handler consumes.
@@ -7844,30 +7922,151 @@ class ModemStateMachine:
                                       'current_bands': current_band_names})
 
                     modem_iface = self.proxy.get_interface(MODEM_INTERFACE)
-                    await modem_iface.call_set_current_bands([MM_MODEM_BAND_ANY])
-                    await asyncio.sleep(3)
 
-                    cleared_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
-                    cleared_list = self._band_array_to_ints(cleared_variant)
-                    cleared_names = [self._mm_constant_to_band_name(b) for b in cleared_list]
+                    # Try the ANY=0 sentinel first.  Some QMI modems (e.g.
+                    # Telit LE910C4) REJECT the band-mask=0 "ANY" form of
+                    # SetSystemSelectionPreference with QMI error 25
+                    # 'DeviceUnsupported' even though they accept an explicit
+                    # band list.  Treat BOTH a raised exception AND a
+                    # non-widening result as "ANY not honored" and fall through
+                    # to writing the explicit supported-band list — that is the
+                    # only way to express "no restriction" on such a modem,
+                    # which is exactly what's needed when switching from a
+                    # band-locked SIM back to an unrestricted one.  The previous
+                    # code let the ANY exception bubble to the outer handler,
+                    # skipping the fallback entirely and leaving the restriction
+                    # in place.
+                    any_ok = False
+                    try:
+                        await modem_iface.call_set_current_bands([MM_MODEM_BAND_ANY])
+                        await asyncio.sleep(3)
 
-                    # Success = the modem widened beyond the prior narrow set.
-                    # Some QMI modems reject the ANY sentinel; if the band set
-                    # did not widen, fall back to writing the explicit
-                    # supported-band list (what the modem advertises).
-                    if set(cleared_list) != current_set and len(cleared_list) >= len(current_set):
-                        logger.info("Band restriction cleared — modem now unrestricted",
-                                   extra={'interface_number': self.interface_number,
-                                          'bands': cleared_names})
+                        cleared_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
+                        cleared_list = self._band_array_to_ints(cleared_variant)
+                        cleared_names = [self._mm_constant_to_band_name(b) for b in cleared_list]
+
+                        # Success = the modem widened beyond the prior narrow set.
+                        if set(cleared_list) != current_set and len(cleared_list) >= len(current_set):
+                            logger.info("Band restriction cleared — modem now unrestricted",
+                                       extra={'interface_number': self.interface_number,
+                                              'bands': cleared_names})
+                            any_ok = True
+                    except Exception as any_e:
+                        logger.info(
+                            "ANY band sentinel rejected by modem "
+                            f"({type(any_e).__name__}: {any_e}) — falling back to "
+                            "explicit supported-band list",
+                            extra={'interface_number': self.interface_number,
+                                   'error': str(any_e),
+                                   'error_type': type(any_e).__name__})
+
+                    if any_ok:
                         return
 
-                    if modem_bands_list:
-                        logger.info("ANY band sentinel not honored — falling "
-                                    "back to explicit supported-band list",
-                                   extra={'interface_number': self.interface_number,
-                                          'supported_bands': modem_band_names})
-                        await modem_iface.call_set_current_bands(modem_bands_list)
+                    # Fallback: write the explicit "all bands" list, which is
+                    # the equivalent of ANY for a modem that rejects the ANY=0
+                    # sentinel.  Source the list from SupportedBands ∪
+                    # CurrentBands (NOT SupportedBands alone): a QMI modem can
+                    # report a TRUNCATED SupportedBands right after re-enable
+                    # (the exact transient that fires on a failback), and any
+                    # band currently enabled is by definition supported, so the
+                    # union recovers bands the capability query dropped.  If the
+                    # union still looks suspiciously small (<=1 band — the
+                    # truncation signature), re-read SupportedBands a few times
+                    # to let it fill in before writing, so the "clear" cannot
+                    # itself become an accidental single-band restriction.
+                    explicit_all = set(capability_bands)
+                    if len(explicit_all) <= 1:
+                        for _ in range(3):
+                            await asyncio.sleep(2)
+                            try:
+                                sb_v = await props.call_get(MODEM_INTERFACE, "SupportedBands")
+                                cb_v = await props.call_get(MODEM_INTERFACE, "CurrentBands")
+                                explicit_all |= set(self._band_array_to_ints(sb_v))
+                                explicit_all |= set(self._band_array_to_ints(cb_v))
+                            except Exception:
+                                pass
+                            if len(explicit_all) > 1:
+                                break
+
+                    if not explicit_all:
+                        logger.warning(
+                            "ANY band sentinel not honored and no capability "
+                            "bands available to fall back to — band restriction "
+                            "may persist",
+                            extra={'interface_number': self.interface_number,
+                                   'current_bands': current_band_names})
+                        return
+
+                    explicit_list = sorted(explicit_all)
+                    explicit_names = [self._mm_constant_to_band_name(b) for b in explicit_list]
+
+                    logger.info("ANY band sentinel not honored — writing explicit "
+                                "all-bands list (SupportedBands ∪ CurrentBands) to "
+                                "clear the restriction",
+                               extra={'interface_number': self.interface_number,
+                                      'all_bands': explicit_names,
+                                      'all_constants': explicit_list})
+                    try:
+                        await modem_iface.call_set_current_bands(explicit_list)
                         await asyncio.sleep(3)
+                        verify_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
+                        verify_list = self._band_array_to_ints(verify_variant)
+                        if set(verify_list) != set(explicit_list):
+                            logger.info(
+                                "Explicit all-bands write not fully reflected "
+                                "— retrying once",
+                                extra={'interface_number': self.interface_number})
+                            await modem_iface.call_set_current_bands(explicit_list)
+                            await asyncio.sleep(3)
+                            verify_variant = await props.call_get(MODEM_INTERFACE, "CurrentBands")
+                            verify_list = self._band_array_to_ints(verify_variant)
+                        verify_names = [self._mm_constant_to_band_name(b) for b in verify_list]
+                        if (set(verify_list) == set(explicit_list)
+                                or len(verify_list) > len(current_set)):
+                            logger.info(
+                                "Band restriction cleared via explicit "
+                                "all-bands list",
+                                extra={'interface_number': self.interface_number,
+                                       'bands': verify_names})
+                            # Capability was transient right after re-enable;
+                            # re-assert once registration completes (when
+                            # SupportedBands is authoritative) so a modem that
+                            # only accepted a partial set now widens fully.
+                            self._schedule_band_clear_reassert()
+                        else:
+                            logger.warning(
+                                "Explicit all-bands write did not clear the "
+                                "restriction — modem may remain band-locked",
+                                extra={'interface_number': self.interface_number,
+                                       'target_bands': explicit_names,
+                                       'actual_bands': verify_names})
+                            self._emit_alert(
+                                alert_type='band_restriction_not_cleared',
+                                severity='warning',
+                                message='Could not clear band restriction on '
+                                        'unrestricted SIM',
+                                actual_bands=verify_names)
+                            # Try again after registration when capability is
+                            # complete — this is the failback transient case.
+                            self._schedule_band_clear_reassert()
+                    except Exception as fb_e:
+                        logger.warning(
+                            "Explicit all-bands fallback also failed "
+                            f"({type(fb_e).__name__}: {fb_e}) — band restriction "
+                            "may persist; will re-attempt after registration",
+                            extra={'interface_number': self.interface_number,
+                                   'error': str(fb_e),
+                                   'error_type': type(fb_e).__name__})
+                        self._emit_alert(
+                            alert_type='band_restriction_not_cleared',
+                            severity='warning',
+                            message='Modem rejected both ANY and explicit band '
+                                    'writes — restriction may persist',
+                            error=str(fb_e))
+                        # Defer one more attempt to the post-registration path,
+                        # where SupportedBands is authoritative.
+                        self._schedule_band_clear_reassert()
                     return
                 else:
                     # Per-SIM restricts to specific bands.
@@ -8031,6 +8230,69 @@ class ModemStateMachine:
             # Don't fail the entire configuration for band issues
             logger.warning("Continuing configuration without band changes",
                           extra={'interface_number': self.interface_number})
+
+    def _schedule_band_clear_reassert(self):
+        """Schedule a single post-registration retry of the band clear.
+
+        The ``per_sim_is_all`` clear path can run moments after a SIM switch
+        re-enables the modem, when SupportedBands is still TRUNCATED — so the
+        explicit all-bands fallback may have written only a partial set (or the
+        modem may have rejected it outright while not fully up).  Once the modem
+        reaches REGISTERED its SupportedBands is authoritative, so re-run the
+        band configuration one more time then.  Idempotent and self-gating: at
+        most one reassert task runs; if bands are already unrestricted the
+        normal ``already_unrestricted`` check makes the rerun a quiet no-op.
+        """
+        task = getattr(self, '_band_clear_reassert_task', None)
+        if task is not None and not task.done():
+            return  # one already pending
+        if self._in_band_clear_reassert:
+            return  # don't let a reassert run schedule another (no recursion)
+        self._band_clear_reassert_task = self._safe_create_task(
+            self._band_clear_reassert_loop(), name='band_clear_reassert')
+
+    async def _band_clear_reassert_loop(self):
+        """Wait for REGISTERED (bounded), then re-run band configuration once."""
+        try:
+            # Wait up to ~30s for the modem to reach a registered/connected
+            # state, where SupportedBands is complete.  Poll rather than hook a
+            # signal so this stays self-contained.
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                await asyncio.sleep(3)
+                if self._shutting_down or not self.proxy:
+                    return
+                try:
+                    props = self.proxy.get_interface(
+                        "org.freedesktop.DBus.Properties")
+                    state_v = await props.call_get(MODEM_INTERFACE, "State")
+                    state = state_v.value if hasattr(state_v, 'value') else state_v
+                except Exception:
+                    continue
+                # 8 REGISTERED, 10 CONNECTING, 11 CONNECTED — capability is
+                # authoritative at/above REGISTERED.
+                if state is not None and state >= 8:
+                    break
+            else:
+                logger.info("Band-clear reassert: modem did not reach "
+                            "REGISTERED within window — running anyway",
+                            extra={'interface_number': self.interface_number})
+
+            logger.info("Re-asserting band clear now that capability is "
+                        "authoritative (post-registration)",
+                       extra={'interface_number': self.interface_number})
+            self._in_band_clear_reassert = True
+            try:
+                await self._configure_supported_bands()
+            finally:
+                self._in_band_clear_reassert = False
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.debug(f"Band-clear reassert failed: {e}",
+                        extra={'interface_number': self.interface_number})
+        finally:
+            self._band_clear_reassert_task = None
 
     async def _configure_network_mode(self):
         """Configure network mode (access technology) on the modem.
@@ -12404,6 +12666,13 @@ class ModemStateMachine:
                 and not self._registration_debounce_timer.done()):
             self._registration_debounce_timer.cancel()
             self._registration_debounce_timer = None
+
+        # Cancel any pending post-registration band-clear reassert
+        if (hasattr(self, '_band_clear_reassert_task')
+                and self._band_clear_reassert_task
+                and not self._band_clear_reassert_task.done()):
+            self._band_clear_reassert_task.cancel()
+            self._band_clear_reassert_task = None
 
         # Force-disconnect the bearer unconditionally — do NOT gate on
         # current_state, because the FSM's internal state may lag the
