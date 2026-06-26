@@ -24,7 +24,7 @@ geoip_lock_file = '/var/lock/vyos-geoip.lock'
 
 # Raw data
 
-def geoip_download_dbip():
+def geoip_download_dbip(source_address=None):
     url = 'https://download.db-ip.com/free/dbip-country-lite-{}.csv.gz'.format(strftime("%Y-%m"))
     asn_url = 'https://download.db-ip.com/free/dbip-asn-lite-{}.csv.gz'.format(strftime("%Y-%m"))
     try:
@@ -32,13 +32,13 @@ def geoip_download_dbip():
         if not os.path.exists(dirname):
             os.mkdir(dirname)
 
-        download(dbip_database_raw, url)
-        download(dbip_asn_database_raw, asn_url)
+        download(dbip_database_raw, url, source_host=source_address)
+        download(dbip_asn_database_raw, asn_url, source_host=source_address)
         return True
     except:
         return False
 
-def geoip_download_maxmind(account_id : str, license_key: str, lite : bool) -> bool:
+def geoip_download_maxmind(account_id : str, license_key: str, lite : bool, source_address: str = None) -> bool:
     db_str = 'GeoLite2' if lite else 'GeoIP2'
     url = f'https://{account_id}:{license_key}@download.maxmind.com/geoip/databases/{db_str}-Country-CSV/download?suffix=zip'
     asn_url = f'https://{account_id}:{license_key}@download.maxmind.com/geoip/databases/{db_str}-ASN-CSV/download?suffix=zip'
@@ -47,8 +47,8 @@ def geoip_download_maxmind(account_id : str, license_key: str, lite : bool) -> b
         if not os.path.exists(dirname):
             os.mkdir(dirname)
 
-        download(mm_database_raw, url)
-        download(mm_asn_database_raw, asn_url)
+        download(mm_database_raw, url, source_host=source_address)
+        download(mm_asn_database_raw, asn_url, source_host=source_address)
         return True
     except:
         return False

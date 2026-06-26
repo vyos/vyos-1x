@@ -27,6 +27,7 @@ from vyos.geoip import db_is_initialised
 from vyos.geoip import db_import_dbip_ranges
 from vyos.geoip import db_import_maxmind_ranges
 from vyos.geoip import geoip_update
+from vyos.utils.process import run
 
 def get_config(conf):
     return (
@@ -41,6 +42,7 @@ def get_config(conf):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--init", help="Initialise", action="store_true")
+    parser.add_argument('--download', help="Download", action="store_true")
     args = parser.parse_args()
 
     if args.init:
@@ -56,31 +58,39 @@ if __name__ == '__main__':
 
     options, firewall, policy = get_config(conf)
 
+    src_addr = options.get('source_address', '')
+    vrf = options.get('vrf', None)
+
+    if args.download or not vrf:
+        if options['provider'] == 'db-ip':
+            print('Downloading latest DB-IP database...')
+            if not geoip_download_dbip(source_address=src_addr):
+                print('Failed to download, aborting.')
+                sys.exit(1)
+        elif options['provider'] == 'maxmind':
+            account_id = options['maxmind_account_id']
+            license_key = options['maxmind_license_key']
+            lite = 'maxmind_lite' in options
+
+            print('Downloading latest MaxMind database...')
+            if not geoip_download_maxmind(account_id, license_key, lite, source_address=src_addr):
+                print('Failed to download, aborting.')
+                sys.exit(1)
+        if args.download:
+            sys.exit(0)
+    elif vrf:
+        run(['python3', __file__, '--download'], stdout=None, stderr=None, vrf=vrf)
+
     if not db_is_initialised():
         db_initialise()
 
+    print('Extracting database...')
     if options['provider'] == 'db-ip':
-        print('Downloading latest DB-IP database...')
-        if not geoip_download_dbip():
-            print('Failed to download, aborting.')
-            sys.exit(1)
-
-        print('Extracting database...')
         if not db_import_dbip_ranges(delete_file=True):
             print('Failed to extract, aborting.')
             sys.exit(1)
 
     elif options['provider'] == 'maxmind':
-        account_id = options['maxmind_account_id']
-        license_key = options['maxmind_license_key']
-        lite = 'maxmind_lite' in options
-
-        print('Downloading latest MaxMind database...')
-        if not geoip_download_maxmind(account_id, license_key, lite):
-            print('Failed to download, aborting.')
-            sys.exit(1)
-
-        print('Extracting database...')
         if not db_import_maxmind_ranges(delete_file=True):
             print('Failed to extract, aborting.')
             sys.exit(1)
