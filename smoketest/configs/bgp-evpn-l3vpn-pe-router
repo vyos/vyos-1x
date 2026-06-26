@@ -227,6 +227,8 @@ vrf {
                             }
                         }
                         advertise-all-vni
+                        vni 2000 {
+                        }
                     }
                 }
                 local-as 100
@@ -253,6 +255,8 @@ vrf {
                             }
                         }
                         advertise-all-vni
+                        vni 4000 {
+                        }
                     }
                 }
                 local-as 100

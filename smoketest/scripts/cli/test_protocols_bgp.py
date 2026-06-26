@@ -1092,6 +1092,73 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(vrf_path + ['protocols', 'bgp', 'address-family'])
         self.cli_commit()
 
+    def test_bgp_08_l2vpn_evpn_advertise_all_vni_conflicts_with_vrf_vni(self):
+        # T8865: Configuring a "vni" sub-block under VRF BGP l2vpn-evpn while
+        # "advertise-all-vni" is active in the default BGP instance causes FRR
+        # to return "% Failed to create VNI" and perform an early exit from config
+        # processing.
+
+        vrf1, vrf2, vrf3 = 'alfa', 'beta', 'gamma'
+        vni1, vni2, vni3 = '5050', '5051', '5052'
+        vrf1_path = ['vrf', 'name', vrf1]
+        vrf2_path = ['vrf', 'name', vrf2]
+        vrf3_path = ['vrf', 'name', vrf3]
+
+        # Set up VRFs with L3VNIs
+        self.cli_set(vrf1_path + ['vni', vni1])
+        self.cli_set(vrf1_path + ['table', '1001'])
+        self.cli_set(vrf2_path + ['vni', vni2])
+        self.cli_set(vrf2_path + ['table', '1002'])
+        self.cli_set(vrf3_path + ['vni', vni3])
+        self.cli_set(vrf3_path + ['table', '1003'])
+
+        # Configure default BGP with advertise-all-vni
+        self.cli_set(base_path + ['system-as', ASN])
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
+
+        # Configure VRF BGP instances
+        for vrf_path in (vrf1_path, vrf2_path, vrf3_path):
+            self.cli_set(vrf_path + ['protocols', 'bgp', 'system-as', ASN])
+            unicast_path = ['l2vpn-evpn', 'advertise', 'ipv4', 'unicast']
+            self.cli_set(
+                vrf_path + ['protocols', 'bgp', 'address-family'] + unicast_path
+            )
+
+        # Adding "vni" sub-block under any VRF l2vpn-evpn while advertise-all-vni
+        # is active globally must be rejected
+        vrf1_af_path = vrf1_path + ['protocols', 'bgp', 'address-family']
+        vrf1_vni_path = vrf1_af_path + ['l2vpn-evpn', 'vni']
+        self.cli_set(vrf1_vni_path + [vni1])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Remove the conflicting vni sub-block - commit must now succeed
+        self.cli_delete(vrf1_vni_path)
+        self.cli_commit()
+
+        # Verify default BGP has advertise-all-vni
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(' advertise-all-vni', frrconfig)
+
+        # Verify all three VRF BGP instances are present in FRR config - this is
+        # the key regression check: FRR must not early-exit and silently drop
+        # l2vpn-evpn config for vrf2 and vrf3
+        for vrf_name, vni_name in ((vrf1, vni1), (vrf2, vni2), (vrf3, vni3)):
+            with self.subTest(vrf_name=vrf_name):
+                frr_vrf_config = self.getFRRconfig(
+                    f'router bgp {ASN} vrf {vrf_name}', stop_section='^exit'
+                )
+                self.assertIn(f'router bgp {ASN} vrf {vrf_name}', frr_vrf_config)
+                self.assertIn(' address-family l2vpn evpn', frr_vrf_config)
+                # "vni" sub-block must NOT appear under any VRF BGP instance
+                self.assertNotIn(f' vni {vni_name}', frr_vrf_config)
+
+        # Cleanup
+        for path in (base_path, vrf1_path, vrf2_path, vrf3_path):
+            self.cli_delete(path)
+        self.cli_commit()
+
     def test_bgp_09_distance_and_flowspec(self):
         distance_external = '25'
         distance_internal = '30'
