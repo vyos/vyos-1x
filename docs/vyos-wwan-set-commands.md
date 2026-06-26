@@ -115,8 +115,8 @@ interfaces
         │           ├── connect-retries <count>           #   default: 3
         │           ├── signal-loss-timer <seconds>       #   default: 60
         │           └── signal-threshold
-        │                 ├── rssi <dBm>                   #   default: -90  (2G/3G)
-        │                 └── rsrp <dBm>                   #   default: -110 (LTE/5G)
+        │                 ├── rssi <dBm>                   #   default: -93  (2G/3G)
+        │                 └── rsrp <dBm>                   #   default: -113 (LTE/5G)
         │
         ├── apn-discovery
         │     └── disable                                #   valueless — disable Android APN DB (enabled by default)
@@ -831,8 +831,8 @@ set interfaces wwan wwan0 sim sim-failback stability-time 300   # primary must s
 # set interfaces wwan wwan0 sim sim-failover disable
 set interfaces wwan wwan0 sim sim-failover connect-retries 3
 set interfaces wwan wwan0 sim sim-failover signal-loss-timer 60
-set interfaces wwan wwan0 sim sim-failover signal-threshold rssi -90
-set interfaces wwan wwan0 sim sim-failover signal-threshold rsrp -110
+set interfaces wwan wwan0 sim sim-failover signal-threshold rssi -93
+set interfaces wwan wwan0 sim sim-failover signal-threshold rsrp -113
 ```
 
 ### APN Discovery
@@ -1000,8 +1000,8 @@ set interfaces wwan wwan0 connectivity-monitoring ipv6-targets '2001:4860:4860::
 # set interfaces wwan wwan0 sim sim-failover disable
 set interfaces wwan wwan0 sim sim-failover connect-retries 3
 set interfaces wwan wwan0 sim sim-failover signal-loss-timer 60
-set interfaces wwan wwan0 sim sim-failover signal-threshold rssi -90
-set interfaces wwan wwan0 sim sim-failover signal-threshold rsrp -110
+set interfaces wwan wwan0 sim sim-failover signal-threshold rssi -93
+set interfaces wwan wwan0 sim sim-failover signal-threshold rsrp -113
 ```
 
 **Signal-loss failover.**  While connected, the active SIM's signal is polled
@@ -1012,6 +1012,13 @@ scales differ by ~20 dB, which is why each has its own value) — for
 alternate SIM (slot must be present and enabled).  The same cooldown/backoff
 that prevents missing-SIM ping-pong applies here, so a marginal cell can't
 cause rapid SIM flapping.  Failover is skipped silently on single-SIM setups.
+
+> **Hysteresis:** the threshold has a built-in ~3 dB recovery deadband.  Once
+> the signal-loss timer is armed (signal dropped below `signal-threshold`),
+> recovery is only declared when the signal climbs ~3 dB *above* the threshold.
+> This stops normal sample-to-sample jitter around the threshold from
+> repeatedly flapping the "dropped/recovered" state (and re-arming the timer)
+> when coverage is sitting right on the boundary.
 
 > **Triggers:** SIM failover fires on any of — (a) sustained weak signal as
 > above, (b) the configured SIM going missing/locked/FAILED, (c) the APN
@@ -1342,8 +1349,8 @@ set interfaces wwan wwan0 logging sink 'both'
 | `sim sim-failover disable` | `sim_failover` | `enabled` |
 | `sim sim-failover connect-retries` | `sim_failover_connect_retries` | `3` |
 | `sim sim-failover signal-loss-timer` | `sim_failover_signal_loss_timer` | `60` |
-| `sim sim-failover signal-threshold rssi` | `sim_failover_signal_threshold_rssi` | `-90` |
-| `sim sim-failover signal-threshold rsrp` | `sim_failover_signal_threshold_rsrp` | `-110` |
+| `sim sim-failover signal-threshold rssi` | `sim_failover_signal_threshold_rssi` | `-93` |
+| `sim sim-failover signal-threshold rsrp` | `sim_failover_signal_threshold_rsrp` | `-113` |
 | `sim slot N apn` | `sim_slot_N_apn` | `(empty)` |
 | `sim slot N username` | `sim_slot_N_username` | `(empty)` |
 | `sim slot N password` | `sim_slot_N_password` | `(empty)` |
