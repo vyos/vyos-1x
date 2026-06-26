@@ -542,6 +542,13 @@ class ModemStateMachine:
         self._failed_retry_enabled = True    # Overridden by config in _apply_parsed_configuration
         self._failed_retry_intervals = [600, 1800, 3600, 7200]  # 10, 30, 60, 120 min (carrier-friendly)
         self._failed_retry_max_interval = 7200  # Cap at 2 hr (carrier-friendly)
+        # Upper bound on the shutdown bearer-disconnect D-Bus call.  dbus_next
+        # has no client-side timeout, and Simple.Disconnect() on a
+        # FAILED/sim-missing modem (no bearer) does not return promptly, so an
+        # unbounded await would consume the whole service-stop budget on a
+        # no-op.  Kept well under the caller's 20s manager-shutdown cap so the
+        # post-disconnect GPIO modem reset still runs on a real reboot/poweroff.
+        self._shutdown_disconnect_timeout = 5.0
         # Companion watcher: polls SimSlots every 30s while FAILED with
         # sim-missing — MM does not signal SIM appearance in non-active slots.
         self._sim_missing_watch_task = None
@@ -560,6 +567,20 @@ class ModemStateMachine:
         # Protected via asyncio.Lock so only one failover runs at a time.
         self._sim_failover_lock = asyncio.Lock()
         self._sim_failover_in_progress = False
+
+        # Potential-SIM-insertion reentrancy guard + debounce.  An
+        # unregisterable modem (band mismatch, sim-missing, dead carrier)
+        # makes ModemManager oscillate SEARCHING<->ENABLED on every
+        # carrier-search iteration.  Each ENABLED-while-FAILED event would
+        # otherwise spawn a fresh _handle_potential_sim_insertion task
+        # (which sleeps 3s then does several D-Bus round-trips), stacking
+        # dozens of overlapping checks that swamp the asyncio loop / D-Bus
+        # socket and flood the log — the system-wide sluggishness during a
+        # stuck-modem episode.  The guard collapses the storm to a single
+        # in-flight check; the debounce rate-limits re-fires.
+        self._sim_insertion_check_in_progress = False
+        self._last_sim_insertion_check_ts = 0.0
+        self._sim_insertion_check_debounce_seconds = 5.0
 
         # Active-SIM removal watchdog (GPIO-mux).  When the active slot's SIM is
         # physically pulled, the GPIO SIM_DETECT edge is authoritative, so we
@@ -7041,39 +7062,66 @@ class ModemStateMachine:
                             extra={'interface_number': self.interface_number})
                 return
 
-            # Wait a moment for SIM to fully initialize
-            await asyncio.sleep(3)
+            # Reentrancy guard + debounce.  ModemManager oscillates
+            # SEARCHING<->ENABLED on every carrier-search loop while a modem
+            # is unregisterable, and each ENABLED-while-FAILED event lands
+            # here.  Without this, every oscillation would spawn another
+            # 3s-sleep + multi-D-Bus check, stacking overlapping tasks that
+            # swamp the loop and flood the log.  Collapse to one in-flight
+            # check and rate-limit re-entry.
+            if self._sim_insertion_check_in_progress:
+                logger.debug("SIM insertion check skipped — already in progress",
+                            extra={'interface_number': self.interface_number})
+                return
+            now = time.time()
+            since_last = now - self._last_sim_insertion_check_ts
+            if since_last < self._sim_insertion_check_debounce_seconds:
+                logger.debug("SIM insertion check skipped — within debounce window "
+                            "(MM search-loop oscillation)",
+                            extra={'interface_number': self.interface_number,
+                                   'since_last_seconds': round(since_last, 1),
+                                   'debounce_seconds':
+                                       self._sim_insertion_check_debounce_seconds})
+                return
+            self._last_sim_insertion_check_ts = now
+            self._sim_insertion_check_in_progress = True
 
-            # Check if we now have the configured SIM
-            sim_inserted = await self._check_sim_insertion()
+            try:
+                # Wait a moment for SIM to fully initialize
+                await asyncio.sleep(3)
 
-            if not sim_inserted:
-                # `_check_sim_insertion` returns False for two very
-                # different reasons:
-                #   (a) the configured slot really has no SIM, OR
-                #   (b) the SIM identity is unchanged since the last
-                #       observation (i.e. this is just MM's normal
-                #       `searching -> enabled` carrier-search
-                #       oscillation, not a hot-swap).
-                # Only case (a) warrants triggering SIM failover —
-                # case (b) should be a quiet no-op so the existing
-                # carrier-friendly failed-retry backoff is not
-                # repeatedly disturbed.
-                if await self._is_configured_sim_present():
-                    logger.debug(
-                        "SIM still present in configured slot - "
-                        "no failover needed (search-loop oscillation)",
-                        extra={'interface_number': self.interface_number})
-                    return
+                # Check if we now have the configured SIM
+                sim_inserted = await self._check_sim_insertion()
 
-                # Still no configured SIM - check for any available SIM
-                if self._is_sim_failover_enabled():
-                    logger.info("No configured SIM found, checking for failover options",
-                               extra={'interface_number': self.interface_number})
-                    await self._handle_sim_missing_failover()
-                else:
-                    logger.info("No configured SIM found and sim-failover disabled for active slot",
-                               extra={'interface_number': self.interface_number})
+                if not sim_inserted:
+                    # `_check_sim_insertion` returns False for two very
+                    # different reasons:
+                    #   (a) the configured slot really has no SIM, OR
+                    #   (b) the SIM identity is unchanged since the last
+                    #       observation (i.e. this is just MM's normal
+                    #       `searching -> enabled` carrier-search
+                    #       oscillation, not a hot-swap).
+                    # Only case (a) warrants triggering SIM failover —
+                    # case (b) should be a quiet no-op so the existing
+                    # carrier-friendly failed-retry backoff is not
+                    # repeatedly disturbed.
+                    if await self._is_configured_sim_present():
+                        logger.debug(
+                            "SIM still present in configured slot - "
+                            "no failover needed (search-loop oscillation)",
+                            extra={'interface_number': self.interface_number})
+                        return
+
+                    # Still no configured SIM - check for any available SIM
+                    if self._is_sim_failover_enabled():
+                        logger.info("No configured SIM found, checking for failover options",
+                                   extra={'interface_number': self.interface_number})
+                        await self._handle_sim_missing_failover()
+                    else:
+                        logger.info("No configured SIM found and sim-failover disabled for active slot",
+                                   extra={'interface_number': self.interface_number})
+            finally:
+                self._sim_insertion_check_in_progress = False
 
         except Exception as e:
             logger.error(f"Error handling potential SIM insertion: {e}",
@@ -12363,14 +12411,35 @@ class ModemStateMachine:
         # bearer was auto-established by ModemManager).  If we don't
         # know the exact bearer path, pass '/' to disconnect all
         # bearers on this modem (ModemManager convention).
+        #
+        # BOUND THE CALL.  dbus_next has no client-side timeout, and
+        # Simple.Disconnect() against a modem that is FAILED/sim-missing
+        # (no bearer to tear down) does NOT return promptly — ModemManager
+        # will not service a disconnect on a failed modem.  An unbounded
+        # await here stalls the ENTIRE service shutdown until the caller's
+        # outer asyncio.wait_for(manager.shutdown(), 20s) fires, wasting
+        # the whole reboot/poweroff budget on a no-op disconnect (the
+        # observed "the entire timeout time is used up" on `reboot now`).
+        # A short cap lets the real recovery — the post-disconnect GPIO
+        # modem reset on the system-stopping path — run on time.
         if self.proxy:
             try:
                 simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
                 target = self.bearer_path if self.bearer_path else '/'
-                await simple_iface.call_disconnect(target)
+                await asyncio.wait_for(
+                    simple_iface.call_disconnect(target),
+                    timeout=self._shutdown_disconnect_timeout)
                 logger.info("Bearer disconnected during shutdown",
                            extra={'interface_number': self.interface_number,
                                   'bearer_path': target})
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Bearer disconnect timed out during shutdown — modem "
+                    "likely FAILED/wedged with no bearer; skipping so the "
+                    "GPIO modem reset can run on time",
+                    extra={'interface_number': self.interface_number,
+                           'bearer_path': target,
+                           'timeout_seconds': self._shutdown_disconnect_timeout})
             except Exception as e:
                 logger.error(f"Error disconnecting bearer during shutdown: {e}",
                            extra={'interface_number': self.interface_number})
