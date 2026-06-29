@@ -789,32 +789,39 @@ class IgosBoard(Board):
         """Display modem signal level on RGB STAT LEDs.
 
         ``level`` is clamped to 0..7 and converted to RGB output by policy.
-        The ladder is monotonic and follows the universal "amber = weak,
-        green = good" convention so a strong signal never looks alarming:
+        The ladder is monotonic and uses a "blue = weak, amber = middling,
+        green = good" convention so a strong signal clearly reads "good":
         - 0: all off (no signal)
-        - 1: amber (weakest usable — caution, but NOT a fault)
-        - 2..4: cool transitional colours as signal improves
-        - 5..6: green (the strong / "good" zone — reassuring)
-        - 7: white (maximum)
-        - red is intentionally never used: it universally reads as a fault,
-          which a low-but-working signal is not.
+        - 1..2: blue   (weak / barely usable — cold, but NOT a fault)
+        - 3..4: amber  (middling — getting there)
+        - 5..7: green  (the strong / "good" zone — reassuring, incl. maximum)
+
+        IMPORTANT — physical-LED constraint that drove this palette:
+        with simple on/off GPIO (no PWM) the blue die visually DOMINATES, so
+        ANY colour that lights the blue channel together with another channel
+        (cyan, magenta, white) reads as plain "blue" on the bench.  The old
+        palette put cyan at level 4 and white at level 7, which made a strong
+        signal look identical to a weak one.  This ladder therefore only ever
+        uses "safe" combinations: pure blue, pure green, or amber (red+green
+        with NO blue).  No blue-containing mixes are used, so each zone is
+        visually distinct and a strong signal is unambiguous green.
         """
         level = max(0, min(7, int(level)))
 
-        # NOTE: with simple GPIO on/off RGB channels there are only 7 non-off
-        # combinations total and red is deliberately excluded (fault colour),
-        # leaving amber/magenta/blue/cyan/green/white.  Green spans levels 5-6
-        # so the strong zone clearly reads "good"; white is reserved for the
-        # absolute maximum.  Add board-specific PWM later for finer gradients.
+        # Safe colours only (never mix blue with another channel — see
+        # docstring): pure blue (weak), amber = red+green/no-blue (middling),
+        # pure green (good).  Green spans the whole strong zone 5-7 so the
+        # maximum still reads green, not a blue-tinted "white".  Add
+        # board-specific PWM later for finer within-zone gradients.
         palette = {
-            0: (0, 0, 0),  # off      — no signal
-            1: (1, 1, 0),  # amber    — barely usable (weakest usable)
-            2: (1, 0, 1),  # magenta  — very poor
-            3: (0, 0, 1),  # blue     — poor
-            4: (0, 1, 1),  # cyan     — fair
-            5: (0, 1, 0),  # green    — good
-            6: (0, 1, 0),  # green    — very good (green dominates strong zone)
-            7: (1, 1, 1),  # white    — excellent / maximum
+            0: (0, 0, 0),  # off    — no signal
+            1: (0, 0, 1),  # blue   — barely usable (weakest usable)
+            2: (0, 0, 1),  # blue   — very poor
+            3: (1, 1, 0),  # amber  — poor (no blue → reads yellow, not blue)
+            4: (1, 1, 0),  # amber  — fair (slow-RAT cap lands here)
+            5: (0, 1, 0),  # green  — good
+            6: (0, 1, 0),  # green  — very good
+            7: (0, 1, 0),  # green  — excellent / maximum
         }
 
         prefix = self._resolve_modem_stat_prefix(modem)
