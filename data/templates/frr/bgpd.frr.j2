@@ -1,3 +1,10 @@
+!
+{% if parameters.input_queue_limit is vyos_defined %}
+ bgp input-queue-limit {{ parameters.input_queue_limit }}
+{% endif %}
+{% if parameters.output_queue_limit is vyos_defined %}
+ bgp output-queue-limit {{ parameters.output_queue_limit }}
+{% endif %}
 {### MACRO definition for recurring peer patter, this can be either fed by a ###}
 {### peer-group or an individual BGP neighbor ###}
 {% macro bgp_neighbor(neighbor, config, peer_group=false) %}
@@ -650,7 +657,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
  bgp network import-check
 {% endif %}
 {% if parameters.route_reflector_allow_outbound_policy is vyos_defined %}
-bgp route-reflector allow-outbound-policy
+ bgp route-reflector allow-outbound-policy
 {% endif %}
 {% if parameters.no_client_to_client_reflection is vyos_defined %}
  no bgp client-to-client reflection
