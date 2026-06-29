@@ -76,7 +76,7 @@ except Exception as e:
     sys.exit(1)
 
 if not os.access(output_dir, os.W_OK):
-    print("The output directory {0} is not writeable".format(output_dir))
+    print("The output directory {0} is not writable".format(output_dir))
     sys.exit(1)
 
 ## If we got this far, everything must be ok and we can convert the file

@@ -107,7 +107,7 @@ sub set_oid {
     my $ifname = ifindextoname($ifindex);
     if ($ifname) {
 	system("ip li set $ifname alias '$value' >/dev/null 2>&1");
-	print "not-writeable\n"	if ($? != 0);
+	print "not-writable\n"	if ($? != 0);
     }
 }
 

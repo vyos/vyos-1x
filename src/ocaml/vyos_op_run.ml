@@ -286,7 +286,7 @@ let is_admin_only_command cmd =
   match res with
   | None -> false
   | Some _ ->
-    let () = Logs.debug @@ fun m -> m "Commandis reserved for admins" in
+    let () = Logs.debug @@ fun m -> m "Command is reserved for admins" in
     true
 
 let check_command_permissions perms cmd =

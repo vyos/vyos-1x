@@ -80,7 +80,7 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
                         return {'success': False, 'errors': [error]}
                     return {'success': False, 'errors': ['not authenticated']}
             else:
-                # AtrributeError will have already been raised if no
+                # AttributeError will have already been raised if no
                 # auth_type; validation and defaultValue ensure it is
                 # one of the previous cases, so this is never reached.
                 pass

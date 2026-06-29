@@ -162,7 +162,7 @@ class Operational(Control):
             stats[counter] = int(self.get_interface(counter))
         return stats
 
-    def formated_stats(self, indent=4):
+    def formatted_stats(self, indent=4):
         tabs = []
         stats = self.get_stats()
         for rtx in self._stats_dir:

@@ -39,7 +39,7 @@ default_config_data = {
     'domain_search': [],
     'nameserver': [],
     'nameservers_dhcp_interfaces': {},
-    'snmpd_restart_reqired': False,
+    'snmpd_restart_required': False,
     'static_host_mapping': {}
 }
 
@@ -57,7 +57,7 @@ def get_config(config=None):
 
     base = ['system']
     if leaf_node_changed(conf, base + ['host-name']) or leaf_node_changed(conf, base + ['domain-name']):
-        hosts['snmpd_restart_reqired'] = True
+        hosts['snmpd_restart_required'] = True
 
     # This may happen if the config is not loaded yet,
     # e.g. if run by cloud-init
@@ -179,7 +179,7 @@ def apply(config):
         call(f'systemctl restart {tmp}')
 
     # If SNMP is running, restart it too
-    if process_named_running('snmpd') and config['snmpd_restart_reqired']:
+    if process_named_running('snmpd') and config['snmpd_restart_required']:
         tmp = systemd_services['snmpd']
         call(f'systemctl restart {tmp}')
 

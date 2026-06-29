@@ -412,7 +412,7 @@ def _get_raw_connections_summary(list_conn, list_sas):
     return tun_dict
 
 
-def _get_formatted_output_conections(data):
+def _get_formatted_output_connections(data):
     from tabulate import tabulate
 
     connections = []
@@ -813,7 +813,7 @@ def show_connections(raw: bool):
         return _get_raw_data_connections(list_conns, list_sas)
 
     connections = _get_raw_data_connections(list_conns, list_sas)
-    return _get_formatted_output_conections(connections)
+    return _get_formatted_output_connections(connections)
 
 
 def show_connections_summary(raw: bool):

@@ -69,7 +69,7 @@ def migrate(config: ConfigTree) -> None:
         prefix_old = config.return_values(ipv6_base + ['prefix'])
         # delete old prefix CLI nodes
         config.delete(ipv6_base + ['prefix'])
-        # create ned prefix tag node
+        # create new prefix tag node
         config.set(ipv6_base + ['prefix'])
         config.set_tag(ipv6_base + ['prefix'])
 
@@ -82,7 +82,7 @@ def migrate(config: ConfigTree) -> None:
         prefix_old = config.return_values(ipv6_base + ['delegate-prefix'])
         # delete old delegate prefix CLI nodes
         config.delete(ipv6_base + ['delegate-prefix'])
-        # create ned delegation tag node
+        # create new delegation tag node
         config.set(ipv6_base + ['delegate'])
         config.set_tag(ipv6_base + ['delegate'])
 

@@ -47,13 +47,13 @@ if not os.access(config_file, os.R_OK):
 
 if out_file is None:
     if not os.access(config_file, os.W_OK):
-        print(f"Config file '{config_file}' not writeable")
+        print(f"Config file '{config_file}' not writable")
         sys.exit(1)
 else:
     try:
         open(out_file, 'w').close()
     except OSError:
-        print(f"Output file '{out_file}' not writeable")
+        print(f"Output file '{out_file}' not writable")
         sys.exit(1)
 
 config_migrate = ConfigMigrate(config_file, force=force, output_file=out_file)
