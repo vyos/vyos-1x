@@ -30,7 +30,9 @@ from vyos.configverify import verify_pki_ca_certificate
 from vyos.configverify import verify_pki_dh_parameters
 from vyos.configdiff import get_config_diff
 from vyos.defaults import api_config_state
-from vyos.pki import wrap_certificate
+from vyos.pki import encode_certificate
+from vyos.pki import find_chain
+from vyos.pki import load_certificate
 from vyos.pki import wrap_private_key
 from vyos.pki import wrap_dh_parameters
 from vyos.template import render
@@ -176,12 +178,19 @@ def generate(https):
         cert_path = os.path.join(cert_dir, f'{cert_name}_cert.pem')
         key_path = os.path.join(cert_dir, f'{cert_name}_key.pem')
 
-        server_cert = str(wrap_certificate(pki_cert['certificate']))
+        # Build the full certificate chain (server certificate followed by any
+        # intermediate CA certificates up to the root) from the CA certificates
+        # available in the PKI. Serving the complete chain lets clients that do
+        # not yet trust the issuing intermediate CA validate the presented
+        # certificate. This mirrors the other PKI consumers (HAProxy, stunnel).
+        loaded_ca_certs = {
+            load_certificate(cert_data['certificate'])
+            for cert_data in dict_search('pki.ca', https, default={}).values()
+        }
 
-        # Append CA certificate if specified to form a full chain
-        if 'ca_certificate' in https['certificates']:
-            ca_cert = https['certificates']['ca_certificate']
-            server_cert += '\n' + str(wrap_certificate(https['pki']['ca'][ca_cert]['certificate']))
+        loaded_pki_cert = load_certificate(pki_cert['certificate'])
+        cert_full_chain = find_chain(loaded_pki_cert, loaded_ca_certs)
+        server_cert = '\n'.join(encode_certificate(c) for c in cert_full_chain)
 
         write_file(cert_path, server_cert, user=user, group=group, mode=0o644)
         write_file(key_path, wrap_private_key(pki_cert['private']['key']),
