@@ -175,13 +175,13 @@ class Control(Section):
         if convert:
             value = convert(value)
 
-        commited = self._write_sysfs(
+        committed = self._write_sysfs(
             self._sysfs_set[name]['location'].format(**config), value)
-        if not commited:
+        if not committed:
             errmsg = self._sysfs_set.get('errormsg', '')
             if errmsg:
                 raise TypeError(errmsg.format(**config))
-        return commited
+        return committed
 
     def get_interface(self, name):
         if name in self._sysfs_get:

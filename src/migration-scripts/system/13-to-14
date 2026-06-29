@@ -38,10 +38,10 @@ def migrate(config: ConfigTree) -> None:
 
     # retrieve all valid timezones
     try:
-        tz_datas = cmd('timedatectl list-timezones')
+        tz_data_raw = cmd('timedatectl list-timezones')
     except OSError:
-        tz_datas = ''
-    tz_data = tz_datas.split('\n')
+        tz_data_raw = ''
+    tz_data = tz_data_raw.split('\n')
 
     if re.match(r'[Ll][Oo][Ss].+', tz):
         tz = 'America/Los_Angeles'

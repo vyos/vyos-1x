@@ -179,7 +179,7 @@ def completion_failure(option: str) -> None:
     sys.exit(1)
 
 
-def expension_failure(option, completions):
+def expansion_failure(option, completions):
     reason = 'Ambiguous' if completions else 'Invalid'
     sys.stderr.write(
         '\n\n  {} command: {} [{}]\n\n'.format(reason, ' '.join(sys.argv),
@@ -201,7 +201,7 @@ def convert(command, args):
         shortname = args.first()
         longnames = complete(shortname)
         if len(longnames) != 1:
-            expension_failure(shortname, longnames)
+            expansion_failure(shortname, longnames)
         longname = longnames[0]
         if options[longname]['type'] == 'noarg':
             command = options[longname]['ping'].format(

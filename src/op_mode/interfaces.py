@@ -96,7 +96,7 @@ def _split_text(text, used=0):
     take a string and attempt to split it to fit with the width of the screen
 
     text: the string to split
-    used: number of characted already used in the screen
+    used: number of character already used in the screen
     """
     no_tty = call('tty -s')
 

@@ -48,7 +48,7 @@ time, so a package with malformed interface definitions will not build.
 The guidelines in a nutshell:
 
 * Use separate functions for retrieving configuration data, validating it, and
-  generating taret config, see our
+  generating target config, see our
   [documentation](https://docs.vyos.io/en/latest/contributing/development.html#python)
   for the common structure
 * Use the `get_config_dict()` API as much as possible when retrieving values from the CLI

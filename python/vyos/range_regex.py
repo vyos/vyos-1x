@@ -34,9 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 300-339: 3[0-3]\d
 # 340-345: 34[0-5]
 
-def range_to_regex(inpt_range):
-    if isinstance(inpt_range, str):
-        range_list = inpt_range.split('-')
+def range_to_regex(input_range):
+    if isinstance(input_range, str):
+        range_list = input_range.split('-')
         # Check input arguments
         if len(range_list) == 2:
             # The first element in range must be higher then the second

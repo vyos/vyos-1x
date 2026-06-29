@@ -99,7 +99,7 @@ def __generate_archived_files(location_path: str) -> None:
 
         return tarinfo
 
-    # Dictionary arhive_name:directory_to_arhive
+    # Dictionary archive_name:directory_to_archive
     archive_dict = {
         'etc': '/etc',
         'home': '/home',

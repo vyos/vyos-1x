@@ -62,7 +62,7 @@ op_mode_definitions: $(op_xml_obj)
 
 	$(CURDIR)/python/vyos/xml_ref/generate_op_cache.py --xml-dir $(BUILD_DIR)/op-mode-definitions --export-json $(DATA_DIR)/op_cache.json || exit 1
 
-	# XXX: tcpdump, ping, traceroute and mtr must be able to recursivly call themselves as the
+	# XXX: tcpdump, ping, traceroute and mtr must be able to recursively call themselves as the
 	# options are provided from the scripts themselves
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
 	ln -s ../node.tag $(OP_TMPL_DIR)/traceroute/node.tag/node.tag/

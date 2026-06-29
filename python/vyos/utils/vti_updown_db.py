@@ -156,15 +156,15 @@ class VTIUpDownDB:
 
     def setPersistentInterfaces(self, interface_list):
         """ Updates the set of persistently up interfaces to match the given list """
-        new_presistent_interfaces = set(interface_list)
-        current_presistent_interfaces = set([ifspec for ifspec in self._ifspecs if ':' not in ifspec])
-        added_presistent_interfaces = new_presistent_interfaces - current_presistent_interfaces
-        removed_presistent_interfaces = current_presistent_interfaces - new_presistent_interfaces
+        new_persistent_interfaces = set(interface_list)
+        current_persistent_interfaces = set([ifspec for ifspec in self._ifspecs if ':' not in ifspec])
+        added_persistent_interfaces = new_persistent_interfaces - current_persistent_interfaces
+        removed_persistent_interfaces = current_persistent_interfaces - new_persistent_interfaces
 
-        for interface in added_presistent_interfaces:
+        for interface in added_persistent_interfaces:
             self.add(interface)
 
-        for interface in removed_presistent_interfaces:
+        for interface in removed_persistent_interfaces:
             self.remove(interface)
 
     def commit(self, interface_dict_supplier):
