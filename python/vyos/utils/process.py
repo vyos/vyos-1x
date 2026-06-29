@@ -23,7 +23,7 @@ from subprocess import STDOUT
 from subprocess import DEVNULL
 
 def get_wrapper(vrf, netns):
-    wrapper = None
+    wrapper = []
     if vrf:
         wrapper = ['ip', 'vrf', 'exec', vrf]
     elif netns:
@@ -176,7 +176,7 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, decode='utf-8', raising=None, message='',
+        stdout=PIPE, stderr=PIPE, raising=None, message='',
         expect=[0], vrf=None, netns=None):
     """
     A wrapper around popen, which returns the stdout and
@@ -192,7 +192,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,
-        decode=decode,
+        decode='utf-8',
         vrf=vrf,
         netns=netns,
     )
@@ -209,6 +209,50 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         else:
             raise raising(feedback)
     return decoded
+
+def cmdl(command: list[str], flag: str = '', input: str | bytes | None = None,
+         timeout: float | None = None, env: dict[str, str] | None = None,
+         stdout: int = PIPE, stderr: int = PIPE,
+         raising: type[Exception] | None = None, message: str = '',
+         expect: list[int] | None = None, vrf: str | None = None,
+         netns: str | None = None, sudo: bool = False) -> str:
+    """
+    A list-argument variant of cmd() for safer subprocess execution.
+
+    command must be a list of strings; no shell interpolation is performed,
+    which eliminates a class of command-injection risks present when building
+    commands with f-strings or other string formatting.
+
+    sudo: prepend sudo(8) to the command for privileged execution
+    """
+    if not isinstance(command, list):
+        raise TypeError(f'cmdl() requires a list, got {type(command).__name__}')
+    if expect is None:
+        expect = [0]
+    if sudo:
+        command = ['sudo'] + command
+    decoded, code = popen(
+        command, flag,
+        shell=False,
+        input=input, timeout=timeout,
+        env=env,
+        stdout=stdout, stderr=stderr,
+        decode='utf-8',
+        vrf=vrf, netns=netns,
+    )
+    if code not in expect:
+        wrapper = get_wrapper(vrf, netns)
+        cmd_str = shlex.join(wrapper + command)
+        feedback = message + '\n' if message else ''
+        feedback += f'failed to run command: {cmd_str}\n'
+        feedback += f'returned: {decoded}\n'
+        feedback += f'exit code: {code}'
+        if raising is None:
+            raise OSError(code, feedback)
+        else:
+            raise raising(feedback)
+    return decoded
+
 
 def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
            stdout=PIPE, stderr=STDOUT, decode='utf-8', vrf=None, netns=None,
