@@ -7,7 +7,7 @@
     <children>
      <node name="log">
         <properties>
-          <help>Show contents of current master logging buffer</help>
+          <help>Show contents of logging buffer</help>
         </properties>
         <command>journalctl --no-hostname --boot</command>
         <children>
@@ -771,6 +771,15 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit accel-ppp@pppoe.service</command>
           </leafNode>
+          <tagNode name="priority">
+            <properties>
+              <help>Show contents of logging buffer and filter messages by minimum priority level (includes all higher severities)</help>
+              <completionHelp>
+                <list>emerg alert crit err warning notice info debug</list>
+              </completionHelp>
+            </properties>
+            <command>SYSTEMD_COLORS=false journalctl --no-hostname --boot --priority=$4</command>
+          </tagNode>
           <node name="protocol">
             <properties>
               <help>Show log for Routing Protocol</help>
