@@ -1,78 +1,151 @@
+---
+myst:
+  html_meta:
+    description: |
+      The VyOS TFTP server lets clients download files from a
+      configured directory over UDP. Uploads are disabled by default
+      and can be enabled. The server can listen on multiple addresses
+      and inside a non-default VRF.
+    keywords: tftp, tftp-server, trivial file transfer protocol, file
+      transfer, network boot
+---
+
 (tftp-server)=
 
-# TFTP Server
+# TFTP server
 
-{abbr}`TFTP (Trivial File Transfer Protocol)` is a simple, lockstep file
-transfer protocol which allows a client to get a file from or put a file onto
-a remote host. One of its primary uses is in the early stages of nodes booting
-from a local area network. TFTP has been used for this application because it
-is very simple to implement.
+{abbr}`TFTP (Trivial File Transfer Protocol)` is a simple, UDP-based
+file-transfer protocol defined in
+[RFC 1350](https://datatracker.ietf.org/doc/html/rfc1350) that lets
+clients upload files to and download files from a remote host. One of
+its main uses is during the early stages of network boot, where
+devices fetch a boot image or initial configuration from a TFTP server
+before they are fully operational.
+
+VyOS ships a TFTP server that lets clients download files from a
+configured directory. Uploads are disabled by default but can be
+enabled. The TFTP server is configured under `service tftp-server`.
 
 ## Configuration
 
 ```{cfgcmd} set service tftp-server directory \<directory\>
 
-Enable TFTP service by specifying the `<directory>` which will be used to serve
-files.
+**Configure the directory from which clients download files and, when
+uploads are enabled, upload files to.**
+
+The directory is created if it does not exist, and its owner and
+group are set to the `tftp` system user. This value is mandatory.
 ```
 
-:::{hint}
-Choose your `directory` location carefully or you will loose the
-content on image upgrades. Any directory under `/config` is save at this
-will be migrated.
-:::
+```{note}
+This setting is mandatory. The commit fails if no directory is configured.
+```
+
+```{note}
+Choose the location carefully, or the contents will be lost on image
+upgrade. Any path under `/config` is preserved and migrated across
+image upgrades.
+```
+
+Example:
+
+```none
+set service tftp-server directory /config/tftpboot
+```
 
 ```{cfgcmd} set service tftp-server listen-address \<address\>
 
-Configure the IPv4 or IPv6 listen address of the TFTP server. Multiple IPv4 and
-IPv6 addresses can be given. There will be one TFTP server instances listening
-on each IP address.
+**Configure a local IPv4 or IPv6 address on which the TFTP server
+accepts incoming requests.**
+
+Repeat the command to listen on multiple IP addresses. The IP address must
+be assigned to a local interface. Otherwise, the commit succeeds with
+a warning, and the TFTP server does not accept connections on that IP
+address.
+```
+
+```{note}
+At least one listen address must be set whenever `service tftp-server`
+is configured. Otherwise, the commit is rejected.
+```
+
+Example:
+
+```none
+set service tftp-server listen-address 192.0.2.1
+set service tftp-server listen-address 2001:db8::1
 ```
 
 ```{cfgcmd} set service tftp-server listen-address \<address\> vrf \<name\>
+
+**Expose the TFTP server on the specified IP address within a non-default VRF.**
+
+The {abbr}`VRF (Virtual Routing and Forwarding instance)` must already
+be configured under `vrf name <name>`. Otherwise, the commit is
+rejected.
 ```
 
-Additional option to run TFTP server in the {abbr}`VRF (Virtual Routing and Forwarding)` context
+Example:
 
-:::{note}
-Configuring a listen-address is essential for the service to work.
-:::
+```none
+set service tftp-server listen-address 192.0.2.1 vrf MGMT
+```
+
+```{cfgcmd} set service tftp-server port \<1-65535\>
+
+**Configure the UDP port on which the TFTP server listens.**
+
+The default is 69, the port assigned to TFTP by the
+{abbr}`IANA (Internet Assigned Numbers Authority)`.
+```
+
+Example:
+
+```none
+set service tftp-server port 6969
+```
+
 ```{cfgcmd} set service tftp-server allow-upload
 
-Optional, if you want to enable uploads, else TFTP server will act as a
-read-only server.
+**Enable client uploads (TFTP write requests) to the server.**
+
+By default, the server operates in read-only mode and rejects write
+requests.
 ```
 
-### Example
-
-Provide TFTP server listening on both IPv4 and IPv6 addresses `192.0.2.1` and
-`2001:db8::1` serving the content from `/config/tftpboot`. Uploading via
-TFTP to this server is disabled.
-
-The resulting configuration will look like:
+Example:
 
 ```none
-vyos@vyos# show service
- tftp-server {
-    directory /config/tftpboot
-    listen-address 2001:db8::1
-    listen-address 192.0.2.1
- }
+set service tftp-server allow-upload
 ```
 
-### Verification
+## Example
 
-Client:
+The following example configures a TFTP server that uses
+`/config/tftpboot` as its file directory, listens on both IPv4 and
+IPv6 addresses, and accepts client uploads.
 
 ```none
-vyos@RTR2:~$ tftp -p -l /config/config.boot -r backup 192.0.2.1
-backup1             100% |******************************|   723  0:00:00 ETA
+set service tftp-server directory '/config/tftpboot'
+set service tftp-server listen-address '192.0.2.1'
+set service tftp-server listen-address '2001:db8::1'
+set service tftp-server allow-upload
 ```
 
-Server:
+## Verification
+
+Upload a file from a TFTP client to the server (write request):
 
 ```none
-vyos@RTR1# ls -ltr /config/tftpboot/
+vyos@client:~$ tftp -p -l /config/config.boot -r backup 192.0.2.1
+backup              100% |******************************|   723  0:00:00 ETA
+```
+
+On the server, the uploaded file appears in the configured directory,
+owned by the `tftp` user:
+
+```none
+vyos@vyos:~$ ls -ltr /config/tftpboot/
 total 1
--rw-rw-rw- 1 tftp tftp  1995 May 19 16:02 backup
+-rw-rw-rw- 1 tftp tftp 723 May 19 16:02 backup
 ```
