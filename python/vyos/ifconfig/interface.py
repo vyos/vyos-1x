@@ -372,10 +372,9 @@ class Interface(Control):
         if self.exists(f'{self.ifname}', netns=netns):
             return
 
-        cmd = f'ip link add dev {self.ifname}'
-        if type: cmd += f' type {type}'
-        if 'netns' in self.config: cmd = f'ip netns exec {netns} {cmd}'
-        self._cmd(cmd)
+        cmd = ['ip', 'link', 'add', 'dev', self.ifname]
+        if type: cmd += ['type', type]
+        self._cmdl(cmd)
 
     def remove(self, skip_delete=False):
         """
@@ -602,7 +601,7 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('dum0').set_netns('foo')
         """
-        self._cmd(f'ip link set dev {self.ifname} netns {netns}')
+        self._cmdl(['ip', 'link', 'set', 'dev', self.ifname, 'netns', netns])
         return True
 
     def get_vrf(self):
@@ -1310,11 +1309,10 @@ class Interface(Control):
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True, vrf_changed=vrf_changed)
         elif not is_intf_addr_assigned(self.ifname, addr, netns=netns):
-            netns_cmd  = f'ip netns exec {netns}' if netns else ''
-            tmp = f'{netns_cmd} ip addr add {addr} dev {self.ifname}'
+            tmp = ['ip', 'addr', 'add', addr, 'dev', self.ifname]
             # Add broadcast address for IPv4
-            if is_ipv4(addr): tmp += ' brd +'
-            self._cmd(tmp)
+            if is_ipv4(addr): tmp += ['brd', '+']
+            self._cmdl(tmp)
         else:
             return False
 
@@ -1359,8 +1357,7 @@ class Interface(Control):
         elif addr == 'dhcpv6':
             self.set_dhcpv6(False)
         elif is_intf_addr_assigned(self.ifname, addr, netns=netns):
-            netns_cmd  = f'ip netns exec {netns}' if netns else ''
-            self._cmd(f'{netns_cmd} ip addr del {addr} dev {self.ifname}')
+            self._cmdl(['ip', 'addr', 'del', addr, 'dev', self.ifname])
         else:
             return False
 

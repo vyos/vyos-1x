@@ -208,8 +208,7 @@ class BridgeIf(Interface):
 
         # VLAN of bridge parent interface is always 1
         # VLAN 1 is the default VLAN for all unlabeled packets
-        cmd = f'bridge vlan add dev {self.ifname} vid 1 pvid untagged self'
-        self._cmd(cmd)
+        self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', '1', 'pvid', 'untagged', 'self'])
 
     def set_multicast_querier(self, enable):
         """
@@ -370,8 +369,7 @@ class BridgeIf(Interface):
         if 'enable_vlan' in config:
             for vlan in config.get('vif_remove', {}):
                 # Remove old VLANs from the bridge
-                cmd = f'bridge vlan del dev {self.ifname} vid {vlan} self'
-                self._cmd(cmd)
+                self._cmdl(['bridge', 'vlan', 'del', 'dev', self.ifname, 'vid', str(vlan), 'self'])
 
                 # After deleting vif, the FDB entry for that VLAN can linger.
                 # We should remove it manually:
@@ -384,13 +382,11 @@ class BridgeIf(Interface):
                         self._cmd(cmd)
 
             for vlan in config.get('vif', {}):
-                cmd = f'bridge vlan add dev {self.ifname} vid {vlan} self'
-                self._cmd(cmd)
+                self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(vlan), 'self'])
 
             # VLAN of bridge parent interface is always 1. VLAN 1 is the default
             # VLAN for all unlabeled packets
-            cmd = f'bridge vlan add dev {self.ifname} vid 1 pvid untagged self'
-            self._cmd(cmd)
+            self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', '1', 'pvid', 'untagged', 'self'])
 
         tmp = dict_search('member.interface', config)
         if tmp:
@@ -460,16 +456,13 @@ class BridgeIf(Interface):
 
                     # Remove redundant VLANs from the system
                     for vlan in list_diff(cur_vlan_ids, add_vlan):
-                        cmd = f'bridge vlan del dev {interface} vid {vlan} master'
-                        self._cmd(cmd)
+                        self._cmdl(['bridge', 'vlan', 'del', 'dev', interface, 'vid', str(vlan), 'master'])
 
                     for vlan in allowed_vlan_ids:
-                        cmd = f'bridge vlan add dev {interface} vid {vlan} master'
-                        self._cmd(cmd)
+                        self._cmdl(['bridge', 'vlan', 'add', 'dev', interface, 'vid', str(vlan), 'master'])
 
                     # Setting native VLAN to system
                     if native_vlan_id:
-                        cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
-                        self._cmd(cmd)
+                        self._cmdl(['bridge', 'vlan', 'add', 'dev', interface, 'vid', str(native_vlan_id), 'pvid', 'untagged', 'master'])
 
         super().update(config)

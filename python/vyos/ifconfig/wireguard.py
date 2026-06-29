@@ -36,7 +36,7 @@ class WireGuardOperational(Operational):
         output = {}
 
         # Dump wireguard connection data
-        _f = self._cmd('wg show all dump')
+        _f = self._cmdl(['wg', 'show', 'all', 'dump'])
         for line in _f.split('\n'):
             if not line:
                 # Skip empty lines and last line
@@ -166,7 +166,7 @@ class WireGuardOperational(Operational):
         output = {}
 
         # Dump wireguard last handshake
-        tmp = self._cmd(f'wg show {self.ifname} latest-handshakes')
+        tmp = self._cmdl(['wg', 'show', self.ifname, 'latest-handshakes'])
         # Output:
         # PUBLIC-KEY=    1732812147
         for line in tmp.split('\n'):

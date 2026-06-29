@@ -158,8 +158,8 @@ class VXLANIf(Interface):
                 if cur_vni_filter != None:
                     vni = vlan_config['vni']
                     if vni in cur_vni_filter:
-                        self._cmd(f'bridge vni delete dev {self.ifname} vni {vni}')
-                self._cmd(f'bridge vlan del dev {self.ifname} vid {vlan}')
+                        self._cmdl(['bridge', 'vni', 'delete', 'dev', self.ifname, 'vni', str(vni)])
+                self._cmdl(['bridge', 'vlan', 'del', 'dev', self.ifname, 'vid', str(vlan)])
 
         # Determine current OS Kernel vlan_tunnel setting - only adjust when needed
         tmp = get_interface_config(self.ifname)
@@ -182,12 +182,12 @@ class VXLANIf(Interface):
                 vni = vlan_config['vni']
                 # The following commands must be run one after another,
                 # they cannot be combined with linux 6.1 and iproute2 6.1
-                self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan}')
-                self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan} tunnel_info id {vni}')
+                self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(vlan)])
+                self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(vlan), 'tunnel_info', 'id', str(vni)])
 
                 # If VNI filtering is enabled, install matching VNI filter
                 if dict_search('parameters.vni_filter', self.config) != None:
-                    self._cmd(f'bridge vni add dev {self.ifname} vni {vni}')
+                    self._cmdl(['bridge', 'vni', 'add', 'dev', self.ifname, 'vni', str(vni)])
 
     def update(self, config):
         """ General helper function which works on a dictionary retrieved by
