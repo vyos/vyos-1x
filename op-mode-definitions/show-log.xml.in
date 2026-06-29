@@ -171,6 +171,15 @@
               </node>
             </children>
           </node>
+          <tagNode name="facility">
+            <properties>
+              <help>Show contents of logging buffer and filter messages by specified facility</help>
+              <completionHelp>
+                <list>kern user mail daemon auth syslog lpr news uucp cron authpriv ftp local0 local1 local2 local3 local4 local5 local6 local7</list>
+              </completionHelp>
+            </properties>
+            <command>SYSTEMD_COLORS=false journalctl --no-hostname --boot --facility=$4</command>
+          </tagNode>
           <node name="firewall">
             <properties>
               <help>Show log for Firewall</help>
