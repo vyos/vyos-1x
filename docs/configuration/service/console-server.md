@@ -1,139 +1,228 @@
+---
+myst:
+  html_meta:
+    description: |
+      Console server is a VyOS service that lets a router act as an
+      out-of-band management device, providing SSH-based remote access
+      to the serial consoles of directly attached devices. It supports
+      both on-board UARTs and USB-to-serial adapters.
+    keywords: console-server, out-of-band, oob, serial console, ssh, usb-to-serial
+---
+
 (console-server)=
 
-# Console Server
+# Console server
 
-Starting of with VyOS 1.3 (equuleus) we added support for running VyOS as an
-Out-of-Band Management device which provides remote access by means of SSH to
-directly attached serial interfaces.
+VyOS can serve as an
+{abbr}`OOB (Out-of-Band)` management device, providing SSH-based
+remote access to the serial consoles of directly attached devices.
 
-Serial interfaces can be any interface which is directly connected to the CPU
-or chipset (mostly known as a ttyS interface in Linux) or any other USB to
-serial converter (Prolific PL2303 or FTDI FT232/FT4232 based chips).
 
-If you happened to use a Cisco NM-16A - Sixteen Port Async Network Module or
-NM-32A - Thirty-two Port Async Network Module - this is your VyOS replacement.
+The following serial interfaces are supported:
 
-For USB port information please refor to: {ref}`hardware_usb`.
+- On-board
+  {abbr}`UARTs (Universal Asynchronous Receiver-Transmitters)`,
+  exposed by the Linux kernel as `/dev/ttyS<N>`.
+- USB-to-serial adapters supported by the Linux USB serial driver,
+  including Prolific PL2303 and FTDI FT232/FT4232 based chips.
+
+
+You can view available devices in the Tab completion of `set service console-server device`.
+
+See {ref}`hardware_usb` for more details on the naming scheme.
 
 ## Configuration
 
-Between computers, the most common configuration used was "8N1": eight bit
-characters, with one start bit, one stop bit, and no parity bit. Thus 10 Baud
-times are used to send a single character, and so dividing the signalling
-bit-rate by ten results in the overall transmission speed in characters per
-second. This is also the default setting if none of those options are defined.
+A console server only works when its serial port is configured to
+match the framing the attached device uses. The framing consists of
+three parameters that the device's documentation will specify: data
+bits per character (typically 8, sometimes 7), parity (none, even, or
+odd), and stop bits (1 or 2), conventionally written together as a
+line, such as 8N1 (eight data bits, no parity, one stop bit).
 
-```{cfgcmd} set service console-server device \<device\> data-bits [7 | 8]
+8N1 is the default framing for most network equipment, so VyOS also
+defaults to it. For an 8N1 device, only the line rate (`speed`) must
+be configured. The `data-bits`, `parity`, and `stop-bits` commands
+below are needed only for devices that use a different framing.
 
-Configure either seven or eight data bits. This defaults to eight data
-bits if left unconfigured.
+```{cfgcmd} set service console-server device \<device\> speed \<300 | 1200 | 2400 | 4800 | 9600 | 19200 | 38400 | 57600 | 115200\>
+
+**Configure the line rate, in baud, for the specified serial device.**
+```
+
+```{note}
+This setting is mandatory for each serial device. Otherwise, the
+commit is rejected.
+```
+
+```{note}
+A serial device already in use by VyOS's system console (configured
+via `set system console device <device>`) cannot be configured as a
+console server device. Configuring the same device under both
+`system console` and `console-server` causes a commit failure.
 ```
 
 
-```{cfgcmd} set service console-server device \<device\> description \<string\>
+Example:
 
-A user friendly description identifying the connected peripheral.
+```none
+set service console-server device usb0b2.4p1.0 speed 9600
 ```
 
+```{cfgcmd} set service console-server device \<device\> data-bits \<7 | 8\>
 
-```{cfgcmd} set service console-server device \<device\> alias \<string\>
+**Configure the number of data bits per character for the specified
+serial device.**
 
-A user friendly alias for this connection. Can be used instead of the
-device name when connecting.
+The default is 8.
 ```
 
+Example:
 
-```{cfgcmd} set service console-server device \<device\> parity [even | odd | none]
-
-Set the parity option for the console. If unset this will default to none.
+```none
+set service console-server device usb0b2.4p1.0 data-bits 8
 ```
 
+```{cfgcmd} set service console-server device \<device\> stop-bits \<1 | 2\>
 
-```{cfgcmd} set service console-server device \<device\> stop-bits [1 | 2]
+**Configure the number of stop bits that mark the end of each
+character for the specified serial device.**
 
-Configure either one or two stop bits. This defaults to one stop bits if
-left unconfigured.
+The default is 1.
 ```
 
+Example:
 
-```{cfgcmd} set service console-server device \<device\> speed [ 300 | 1200 | 2400 | 4800 | 9600 | 19200 | 38400 | 57600 | 115200 ]
-
-:::{note}
-USB to serial converters will handle most of their work in software
-so you should be careful with the selected baudrate as sometimes they
-can't cope with the expected speed.
-:::
+```none
+set service console-server device usb0b2.4p1.0 stop-bits 1
 ```
 
-### Remote Access
+```{cfgcmd} set service console-server device \<device\> parity \<even | odd | none\>
 
+**Configure the parity mode for the specified serial device.**
 
-Each individual configured console-server device can be directly exposed to
-the outside world. A user can directly connect via SSH to the configured
-port.
+The default is `none`.
+```
 
-```{cfgcmd} set service console-server device \<device\> ssh port \<port\>
+Example:
 
-Accept SSH connections for the given `<device>` on TCP port `<port>`.
-After successful authentication the user will be directly dropped to
-the connected serial device.
+```none
+set service console-server device usb0b2.4p1.0 parity none
+```
 
-:::{hint}
-Multiple users can connect to the same serial device but only
-one is allowed to write to the console port.
-:::
+```{cfgcmd} set service console-server device \<device\> description \<description\>
+
+**Configure a description for the specified serial device.**
+
+Limited to 255 characters.
+```
+
+Example:
+
+```none
+set service console-server device usb0b2.4p1.0 description 'core-sw-1 console'
+```
+
+```{cfgcmd} set service console-server device \<device\> alias \<alias\>
+
+**Configure an alias for the specified serial device.**
+
+The alias can be used in place of the device name in the
+`connect console` operational command. Aliases must be unique across
+all configured serial devices and are restricted to the character
+class `[-_a-zA-Z0-9.]`, with a maximum length of 128 characters.
+```
+
+Example:
+
+```none
+set service console-server device usb0b2.4p1.0 alias core-sw-1
+```
+
+### Remote access
+
+Each configured console device can be exposed for direct SSH access on
+a dedicated TCP port. This SSH access is served by a separate SSH
+instance, independent of the main `service ssh` daemon.
+
+```{cfgcmd} set service console-server device \<device\> ssh port \<1-65535\>
+
+**Configure a dedicated TCP port on which SSH access to the specified
+serial device is exposed.**
+
+After successful authentication, the user is connected directly to the
+device's serial console.
+```
+
+```{note}
+Multiple users can SSH to the same serial device simultaneously, but
+only one can type at a time. The others see the same output in
+read-only mode.
+```
+
+Example:
+
+```none
+set service console-server device usb0b2.4p1.0 ssh port 2201
 ```
 
 ## Operation
 
 ```{opcmd} show console-server ports
 
-Show configured serial ports and their respective interface configuration.
-
-:::{code-block} none
-vyos@vyos:~$ show console-server ports
-usb0b2.4p1.0             on /dev/serial/by-bus/usb0b2.4p1.0@ at   9600n
-:::
+Show each configured console device together with its line rate.
 ```
 
+```none
+vyos@vyos:~$ show console-server ports
+usb0b2.4p1.0             on /dev/serial/by-bus/usb0b2.4p1.0@ at   9600n
+```
 
 ```{opcmd} show console-server user
 
-Show currently connected users.
+Show each configured console device, its up/down state, and the
+user currently typing in the console, if any.
+```
 
-:::{code-block} none
+```none
 vyos@vyos:~$ show console-server user
 usb0b2.4p1.0               up   vyos@localhost
-:::
 ```
-```{opcmd} connect console \<device\>
 
-Locally connect to serial port identified by `<device>`.
+```{opcmd} connect console \<device | alias\>
 
-:::{code-block} none
+Connect to the specified serial device's console from the VyOS
+CLI.
+
+If an alias is configured for the device, it can be used in place of
+the device name.
+```
+
+```{note}
+Multiple users can connect to the same serial device simultaneously,
+but only one can type at a time. The others see the same output in
+read-only mode.
+```
+
+```{note}
+Press the keys in sequence: `Ctrl+E c ?` to list in-session commands,
+`Ctrl+E c .` to disconnect from the session. Both escape sequences
+are interpreted by the console-server client locally and are not sent
+to the attached device.
+```
+
+```none
 vyos@vyos-r1:~$ connect console usb0b2.4p1.0
 [Enter `^Ec?' for help]
 [-- MOTD -- VyOS Console Server]
 
 vyos-r2 login:
-:::
-
-:::{hint}
-Multiple users can connect to the same serial device but only
-one is allowed to write to the console port.
-:::
-
-:::{hint}
-The sequence ``^Ec?`` translates to: ``Ctrl+E c ?``. To quit
-the session use: ``Ctrl+E c .``
-:::
-
-:::{hint}
-If ``alias`` is set, it can be used instead of the device when
-connecting.
-:::
 ```
+
 ```{opcmd} show log console-server
 
-Show the console server log.
+Show the console server log since the most recent boot, in live
+mode.
+
+Use `Ctrl+C` to exit.
 ```
