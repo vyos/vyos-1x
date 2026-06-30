@@ -11865,6 +11865,8 @@ class ModemStateMachine:
                             'rsrp': lte.get('rsrp', ''),
                             'rsrq': lte.get('rsrq', ''),
                             'snr': lte.get('snr', ''),
+                            'ecio': '',
+                            'rscp': '',
                         }
 
                     # 5G NR
@@ -11878,6 +11880,8 @@ class ModemStateMachine:
                                 'rsrp': nr5g.get('rsrp', ''),
                                 'rsrq': nr5g.get('rsrq', ''),
                                 'snr': nr5g.get('snr', ''),
+                                'ecio': '',
+                                'rscp': '',
                             }
 
                     # UMTS (3G)
@@ -11889,6 +11893,11 @@ class ModemStateMachine:
                                 'technology': 'UMTS',
                                 'rssi': umts.get('rssi', ''),
                                 'rsrp': '', 'rsrq': '', 'snr': '',
+                                # 3G quality metrics come from the UMTS dict
+                                # directly (no AT needed): RSCP is the code-
+                                # channel power, Ec/Io the chip-energy ratio.
+                                'ecio': umts.get('ecio', ''),
+                                'rscp': umts.get('rscp', ''),
                             }
 
                     # GSM (2G)
@@ -11899,7 +11908,11 @@ class ModemStateMachine:
                             signal_detail = {
                                 'technology': 'GSM',
                                 'rssi': gsm['rssi'],
-                                'rsrp': '', 'rsrq': '', 'snr': '',
+                                'rsrp': '',
+                                'rsrq': '',
+                                'snr': '',
+                                'ecio': '',
+                                'rscp': '',
                             }
 
                     # CDMA
@@ -11910,7 +11923,11 @@ class ModemStateMachine:
                             signal_detail = {
                                 'technology': 'CDMA',
                                 'rssi': cdma['rssi'],
-                                'rsrp': '', 'rsrq': '', 'snr': '',
+                                'rsrp': '',
+                                'rsrq': '',
+                                'snr': '',
+                                'ecio': cdma.get('ecio', ''),
+                                'rscp': '',
                             }
 
                     # EVDO
@@ -11946,16 +11963,32 @@ class ModemStateMachine:
                 status['signal_rsrp'] = signal_detail.get('rsrp', '')
                 status['signal_rsrq'] = signal_detail.get('rsrq', '')
                 status['signal_snr'] = signal_detail.get('snr', '')
+                status['signal_ecio'] = signal_detail.get('ecio', '')
+                status['signal_rscp'] = signal_detail.get('rscp', '')
                 status['signal_technology'] = signal_detail.get('technology', '')
             else:
-                for k in ('signal_rssi', 'signal_rsrp', 'signal_rsrq',
-                          'signal_snr', 'signal_technology'):
+                for k in (
+                    'signal_rssi',
+                    'signal_rsrp',
+                    'signal_rsrq',
+                    'signal_snr',
+                    'signal_ecio',
+                    'signal_rscp',
+                    'signal_technology',
+                ):
                     status[k] = ''
         except Exception:
             status['signal_percent'] = 0
             status['signal_dbm'] = 0
-            for k in ('signal_rssi', 'signal_rsrp', 'signal_rsrq',
-                      'signal_snr', 'signal_technology'):
+            for k in (
+                'signal_rssi',
+                'signal_rsrp',
+                'signal_rsrq',
+                'signal_snr',
+                'signal_ecio',
+                'signal_rscp',
+                'signal_technology',
+            ):
                 status[k] = ''
 
         # ── 6b. Serving cell info (band actually camped on) ──────────
@@ -15696,7 +15729,7 @@ class ModemStateMachine:
         wwan = f"wwan{self.interface_number}"
         lan = self._bridging_target_interface()
         targets = {
-            f"/proc/sys/net/ipv6/conf/all/forwarding": "1",
+            "/proc/sys/net/ipv6/conf/all/forwarding": "1",
             f"/proc/sys/net/ipv6/conf/{wwan}/proxy_ndp": "1",
         }
         if lan:
@@ -16665,7 +16698,6 @@ class ModemStateMachine:
         # First pass reported no usable route.  Before treating this as a dead
         # SIM, give the interface time to come operationally up and retry — the
         # overwhelmingly common case is a link-up race, not an unroutable SIM.
-        interface_name = f"wwan{self.interface_number}"
         max_retries = 6          # ~ up to 6 * 5s = 30s of patience
         retry_delay = 5
         for attempt in range(1, max_retries + 1):

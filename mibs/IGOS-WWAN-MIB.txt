@@ -29,7 +29,7 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
         Integer32, Unsigned32, Counter64, TimeTicks, enterprises
             FROM SNMPv2-SMI
         TEXTUAL-CONVENTION, DisplayString, TruthValue, DateAndTime,
-        MacAddress, RowStatus
+        MacAddress
             FROM SNMPv2-TC
         MODULE-COMPLIANCE, OBJECT-GROUP, NOTIFICATION-GROUP
             FROM SNMPv2-CONF
@@ -40,7 +40,7 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
     ;
 
     igosWwanMIB MODULE-IDENTITY
-        LAST-UPDATED "202605010000Z"
+        LAST-UPDATED "202606300000Z"
         ORGANIZATION "IGOS"
         CONTACT-INFO
             "IGOS - https://igos.io"
@@ -50,6 +50,11 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
              management, failover/failback, signal quality,
              registration, bearer, data usage, IPv6 PD and
              IP-passthrough."
+        REVISION     "202606300000Z"
+        DESCRIPTION
+            "Add igosWwanRadioRscp (UMTS/HSPA received signal code
+             power).  Remove the unused igosWwanDataUsage placeholder
+             node (per-SIM usage lives in igosWwanSimTable)."
         REVISION     "202605010000Z"
         DESCRIPTION  "Initial revision."
         ::= { enterprises 44641 1 }
@@ -66,7 +71,9 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
     igosWwanRadio          OBJECT IDENTIFIER ::= { igosWwanObjects 3 }
     igosWwanBearer         OBJECT IDENTIFIER ::= { igosWwanObjects 4 }
     igosWwanFailover       OBJECT IDENTIFIER ::= { igosWwanObjects 5 }
-    igosWwanDataUsage      OBJECT IDENTIFIER ::= { igosWwanObjects 6 }
+    -- { igosWwanObjects 6 } intentionally unassigned: per-SIM data-usage
+    -- counters live in igosWwanSimTable (columns 21-26), so no separate
+    -- data-usage subtree is needed.
     igosWwanPd             OBJECT IDENTIFIER ::= { igosWwanObjects 7 }
     igosWwanPassthrough    OBJECT IDENTIFIER ::= { igosWwanObjects 8 }
 
@@ -600,7 +607,8 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
         igosWwanRadioPci            Integer32,
         igosWwanRadioTac            Integer32,
         igosWwanRadioEarfcn         Integer32,
-        igosWwanRadioNrArfcn        Unsigned32
+        igosWwanRadioNrArfcn        Unsigned32,
+        igosWwanRadioRscp           Integer32
     }
 
     igosWwanRadioRat        OBJECT-TYPE  SYNTAX IgosWwanRat
@@ -642,6 +650,10 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
     igosWwanRadioNrArfcn    OBJECT-TYPE  SYNTAX Unsigned32
         MAX-ACCESS read-only STATUS current
         DESCRIPTION "NR-ARFCN (5G)." ::= { igosWwanRadioEntry 13 }
+    igosWwanRadioRscp       OBJECT-TYPE  SYNTAX Integer32 UNITS "dBm"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Received signal code power (UMTS/HSPA)."
+        ::= { igosWwanRadioEntry 14 }
 
     -- ================================================================
     -- 4. Bearer  (current PDN attachment)
@@ -801,7 +813,7 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
         ::= { igosWwanFailoverEntry 12 }
 
     -- ================================================================
-    -- 6. IPv6 PD status
+    -- 7. IPv6 PD status
     -- ================================================================
     igosWwanPdTable OBJECT-TYPE
         SYNTAX       SEQUENCE OF IgosWwanPdEntry
@@ -872,7 +884,7 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
         ::= { igosWwanPdEntry 9 }
 
     -- ================================================================
-    -- 7. IP-Passthrough status
+    -- 8. IP-Passthrough status
     -- ================================================================
     igosWwanPassthroughTable OBJECT-TYPE
         SYNTAX       SEQUENCE OF IgosWwanPassthroughEntry
@@ -1068,7 +1080,7 @@ IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
             igosWwanRadioRssi, igosWwanRadioRsrp, igosWwanRadioRsrq,
             igosWwanRadioSinr, igosWwanRadioEcio, igosWwanRadioCellId,
             igosWwanRadioPci, igosWwanRadioTac, igosWwanRadioEarfcn,
-            igosWwanRadioNrArfcn
+            igosWwanRadioNrArfcn, igosWwanRadioRscp
         }
         STATUS current DESCRIPTION "Radio metrics."
         ::= { igosWwanGroups 3 }

@@ -126,6 +126,8 @@ igos@igos:~$ show interfaces wwan wwan0 status
 | | Operator | Network operator name |
 | | Operator code | MCC/MNC code |
 | | APN | Connected APN name |
+| | Requested APN | APN requested by configuration (shown with Negotiated APN) |
+| | Negotiated APN | APN the carrier actually activated |
 | | Log level | Effective WWAN log level |
 | | Log sink | Effective WWAN log destination (`both`, `journal`, `syslog`) |
 | | Failure reason | Set when state is `FAILED` |
@@ -138,7 +140,9 @@ igos@igos:~$ show interfaces wwan wwan0 status
 | | MTU | Effective MTU (carrier-negotiated or fallback) |
 | **Signal** | Quality | Signal quality as percentage |
 | | Strength | Signal strength in dBm |
-| | Active bands | Currently active radio bands |
+| | Serving band | Band the modem is currently camped on |
+| | Configured bands | Operator-selected band restriction (shown when not `all`) |
+| | Enabled bands | Currently active radio bands |
 | **SMS** | SMS supported | Whether modem supports SMS |
 | | Messages | Total SMS message count |
 | | Unread | Unread incoming SMS count |
@@ -199,6 +203,13 @@ igos@igos:~$ show interfaces wwan wwan0 signal
 | | RSRP | Reference Signal Received Power (dBm) — LTE/5G |
 | | RSRQ | Reference Signal Received Quality (dB) — LTE/5G |
 | | SNR | Signal-to-Noise Ratio (dB) |
+| | RSCP | Received Signal Code Power (dBm) — UMTS/HSPA (3G only) |
+| | Ec/Io | Chip energy-to-interference ratio (dB) — UMTS/HSPA (3G only) |
+| **Serving Cell** | Band | Band the modem is camped on (e.g. `eutran-7`) |
+| | EARFCN / ARFCN | Serving channel number (EARFCN for LTE, ARFCN otherwise) |
+| | Cell ID | Serving cell identifier |
+| | PCI | Physical Cell Identity |
+| | TAC | Tracking/Location Area Code |
 | **Active Bands** | *(list)* | Currently active radio bands (e.g. `eutran-7`, `ngran-78`) |
 
 **Signal quality interpretation:**

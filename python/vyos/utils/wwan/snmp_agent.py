@@ -38,6 +38,7 @@ PD and IP-passthrough tables are reserved (not yet populated).
 
 from __future__ import annotations
 
+import bisect
 import logging
 import os
 import socket
@@ -106,7 +107,18 @@ CONNECTION_MODE_MAP = {
 }
 
 NETWORK_MODE_MAP = {
-    'auto': 1, 'lte': 2, '5g': 3, 'nr5g': 3, '3g': 4, 'umts': 4, '2g': 5, 'gsm': 5,
+    # The MIB's igosWwanIfNetworkMode enumerates only nr5g(3); both the
+    # combined '5g' (NSA+SA) and '5g-only' (SA) CLI modes collapse to it.
+    'auto': 1,
+    'lte': 2,
+    '5g': 3,
+    '5g-only': 3,
+    '5g_only': 3,
+    'nr5g': 3,
+    '3g': 4,
+    'umts': 4,
+    '2g': 5,
+    'gsm': 5,
 }
 
 AUTH_TYPE_MAP = {'none': 1, 'pap': 2, 'chap': 3, 'both': 4}
@@ -167,13 +179,15 @@ def _discover_interfaces() -> List[Tuple[int, str, int]]:
 
 
 # ── Status collection ──────────────────────────────────────────────────────
-class _StatusCache:
-    """Caches per-interface status dicts to throttle D-Bus traffic."""
+class _StatusFetcher:
+    """Fetches per-interface status dicts from the WWAN FSM over D-Bus.
 
-    def __init__(self, ttl: float = CACHE_TTL_SECONDS) -> None:
-        self.ttl = max(0.5, float(ttl))
-        self._stamp: float = 0.0
-        self._snapshot: Dict[int, Dict[str, Any]] = {}
+    Result caching is owned one level up by ``PassPersistAgent._refresh_tree``
+    (a single TTL gate), so this performs a fresh fetch on every call and keeps
+    no snapshot of its own.
+    """
+
+    def __init__(self) -> None:
         self._client = None  # lazy
 
     def _get_client(self):
@@ -183,9 +197,6 @@ class _StatusCache:
         return self._client
 
     def get(self) -> Dict[int, Dict[str, Any]]:
-        now = time.monotonic()
-        if (now - self._stamp) < self.ttl and self._snapshot:
-            return self._snapshot
         snapshot: Dict[int, Dict[str, Any]] = {}
         client = self._get_client()
         for if_num, name, if_index in _discover_interfaces():
@@ -198,8 +209,6 @@ class _StatusCache:
             status.setdefault('_ifindex', if_index)
             status.setdefault('_interface_number', if_num)
             snapshot[if_index] = status
-        self._snapshot = snapshot
-        self._stamp = now
         return snapshot
 
 
@@ -336,19 +345,40 @@ def _build_radio_row(if_index: int, st: Dict[str, Any]) -> Iterable[Tuple[Tuple[
     base = RADIO_ENTRY
     bars_pct = _int(st.get('signal_percent'), 0)
     bars = max(0, min(5, int(round(bars_pct / 20.0)))) if bars_pct else 0
-    yield base + (1, if_index),  T_INT,    str(_enum(st.get('access_technology_name') or st.get('signal_technology'), RAT_MAP))
-    yield base + (2, if_index),  T_STRING, _str(st.get('current_bands') or st.get('active_band'))
-    yield base + (3, if_index),  T_INT,    str(bars)
-    yield base + (4, if_index),  T_INT,    str(_int(st.get('signal_rssi') or st.get('signal_dbm'), 0))
-    yield base + (5, if_index),  T_INT,    str(_int(st.get('signal_rsrp'), 0))
-    yield base + (6, if_index),  T_INT,    str(_int(st.get('signal_rsrq'), 0))
-    yield base + (7, if_index),  T_INT,    str(_int(st.get('signal_snr') or st.get('signal_sinr'), 0))
-    yield base + (8, if_index),  T_INT,    str(_int(st.get('signal_ecio'), 0))
-    yield base + (9, if_index),  T_GAUGE,  str(_int(st.get('cell_id'), 0))
-    yield base + (10, if_index), T_INT,    str(_int(st.get('pci'), 0))
-    yield base + (11, if_index), T_INT,    str(_int(st.get('tac') or st.get('lac'), 0))
-    yield base + (12, if_index), T_INT,    str(_int(st.get('earfcn'), 0))
-    yield base + (13, if_index), T_GAUGE,  str(_int(st.get('nr_arfcn'), 0))
+    # Serving-cell identity keys are published by the FSM under the
+    # ``serving_*`` namespace (serving_cell_id / serving_tac / serving_earfcn /
+    # serving_physical_ci).  The earlier short keys (cell_id/tac/earfcn/pci)
+    # never existed in the status dict, so these columns silently reported 0.
+    # NR-ARFCN shares ``serving_earfcn`` (populated for an NR serving cell);
+    # gate it on the serving cell type so it only fills for 5G.
+    cell_type = str(st.get('serving_cell_type') or '').lower()
+    serving_chan = _int(st.get('serving_earfcn'), 0)
+    nr_arfcn = serving_chan if cell_type in ('nr5g', '5gnr') else 0
+    earfcn = serving_chan if cell_type not in ('nr5g', '5gnr') else 0
+    yield base + (1, if_index), T_INT, str(
+        _enum(st.get('access_technology_name') or st.get('signal_technology'), RAT_MAP)
+    )
+    yield base + (2, if_index), T_STRING, _str(
+        st.get('serving_band') or st.get('current_bands') or st.get('active_band')
+    )
+    yield base + (3, if_index), T_INT, str(bars)
+    yield base + (4, if_index), T_INT, str(
+        _int(st.get('signal_rssi') or st.get('signal_dbm'), 0)
+    )
+    yield base + (5, if_index), T_INT, str(_int(st.get('signal_rsrp'), 0))
+    yield base + (6, if_index), T_INT, str(_int(st.get('signal_rsrq'), 0))
+    yield base + (7, if_index), T_INT, str(
+        _int(st.get('signal_snr') or st.get('signal_sinr'), 0)
+    )
+    yield base + (8, if_index), T_INT, str(_int(st.get('signal_ecio'), 0))
+    yield base + (9, if_index), T_GAUGE, str(_int(st.get('serving_cell_id'), 0))
+    yield base + (10, if_index), T_INT, str(_int(st.get('serving_physical_ci'), 0))
+    yield base + (11, if_index), T_INT, str(
+        _int(st.get('serving_tac') or st.get('lac'), 0)
+    )
+    yield base + (12, if_index), T_INT, str(earfcn)
+    yield base + (13, if_index), T_GAUGE, str(nr_arfcn)
+    yield base + (14, if_index), T_INT, str(_int(st.get('signal_rscp'), 0))
 
 
 def _build_bearer_row(if_index: int, st: Dict[str, Any]) -> Iterable[Tuple[Tuple[int, ...], str, str]]:
@@ -422,8 +452,9 @@ class PassPersistAgent:
     """Implements net-snmp pass_persist for the WWAN MIB subtree."""
 
     def __init__(self) -> None:
-        self.cache = _StatusCache()
+        self.cache = _StatusFetcher()
         self._tree: List[Tuple[Tuple[int, ...], str, str]] = []
+        self._keys: List[Tuple[int, ...]] = []
         self._tree_stamp: float = 0.0
 
     def _refresh_tree(self) -> None:
@@ -436,22 +467,22 @@ class PassPersistAgent:
         except Exception as exc:
             logger.warning('Failed to refresh OID tree: %s', exc)
             self._tree = []
+        # Parallel sorted key list for O(log n) bisect lookups.
+        self._keys = [entry[0] for entry in self._tree]
         self._tree_stamp = now
 
     def handle_get(self, oid: Tuple[int, ...]) -> Optional[Tuple[Tuple[int, ...], str, str]]:
         self._refresh_tree()
-        for entry in self._tree:
-            if entry[0] == oid:
-                return entry
-            if entry[0] > oid:
-                break
+        idx = bisect.bisect_left(self._keys, oid)
+        if idx < len(self._keys) and self._keys[idx] == oid:
+            return self._tree[idx]
         return None
 
     def handle_getnext(self, oid: Tuple[int, ...]) -> Optional[Tuple[Tuple[int, ...], str, str]]:
         self._refresh_tree()
-        for entry in self._tree:
-            if entry[0] > oid:
-                return entry
+        idx = bisect.bisect_right(self._keys, oid)
+        if idx < len(self._tree):
+            return self._tree[idx]
         return None
 
     def run(self) -> None:
@@ -491,8 +522,10 @@ class PassPersistAgent:
                     emit(_format_oid(res_oid), res_type, res_value)
                 continue
             if cmd == 'set':
-                # Drain the two follow-up lines (TYPE, VALUE) and refuse.
-                in_stream.readline()
+                # net-snmp pass_persist sends exactly two follow-up lines for a
+                # SET: the OID, then a "<type> <value>" line.  Drain both and
+                # refuse — this MIB subtree is read-only.  (Draining a third
+                # line here would swallow the next command and desync.)
                 in_stream.readline()
                 in_stream.readline()
                 emit('not-writable')

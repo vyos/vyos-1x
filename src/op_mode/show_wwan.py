@@ -187,10 +187,13 @@ def _raw_signal(status: dict) -> dict:
         'rsrp': status.get('signal_rsrp', ''),
         'rsrq': status.get('signal_rsrq', ''),
         'snr': status.get('signal_snr', ''),
+        'ecio': status.get('signal_ecio', ''),
+        'rscp': status.get('signal_rscp', ''),
         'serving_band': status.get('serving_band', ''),
         'serving_earfcn': status.get('serving_earfcn', ''),
         'serving_cell_id': status.get('serving_cell_id', ''),
         'serving_tac': status.get('serving_tac', ''),
+        'serving_physical_ci': status.get('serving_physical_ci', ''),
         'serving_cell_type': status.get('serving_cell_type', ''),
         'current_bands': _normalize_list_field(status.get('current_bands', [])),
         'configured_bands': _normalize_list_field(status.get('configured_bands', [])),
@@ -363,6 +366,10 @@ def _format_signal(status: dict, interface: str) -> str:
     lines.append(_kv('RSRP:', f"{d['rsrp']} dBm" if d['rsrp'] != '' else ''))
     lines.append(_kv('RSRQ:', f"{d['rsrq']} dB" if d['rsrq'] != '' else ''))
     lines.append(_kv('SNR:', f"{d['snr']} dB" if d['snr'] != '' else ''))
+    # 3G-only quality metrics — shown only when the modem reports them
+    # (UMTS/HSPA serving cell), so LTE/NR output stays uncluttered.
+    lines.append(_kv('RSCP:', f"{d['rscp']} dBm" if d['rscp'] != '' else ''))
+    lines.append(_kv('Ec/Io:', f"{d['ecio']} dB" if d['ecio'] != '' else ''))
 
     # Always render the Serving Cell section with placeholders so the
     # field is discoverable even when ModemManager (< 1.22 with QMI)
@@ -373,6 +380,7 @@ def _format_signal(status: dict, interface: str) -> str:
     label = 'EARFCN:' if cell_type == 'lte' else 'ARFCN:'
     lines.append(_kv(label, d['serving_earfcn'] or 'unavailable'))
     lines.append(_kv('Cell ID:', d['serving_cell_id'] or 'unavailable'))
+    lines.append(_kv('PCI:', d['serving_physical_ci'] or 'unavailable'))
     lines.append(_kv('TAC:', d['serving_tac'] or 'unavailable'))
 
     bands = d['current_bands']
