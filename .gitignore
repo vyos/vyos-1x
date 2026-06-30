@@ -163,3 +163,6 @@ python/vyos/proto/*.desc
 # We do not use pip
 Pipfile
 Pipfile.lock
+
+# AI stuff
+.claude/
