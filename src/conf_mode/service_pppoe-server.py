@@ -126,6 +126,7 @@ def get_config(config=None):
         is_node_changed(conf, base + ['interface']),
         is_node_changed(conf, base + ['authentication', 'radius']),
         is_node_changed(conf, base + ['authentication', 'mode']),
+        is_node_changed(conf, base + ['authentication', 'protocols']),
         any(
             base_ifname(iface) in all_changed_vpp_ifaces
             for iface in pppoe.get('interface', {})
