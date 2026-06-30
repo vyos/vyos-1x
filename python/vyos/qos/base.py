@@ -241,6 +241,13 @@ class QoSBase:
             for cls, cls_config in config['class'].items():
                 self._build_base_qdisc(cls_config, int(cls))
 
+
+                # Get DSCP value for packet remarking via tc pedit action
+                set_dscp = dict_search('set_dscp', cls_config)
+                dscp_value = None
+                if set_dscp:
+                    dscp_value = str(self._get_dsfield(set_dscp))
+
                 # every match criteria has it's tc instance
                 filter_cmd_base = ['tc', 'filter', 'add', 'dev', self._interface,
                                     'parent', f'{self._parent:x}:']
@@ -263,8 +270,10 @@ class QoSBase:
                                     has_filter = True
                                     break
 
-                        tmp = dict_search(f'ether.protocol', match_config) or 'all'
-                        filter_cmd += ['protocol', str(tmp)]
+                        filter_protocol = (
+                            dict_search(f'ether.protocol', match_config) or 'all'
+                        )
+                        filter_cmd += ['protocol', filter_protocol]
 
                         if self.qostype in ['shaper', 'shaper_hfsc'] and 'prio' not in filter_cmd:
                             filter_cmd += ['prio', str(index)]
@@ -361,9 +370,29 @@ class QoSBase:
                                         elif af == 'ipv6':
                                             filter_cmd += ['match', 'u8', str(mask), str(mask), 'at', '53']
 
+                        # Build pedit action to rewrite DSCP on matched packets.
+                        # retain 0xfc preserves ECN bits (bottom 2 bits of TOS/Traffic Class).
+                        # Non-IP match types skip pedit to avoid corrupting
+                        # non-IP packets, unless ether protocol is ip or ipv6.
+                        dscp_action = []
+                        if dscp_value is not None:
+                            proto = str(filter_protocol).lower()
+                            is_ipv4 = 'ip' in match_config or proto in ('ip', '0x0800', '2048')
+                            is_ipv6 = 'ipv6' in match_config or proto in ('ipv6', '0x86dd', '34525')
+                            if is_ipv4:
+                                dscp_action = ['action', 'pedit', 'ex', 'munge', 'ip',
+                                               'dsfield', 'set', dscp_value, 'retain', '0xfc',
+                                               'pipe', 'action', 'csum', 'ip4h']
+                            elif is_ipv6:
+                                dscp_action = ['action', 'pedit', 'ex', 'munge',
+                                               'ip6', 'traffic_class', 'set', dscp_value, 'retain', '0xfc']
+
                         if index != max_index or not has_action_policy:
                             # avoid duplicate last match rule
                             cls = int(cls)
+                            # add pedit before flowid for filters without police
+                            if dscp_action:
+                                filter_cmd += dscp_action
                             filter_cmd += ['flowid', f'{self._parent:x}:{cls:x}']
                             self._cmdl(filter_cmd)
 
@@ -373,6 +402,9 @@ class QoSBase:
                     if has_action_policy and has_filter:
                         # For "vif" "basic match" is used instead of "action police" T5961
                         if not match_vlan:
+                            # chain pedit before police with pipe
+                            if dscp_action:
+                                filter_cmd += dscp_action + ['pipe']
                             filter_cmd += ['action', 'police']
 
                             if 'exceed' in cls_config:
@@ -393,6 +425,9 @@ class QoSBase:
                             if 'mtu' in cls_config:
                                 mtu = cls_config['mtu']
                                 filter_cmd += ['mtu', str(mtu)]
+                        elif dscp_action:
+                            # vlan match skips police (T5961) but still needs pedit
+                            filter_cmd += dscp_action
 
                         cls = int(cls)
                         filter_cmd += ['flowid', f'{self._parent:x}:{cls:x}']
@@ -429,6 +464,32 @@ class QoSBase:
                 class_id_max = self._get_class_max_id(config)
                 default_cls_id = int(class_id_max) +1
             self._build_base_qdisc(config['default'], default_cls_id)
+
+            # Default class has no match filters, so catch-all filters
+            # are needed to attach the pedit action for DSCP remarking.
+            # Separate filters per protocol to avoid corrupting non-IP packets (e.g. ARP).
+            # IPv4 uses u32 catch-all, IPv6 uses basic classifier (u32 doesn't support protocol ipv6).
+            # prio 255/256 ensures class filters match first.
+            set_dscp = dict_search('set_dscp', config['default'])
+            if set_dscp and self.qostype == 'shaper':
+                dscp_value = str(self._get_dsfield(set_dscp))
+                filter_cmd = ['tc', 'filter', 'replace', 'dev', self._interface,
+                              'parent', f'{self._parent:x}:']
+                filter_cmd += ['prio', '255', 'protocol', 'ip', 'u32',
+                               'match', 'u32', '0', '0']
+                filter_cmd += ['action', 'pedit', 'ex', 'munge',
+                               'ip', 'dsfield', 'set', dscp_value, 'retain', '0xfc',
+                               'pipe', 'action', 'csum', 'ip4h']
+                filter_cmd += ['flowid', f'{self._parent:x}:{default_cls_id:x}']
+                self._cmdl(filter_cmd)
+
+                filter_cmd = ['tc', 'filter', 'replace', 'dev', self._interface,
+                              'parent', f'{self._parent:x}:']
+                filter_cmd += ['prio', '256', 'protocol', 'ipv6', 'basic']
+                filter_cmd += ['action', 'pedit', 'ex', 'munge', 'ip6',
+                               'traffic_class', 'set', dscp_value, 'retain', '0xfc']
+                filter_cmd += ['flowid', f'{self._parent:x}:{default_cls_id:x}']
+                self._cmdl(filter_cmd)
 
         if self.qostype == 'limiter':
             if 'default' in config:

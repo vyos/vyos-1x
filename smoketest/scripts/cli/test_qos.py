@@ -614,15 +614,23 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
 
         for interface in self._interfaces:
             shaper_name = f'qos-shaper-{interface}'
+            shaper_path = base_path + ['policy', 'shaper', shaper_name]
+            class_path = shaper_path + ['class', '23']
 
             self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'bandwidth', f'{bandwidth}mbit'])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'bandwidth', f'{default_bandwidth}mbit'])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'ceiling', f'{default_ceil}mbit'])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'queue-type', 'fair-queue'])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'bandwidth', f'{class_bandwidth}mbit'])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'ceiling', f'{class_ceil}mbit'])
-            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ip', 'destination', 'address', dst_address])
+            self.cli_set(shaper_path + ['bandwidth', f'{bandwidth}mbit'])
+            self.cli_set(
+                shaper_path + ['default', 'bandwidth', f'{default_bandwidth}mbit']
+            )
+            self.cli_set(shaper_path + ['default', 'ceiling', f'{default_ceil}mbit'])
+            self.cli_set(shaper_path + ['default', 'queue-type', 'fair-queue'])
+            self.cli_set(shaper_path + ['default', 'set-dscp', 'AF11'])
+            self.cli_set(class_path + ['bandwidth', f'{class_bandwidth}mbit'])
+            self.cli_set(class_path + ['ceiling', f'{class_ceil}mbit'])
+            self.cli_set(
+                class_path
+                + ['match', '10', 'ip', 'destination', 'address', dst_address]
+            )
 
             bandwidth += 1
             default_bandwidth += 1
@@ -650,6 +658,16 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
 
             for config_entry in config_entries:
                 self.assertIn(config_entry, output)
+
+            # set-dscp on default class: catch-all filters with pedit
+            # AF11 = DSCP 10 << 2 = 0x28
+            filter_output = get_tc_filter_details(interface)
+            self.assertIn('pedit', filter_output)
+            self.assertIn('protocol ip pref 255', filter_output)
+            self.assertIn('at ipv4+0: val 00280000', filter_output)
+            self.assertIn('csum (iph)', filter_output)
+            self.assertIn('protocol ipv6 pref 256', filter_output)
+            self.assertIn('at ipv6+0: val 02800000', filter_output)
 
             bandwidth += 1
             default_bandwidth += 1
@@ -1323,6 +1341,74 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             else:
                 self.assertIn(f'filter parent 1: protocol {proto} pref',
                               get_tc_filter_details(interface))
+
+
+    def test_25_shaper_set_dscp(self):
+        interface = self._interfaces[0]
+        shaper_name = f'qos-shaper-{interface}'
+        shaper_path = base_path + ['policy', 'shaper', shaper_name]
+        class_path = shaper_path + ['class', '10']
+
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(shaper_path + ['bandwidth', '100mbit'])
+        self.cli_set(shaper_path + ['default', 'bandwidth', '10mbit'])
+        self.cli_set(class_path + ['bandwidth', '50mbit'])
+        self.cli_set(class_path + ['set-dscp', 'CS4'])
+
+        # IPv4 match: pedit should target ipv4+0
+        self.cli_set(
+            class_path + ['match', 'RULE', 'ip', 'source', 'address', '172.17.1.2/32']
+        )
+        self.cli_commit()
+
+        # CS4 = DSCP 32 << 2 = 0x80
+        filter_output = get_tc_filter_details(interface)
+        self.assertIn('action order 1:  pedit', filter_output)
+        self.assertIn('at ipv4+0: val 00800000', filter_output)
+        self.assertIn('csum (iph)', filter_output)
+        self.assertNotIn('at ipv6+0', filter_output)
+
+        # IPv6 match: pedit should target ipv6+0
+        self.cli_delete(class_path + ['match', 'RULE'])
+        self.cli_set(
+            class_path + ['match', 'RULE', 'ipv6', 'source', 'address', '2001:db8::/32']
+        )
+        self.cli_set(class_path + ['set-dscp', 'AF21'])
+        self.cli_commit()
+
+        # AF21 = DSCP 18 << 2 = 0x48
+        filter_output = get_tc_filter_details(interface)
+        self.assertIn('action order 1:  pedit', filter_output)
+        self.assertIn('at ipv6+0: val 04800000', filter_output)
+        self.assertNotIn('at ipv4+0', filter_output)
+
+        # Ether match with protocol all: pedit is skipped to avoid
+        # corrupting non-IP packets
+        self.cli_delete(class_path + ['match', 'RULE'])
+        self.cli_set(class_path + ['match', 'RULE', 'ether', 'protocol', 'all'])
+        self.cli_set(class_path + ['set-dscp', '46'])
+        self.cli_commit()
+
+        filter_output = get_tc_filter_details(interface)
+        self.assertNotIn('pedit', filter_output)
+
+        # Ether match with protocol ip: pedit targets ipv4+0 only
+        self.cli_set(class_path + ['match', 'RULE', 'ether', 'protocol', 'ip'])
+        self.cli_commit()
+
+        # numeric 46 << 2 = 0xb8
+        filter_output = get_tc_filter_details(interface)
+        self.assertIn('action order 1:  pedit', filter_output)
+        self.assertIn('at ipv4+0: val 00b80000', filter_output)
+        self.assertIn('csum (iph)', filter_output)
+        self.assertNotIn('at ipv6+0', filter_output)
+
+        # Removing set-dscp: no pedit should remain
+        self.cli_delete(class_path + ['set-dscp'])
+        self.cli_commit()
+
+        filter_output = get_tc_filter_details(interface)
+        self.assertNotIn('pedit', filter_output)
 
 
 if __name__ == '__main__':
