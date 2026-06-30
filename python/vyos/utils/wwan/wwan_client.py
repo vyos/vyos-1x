@@ -1208,25 +1208,153 @@ class WWANClientSync:
 
     def __init__(self, bus_type: BusType = BusType.SYSTEM) -> None:
         self._bus_type = bus_type
+        # Persistent connection reused across calls.  A repeated caller (the
+        # SNMP pass_persist agent polls every few seconds) would otherwise pay
+        # a full MessageBus connect + multi-object introspect on EVERY call.
+        # The bus + introspected proxies are cached here and reused; a stale
+        # bus (e.g. the WWAN manager restarted) is detected on use and dropped
+        # so the next call reconnects.  Single-threaded use is assumed (the
+        # SNMP agent and the CLI tools are); the persistent loop is driven only
+        # from the calling thread.
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._client: Optional["WWANClient"] = None
 
-    def _run(self, coro):
-        """Run an async coroutine synchronously."""
+    def _get_loop(self) -> asyncio.AbstractEventLoop:
+        """Return the dedicated event loop, creating it on first use.
+
+        The persistent ``WWANClient`` (and its dbus-next ``MessageBus``) is
+        bound to this loop, so every persistent-path call must be driven by it
+        via ``run_until_complete`` — never ``asyncio.run`` (which would create
+        and tear down a fresh loop each call, defeating reuse and orphaning the
+        bus).
+        """
+        if self._loop is None or self._loop.is_closed():
+            self._loop = asyncio.new_event_loop()
+        return self._loop
+
+    async def _ensure_client(self) -> "WWANClient":
+        """Return the cached open client, connecting + introspecting on first use."""
+        if self._client is None:
+            client = WWANClient(bus_type=self._bus_type)
+            try:
+                await client.open()
+            except Exception:
+                try:
+                    await client.close()
+                except Exception:
+                    pass
+                raise
+            self._client = client
+        return self._client
+
+    async def _drop_client(self) -> None:
+        """Close and forget the cached client so the next call reconnects."""
+        client, self._client = self._client, None
+        if client is not None:
+            try:
+                await client.close()
+            except Exception:
+                pass
+
+    def _method(self, name: str, *args, **kwargs):
+        """Build a factory invoking ``client.<name>(*args, **kwargs)``.
+
+        A factory (rather than a ready-made coroutine) lets ``_run`` target
+        either the persistent client or an isolated one (nested-loop fallback)
+        and re-issue the call on a fresh client after a reconnect.
+        """
+        def _factory(client):
+            return getattr(client, name)(*args, **kwargs)
+        return _factory
+
+    # Back-compat shim: older call sites pass ``self._call("name", ifnum, ...)``.
+    # It now returns a factory (same contract ``_run`` expects), not a coroutine.
+    def _call(self, method_name: str, interface_number: int, **kwargs):
+        return self._method(method_name, interface_number, **kwargs)
+
+    def _run(self, make_coro):
+        """Execute ``make_coro(client)`` synchronously on the persistent bus.
+
+        ``make_coro`` is a callable taking an open :class:`WWANClient` and
+        returning the awaitable to run (see :meth:`_method`).
+        """
+        # Nested-loop safety: we cannot drive our persistent loop from inside
+        # an event loop already running on this thread.  Fall back to an
+        # isolated, stateless fresh-connection run in a worker thread (the
+        # original behaviour) — correctness over reuse in that rare case.
         try:
-            loop = asyncio.get_running_loop()
+            running = asyncio.get_running_loop()
         except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            # Already inside an event loop — use a new thread
+            running = None
+        if running is not None and running.is_running():
             import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(asyncio.run, coro).result()
-        return asyncio.run(coro)
 
-    async def _call(self, method_name: str, interface_number: int, **kwargs):
-        async with WWANClient(bus_type=self._bus_type) as client:
-            method = getattr(client, method_name)
-            return await method(interface_number, **kwargs)
+            async def _isolated():
+                async with WWANClient(bus_type=self._bus_type) as client:
+                    return await make_coro(client)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, _isolated()).result()
+
+        return self._get_loop().run_until_complete(self._dispatch(make_coro))
+
+    async def _dispatch(self, make_coro):
+        """Run one call on the persistent client, healing a stale connection.
+
+        A connection-level failure while *establishing* the bus is retried once
+        on a fresh connection.  A connection-level failure *during* the call
+        only drops the cached client (so the next call reconnects) and then
+        propagates — it is NOT retried, because the request may already have
+        reached the server and re-issuing it could double a side effect.  DBus
+        method errors propagate untouched and keep the connection.
+        """
+        try:
+            client = await self._ensure_client()
+        except (EOFError, ConnectionError, BrokenPipeError, OSError):
+            await self._drop_client()
+            client = await self._ensure_client()
+        try:
+            return await make_coro(client)
+        except (EOFError, ConnectionError, BrokenPipeError, OSError):
+            await self._drop_client()
+            raise
+
+    def close(self) -> None:
+        """Tear down the persistent connection and loop.
+
+        Optional — short-lived CLI uses can rely on process exit, but a
+        long-lived holder (e.g. the SNMP agent) can call this for a clean
+        shutdown.
+        """
+        loop, self._loop = self._loop, None
+        if loop is not None and not loop.is_closed():
+            try:
+                loop.run_until_complete(self._drop_client())
+            except Exception:
+                pass
+            try:
+                loop.close()
+            except Exception:
+                pass
+
+    def __del__(self):
+        """Best-effort finalizer: reclaim the loop if ``close()`` was skipped.
+
+        Real callers are either a long-lived singleton (the SNMP agent) or a
+        short-lived CLI process, so this rarely matters — but if an instance is
+        dropped without ``close()`` it guarantees the persistent loop (and the
+        bus socket FDs the loop owns) are released promptly instead of lingering
+        until GC finalizers run.  Deliberately does NOT run async cleanup:
+        ``__del__`` may fire during interpreter shutdown where driving the loop
+        is unsafe, so we only close the loop object directly (which cascades to
+        its transports' sockets).  Fully guarded — a finalizer must never raise.
+        """
+        loop = getattr(self, '_loop', None)
+        if loop is not None and not loop.is_closed():
+            try:
+                loop.close()
+            except Exception:
+                pass
 
     # ── Control ──────────────────────────────────────────────────────────
 
@@ -1244,10 +1372,7 @@ class WWANClientSync:
         self, interface_number: int, config: Dict[str, Any]
     ) -> str:
         """Apply configuration.  See :meth:`WWANClient.set_configuration`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.set_configuration(interface_number, config)
-        return self._run(_inner())
+        return self._run(self._method("set_configuration", interface_number, config))
 
     def connect(self, interface_number: int) -> str:
         """Synchronous wrapper.  See :meth:`WWANClient.connect`."""
@@ -1270,24 +1395,18 @@ class WWANClientSync:
         timeout: float = 60.0, poll_interval: float = 1.0,
     ) -> bool:
         """Connect bearer and block until up.  See :meth:`WWANClient.connect_bearer_and_wait`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.connect_bearer_and_wait(
-                    interface_number, timeout=timeout,
-                    poll_interval=poll_interval)
-        return self._run(_inner())
+        return self._run(self._method(
+            "connect_bearer_and_wait", interface_number,
+            timeout=timeout, poll_interval=poll_interval))
 
     def disconnect_bearer_and_wait(
         self, interface_number: int,
         timeout: float = 30.0, poll_interval: float = 1.0,
     ) -> bool:
         """Disconnect bearer and block until down.  See :meth:`WWANClient.disconnect_bearer_and_wait`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.disconnect_bearer_and_wait(
-                    interface_number, timeout=timeout,
-                    poll_interval=poll_interval)
-        return self._run(_inner())
+        return self._run(self._method(
+            "disconnect_bearer_and_wait", interface_number,
+            timeout=timeout, poll_interval=poll_interval))
 
     def get_bearer_status(self, interface_number: int) -> str:
         """Poll bearer state.  See :meth:`WWANClient.get_bearer_status`."""
@@ -1299,24 +1418,16 @@ class WWANClientSync:
 
     def get_recent_alerts(self, limit: int = 50, interface_number: int = -1) -> list:
         """Fetch recent alerts.  See :meth:`WWANClient.get_recent_alerts`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.get_recent_alerts(limit=limit, interface_number=interface_number)
-        return self._run(_inner())
+        return self._run(self._method(
+            "get_recent_alerts", limit=limit, interface_number=interface_number))
 
     def clear_alerts(self, interface_number: int = -1) -> str:
         """Clear alert history.  See :meth:`WWANClient.clear_alerts`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.clear_alerts(interface_number=interface_number)
-        return self._run(_inner())
+        return self._run(self._method("clear_alerts", interface_number=interface_number))
 
     def ack_alert(self, alert_id: str) -> bool:
         """Acknowledge alert by id. See :meth:`WWANClient.ack_alert`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.ack_alert(alert_id=alert_id)
-        return self._run(_inner())
+        return self._run(self._method("ack_alert", alert_id=alert_id))
 
     def get_alerts_filtered(
         self,
@@ -1333,21 +1444,19 @@ class WWANClientSync:
         min_sequence: int = 0,
     ) -> list:
         """Filtered alerts helper.  See :meth:`WWANClient.get_alerts_filtered`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.get_alerts_filtered(
-                    limit=limit,
-                    interface_number=interface_number,
-                    alert_type=alert_type,
-                    category=category,
-                    code=code,
-                    source=source,
-                    state=state,
-                    severity=severity,
-                    contains=contains,
-                    min_sequence=min_sequence,
-                )
-        return self._run(_inner())
+        return self._run(self._method(
+            "get_alerts_filtered",
+            limit=limit,
+            interface_number=interface_number,
+            alert_type=alert_type,
+            category=category,
+            code=code,
+            source=source,
+            state=state,
+            severity=severity,
+            contains=contains,
+            min_sequence=min_sequence,
+        ))
 
     def monitor_alerts(
         self,
@@ -1366,23 +1475,21 @@ class WWANClientSync:
         use_json_signal: bool = False,
     ) -> list:
         """Block and collect matching alerts for *timeout* seconds."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.monitor_alerts(
-                    timeout=timeout,
-                    interface_number=interface_number,
-                    alert_type=alert_type,
-                    category=category,
-                    code=code,
-                    severity=severity,
-                    contains=contains,
-                    source=source,
-                    state=state,
-                    include_existing=include_existing,
-                    existing_limit=existing_limit,
-                    use_json_signal=use_json_signal,
-                )
-        return self._run(_inner())
+        return self._run(self._method(
+            "monitor_alerts",
+            timeout=timeout,
+            interface_number=interface_number,
+            alert_type=alert_type,
+            category=category,
+            code=code,
+            severity=severity,
+            contains=contains,
+            source=source,
+            state=state,
+            include_existing=include_existing,
+            existing_limit=existing_limit,
+            use_json_signal=use_json_signal,
+        ))
 
     def wait_for_alert(
         self,
@@ -1397,19 +1504,17 @@ class WWANClientSync:
         limit: int = 200,
     ) -> Optional[Dict[str, Any]]:
         """Blocking alert wait helper.  See :meth:`WWANClient.wait_for_alert`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.wait_for_alert(
-                    alert_type=alert_type,
-                    severity=severity,
-                    interface_number=interface_number,
-                    contains=contains,
-                    timeout=timeout,
-                    poll_interval=poll_interval,
-                    include_existing=include_existing,
-                    limit=limit,
-                )
-        return self._run(_inner())
+        return self._run(self._method(
+            "wait_for_alert",
+            alert_type=alert_type,
+            severity=severity,
+            interface_number=interface_number,
+            contains=contains,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            include_existing=include_existing,
+            limit=limit,
+        ))
 
     def get_failover_alerts(
         self,
@@ -1419,14 +1524,12 @@ class WWANClientSync:
         min_sequence: int = 0,
     ) -> list:
         """Failover-alert helper.  See :meth:`WWANClient.get_failover_alerts`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.get_failover_alerts(
-                    limit=limit,
-                    interface_number=interface_number,
-                    min_sequence=min_sequence,
-                )
-        return self._run(_inner())
+        return self._run(self._method(
+            "get_failover_alerts",
+            limit=limit,
+            interface_number=interface_number,
+            min_sequence=min_sequence,
+        ))
 
     def wait_for_failover_alert(
         self,
@@ -1438,16 +1541,14 @@ class WWANClientSync:
         limit: int = 200,
     ) -> Optional[Dict[str, Any]]:
         """Blocking failover-alert wait helper. See :meth:`WWANClient.wait_for_failover_alert`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.wait_for_failover_alert(
-                    interface_number=interface_number,
-                    timeout=timeout,
-                    poll_interval=poll_interval,
-                    include_existing=include_existing,
-                    limit=limit,
-                )
-        return self._run(_inner())
+        return self._run(self._method(
+            "wait_for_failover_alert",
+            interface_number=interface_number,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            include_existing=include_existing,
+            limit=limit,
+        ))
 
     # ── SMS ──────────────────────────────────────────────────────────────
 
@@ -1455,10 +1556,7 @@ class WWANClientSync:
         self, interface_number: int, recipient: str, message: str
     ) -> Dict[str, Any]:
         """Send SMS.  See :meth:`WWANClient.send_sms`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.send_sms(interface_number, recipient, message)
-        return self._run(_inner())
+        return self._run(self._method("send_sms", interface_number, recipient, message))
 
     def list_sms(self, interface_number: int) -> list:
         """List SMS.  See :meth:`WWANClient.list_sms`."""
@@ -1466,17 +1564,11 @@ class WWANClientSync:
 
     def read_sms(self, interface_number: int, message_id: int) -> Dict[str, Any]:
         """Read SMS.  See :meth:`WWANClient.read_sms`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.read_sms(interface_number, message_id)
-        return self._run(_inner())
+        return self._run(self._method("read_sms", interface_number, message_id))
 
     def delete_sms(self, interface_number: int, message_id: int) -> Dict[str, Any]:
         """Delete SMS.  See :meth:`WWANClient.delete_sms`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.delete_sms(interface_number, message_id)
-        return self._run(_inner())
+        return self._run(self._method("delete_sms", interface_number, message_id))
 
     def delete_all_sms(self, interface_number: int) -> Dict[str, Any]:
         """Delete all SMS.  See :meth:`WWANClient.delete_all_sms`."""
@@ -1490,12 +1582,8 @@ class WWANClientSync:
         poll_interval: float = 1.0,
     ) -> bool:
         """Block until bearer reaches *target*.  See :meth:`WWANClient.wait_for_bearer`."""
-        async def _inner():
-            async with WWANClient(bus_type=self._bus_type) as client:
-                return await client.wait_for_bearer(
-                    interface_number, target, timeout, poll_interval
-                )
-        return self._run(_inner())
+        return self._run(self._method(
+            "wait_for_bearer", interface_number, target, timeout, poll_interval))
 
     def is_connected(self, interface_number: int) -> bool:
         """Check if bearer is up.  See :meth:`WWANClient.is_connected`."""

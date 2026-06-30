@@ -731,6 +731,14 @@ class ModemStateMachine:
         # PropertiesChanged handlers on the same proxy/path.
         self._on_modem_found_in_progress = False
         self._signal_handlers_bound_modem_path = None
+        # The Properties interface the modem-level PropertiesChanged dispatcher
+        # is bound to.  Held so the handler can be explicitly unbound
+        # (off_properties_changed) before rebinding on a new proxy (SIM switch /
+        # modem re-enumeration) and on modem removal.  dbus_next does NOT remove
+        # the handler when the proxy is dropped, and the bound method keeps the
+        # FSM alive, so tracking only the path string (above) left no way to
+        # unbind — every SIM switch leaked a handler + match rule on the bus.
+        self._modem_properties_iface = None
 
         # Bus generation counter — incremented every time the FSM is re-bound
         # to a fresh ModemManager instance (update_bus_connection, fired by the
@@ -1309,7 +1317,10 @@ class ModemStateMachine:
                     self.proxy = None
                     self.modem_path = None
                     self.bearer_path = None
-                    self._signal_handlers_bound_modem_path = None
+                    # Actually remove the modem-level PropertiesChanged handler
+                    # from the bus (not just clear the path) so it cannot leak
+                    # across the switch's modem re-enumeration.
+                    self._unbind_modem_properties_handler()
                     return   # ← skip all the normal removal cleanup / state change
 
                 logger.warning("Current modem removed via signal, transitioning to scanning",
@@ -1355,7 +1366,10 @@ class ModemStateMachine:
                 self.proxy = None
                 self.modem_path = None
                 self.bearer_path = None
-                self._signal_handlers_bound_modem_path = None
+                # Actually remove the modem-level PropertiesChanged handler from
+                # the bus (not just clear the path) so it cannot leak across
+                # modem removal / re-add cycles.
+                self._unbind_modem_properties_handler()
 
                 # Cancel any ongoing initial configuration task
                 if hasattr(self, '_initial_config_task') and self._initial_config_task and not self._initial_config_task.done():
@@ -1761,6 +1775,53 @@ class ModemStateMachine:
             logger.warning(f"Could not get initial modem state: {e}",
                           extra={'interface_number': self.interface_number})
 
+    def _unbind_modem_properties_handler(self):
+        """Unbind the modem-level PropertiesChanged dispatcher.
+
+        dbus_next keeps the handler registered on the MessageBus until it is
+        explicitly removed; the bound method also keeps the proxy (and the whole
+        FSM) alive.  So we MUST off_properties_changed() rather than rely on
+        dropping the proxy reference.  Safe to call when nothing is bound.
+        """
+        iface = self._modem_properties_iface
+        if iface is not None:
+            try:
+                iface.off_properties_changed(self._dispatch_properties_changed)
+                logger.debug("Modem PropertiesChanged handler unbound",
+                            extra={'interface_number': self.interface_number,
+                                   'modem_path': self._signal_handlers_bound_modem_path})
+            except Exception as off_err:
+                logger.debug(f"off_properties_changed (modem) failed: {off_err}",
+                            extra={'interface_number': self.interface_number})
+        self._modem_properties_iface = None
+        self._signal_handlers_bound_modem_path = None
+
+    def _bind_modem_properties_handler(self, props_iface, modem_path, force=False):
+        """Bind the modem-level PropertiesChanged dispatcher without stacking.
+
+        Idempotent: if already bound to this exact ``modem_path`` (and not
+        ``force``), do nothing.  Otherwise unbind any prior registration FIRST
+        so handlers never accumulate on the bus across SIM switches / modem
+        re-enumerations.  ``force=True`` is used by the SIM-switch rebind, where
+        the proxy object is always new even if the path string happens to match.
+        """
+        if (not force
+                and self._signal_handlers_bound_modem_path == modem_path
+                and self._modem_properties_iface is not None):
+            logger.debug("PropertiesChanged handlers already bound for modem path",
+                        extra={'interface_number': self.interface_number,
+                               'modem_path': modem_path})
+            return
+        # Different/stale path, new proxy, or first bind — drop any prior
+        # registration before adding the new one.
+        self._unbind_modem_properties_handler()
+        props_iface.on_properties_changed(self._dispatch_properties_changed)
+        self._modem_properties_iface = props_iface
+        self._signal_handlers_bound_modem_path = modem_path
+        logger.info("PropertiesChanged signal monitoring enabled (Modem + 3GPP)",
+                   extra={'interface_number': self.interface_number,
+                          'modem_path': modem_path})
+
     async def on_modem_found(self):
         if not self.proxy:
             return
@@ -1778,17 +1839,9 @@ class ModemStateMachine:
         # registering multiple callbacks on the same interface may replace or
         # stack depending on the version, so we use one dispatcher instead.
             try:
-                if self._signal_handlers_bound_modem_path != self.modem_path:
-                    modem_properties_iface = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-                    modem_properties_iface.on_properties_changed(self._dispatch_properties_changed)
-                    self._signal_handlers_bound_modem_path = self.modem_path
-                    logger.info("PropertiesChanged signal monitoring enabled (Modem + 3GPP)",
-                               extra={'interface_number': self.interface_number,
-                                      'modem_path': self.modem_path})
-                else:
-                    logger.debug("PropertiesChanged handlers already bound for modem path",
-                                extra={'interface_number': self.interface_number,
-                                       'modem_path': self.modem_path})
+                self._bind_modem_properties_handler(
+                    self.proxy.get_interface("org.freedesktop.DBus.Properties"),
+                    self.modem_path)
             except Exception as e:
                 logger.error(f"Failed to set up signal handlers: {e}",
                             extra={'interface_number': self.interface_number})
@@ -3132,6 +3185,24 @@ class ModemStateMachine:
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None
         self._bearer_interface = None
+        # The Properties interface the bearer PropertiesChanged handler is bound
+        # to.  Held so _cleanup_bearer_signal_monitoring() can explicitly call
+        # off_properties_changed() — dbus_next does NOT auto-remove the handler
+        # when the proxy is dropped, and the bound method keeps the FSM alive,
+        # so without this every connect/disconnect flap leaks a match rule +
+        # handler (and the handler keeps firing on every future signal).
+        self._bearer_properties_iface = None
+
+        # SMS listener state.  _setup_sms_listener() runs on every CONNECTED
+        # entry, so it MUST be idempotent: dbus_next's Messaging.Added handler
+        # is not auto-removed when the proxy is dropped, so re-binding on each
+        # reconnect (same bus) would leak a proxy + match rule + handler per
+        # cycle.  Track the bound interface, handler and modem path so we can
+        # skip a redundant bind (same path) and explicitly off_added() the old
+        # one when the modem path changes.
+        self._sms_messaging_iface = None
+        self._sms_added_handler = None
+        self._sms_listener_bound_path = None
 
         # IPv6 bridging configuration
         self._bridging_config = self.parsed_config.raw_config.get(
@@ -7507,10 +7578,15 @@ class ModemStateMachine:
                                 # Re-enable signal monitoring
                                 await self._enable_signal_monitoring()
 
-                                # Re-register PropertiesChanged handler on the new proxy
+                                # Re-register PropertiesChanged handler on the new proxy.
+                                # force=True: the proxy is always new after a SIM
+                                # switch (modem re-enumerates), so rebind even if
+                                # the path string matches — and unbind the old
+                                # registration first so it cannot leak on the bus.
                                 try:
-                                    new_props_iface = proxy.get_interface("org.freedesktop.DBus.Properties")
-                                    new_props_iface.on_properties_changed(self._dispatch_properties_changed)
+                                    self._bind_modem_properties_handler(
+                                        proxy.get_interface("org.freedesktop.DBus.Properties"),
+                                        path, force=True)
                                 except Exception as sig_e:
                                     logger.warning(f"Could not re-register signal handlers after SIM switch: {sig_e}",
                                                   extra={'interface_number': self.interface_number})
@@ -8730,6 +8806,14 @@ class ModemStateMachine:
                     out, err = await asyncio.wait_for(
                         proc.communicate(), timeout=8)
                 except asyncio.TimeoutError:
+                    # Reap the child — a timed-out qmicli left unkilled leaks
+                    # an FD/zombie, and this path fires exactly when the modem
+                    # is wedged (i.e. repeatedly).
+                    try:
+                        proc.kill()
+                        await proc.wait()
+                    except Exception:
+                        pass
                     logger.info("qmicli serving-cell query timed out",
                                 extra={'interface_number': self.interface_number,
                                        'args': ' '.join(args)})
@@ -8915,6 +8999,14 @@ class ModemStateMachine:
                 )
                 out, err = await asyncio.wait_for(proc.communicate(), timeout=8)
             except asyncio.TimeoutError:
+                # Reap the child — a timed-out qmicli left unkilled leaks an
+                # FD/zombie, and this path fires exactly when the modem is
+                # wedged (i.e. repeatedly).
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except Exception:
+                    pass
                 logger.info("qmicli current-APN query timed out",
                             extra={'interface_number': self.interface_number})
                 return ''
@@ -12576,7 +12668,10 @@ class ModemStateMachine:
         self.initial_configuration_in_progress = False
         self.registration_handling_in_progress = False
         self._on_modem_found_in_progress = False
-        self._signal_handlers_bound_modem_path = None
+        # Unbind the modem-level PropertiesChanged handler.  The bus is being
+        # swapped, but explicitly unbinding drops the handler and our reference
+        # to the old-bus interface rather than relying on GC.
+        self._unbind_modem_properties_handler()
 
         # 3. Cancel every tracked background task so nothing keeps poking the
         #    dead bus.  Each is best-effort and guarded.
@@ -13794,8 +13889,20 @@ class ModemStateMachine:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
-                stdout, stderr = await asyncio.wait_for(result.communicate(),
-                                                       timeout=self.interface_up_timeout)
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        result.communicate(),
+                        timeout=self.interface_up_timeout)
+                except asyncio.TimeoutError:
+                    # Reap the child on timeout — without kill()+wait() the
+                    # subprocess transport leaks an FD/zombie every time this
+                    # fires.  Re-raise so the outer handler logs the timeout.
+                    try:
+                        result.kill()
+                        await result.wait()
+                    except Exception:
+                        pass
+                    raise
 
                 if result.returncode == 0:
                     logger.info(f"Interface {interface_name} set UP successfully",
@@ -14142,6 +14249,11 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'bearer_path': self.bearer_path})
 
+            # Idempotent: tear down any prior binding first so a second setup
+            # without an intervening stop (or a bearer-path change) can never
+            # stack a second handler on the bus.
+            self._cleanup_bearer_signal_monitoring()
+
             # Get bearer proxy and interface
             introspect = await self.bus.introspect("org.freedesktop.ModemManager1", self.bearer_path)
             self._bearer_proxy = self.bus.get_proxy_object("org.freedesktop.ModemManager1", self.bearer_path, introspect)
@@ -14152,11 +14264,12 @@ class ModemStateMachine:
 
             # Use the correct dbus_next Properties interface method
             bearer_properties_iface.on_properties_changed(self._handle_bearer_properties_changed)
+            # Hold the Properties interface so cleanup can explicitly unbind the
+            # handler (off_properties_changed).  Without this the handler — and
+            # the FSM it references — leaks on every connect/disconnect cycle.
+            self._bearer_properties_iface = bearer_properties_iface
             logger.info("Using on_properties_changed method for D-Bus signals",
                        extra={'interface_number': self.interface_number})
-
-            # Store reference for cleanup
-
 
             logger.info("Bearer signal monitoring active",
                        extra={'interface_number': self.interface_number})
@@ -14168,16 +14281,29 @@ class ModemStateMachine:
 
 
     def _cleanup_bearer_signal_monitoring(self):
-        """Clean up bearer D-Bus signal monitoring"""
+        """Clean up bearer D-Bus signal monitoring.
+
+        dbus_next does NOT remove a PropertiesChanged handler when the proxy
+        reference is dropped — the handler stays registered on the MessageBus
+        (along with its AddMatch rule) and, being a bound method, keeps the
+        whole FSM alive.  So we MUST explicitly off_properties_changed().
+        Skipping this leaks a handler + match rule on every connect/disconnect
+        flap, and every leaked handler keeps firing on all future signals —
+        super-linear CPU/memory growth under signal churn.
+        """
         try:
-            if hasattr(self, '_bearer_interface'):
-                # Note: dbus_next signal handlers are automatically cleaned up when the proxy is destroyed
-                logger.debug("Bearer signal monitoring cleaned up",
-                           extra={'interface_number': self.interface_number})
-
-
+            if self._bearer_properties_iface is not None:
+                try:
+                    self._bearer_properties_iface.off_properties_changed(
+                        self._handle_bearer_properties_changed)
+                    logger.debug("Bearer PropertiesChanged handler unbound",
+                               extra={'interface_number': self.interface_number})
+                except Exception as off_err:
+                    logger.debug(f"off_properties_changed failed: {off_err}",
+                               extra={'interface_number': self.interface_number})
 
             # Clear references
+            self._bearer_properties_iface = None
             self._bearer_proxy = None
             self._bearer_interface = None
 
@@ -17050,6 +17176,18 @@ class ModemStateMachine:
         """Subscribe to ModemManager Messaging.Added signal for incoming SMS."""
         if not self.modem_path:
             return
+        # Idempotent: this runs on every CONNECTED entry.  If we are already
+        # bound to the Messaging.Added signal for THIS modem path, do nothing —
+        # re-binding would stack a second handler on the live bus (dbus_next
+        # does not auto-remove it), leaking a proxy + match rule + handler on
+        # every reconnect.  If we were bound to a DIFFERENT (stale) path, unbind
+        # that first.
+        if self._sms_listener_bound_path == self.modem_path:
+            logger.debug("SMS listener already bound for modem path — skipping",
+                        extra={'interface_number': self.interface_number,
+                               'modem_path': self.modem_path})
+            return
+        self._cleanup_sms_listener()
         try:
             introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
             proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, introspect)
@@ -17061,6 +17199,11 @@ class ModemStateMachine:
                     asyncio.ensure_future(self._handle_incoming_sms(path))
 
             messaging.on_added(on_sms_added)
+            # Hold the interface + handler + path so a later setup can unbind
+            # (off_added) instead of leaking this registration.
+            self._sms_messaging_iface = messaging
+            self._sms_added_handler = on_sms_added
+            self._sms_listener_bound_path = self.modem_path
             logger.info("SMS listener registered",
                        extra={'interface_number': self.interface_number})
 
@@ -17070,6 +17213,28 @@ class ModemStateMachine:
         except Exception as e:
             logger.warning(f"Could not set up SMS listener: {e}",
                           extra={'interface_number': self.interface_number})
+
+    def _cleanup_sms_listener(self):
+        """Unbind the Messaging.Added handler.
+
+        dbus_next keeps the handler registered on the MessageBus until it is
+        explicitly removed, and the bound closure keeps the proxy (and FSM)
+        alive — so we must off_added() rather than rely on dropping the proxy.
+        """
+        try:
+            if (self._sms_messaging_iface is not None
+                    and self._sms_added_handler is not None):
+                try:
+                    self._sms_messaging_iface.off_added(self._sms_added_handler)
+                    logger.debug("SMS Added handler unbound",
+                               extra={'interface_number': self.interface_number})
+                except Exception as off_err:
+                    logger.debug(f"off_added failed: {off_err}",
+                               extra={'interface_number': self.interface_number})
+        finally:
+            self._sms_messaging_iface = None
+            self._sms_added_handler = None
+            self._sms_listener_bound_path = None
 
     async def _drain_existing_sms(self):
         """Import any SMS already stored on the SIM into our flat-file store."""

@@ -90,6 +90,28 @@ RemoveIPC=true
 # Allow D-Bus communication
 SupplementaryGroups=messagebus
 
+# Resource limits.
+#
+# This service runs as root with no sandboxing, so an unbounded memory
+# leak here would let the *kernel* OOM-killer pick a victim system-wide
+# (it could reap dbus, sshd, ModemManager,...), taking the whole box
+# down instead of just us.  Cap our own cgroup so a runaway is contained:
+#   - MemoryHigh: soft limit -- the kernel throttles and reclaims hard
+#     against us once we cross it, giving a leak a chance to back off
+#     without a kill.
+#   - MemoryMax: hard ceiling -- if we blow past this we are OOM-killed
+#     in isolation and systemd restarts us (Restart=on-failure), which is
+#     a clean, logged, single-service event rather than a whole-system
+#     OOM storm.
+#   - OOMScoreAdjust: bias the global OOM-killer toward us, so if the box
+#     does run out of memory for any reason, this service is the
+#     preferred victim ahead of sshd / dbus / the routing daemons.
+# Normal steady-state RSS is well under 128M; these are headroom, not a
+# tight fit.  Raise them if a future feature legitimately needs more.
+MemoryHigh=256M
+MemoryMax=384M
+OOMScoreAdjust=500
+
 # Environment
 Environment=PYTHONPATH=/usr/lib/python3/dist-packages
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
