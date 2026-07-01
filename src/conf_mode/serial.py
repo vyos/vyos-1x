@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import json
 import shutil
@@ -45,6 +46,9 @@ from vyos.configdict import is_node_changed
 CERT_PATH = Path('/run/vyos_pki')
 SERIAL_PATH = Path('/run/serial')
 SERIAL_SERVICE = 'iolan-monitor.service'
+
+PROC = Path('/proc')
+LOGIN_SERVICE_EXE = 'iol_direct'
 
 def get_config(config=None):
     if config:
@@ -104,9 +108,63 @@ def get_config(config=None):
 
     return proxy
 
+def get_ppid(pid):
+    try:
+        for line in (PROC / str(pid) / 'status').read_text().splitlines():
+            if line.startswith('PPid:'):
+                return int(line.split()[1])
+    except Exception:
+        return None
+    return None
+
+def is_login(pid):
+    try:
+        return Path(f'/proc/{pid}/exe').resolve().name == LOGIN_SERVICE_EXE
+    except Exception:
+        return False
+
+def get_ttyS_from_pid(pid):
+    fd_dir = PROC/str(pid)/'fd'
+    if not fd_dir.exists():
+        return None
+    try:
+        for fd in fd_dir.iterdir():
+            try:
+                target = fd.readlink()
+                if target.name.startswith('ttyS') and target.parent == Path('/dev'):
+                    return str(target.name)
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    return None
+
+def resolve_device_from_leaf_pid(pid):
+    while pid and pid != 1:
+        if is_login(pid):
+            return get_ttyS_from_pid(pid)
+        pid = get_ppid(pid)
+    return None
+
+def get_vbash_pid_from_temp_config_dir():
+    temp_config_dir = os.environ.get('VYATTA_TEMP_CONFIG_DIR', '')
+    pid_match = re.search(r'new_config_(\d+)$', temp_config_dir)
+    if not pid_match:
+        return None
+
+    return int(pid_match.group(1))
+
 def verify(proxy):
     if not proxy:
         return None
+
+    conf_session_device = resolve_device_from_leaf_pid(get_vbash_pid_from_temp_config_dir())
+
+    if conf_session_device:
+        affected_devices = set(proxy.get('serial_restart', [])) | set(proxy.get('serial_remove', []))
+        if conf_session_device in affected_devices:
+            raise ConfigError(f'Attempting to change config on current serial port: {conf_session_device}')
 
     if 'device' in proxy:
         for device, device_conf in proxy['device'].items():
