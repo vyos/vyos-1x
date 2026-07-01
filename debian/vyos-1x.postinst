@@ -259,6 +259,17 @@ systemctl enable vyos-config-cloud-init.service
 # Enable Podman API
 systemctl enable podman.service
 
+# Enable WWAN interface manager D-Bus service
+systemctl enable igos-wwan-manager.service
+
+# Disable the system-wide dnsmasq instance — VyOS spawns scoped dnsmasq
+# instances per-feature (DNS forwarding, DHCP server, WWAN ip-passthrough)
+# with --bind-interfaces.  The default Debian unit binds to *:67 and would
+# steal the DHCP port from any of these.  The dnsmasq binary is still
+# required (pulled in via Depends) so the per-feature instances can spawn
+# it directly.
+systemctl disable --now dnsmasq.service 2>/dev/null || true
+
 # Generate API GraphQL schema
 /usr/libexec/vyos/services/api/graphql/generate/generate_schema.py
 

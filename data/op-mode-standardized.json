@@ -28,6 +28,7 @@
 "reset_vpn.py",
 "load-balancing_haproxy.py",
 "route.py",
+"show_wwan.py",
 "storage.py",
 "stp.py",
 "system.py",

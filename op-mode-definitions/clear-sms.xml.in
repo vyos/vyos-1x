@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="interfaces">
+        <properties>
+          <help>Clear interface-related data</help>
+        </properties>
+        <children>
+          <node name="wwan">
+            <properties>
+              <help>Clear Wireless Modem (WWAN) SMS data</help>
+            </properties>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>WWAN interface name</help>
+                  <completionHelp>
+                    <path>interfaces wwan</path>
+                    <script>cd /sys/class/net; ls -d wwan* 2>/dev/null</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="sms">
+                    <properties>
+                      <help>Clear all SMS messages</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/wwan_sms.py delete_all_sms --interface="$4"</command>
+                    <children>
+                      <node name="message">
+                        <properties>
+                          <help>Clear a specific SMS message</help>
+                        </properties>
+                        <children>
+                          <virtualTagNode>
+                            <properties>
+                              <help>Clear a specific SMS message by ID</help>
+                              <completionHelp>
+                                <list>&lt;1-999&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/wwan_sms.py delete_sms --interface="$4" --message-id="$7"</command>
+                          </virtualTagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+                </virtualTagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

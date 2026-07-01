@@ -10,6 +10,9 @@ KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"
 # ignore "secondary" monitor interfaces of mac80211 drivers
 KERNEL=="wlan*", ATTRS{type}=="803",	GOTO="vyos_net_end"
 
+# Skip interfaces already pinned by rule 63 (igos-eth-port-id / igos-wwan-port-id)
+ENV{IGOS_IFNAME}=="?*",     GOTO="vyos_net_end"
+
 # If using VyOS predefined names
 ENV{VYOS_IFNAME}!="eth*",	GOTO="end_vyos_predef_names"
 

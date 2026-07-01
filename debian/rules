@@ -48,6 +48,9 @@ override_dh_gencontrol:
 	dh_gencontrol -- -v$(BASE_VERSION)-$(COMMIT_COUNT)-$(COMMIT_ID)$(DIRTY_FLAG)
 
 override_dh_auto_build:
+	# Install pip requirements for packages not available as Debian packages
+	mkdir -p $(DIR)/usr/lib/python3/dist-packages
+	pip3 install --target $(DIR)/usr/lib/python3/dist-packages -r requirements.txt
 	make all
 
 # PSL: The VyOS build environment apparently assumes that the build unit

@@ -1,0 +1,133 @@
+[Unit]
+Description=iGOS WWAN Interface Manager
+Documentation=man:igos-wwan-manager(8)
+#
+# Lifecycle (read this before touching the unit):
+#
+#   This service is intentionally NOT started at boot by systemd. There
+#   is no [Install] section and no WantedBy=.  The service is started
+#   on-demand by the VyOS conf_mode script
+#   (src/conf_mode/interfaces_wwan.py) when the first `interfaces wwan`
+#   node is committed -- and at boot only via the same path when
+#   vyos-router.service replays the saved configuration.
+#
+#   Rationale:
+#     - With no wwan configuration there is nothing for this service to
+#       do, so it must not run.
+#     - This service is what starts ModemManager (it dbus-calls MM on
+#       startup).  Starting it unconditionally at boot would mean MM
+#       runs on every device whether or not there is a modem
+#       configured.
+#
+# IMPORTANT: do NOT add Wants=/Requires=ModemManager.service.
+#
+#   Pulling MM in alongside us starts it in parallel with our After=
+#   ordering gates, which races udev coldplug.  If MM enumerates the
+#   modem's usb_device before 60-Perle-usb-modem.rules has stamped
+#   ID_MM_PHYSDEV_UID on it, MM caches the modem with no UID forever
+#   (it does not re-read the udev db).  We talk to MM over D-Bus, so by
+#   the time we call it udev coldplug has long since completed.
+#
+# After= below provides ordering only -- it does NOT pull these units
+# in.  We rely on dbus.service being up (it always is by multi-user),
+# and on ModemManager.service: we don't pull MM in, but if it does
+# happen to be activating, ordering ourselves after it avoids a startup
+# race with MM's D-Bus name acquisition.
+#
+# LOAD-BEARING FOR GRACEFUL SHUTDOWN -- do NOT remove
+# After=ModemManager.service:
+#
+#   systemd reverses ordering dependencies at stop time, so ordering
+#   ourselves After= MM means systemd stops *us* before MM (and before
+#   dbus.service) in any full-system shutdown/reboot transaction.  That
+#   is precisely what lets fsm.shutdown() issue its Simple.Disconnect()
+#   D-Bus call to tear the bearer down gracefully while MM and the bus
+#   are still alive.  Plain After= ordering is honored on the stop side
+#   even without Wants=/Requires=, as long as both units stop in the
+#   same transaction.  Drop this line and shutdown races MM -- MM may go
+#   down first and the bearer never gets a clean disconnect.
+#
+#   (This does not cover a standalone `systemctl stop ModemManager` or
+#   an MM crash; those are handled at runtime by the MM-restart recovery
+#   path, and the shutdown disconnect is try/except-wrapped + bounded.)
+#
+# NOTE: do NOT add After=vyos-router.service.  This service is started
+# *by* the conf_mode script that runs inside vyos-router, so adding it
+# here would either deadlock or be silently ignored (systemd cannot
+# order a unit after a unit that is starting it).
+StartLimitBurst=3
+StartLimitIntervalSec=300
+After=dbus.service ModemManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/python3/dist-packages/vyos/utils/wwan/interfaces_wwan_main.py
+Restart=on-failure
+RestartSec=30
+# Backstop for graceful stop.  On SIGTERM the manager runs an in-process
+# bounded shutdown (asyncio.wait_for(manager.shutdown(), 20s)) before
+# disconnecting from D-Bus.  On a real system reboot/poweroff it then
+# GPIO-resets every modem after that disconnect (bounded to 8s).  Keep
+# this comfortably above that 20s + 8s worst case so the clean path wins,
+# while still failing well under systemd's 90s default if the process
+# wedges entirely.
+TimeoutStopSec=45
+User=root
+Group=vyattacfg
+
+# Security settings
+# Note: This service must configure network interfaces (ip addr/route/link),
+# write sysctl (/proc/sys/net/) and sysfs (/sys/class/net/) values, and
+# read the VyOS config tree.  Heavy sandboxing is not feasible.
+ProtectHome=read-only
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RemoveIPC=true
+
+# Allow D-Bus communication
+SupplementaryGroups=messagebus
+
+# Resource limits.
+#
+# This service runs as root with no sandboxing, so an unbounded memory
+# leak here would let the *kernel* OOM-killer pick a victim system-wide
+# (it could reap dbus, sshd, ModemManager,...), taking the whole box
+# down instead of just us.  Cap our own cgroup so a runaway is contained:
+#   - MemoryHigh: soft limit -- the kernel throttles and reclaims hard
+#     against us once we cross it, giving a leak a chance to back off
+#     without a kill.
+#   - MemoryMax: hard ceiling -- if we blow past this we are OOM-killed
+#     in isolation and systemd restarts us (Restart=on-failure), which is
+#     a clean, logged, single-service event rather than a whole-system
+#     OOM storm.
+#   - OOMScoreAdjust: bias the global OOM-killer toward us, so if the box
+#     does run out of memory for any reason, this service is the
+#     preferred victim ahead of sshd / dbus / the routing daemons.
+# Normal steady-state RSS is well under 128M; these are headroom, not a
+# tight fit.  Raise them if a future feature legitimately needs more.
+MemoryHigh=256M
+MemoryMax=384M
+OOMScoreAdjust=500
+
+# Environment
+Environment=PYTHONPATH=/usr/lib/python3/dist-packages
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+# Logging
+SyslogIdentifier=igos-wwan-manager
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=igos-wwan-manager
+
+# NOTE: NO [Install] SECTION ON PURPOSE.
+#
+# This unit must not be enabled (systemctl enable) and must not have a
+# WantedBy=multi-user.target.  It is started exclusively by the VyOS
+# conf_mode script src/conf_mode/interfaces_wwan.py on the first
+# wwan-interface commit -- and at boot only when vyos-router.service
+# replays a saved wwan configuration through that same path.  See the
+# extended lifecycle comment in [Unit] above.

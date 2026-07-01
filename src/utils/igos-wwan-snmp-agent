@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# igos-wwan-snmp-agent — net-snmp pass_persist subagent for the VyOS WWAN
+# enhanced subsystem.  Wired into snmpd via:
+#
+#     pass_persist .1.3.6.1.4.1.44641.1 /usr/bin/igos-wwan-snmp-agent
+#
+# snmpd spawns this script on demand, communicates over stdin/stdout,
+# and respawns it if it exits.  All real logic lives in
+# vyos.utils.wwan.snmp_agent.
+
+from vyos.utils.wwan.snmp_agent import main
+
+if __name__ == '__main__':
+    main()

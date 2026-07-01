@@ -26,72 +26,155 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=wirelessmodem</command>
                 <children>
-                  <leafNode name="capabilities">
+                  <leafNode name="detail">
                     <properties>
-                      <help>Show WWAN module capabilities</help>
+                      <help>Show all WWAN modem information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --capabilities</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_detail --interface="$4"</command>
                   </leafNode>
-                  <leafNode name="firmware">
+                  <leafNode name="hardware">
                     <properties>
-                      <help>Show WWAN module firmware</help>
+                      <help>Show WWAN modem hardware information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --firmware</command>
-                  </leafNode>
-                  <leafNode name="imei">
-                    <properties>
-                      <help>Show WWAN module IMEI/ESN/MEID</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imei</command>
-                  </leafNode>
-                  <leafNode name="imsi">
-                    <properties>
-                      <help>Show WWAN module IMSI</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imsi</command>
-                  </leafNode>
-                  <leafNode name="model">
-                    <properties>
-                      <help>Show WWAN module manufacturer</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --model</command>
-                  </leafNode>
-                  <leafNode name="msisdn">
-                    <properties>
-                      <help>Show WWAN module MSISDN</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --msisdn</command>
-                  </leafNode>
-                  <leafNode name="revision">
-                    <properties>
-                      <help>Show WWAN module revision</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --revision</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_hardware --interface="$4"</command>
                   </leafNode>
                   <leafNode name="signal">
                     <properties>
-                      <help>Show WWAN module RF signal info</help>
+                      <help>Show WWAN RF signal information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --signal</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_signal --interface="$4"</command>
                   </leafNode>
                   <leafNode name="sim">
                     <properties>
-                      <help>Show WWAN module connected SIM card information</help>
+                      <help>Show WWAN SIM card information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --sim</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_sim --interface="$4"</command>
                   </leafNode>
-                  <leafNode name="detail">
+                  <leafNode name="status">
                     <properties>
-                      <help>Show WWAN module detailed information summary</help>
+                      <help>Show WWAN operational status</help>
                     </properties>
-                    <command>bash -c "if cli-shell-api existsActive interfaces wwan $4; then mmcli --modem ${4#wwan}; else echo \"Interface \"$4\" unconfigured!\"; fi"</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_status --interface="$4"</command>
                   </leafNode>
-                  <leafNode name="log">
+                  <node name="wait-failover-alert">
                     <properties>
-                      <help>Show interface log for specified interface</help>
+                      <help>Wait for next WWAN failover alert</help>
                     </properties>
-                    <command>bash -c 'echo Unimplemented'</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_wait_failover --interface="$4"</command>
+                    <children>
+                      <node name="timeout">
+                        <properties>
+                          <help>Set wait timeout in seconds</help>
+                        </properties>
+                        <children>
+                          <tagNode name="seconds">
+                            <properties>
+                              <help>Timeout in seconds (1-600)</help>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-600"/>
+                              </constraint>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_wait_failover --interface="$4" --timeout="$7"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="monitor-alerts">
+                    <properties>
+                      <help>Monitor WWAN alerts for a time window</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4"</command>
+                    <children>
+                      <node name="timeout">
+                        <properties>
+                          <help>Set monitor timeout in seconds</help>
+                        </properties>
+                        <children>
+                          <tagNode name="seconds">
+                            <properties>
+                              <help>Timeout in seconds (1-600)</help>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-600"/>
+                              </constraint>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --timeout="$7"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                      <node name="severity">
+                        <properties>
+                          <help>Filter by alert severity</help>
+                        </properties>
+                        <children>
+                          <leafNode name="info">
+                            <properties><help>Informational alerts</help></properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --severity="info"</command>
+                          </leafNode>
+                          <leafNode name="warning">
+                            <properties><help>Warning alerts</help></properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --severity="warning"</command>
+                          </leafNode>
+                          <leafNode name="critical">
+                            <properties><help>Critical alerts</help></properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --severity="critical"</command>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <node name="category">
+                        <properties>
+                          <help>Filter by alert category</help>
+                        </properties>
+                        <children>
+                          <leafNode name="connectivity">
+                            <properties><help>Connectivity alerts</help></properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="connectivity"</command>
+                          </leafNode>
+                          <leafNode name="sim">
+                            <properties><help>SIM alerts</help></properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="sim"</command>
+                          </leafNode>
+                          <leafNode name="usage">
+                            <properties><help>Usage alerts</help></properties>
+                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="usage"</command>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="sms">
+                    <properties>
+                      <help>Show SMS messages</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/wwan_sms.py show_sms --interface="$4"</command>
+                    <children>
+                      <node name="message">
+                        <properties>
+                          <help>Show a specific SMS message</help>
+                        </properties>
+                        <children>
+                          <virtualTagNode>
+                            <properties>
+                              <help>Show a specific SMS message by ID</help>
+                              <completionHelp>
+                                <list>&lt;1-999&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/wwan_sms.py show_sms_message --interface="$4" --message-id="$7"</command>
+                          </virtualTagNode>
+                        </children>
+                      </node>
+                      <virtualTagNode>
+                        <properties>
+                          <help>Show a specific SMS message by ID</help>
+                          <completionHelp>
+                            <list>&lt;1-999&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/wwan_sms.py show_sms_message --interface="$4" --message-id="$6"</command>
+                      </virtualTagNode>
+                    </children>
+                  </node>
                   #include <include/show-interface-type-event-log.xml.i>
                 </children>
               </virtualTagNode>

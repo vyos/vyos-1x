@@ -10,6 +10,8 @@ Build-Depends:
   iproute2,
   libzmq3-dev,
   python3 (>= 3.10),
+  python3-pip,
+  python3-setuptools,
 # For libvyosconfig
   libpcre2-dev,
   libffi-dev,
@@ -22,6 +24,7 @@ Build-Depends:
   python3-certbot-nginx,
   python3-pam,
   python3-dbus,
+  python3-dbus-next | python3-pip,
   python3-pyroute2,
   python3-voluptuous,
 # For generating command definitions
@@ -97,6 +100,7 @@ Depends:
   python3-voluptuous,
   python3-xmltodict,
   python3-zmq,
+## Note: python3-dbus-next is installed via pip from requirements.txt
 ## End of Python libraries
 ## Basic System services and utilities
   coreutils,
@@ -166,6 +170,15 @@ Depends:
   modemmanager,
   usb-modeswitch,
   libqmi-utils,
+# dnsmasq is required by ip-passthrough — the FSM spawns a per-interface
+# scoped instance to hand the carrier IPv4/IPv6 to one downstream device
+# (DOCSIS-modem-style passthrough). dnsmasq-utils provides dhcp_release2
+# for DHCPFORCERENEW (RFC 3203), used to instantly migrate the downstream
+# lease when the carrier rotates the WAN IP. The helper is optional at
+# runtime (graceful fallback to natural lease expiry) but recommended for
+# sub-second IP takeover.
+  dnsmasq,
+  dnsmasq-utils,
 # End "interfaces wwan"
 # For "interfaces openvpn"
   openvpn,
@@ -415,6 +428,13 @@ Depends:
 ## Serial nfs remote port buffer
   nfs-common
 ## End serial nfs remote port buffer
+Recommends:
+# Used by vyos.hardware (GPIO control for cellular modem reset, SIM
+# select, RS-232/485 transceiver mode, etc.). Lazy-imported, so absence
+# only matters on images whose flavor wires up a pinmap overlay; cloud,
+# VM and x86 generic images are unaffected. Pulled in for hardware
+# flavors via the igOS platform fragments in vyos-build.
+  python3-libgpiod,
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 

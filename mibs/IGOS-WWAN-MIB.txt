@@ -1,0 +1,1161 @@
+IGOS-WWAN-MIB DEFINITIONS ::= BEGIN
+
+-- ============================================================================
+-- IGOS-WWAN-MIB
+--
+-- Cellular / WWAN interface management MIB for VyOS.
+--
+-- Models a multi-slot, dual-SIM cellular modem with failover/failback,
+-- per-SIM data limits, signal quality, registration state, bearer state,
+-- IPv6 prefix delegation status, and IP-passthrough status.
+--
+-- Field names and semantics deliberately track CISCO-WAN-3G-MIB and
+-- CISCO-WAN-CELL-EXT-MIB so that existing NMS templates (LibreNMS,
+-- Observium, Zabbix, PRTG) need only an OID re-map to ingest.
+--
+-- Indexing model:
+--   igosWwanIfTable          INDEX { ifIndex }
+--   igosWwanSimTable         INDEX { ifIndex, igosWwanSimSlot }
+--   igosWwanRadioTable       INDEX { ifIndex }   (current radio metrics)
+--   igosWwanBearerTable      INDEX { ifIndex }   (current PDN bearer)
+--   igosWwanPdTable          INDEX { ifIndex, igosWwanPdInstance,
+--                                    igosWwanPdIfIndex }
+--
+-- Enterprise OID: { enterprises 44641 } = IGOS
+-- ============================================================================
+
+    IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
+        Integer32, Unsigned32, Counter64, TimeTicks, enterprises
+            FROM SNMPv2-SMI
+        TEXTUAL-CONVENTION, DisplayString, TruthValue, DateAndTime,
+        MacAddress
+            FROM SNMPv2-TC
+        MODULE-COMPLIANCE, OBJECT-GROUP, NOTIFICATION-GROUP
+            FROM SNMPv2-CONF
+        InterfaceIndex, ifIndex
+            FROM IF-MIB
+        InetAddress, InetAddressType, InetAddressPrefixLength
+            FROM INET-ADDRESS-MIB
+    ;
+
+    igosWwanMIB MODULE-IDENTITY
+        LAST-UPDATED "202606300000Z"
+        ORGANIZATION "IGOS"
+        CONTACT-INFO
+            "IGOS - https://igos.io"
+        DESCRIPTION
+            "MIB for the VyOS enhanced WWAN/cellular interface
+             management subsystem.  Covers multi-slot SIM
+             management, failover/failback, signal quality,
+             registration, bearer, data usage, IPv6 PD and
+             IP-passthrough."
+        REVISION     "202606300000Z"
+        DESCRIPTION
+            "Add igosWwanRadioRscp (UMTS/HSPA received signal code
+             power).  Remove the unused igosWwanDataUsage placeholder
+             node (per-SIM usage lives in igosWwanSimTable)."
+        REVISION     "202605010000Z"
+        DESCRIPTION  "Initial revision."
+        ::= { enterprises 44641 1 }
+
+    -- ----------------------------------------------------------------
+    -- Top-level structure
+    -- ----------------------------------------------------------------
+    igosWwanObjects        OBJECT IDENTIFIER ::= { igosWwanMIB 1 }
+    igosWwanNotifications  OBJECT IDENTIFIER ::= { igosWwanMIB 2 }
+    igosWwanConformance    OBJECT IDENTIFIER ::= { igosWwanMIB 3 }
+
+    igosWwanInterface      OBJECT IDENTIFIER ::= { igosWwanObjects 1 }
+    igosWwanSim            OBJECT IDENTIFIER ::= { igosWwanObjects 2 }
+    igosWwanRadio          OBJECT IDENTIFIER ::= { igosWwanObjects 3 }
+    igosWwanBearer         OBJECT IDENTIFIER ::= { igosWwanObjects 4 }
+    igosWwanFailover       OBJECT IDENTIFIER ::= { igosWwanObjects 5 }
+    -- { igosWwanObjects 6 } intentionally unassigned: per-SIM data-usage
+    -- counters live in igosWwanSimTable (columns 21-26), so no separate
+    -- data-usage subtree is needed.
+    igosWwanPd             OBJECT IDENTIFIER ::= { igosWwanObjects 7 }
+    igosWwanPassthrough    OBJECT IDENTIFIER ::= { igosWwanObjects 8 }
+
+    -- ----------------------------------------------------------------
+    -- Textual conventions
+    -- ----------------------------------------------------------------
+    IgosWwanFsmState ::= TEXTUAL-CONVENTION
+        STATUS       current
+        DESCRIPTION
+            "WWAN finite-state-machine state."
+        SYNTAX       INTEGER {
+                         unknown(0),
+                         disabled(1),
+                         initializing(2),
+                         simReady(3),
+                         registering(4),
+                         registered(5),
+                         connecting(6),
+                         connected(7),
+                         disconnecting(8),
+                         failed(9),
+                         retryBackoff(10),
+                         hardwareReset(11)
+                     }
+
+    IgosWwanRat ::= TEXTUAL-CONVENTION
+        STATUS       current
+        DESCRIPTION
+            "Radio access technology currently used by the bearer."
+        SYNTAX       INTEGER {
+                         unknown(0),
+                         gsm(1),
+                         gprs(2),
+                         edge(3),
+                         umts(4),
+                         hspa(5),
+                         hspaPlus(6),
+                         lte(7),
+                         lteAdvanced(8),
+                         nr5gNsa(9),
+                         nr5gSa(10)
+                     }
+
+    IgosWwanRegState ::= TEXTUAL-CONVENTION
+        STATUS       current
+        DESCRIPTION
+            "3GPP registration state."
+        SYNTAX       INTEGER {
+                         unknown(0),
+                         notRegistered(1),
+                         searching(2),
+                         registeredHome(3),
+                         registeredRoaming(4),
+                         denied(5),
+                         emergencyOnly(6)
+                     }
+
+    IgosWwanSimState ::= TEXTUAL-CONVENTION
+        STATUS       current
+        DESCRIPTION
+            "SIM slot state."
+        SYNTAX       INTEGER {
+                         unknown(0),
+                         absent(1),
+                         pinLocked(2),
+                         pukLocked(3),
+                         ready(4),
+                         active(5),
+                         disabled(6),
+                         error(7)
+                     }
+
+    IgosWwanFailoverReason ::= TEXTUAL-CONVENTION
+        STATUS       current
+        DESCRIPTION
+            "Reason a SIM-slot switch was triggered."
+        SYNTAX       INTEGER {
+                         none(0),
+                         signalLoss(1),
+                         registrationLost(2),
+                         registrationFlap(3),
+                         connectFailure(4),
+                         dataLimitReached(5),
+                         hardwareError(6),
+                         manualSwitch(7),
+                         primarySlotRecovered(8),  -- failback
+                         simAbsent(9)
+                     }
+
+    IgosWwanDataLimitAction ::= TEXTUAL-CONVENTION
+        STATUS       current
+        DESCRIPTION
+            "Action taken when a data limit is reached."
+        SYNTAX       INTEGER {
+                         none(0),
+                         disable(1),
+                         simFailover(2),
+                         simFailoverSticky(3)
+                     }
+
+    -- ================================================================
+    -- 1. Per-interface table
+    -- ================================================================
+    igosWwanIfTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanIfEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION
+            "One row per VyOS WWAN interface (wwan0, wwan1, ...)."
+        ::= { igosWwanInterface 1 }
+
+    igosWwanIfEntry OBJECT-TYPE
+        SYNTAX       IgosWwanIfEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "Per-interface row, indexed by ifIndex."
+        INDEX        { ifIndex }
+        ::= { igosWwanIfTable 1 }
+
+    IgosWwanIfEntry ::= SEQUENCE {
+        igosWwanIfFsmState              IgosWwanFsmState,
+        igosWwanIfManufacturer          DisplayString,
+        igosWwanIfModel                 DisplayString,
+        igosWwanIfFirmwareRevision      DisplayString,
+        igosWwanIfHardwareRevision      DisplayString,
+        igosWwanIfImei                  DisplayString,
+        igosWwanIfPrimarySlot           Integer32,
+        igosWwanIfActiveSlot            Integer32,
+        igosWwanIfStickyFailover        TruthValue,
+        igosWwanIfConnectionMode        INTEGER,
+        igosWwanIfNetworkMode           INTEGER,
+        igosWwanIfMtu                   Integer32,
+        igosWwanIfUptime                TimeTicks,
+        igosWwanIfLastEventTime         DateAndTime,
+        igosWwanIfLastEventDescription  DisplayString
+    }
+
+    igosWwanIfFsmState OBJECT-TYPE
+        SYNTAX       IgosWwanFsmState
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Current FSM state for this interface."
+        ::= { igosWwanIfEntry 1 }
+
+    igosWwanIfManufacturer OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..64))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Modem manufacturer (e.g. 'Quectel', 'Sierra Wireless')."
+        ::= { igosWwanIfEntry 2 }
+
+    igosWwanIfModel OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..64))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Modem model string."
+        ::= { igosWwanIfEntry 3 }
+
+    igosWwanIfFirmwareRevision OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..64))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Modem firmware revision."
+        ::= { igosWwanIfEntry 4 }
+
+    igosWwanIfHardwareRevision OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..64))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Modem hardware revision."
+        ::= { igosWwanIfEntry 5 }
+
+    igosWwanIfImei OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..32))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Modem IMEI (15 digits for 3GPP)."
+        ::= { igosWwanIfEntry 6 }
+
+    igosWwanIfPrimarySlot OBJECT-TYPE
+        SYNTAX       Integer32 (1..2)
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+            "Configured primary SIM slot (the slot the FSM
+             prefers to run on; failback returns here)."
+        ::= { igosWwanIfEntry 7 }
+
+    igosWwanIfActiveSlot OBJECT-TYPE
+        SYNTAX       Integer32 (1..2)
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+            "Currently active SIM slot.  Differs from
+             igosWwanIfPrimarySlot when failover is in effect."
+        ::= { igosWwanIfEntry 8 }
+
+    igosWwanIfStickyFailover OBJECT-TYPE
+        SYNTAX       TruthValue
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+            "TRUE if the active slot is held by a sticky
+             failover (data-limit action sim-failover-sticky)
+             and automatic failback is suppressed."
+        ::= { igosWwanIfEntry 9 }
+
+    igosWwanIfConnectionMode OBJECT-TYPE
+        SYNTAX       INTEGER {
+                         alwaysOn(1),
+                         connectOnDemand(2),
+                         dialOnDemand(3)
+                     }
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Configured connection mode."
+        ::= { igosWwanIfEntry 10 }
+
+    igosWwanIfNetworkMode OBJECT-TYPE
+        SYNTAX       INTEGER {
+                         auto(1),
+                         lte(2),
+                         nr5g(3),
+                         umts(4),
+                         gsm(5)
+                     }
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Modem RAT selection policy."
+        ::= { igosWwanIfEntry 11 }
+
+    igosWwanIfMtu OBJECT-TYPE
+        SYNTAX       Integer32 (68..1500)
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Effective MTU on the bearer."
+        ::= { igosWwanIfEntry 12 }
+
+    igosWwanIfUptime OBJECT-TYPE
+        SYNTAX       TimeTicks
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Time since the FSM entered its current state."
+        ::= { igosWwanIfEntry 13 }
+
+    igosWwanIfLastEventTime OBJECT-TYPE
+        SYNTAX       DateAndTime
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Wall-clock timestamp of the last FSM event."
+        ::= { igosWwanIfEntry 14 }
+
+    igosWwanIfLastEventDescription OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..255))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Human-readable description of the last FSM event."
+        ::= { igosWwanIfEntry 15 }
+
+    -- ================================================================
+    -- 2. Per-SIM-slot table  (multi-slot first-class)
+    -- ================================================================
+    igosWwanSimTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanSimEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION
+            "One row per (interface, SIM slot) pair.  A dual-SIM
+             modem produces two rows per ifIndex; the row whose
+             igosWwanSimSlot equals igosWwanIfActiveSlot is the
+             slot currently providing service."
+        ::= { igosWwanSim 1 }
+
+    igosWwanSimEntry OBJECT-TYPE
+        SYNTAX       IgosWwanSimEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "SIM slot row."
+        INDEX        { ifIndex, igosWwanSimSlot }
+        ::= { igosWwanSimTable 1 }
+
+    IgosWwanSimEntry ::= SEQUENCE {
+        igosWwanSimSlot                 Integer32,
+        igosWwanSimState                IgosWwanSimState,
+        igosWwanSimIsActive             TruthValue,
+        igosWwanSimIccid                DisplayString,
+        igosWwanSimImsi                 DisplayString,
+        igosWwanSimMsisdn               DisplayString,
+        igosWwanSimOperatorCode         DisplayString,   -- PLMN MCCMNC
+        igosWwanSimOperatorName         DisplayString,
+        igosWwanSimRoaming              TruthValue,
+        igosWwanSimRoamingAllowed       TruthValue,
+        igosWwanSimApn                  DisplayString,
+        igosWwanSimApnSource            INTEGER,
+        igosWwanSimAuthType             INTEGER,
+        igosWwanSimPdpType              INTEGER,
+        igosWwanSimRegState             IgosWwanRegState,
+        igosWwanSimConnectAttempts      Counter64,
+        igosWwanSimConnectFailures      Counter64,
+        igosWwanSimLastConnectTime      DateAndTime,
+        igosWwanSimLastDisconnectTime   DateAndTime,
+        igosWwanSimLastDisconnectCause  DisplayString,
+        igosWwanSimDataLimitBytes       Counter64,       -- 0 = unlimited
+        igosWwanSimDataLimitAction      IgosWwanDataLimitAction,
+        igosWwanSimDataUsedCycleBytes   Counter64,
+        igosWwanSimDataUsedTotalBytes   Counter64,
+        igosWwanSimBillingDate          Integer32,
+        igosWwanSimDataPercentUsed      Integer32
+    }
+
+    igosWwanSimSlot OBJECT-TYPE
+        SYNTAX       Integer32 (1..2)
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "Physical SIM slot number."
+        ::= { igosWwanSimEntry 1 }
+
+    igosWwanSimState OBJECT-TYPE
+        SYNTAX       IgosWwanSimState
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Lifecycle state of this SIM slot."
+        ::= { igosWwanSimEntry 2 }
+
+    igosWwanSimIsActive OBJECT-TYPE
+        SYNTAX       TruthValue
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+            "TRUE if this slot is the active slot for its interface."
+        ::= { igosWwanSimEntry 3 }
+
+    igosWwanSimIccid OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..22))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "ICCID printed on the SIM (19-20 digits)."
+        ::= { igosWwanSimEntry 4 }
+
+    igosWwanSimImsi OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..16))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "IMSI of the SIM."
+        ::= { igosWwanSimEntry 5 }
+
+    igosWwanSimMsisdn OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..32))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "MSISDN if known to the modem."
+        ::= { igosWwanSimEntry 6 }
+
+    igosWwanSimOperatorCode OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..8))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Serving PLMN MCCMNC (e.g. '302610')."
+        ::= { igosWwanSimEntry 7 }
+
+    igosWwanSimOperatorName OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..64))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Serving operator long name."
+        ::= { igosWwanSimEntry 8 }
+
+    igosWwanSimRoaming OBJECT-TYPE
+        SYNTAX       TruthValue
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "TRUE if currently registered on a non-home network."
+        ::= { igosWwanSimEntry 9 }
+
+    igosWwanSimRoamingAllowed OBJECT-TYPE
+        SYNTAX       TruthValue
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "TRUE if roaming is permitted by configuration."
+        ::= { igosWwanSimEntry 10 }
+
+    igosWwanSimApn OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..64))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "APN currently in use for this slot."
+        ::= { igosWwanSimEntry 11 }
+
+    igosWwanSimApnSource OBJECT-TYPE
+        SYNTAX       INTEGER {
+                         configured(1),
+                         lastConnected(2),
+                         androidDb(3),
+                         networkAssigned(4),
+                         unknown(5)
+                     }
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "How the active APN was selected."
+        ::= { igosWwanSimEntry 12 }
+
+    igosWwanSimAuthType OBJECT-TYPE
+        SYNTAX       INTEGER { none(1), pap(2), chap(3), both(4) }
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "PPP/PDN authentication method."
+        ::= { igosWwanSimEntry 13 }
+
+    igosWwanSimPdpType OBJECT-TYPE
+        SYNTAX       INTEGER { ipv4(1), ipv6(2), ipv4v6(3) }
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Configured PDP/PDN context type."
+        ::= { igosWwanSimEntry 14 }
+
+    igosWwanSimRegState OBJECT-TYPE
+        SYNTAX       IgosWwanRegState
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "3GPP registration state for this slot."
+        ::= { igosWwanSimEntry 15 }
+
+    igosWwanSimConnectAttempts OBJECT-TYPE
+        SYNTAX       Counter64
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Cumulative connect attempts on this slot."
+        ::= { igosWwanSimEntry 16 }
+
+    igosWwanSimConnectFailures OBJECT-TYPE
+        SYNTAX       Counter64
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Cumulative connect failures on this slot."
+        ::= { igosWwanSimEntry 17 }
+
+    igosWwanSimLastConnectTime OBJECT-TYPE
+        SYNTAX       DateAndTime
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Last successful connect on this slot."
+        ::= { igosWwanSimEntry 18 }
+
+    igosWwanSimLastDisconnectTime OBJECT-TYPE
+        SYNTAX       DateAndTime
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Last bearer disconnect on this slot."
+        ::= { igosWwanSimEntry 19 }
+
+    igosWwanSimLastDisconnectCause OBJECT-TYPE
+        SYNTAX       DisplayString (SIZE (0..128))
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Last disconnect cause string from the modem."
+        ::= { igosWwanSimEntry 20 }
+
+    igosWwanSimDataLimitBytes OBJECT-TYPE
+        SYNTAX       Counter64
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Per-SIM data limit in bytes (0 = unlimited)."
+        ::= { igosWwanSimEntry 21 }
+
+    igosWwanSimDataLimitAction OBJECT-TYPE
+        SYNTAX       IgosWwanDataLimitAction
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Action taken when the limit is reached."
+        ::= { igosWwanSimEntry 22 }
+
+    igosWwanSimDataUsedCycleBytes OBJECT-TYPE
+        SYNTAX       Counter64
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Bytes used in the current billing cycle."
+        ::= { igosWwanSimEntry 23 }
+
+    igosWwanSimDataUsedTotalBytes OBJECT-TYPE
+        SYNTAX       Counter64
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Lifetime bytes counted on this slot."
+        ::= { igosWwanSimEntry 24 }
+
+    igosWwanSimBillingDate OBJECT-TYPE
+        SYNTAX       Integer32 (1..28)
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION  "Day of month the billing cycle resets."
+        ::= { igosWwanSimEntry 25 }
+
+    igosWwanSimDataPercentUsed OBJECT-TYPE
+        SYNTAX       Integer32 (0..200)
+        MAX-ACCESS   read-only
+        STATUS       current
+        DESCRIPTION
+            "Percent of the per-SIM data limit consumed in the
+             current billing cycle.  May exceed 100.  Returns 0
+             if the limit is unlimited."
+        ::= { igosWwanSimEntry 26 }
+
+    -- ================================================================
+    -- 3. Radio metrics  (current serving cell on the active slot)
+    -- ================================================================
+    igosWwanRadioTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanRadioEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "Current radio metrics for the active slot."
+        ::= { igosWwanRadio 1 }
+
+    igosWwanRadioEntry OBJECT-TYPE
+        SYNTAX       IgosWwanRadioEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "One row per WWAN interface."
+        INDEX        { ifIndex }
+        ::= { igosWwanRadioTable 1 }
+
+    IgosWwanRadioEntry ::= SEQUENCE {
+        igosWwanRadioRat            IgosWwanRat,
+        igosWwanRadioBand           DisplayString,
+        igosWwanRadioBars           Integer32,
+        igosWwanRadioRssi           Integer32,
+        igosWwanRadioRsrp           Integer32,
+        igosWwanRadioRsrq           Integer32,
+        igosWwanRadioSinr           Integer32,
+        igosWwanRadioEcio           Integer32,
+        igosWwanRadioCellId         Unsigned32,
+        igosWwanRadioPci            Integer32,
+        igosWwanRadioTac            Integer32,
+        igosWwanRadioEarfcn         Integer32,
+        igosWwanRadioNrArfcn        Unsigned32,
+        igosWwanRadioRscp           Integer32
+    }
+
+    igosWwanRadioRat        OBJECT-TYPE  SYNTAX IgosWwanRat
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Active RAT." ::= { igosWwanRadioEntry 1 }
+    igosWwanRadioBand       OBJECT-TYPE  SYNTAX DisplayString (SIZE (0..32))
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Active band (e.g. 'B66', 'n41')." ::= { igosWwanRadioEntry 2 }
+    igosWwanRadioBars       OBJECT-TYPE  SYNTAX Integer32 (0..5)
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Signal bars 0-5." ::= { igosWwanRadioEntry 3 }
+    igosWwanRadioRssi       OBJECT-TYPE  SYNTAX Integer32 UNITS "dBm"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Received signal strength." ::= { igosWwanRadioEntry 4 }
+    igosWwanRadioRsrp       OBJECT-TYPE  SYNTAX Integer32 UNITS "dBm"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Reference signal received power (LTE/NR)." ::= { igosWwanRadioEntry 5 }
+    igosWwanRadioRsrq       OBJECT-TYPE  SYNTAX Integer32 UNITS "dB"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Reference signal received quality." ::= { igosWwanRadioEntry 6 }
+    igosWwanRadioSinr       OBJECT-TYPE  SYNTAX Integer32 UNITS "dB"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Signal-to-interference-plus-noise ratio." ::= { igosWwanRadioEntry 7 }
+    igosWwanRadioEcio       OBJECT-TYPE  SYNTAX Integer32 UNITS "dB"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Ec/Io (UMTS/HSPA)." ::= { igosWwanRadioEntry 8 }
+    igosWwanRadioCellId     OBJECT-TYPE  SYNTAX Unsigned32
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Serving cell ID." ::= { igosWwanRadioEntry 9 }
+    igosWwanRadioPci        OBJECT-TYPE  SYNTAX Integer32
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Physical cell ID." ::= { igosWwanRadioEntry 10 }
+    igosWwanRadioTac        OBJECT-TYPE  SYNTAX Integer32
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Tracking/Location area code." ::= { igosWwanRadioEntry 11 }
+    igosWwanRadioEarfcn     OBJECT-TYPE  SYNTAX Integer32
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "EARFCN (LTE)." ::= { igosWwanRadioEntry 12 }
+    igosWwanRadioNrArfcn    OBJECT-TYPE  SYNTAX Unsigned32
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "NR-ARFCN (5G)." ::= { igosWwanRadioEntry 13 }
+    igosWwanRadioRscp       OBJECT-TYPE  SYNTAX Integer32 UNITS "dBm"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Received signal code power (UMTS/HSPA)."
+        ::= { igosWwanRadioEntry 14 }
+
+    -- ================================================================
+    -- 4. Bearer  (current PDN attachment)
+    -- ================================================================
+    igosWwanBearerTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanBearerEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "Current bearer attachment per interface."
+        ::= { igosWwanBearer 1 }
+
+    igosWwanBearerEntry OBJECT-TYPE
+        SYNTAX       IgosWwanBearerEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  ""
+        INDEX        { ifIndex }
+        ::= { igosWwanBearerTable 1 }
+
+    IgosWwanBearerEntry ::= SEQUENCE {
+        igosWwanBearerConnected         TruthValue,
+        igosWwanBearerIpv4AddrType      InetAddressType,
+        igosWwanBearerIpv4Addr          InetAddress,
+        igosWwanBearerIpv4Gateway       InetAddress,
+        igosWwanBearerIpv6AddrType      InetAddressType,
+        igosWwanBearerIpv6Addr          InetAddress,
+        igosWwanBearerIpv6PrefixLen     InetAddressPrefixLength,
+        igosWwanBearerIpv6Gateway       InetAddress,
+        igosWwanBearerDnsPrimary        InetAddress,
+        igosWwanBearerDnsSecondary      InetAddress,
+        igosWwanBearerConnectTime       DateAndTime,
+        igosWwanBearerSessionDuration   TimeTicks,
+        igosWwanBearerInOctets          Counter64,
+        igosWwanBearerOutOctets         Counter64
+    }
+
+    igosWwanBearerConnected OBJECT-TYPE  SYNTAX TruthValue
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Bearer up." ::= { igosWwanBearerEntry 1 }
+    igosWwanBearerIpv4AddrType OBJECT-TYPE SYNTAX InetAddressType
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 2 }
+    igosWwanBearerIpv4Addr OBJECT-TYPE  SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Carrier-assigned IPv4." ::= { igosWwanBearerEntry 3 }
+    igosWwanBearerIpv4Gateway OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 4 }
+    igosWwanBearerIpv6AddrType OBJECT-TYPE SYNTAX InetAddressType
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 5 }
+    igosWwanBearerIpv6Addr OBJECT-TYPE  SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Carrier-assigned IPv6." ::= { igosWwanBearerEntry 6 }
+    igosWwanBearerIpv6PrefixLen OBJECT-TYPE SYNTAX InetAddressPrefixLength
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Prefix length advertised by the carrier."
+        ::= { igosWwanBearerEntry 7 }
+    igosWwanBearerIpv6Gateway OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 8 }
+    igosWwanBearerDnsPrimary OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 9 }
+    igosWwanBearerDnsSecondary OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 10 }
+    igosWwanBearerConnectTime OBJECT-TYPE SYNTAX DateAndTime
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 11 }
+    igosWwanBearerSessionDuration OBJECT-TYPE SYNTAX TimeTicks
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanBearerEntry 12 }
+    igosWwanBearerInOctets OBJECT-TYPE  SYNTAX Counter64
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Bytes received this session." ::= { igosWwanBearerEntry 13 }
+    igosWwanBearerOutOctets OBJECT-TYPE SYNTAX Counter64
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Bytes transmitted this session." ::= { igosWwanBearerEntry 14 }
+
+    -- ================================================================
+    -- 5. Failover state
+    -- ================================================================
+    igosWwanFailoverTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanFailoverEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "Failover/failback state per interface."
+        ::= { igosWwanFailover 1 }
+
+    igosWwanFailoverEntry OBJECT-TYPE
+        SYNTAX       IgosWwanFailoverEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  ""
+        INDEX        { ifIndex }
+        ::= { igosWwanFailoverTable 1 }
+
+    IgosWwanFailoverEntry ::= SEQUENCE {
+        igosWwanFailoverEnabled         TruthValue,
+        igosWwanFailbackEnabled         TruthValue,
+        igosWwanFailoverInProgress      TruthValue,
+        igosWwanFailoverLastFromSlot    Integer32,
+        igosWwanFailoverLastToSlot      Integer32,
+        igosWwanFailoverLastReason      IgosWwanFailoverReason,
+        igosWwanFailoverLastTime        DateAndTime,
+        igosWwanFailoverCount           Counter64,
+        igosWwanFailbackCount           Counter64,
+        igosWwanFailoverCooldownRemain  Integer32,
+        igosWwanRegFlapCountWindow      Integer32,
+        igosWwanRegFlapWindowSeconds    Integer32
+    }
+
+    igosWwanFailoverEnabled OBJECT-TYPE SYNTAX TruthValue
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Failover globally enabled." ::= { igosWwanFailoverEntry 1 }
+    igosWwanFailbackEnabled OBJECT-TYPE SYNTAX TruthValue
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Failback globally enabled." ::= { igosWwanFailoverEntry 2 }
+    igosWwanFailoverInProgress OBJECT-TYPE SYNTAX TruthValue
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Failover transition currently in flight."
+        ::= { igosWwanFailoverEntry 3 }
+    igosWwanFailoverLastFromSlot OBJECT-TYPE SYNTAX Integer32 (0..2)
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Slot the last switch moved away from (0 = none)."
+        ::= { igosWwanFailoverEntry 4 }
+    igosWwanFailoverLastToSlot OBJECT-TYPE SYNTAX Integer32 (0..2)
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Slot the last switch moved to (0 = none)."
+        ::= { igosWwanFailoverEntry 5 }
+    igosWwanFailoverLastReason OBJECT-TYPE SYNTAX IgosWwanFailoverReason
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Reason for the most recent slot change."
+        ::= { igosWwanFailoverEntry 6 }
+    igosWwanFailoverLastTime OBJECT-TYPE SYNTAX DateAndTime
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Timestamp of the most recent slot change."
+        ::= { igosWwanFailoverEntry 7 }
+    igosWwanFailoverCount OBJECT-TYPE SYNTAX Counter64
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Total failovers since FSM start." ::= { igosWwanFailoverEntry 8 }
+    igosWwanFailbackCount OBJECT-TYPE SYNTAX Counter64
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Total failbacks to primary slot." ::= { igosWwanFailoverEntry 9 }
+    igosWwanFailoverCooldownRemain OBJECT-TYPE SYNTAX Integer32 UNITS "seconds"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Seconds remaining before another failover may occur."
+        ::= { igosWwanFailoverEntry 10 }
+    igosWwanRegFlapCountWindow OBJECT-TYPE SYNTAX Integer32
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Registration flaps observed in the current window."
+        ::= { igosWwanFailoverEntry 11 }
+    igosWwanRegFlapWindowSeconds OBJECT-TYPE SYNTAX Integer32 UNITS "seconds"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Width of the registration-flap window."
+        ::= { igosWwanFailoverEntry 12 }
+
+    -- ================================================================
+    -- 7. IPv6 PD status
+    -- ================================================================
+    igosWwanPdTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanPdEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION
+            "Status of FSM-native IPv6 prefix delegations.  Indexed
+             by WWAN ifIndex, PD instance number, and the LAN
+             interface ifIndex receiving the delegated prefix."
+        ::= { igosWwanPd 1 }
+
+    igosWwanPdEntry OBJECT-TYPE
+        SYNTAX       IgosWwanPdEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  ""
+        INDEX        { ifIndex, igosWwanPdInstance, igosWwanPdIfIndex }
+        ::= { igosWwanPdTable 1 }
+
+    IgosWwanPdEntry ::= SEQUENCE {
+        igosWwanPdInstance              Unsigned32,
+        igosWwanPdIfIndex               InterfaceIndex,
+        igosWwanPdLanIfName             DisplayString,
+        igosWwanPdSlaId                 Unsigned32,
+        igosWwanPdSlaLen                Unsigned32,
+        igosWwanPdDelegatedPrefix       InetAddress,
+        igosWwanPdDelegatedPrefixLen    InetAddressPrefixLength,
+        igosWwanPdState                 INTEGER,
+        igosWwanPdAppliedTime           DateAndTime
+    }
+
+    igosWwanPdInstance OBJECT-TYPE SYNTAX Unsigned32
+        MAX-ACCESS not-accessible STATUS current
+        DESCRIPTION "PD instance number." ::= { igosWwanPdEntry 1 }
+    igosWwanPdIfIndex OBJECT-TYPE SYNTAX InterfaceIndex
+        MAX-ACCESS not-accessible STATUS current
+        DESCRIPTION "ifIndex of the LAN interface receiving the prefix."
+        ::= { igosWwanPdEntry 2 }
+    igosWwanPdLanIfName OBJECT-TYPE SYNTAX DisplayString (SIZE (0..32))
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Configured LAN interface name (may be pending if absent)."
+        ::= { igosWwanPdEntry 3 }
+    igosWwanPdSlaId OBJECT-TYPE SYNTAX Unsigned32 (0..65535)
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Site-level aggregator ID." ::= { igosWwanPdEntry 4 }
+    igosWwanPdSlaLen OBJECT-TYPE SYNTAX Unsigned32 (0..64)
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Bits used for SLA subdivision." ::= { igosWwanPdEntry 5 }
+    igosWwanPdDelegatedPrefix OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Delegated IPv6 prefix in use." ::= { igosWwanPdEntry 6 }
+    igosWwanPdDelegatedPrefixLen OBJECT-TYPE SYNTAX InetAddressPrefixLength
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Delegated IPv6 prefix length." ::= { igosWwanPdEntry 7 }
+    igosWwanPdState OBJECT-TYPE
+        SYNTAX INTEGER {
+                   pending(1),     -- LAN interface not yet present
+                   applied(2),     -- prefix installed on LAN interface
+                   removed(3),     -- bearer down or interface gone
+                   error(4)
+               }
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Lifecycle state of this delegation."
+        ::= { igosWwanPdEntry 8 }
+    igosWwanPdAppliedTime OBJECT-TYPE SYNTAX DateAndTime
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "Last time the prefix was applied."
+        ::= { igosWwanPdEntry 9 }
+
+    -- ================================================================
+    -- 8. IP-Passthrough status
+    -- ================================================================
+    igosWwanPassthroughTable OBJECT-TYPE
+        SYNTAX       SEQUENCE OF IgosWwanPassthroughEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  "IP-passthrough status per interface."
+        ::= { igosWwanPassthrough 1 }
+
+    igosWwanPassthroughEntry OBJECT-TYPE
+        SYNTAX       IgosWwanPassthroughEntry
+        MAX-ACCESS   not-accessible
+        STATUS       current
+        DESCRIPTION  ""
+        INDEX        { ifIndex }
+        ::= { igosWwanPassthroughTable 1 }
+
+    IgosWwanPassthroughEntry ::= SEQUENCE {
+        igosWwanPtEnabled               TruthValue,
+        igosWwanPtLanIfName             DisplayString,
+        igosWwanPtClientMac             MacAddress,
+        igosWwanPtClientIpv4            InetAddress,
+        igosWwanPtClientIpv6            InetAddress,
+        igosWwanPtLeaseSeconds          Integer32,
+        igosWwanPtLastIpChangeTime      DateAndTime,
+        igosWwanPtForcerenewSupported   TruthValue
+    }
+
+    igosWwanPtEnabled OBJECT-TYPE SYNTAX TruthValue
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 1 }
+    igosWwanPtLanIfName OBJECT-TYPE SYNTAX DisplayString (SIZE (0..32))
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 2 }
+    igosWwanPtClientMac OBJECT-TYPE SYNTAX MacAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 3 }
+    igosWwanPtClientIpv4 OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 4 }
+    igosWwanPtClientIpv6 OBJECT-TYPE SYNTAX InetAddress
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 5 }
+    igosWwanPtLeaseSeconds OBJECT-TYPE SYNTAX Integer32 UNITS "seconds"
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 6 }
+    igosWwanPtLastIpChangeTime OBJECT-TYPE SYNTAX DateAndTime
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "" ::= { igosWwanPassthroughEntry 7 }
+    igosWwanPtForcerenewSupported OBJECT-TYPE SYNTAX TruthValue
+        MAX-ACCESS read-only STATUS current
+        DESCRIPTION "TRUE if dhcp_release2 is available for FORCERENEW."
+        ::= { igosWwanPassthroughEntry 8 }
+
+    -- ================================================================
+    -- Notifications
+    -- ================================================================
+    igosWwanNotifPrefix OBJECT IDENTIFIER ::= { igosWwanNotifications 0 }
+
+    -- Accessible-for-notify scalar carrying the SIM slot number
+    -- referenced by a notification.  igosWwanSimSlot is itself a
+    -- table INDEX (not-accessible) and therefore cannot appear in
+    -- a NOTIFICATION-TYPE OBJECTS clause.
+    igosWwanEventSlot OBJECT-TYPE
+        SYNTAX       Integer32 (1..8)
+        MAX-ACCESS   accessible-for-notify
+        STATUS       current
+        DESCRIPTION
+            "SIM slot number associated with the enclosing
+             notification."
+        ::= { igosWwanNotifications 1 }
+
+    igosWwanFsmStateChange NOTIFICATION-TYPE
+        OBJECTS { igosWwanIfFsmState,
+                  igosWwanIfActiveSlot,
+                  igosWwanIfLastEventDescription }
+        STATUS  current
+        DESCRIPTION "FSM transitioned to a new state."
+        ::= { igosWwanNotifPrefix 1 }
+
+    igosWwanFailoverEvent NOTIFICATION-TYPE
+        OBJECTS { igosWwanFailoverLastFromSlot,
+                  igosWwanFailoverLastToSlot,
+                  igosWwanFailoverLastReason,
+                  igosWwanIfActiveSlot }
+        STATUS  current
+        DESCRIPTION "SIM failover (or failback) occurred."
+        ::= { igosWwanNotifPrefix 2 }
+
+    igosWwanRegistrationLost NOTIFICATION-TYPE
+        OBJECTS { igosWwanSimRegState,
+                  igosWwanSimOperatorCode,
+                  igosWwanIfActiveSlot }
+        STATUS  current
+        DESCRIPTION "Registration was lost on the active slot."
+        ::= { igosWwanNotifPrefix 3 }
+
+    igosWwanBearerUp NOTIFICATION-TYPE
+        OBJECTS { igosWwanBearerIpv4Addr,
+                  igosWwanBearerIpv6Addr,
+                  igosWwanIfActiveSlot }
+        STATUS  current
+        DESCRIPTION "Bearer became connected."
+        ::= { igosWwanNotifPrefix 4 }
+
+    igosWwanBearerDown NOTIFICATION-TYPE
+        OBJECTS { igosWwanSimLastDisconnectCause,
+                  igosWwanIfActiveSlot }
+        STATUS  current
+        DESCRIPTION "Bearer disconnected."
+        ::= { igosWwanNotifPrefix 5 }
+
+    igosWwanSignalDegraded NOTIFICATION-TYPE
+        OBJECTS { igosWwanRadioRsrp,
+                  igosWwanRadioRsrq,
+                  igosWwanRadioSinr }
+        STATUS  current
+        DESCRIPTION
+            "Signal quality crossed below the configured threshold."
+        ::= { igosWwanNotifPrefix 6 }
+
+    igosWwanDataLimitWarning NOTIFICATION-TYPE
+        OBJECTS { igosWwanEventSlot,
+                  igosWwanSimDataPercentUsed,
+                  igosWwanSimDataLimitBytes }
+        STATUS  current
+        DESCRIPTION "Per-SIM data-usage warning threshold crossed."
+        ::= { igosWwanNotifPrefix 7 }
+
+    igosWwanDataLimitReached NOTIFICATION-TYPE
+        OBJECTS { igosWwanEventSlot,
+                  igosWwanSimDataUsedCycleBytes,
+                  igosWwanSimDataLimitAction }
+        STATUS  current
+        DESCRIPTION "Per-SIM data limit reached; action triggered."
+        ::= { igosWwanNotifPrefix 8 }
+
+    igosWwanSimSwapDetected NOTIFICATION-TYPE
+        OBJECTS { igosWwanEventSlot,
+                  igosWwanSimIccid }
+        STATUS  current
+        DESCRIPTION
+            "ICCID changed in a slot configured with an ICCID lock
+             (possible tamper / unauthorized SIM swap)."
+        ::= { igosWwanNotifPrefix 9 }
+
+    igosWwanHardwareReset NOTIFICATION-TYPE
+        OBJECTS { igosWwanIfFsmState,
+                  igosWwanIfLastEventDescription }
+        STATUS  current
+        DESCRIPTION "FSM triggered a modem hardware reset."
+        ::= { igosWwanNotifPrefix 10 }
+
+    -- ================================================================
+    -- Conformance
+    -- ================================================================
+    igosWwanGroups      OBJECT IDENTIFIER ::= { igosWwanConformance 1 }
+    igosWwanCompliances OBJECT IDENTIFIER ::= { igosWwanConformance 2 }
+
+    igosWwanIfGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanIfFsmState, igosWwanIfManufacturer, igosWwanIfModel,
+            igosWwanIfFirmwareRevision, igosWwanIfHardwareRevision,
+            igosWwanIfImei, igosWwanIfPrimarySlot, igosWwanIfActiveSlot,
+            igosWwanIfStickyFailover, igosWwanIfConnectionMode,
+            igosWwanIfNetworkMode, igosWwanIfMtu, igosWwanIfUptime,
+            igosWwanIfLastEventTime, igosWwanIfLastEventDescription
+        }
+        STATUS current
+        DESCRIPTION "Per-interface objects."
+        ::= { igosWwanGroups 1 }
+
+    igosWwanSimGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanSimState, igosWwanSimIsActive, igosWwanSimIccid,
+            igosWwanSimImsi, igosWwanSimMsisdn, igosWwanSimOperatorCode,
+            igosWwanSimOperatorName, igosWwanSimRoaming,
+            igosWwanSimRoamingAllowed, igosWwanSimApn, igosWwanSimApnSource,
+            igosWwanSimAuthType, igosWwanSimPdpType, igosWwanSimRegState,
+            igosWwanSimConnectAttempts, igosWwanSimConnectFailures,
+            igosWwanSimLastConnectTime, igosWwanSimLastDisconnectTime,
+            igosWwanSimLastDisconnectCause, igosWwanSimDataLimitBytes,
+            igosWwanSimDataLimitAction, igosWwanSimDataUsedCycleBytes,
+            igosWwanSimDataUsedTotalBytes, igosWwanSimBillingDate,
+            igosWwanSimDataPercentUsed, igosWwanEventSlot
+        }
+        STATUS current
+        DESCRIPTION "Per-SIM-slot objects."
+        ::= { igosWwanGroups 2 }
+
+    igosWwanRadioGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanRadioRat, igosWwanRadioBand, igosWwanRadioBars,
+            igosWwanRadioRssi, igosWwanRadioRsrp, igosWwanRadioRsrq,
+            igosWwanRadioSinr, igosWwanRadioEcio, igosWwanRadioCellId,
+            igosWwanRadioPci, igosWwanRadioTac, igosWwanRadioEarfcn,
+            igosWwanRadioNrArfcn, igosWwanRadioRscp
+        }
+        STATUS current DESCRIPTION "Radio metrics."
+        ::= { igosWwanGroups 3 }
+
+    igosWwanBearerGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanBearerConnected, igosWwanBearerIpv4AddrType,
+            igosWwanBearerIpv4Addr, igosWwanBearerIpv4Gateway,
+            igosWwanBearerIpv6AddrType, igosWwanBearerIpv6Addr,
+            igosWwanBearerIpv6PrefixLen, igosWwanBearerIpv6Gateway,
+            igosWwanBearerDnsPrimary, igosWwanBearerDnsSecondary,
+            igosWwanBearerConnectTime, igosWwanBearerSessionDuration,
+            igosWwanBearerInOctets, igosWwanBearerOutOctets
+        }
+        STATUS current DESCRIPTION "Bearer state."
+        ::= { igosWwanGroups 4 }
+
+    igosWwanFailoverGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanFailoverEnabled, igosWwanFailbackEnabled,
+            igosWwanFailoverInProgress, igosWwanFailoverLastFromSlot,
+            igosWwanFailoverLastToSlot, igosWwanFailoverLastReason,
+            igosWwanFailoverLastTime, igosWwanFailoverCount,
+            igosWwanFailbackCount, igosWwanFailoverCooldownRemain,
+            igosWwanRegFlapCountWindow, igosWwanRegFlapWindowSeconds
+        }
+        STATUS current DESCRIPTION "Failover/failback state."
+        ::= { igosWwanGroups 5 }
+
+    igosWwanPdGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanPdLanIfName, igosWwanPdSlaId, igosWwanPdSlaLen,
+            igosWwanPdDelegatedPrefix, igosWwanPdDelegatedPrefixLen,
+            igosWwanPdState, igosWwanPdAppliedTime
+        }
+        STATUS current DESCRIPTION "IPv6 PD state."
+        ::= { igosWwanGroups 6 }
+
+    igosWwanPassthroughGroup OBJECT-GROUP
+        OBJECTS {
+            igosWwanPtEnabled, igosWwanPtLanIfName, igosWwanPtClientMac,
+            igosWwanPtClientIpv4, igosWwanPtClientIpv6,
+            igosWwanPtLeaseSeconds, igosWwanPtLastIpChangeTime,
+            igosWwanPtForcerenewSupported
+        }
+        STATUS current DESCRIPTION "IP-passthrough state."
+        ::= { igosWwanGroups 7 }
+
+    igosWwanNotifGroup NOTIFICATION-GROUP
+        NOTIFICATIONS {
+            igosWwanFsmStateChange, igosWwanFailoverEvent,
+            igosWwanRegistrationLost, igosWwanBearerUp, igosWwanBearerDown,
+            igosWwanSignalDegraded, igosWwanDataLimitWarning,
+            igosWwanDataLimitReached, igosWwanSimSwapDetected,
+            igosWwanHardwareReset
+        }
+        STATUS current DESCRIPTION "All WWAN traps."
+        ::= { igosWwanGroups 8 }
+
+    igosWwanCompliance MODULE-COMPLIANCE
+        STATUS current
+        DESCRIPTION "Baseline compliance for VyOS WWAN."
+        MODULE
+            MANDATORY-GROUPS {
+                igosWwanIfGroup,
+                igosWwanSimGroup,
+                igosWwanRadioGroup,
+                igosWwanBearerGroup,
+                igosWwanFailoverGroup,
+                igosWwanNotifGroup
+            }
+            GROUP igosWwanPdGroup
+                DESCRIPTION "Required if IPv6 PD is supported."
+            GROUP igosWwanPassthroughGroup
+                DESCRIPTION "Required if IP-passthrough is supported."
+        ::= { igosWwanCompliances 1 }
+
+END

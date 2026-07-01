@@ -23,8 +23,6 @@ from time import sleep
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
-from vyos.utils.network import is_wwan_connected
-from vyos.utils.process import DEVNULL
 
 def check_ppp_interface(interface):
     if not os.path.isfile(f'/etc/ppp/peers/{interface}'):
@@ -40,6 +38,15 @@ def check_ppp_running(interface):
 
     return False
 
+def _wwan_ifnum(interface):
+    """Extract numeric index from 'wwanN'."""
+    return int(interface.replace('wwan', ''))
+
+def _wwan_client():
+    """Return a synchronous WWAN FSM D-Bus client."""
+    from vyos.utils.wwan.wwan_client import WWANClientSync
+    return WWANClientSync()
+
 def connect(interface):
     """ Connect dialer interface """
 
@@ -54,10 +61,30 @@ def connect(interface):
             print(f'Interface {interface}: connecting...')
             call(f'systemctl restart ppp@{interface}.service')
     elif interface.startswith('wwan'):
-        if is_wwan_connected(interface):
-            print(f'Interface {interface}: already connected!')
-        else:
-            call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces_wwan.py')
+        # Route through the FSM so it clears the user-disconnect inhibit
+        # and drives the modem through its own state machine.
+        try:
+            client = _wwan_client()
+            ifnum = _wwan_ifnum(interface)
+            # In always-on mode the bearer is FSM-managed (auto-connect at
+            # boot, self-heal on failure), so a manual connect is rejected.
+            # Check the mode BEFORE the bearer-status short-circuit so the
+            # rejection surfaces regardless of the current bearer state
+            # (otherwise an already-connected always-on modem would print a
+            # misleading "already connected!" instead of the rejection).
+            mode = client.get_status(ifnum).get('connection_mode', 'always-on')
+            if mode == 'always-on':
+                # Call through so the service's clear InvalidConnectionMode
+                # error is what the operator sees.
+                client.connect(ifnum)
+            elif client.get_bearer_status(ifnum) == 'connected':
+                print(f'Interface {interface}: already connected!')
+            else:
+                print(f'Interface {interface}: connecting...')
+                client.connect(ifnum)
+        except Exception as exc:
+            print(f'Interface {interface}: connect failed: {exc}')
+            exit(1)
     else:
         print(f'Unknown interface {interface}, cannot connect. Aborting!')
 
@@ -85,11 +112,30 @@ def disconnect(interface):
             print(f'Interface {interface}: disconnecting...')
             call(f'systemctl stop ppp@{interface}.service')
     elif interface.startswith('wwan'):
-        if not is_wwan_connected(interface):
-            print(f'Interface {interface}: connection is already down')
-        else:
-            modem = interface.lstrip('wwan')
-            call(f'mmcli --modem {modem} --simple-disconnect', stdout=DEVNULL)
+        # Route through the FSM — it sets the user-disconnect inhibit so
+        # the bearer does not automatically reconnect.
+        try:
+            client = _wwan_client()
+            ifnum = _wwan_ifnum(interface)
+            # In always-on mode the bearer is FSM-managed and self-healing,
+            # so a manual disconnect is rejected.  Check the mode BEFORE the
+            # bearer-status short-circuit so the rejection surfaces
+            # regardless of the current bearer state (otherwise a
+            # disconnected always-on modem would print a misleading
+            # "connection is already down" instead of the rejection).
+            mode = client.get_status(ifnum).get('connection_mode', 'always-on')
+            if mode == 'always-on':
+                # Call through so the service's clear InvalidConnectionMode
+                # error is what the operator sees.
+                client.disconnect(ifnum)
+            elif client.get_bearer_status(ifnum) != 'connected':
+                print(f'Interface {interface}: connection is already down')
+            else:
+                print(f'Interface {interface}: disconnecting...')
+                client.disconnect(ifnum)
+        except Exception as exc:
+            print(f'Interface {interface}: disconnect failed: {exc}')
+            exit(1)
     else:
         print(f'Unknown interface {interface}, cannot disconnect. Aborting!')
 

@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="interfaces">
+        <properties>
+          <help>Generate interface-related output</help>
+        </properties>
+        <children>
+          <node name="wwan">
+            <properties>
+              <help>Generate SMS from Wireless Modem (WWAN)</help>
+            </properties>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>WWAN interface name</help>
+                  <completionHelp>
+                    <path>interfaces wwan</path>
+                    <script>cd /sys/class/net; ls -d wwan* 2>/dev/null</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="sms">
+                    <properties>
+                      <help>Generate (send) SMS message</help>
+                    </properties>
+                    <children>
+                      <tagNode name="number">
+                        <properties>
+                          <help>Destination phone number (e.g. +15551234567)</help>
+                        </properties>
+                        <children>
+                          <tagNode name="message">
+                            <properties>
+                              <help>Message text to send</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </virtualTagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

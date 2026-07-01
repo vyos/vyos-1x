@@ -16,6 +16,7 @@
 
 import os
 import re
+import glob
 import time
 import logging
 import logging.handlers
@@ -161,7 +162,7 @@ def get_configfile_interfaces() -> dict:
         for intf in eth_intfs:
             path = base + [intf, 'hw-id']
             if not config.exists(path):
-                logger.warning(f"no 'hw-id' entry for {intf}")
+                # hw-id is optional for pinned interfaces
                 continue
             hwid = config.return_value(path)
             if hwid in list(interfaces):
@@ -177,7 +178,6 @@ def get_configfile_interfaces() -> dict:
         for intf in wlan_intfs:
             path = base + [intf, 'hw-id']
             if not config.exists(path):
-                logger.warning(f"no 'hw-id' entry for {intf}")
                 continue
             hwid = config.return_value(path)
             if hwid in list(interfaces):
@@ -235,7 +235,6 @@ def on_boot_event(intf_name: str, hwid: str, predefined: str = '') -> str:
     logger.info(f"new name for '{intf_name}' is '{newname}'")
 
     leave_rescan_hint(newname, hwid)
-
     return newname
 
 

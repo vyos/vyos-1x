@@ -1,1 +1,5 @@
+# Temporarily rename eth* interfaces to avoid naming collisions when
+# 80-net-setup-link.rules applies the final Name= from .link files.
+# On live-boot coldplug the device is already temp-named (e2/e3) from
+# initramfs, so KERNEL=="eth*" naturally skips it here.
 SUBSYSTEM=="net", ACTION=="add", KERNEL=="eth*", DRIVERS=="?*", NAME="e$env{IFINDEX}"

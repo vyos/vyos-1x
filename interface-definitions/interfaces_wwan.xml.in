@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
+<!-- Enhanced WWAN interface definition.
+     Replaces the upstream VyOS WWAN tree.  Legacy per-interface apn,
+     authentication, connect-on-demand, address, and dhcp-options nodes are
+     removed — those functions are handled per-SIM by the enhanced service.
+     PD is a direct child for FSM-native IPv6 prefix delegation (no dhcp6c).
+-->
 <interfaceDefinition>
   <node name="interfaces">
     <children>
@@ -19,29 +25,1407 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
-          <leafNode name="apn">
-            <properties>
-              <help>Access Point Name (APN)</help>
-            </properties>
-          </leafNode>
-          #include <include/interface/dhcp-options.xml.i>
-          #include <include/interface/dhcpv6-options.xml.i>
-          #include <include/interface/authentication.xml.i>
+          <!-- ── VyOS infrastructure nodes (retained) ────────────── -->
           #include <include/generic-description.xml.i>
           #include <include/interface/disable.xml.i>
-          #include <include/interface/disable-link-detect.xml.i>
-          #include <include/interface/mirror.xml.i>
           #include <include/interface/mtu-68-1500.xml.i>
           <leafNode name="mtu">
-            <defaultValue>1430</defaultValue>
+            <defaultValue>1420</defaultValue>
           </leafNode>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/mirror.xml.i>
           #include <include/interface/ipv4-options.xml.i>
           #include <include/interface/ipv6-options.xml.i>
           #include <include/interface/ipv6-options-with-nd.xml.i>
-          #include <include/interface/dial-on-demand.xml.i>
-          #include <include/interface/redirect.xml.i>
-          #include <include/interface/vrf.xml.i>
+          <!-- ── IPv6 management-address (FSM-stamped <prefix>::1 on wwanN) ── -->
+          <!--
+            Extends the standard `ipv6` node above with a `management-address`
+            sub-tree.  Opt-in: creating this node tells the FSM to stamp a
+            stable host address inside the carrier prefix directly on wwanN
+            (default `<prefix>::1`) so the router itself is reachable from
+            the public internet at a name you can pin to DDNS.  An
+            FSM-owned ip6tables chain locks the address down: ICMPv6,
+            ESTABLISHED/RELATED, and TCP 443 (VyOS HTTPS UI) are permitted
+            by default; everything else is dropped.  Use `disable-default-https`
+            to suppress the auto-443 rule, `permit-tcp` / `permit-udp` to
+            open additional ports, and `permit-source` to restrict all
+            permits to specific source prefixes.  Mutually exclusive with
+            `ip-passthrough`.
+          -->
+          <node name="ipv6">
+            <children>
+              <node name="management-address">
+                <properties>
+                  <help>Stable management address inside the carrier IPv6 prefix on this WWAN interface</help>
+                </properties>
+                <children>
+                  <leafNode name="disable-default-https">
+                    <properties>
+                      <help>Suppress the default-permit rule for TCP 443 (VyOS HTTPS UI)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host-id">
+                    <properties>
+                      <help>Host portion of the management address (IPv6 literal with upper 64 bits zero)</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 host-id, e.g. ::1, ::cafe</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6"/>
+                      </constraint>
+                      <constraintErrorMessage>host-id must be a valid IPv6 literal with the upper 64 bits zero (e.g. ::1, ::cafe)</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>::1</defaultValue>
+                  </leafNode>
+                  <leafNode name="permit-tcp">
+                    <properties>
+                      <help>Permit inbound TCP destination port to the management address</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>TCP port number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>TCP port must be 1-65535</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="permit-udp">
+                    <properties>
+                      <help>Permit inbound UDP destination port to the management address</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>UDP port number</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>UDP port must be 1-65535</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="permit-source">
+                    <properties>
+                      <help>Restrict inbound permits to traffic from this IPv6 source prefix</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 source prefix (e.g. 2001:db8::/32)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                      <constraintErrorMessage>permit-source must be a valid IPv6 prefix (e.g. 2001:db8::/32)</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          #include <include/interface/dhcpv6-options.xml.i>
+          <!-- ── Connection mode ─────────────────────────────────── -->
+          <leafNode name="connection-mode">
+            <properties>
+              <help>Connection establishment strategy</help>
+              <completionHelp>
+                <list>always-on connect-on-demand dial-on-demand</list>
+              </completionHelp>
+              <valueHelp>
+                <format>always-on</format>
+                <description>Connect at boot and stay connected (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>connect-on-demand</format>
+                <description>Park at registered-idle, connect via D-Bus call</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dial-on-demand</format>
+                <description>Connect when traffic is detected on the interface</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(always-on|connect-on-demand|dial-on-demand)$</regex>
+              </constraint>
+              <constraintErrorMessage>Connection mode must be always-on, connect-on-demand, or dial-on-demand</constraintErrorMessage>
+            </properties>
+            <defaultValue>always-on</defaultValue>
+          </leafNode>
+          <!-- ── Network mode ────────────────────────────────────── -->
+          <leafNode name="network-mode">
+            <properties>
+              <help>Modem radio access technology selection</help>
+              <completionHelp>
+                <list>auto lte 5g 5g-only 3g 2g</list>
+              </completionHelp>
+              <valueHelp>
+                <format>auto</format>
+                <description>Modem selects best available RAT (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>lte</format>
+                <description>LTE only</description>
+              </valueHelp>
+              <valueHelp>
+                <format>5g</format>
+                <description>5G NR preferred with LTE anchor (NSA + SA)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>5g-only</format>
+                <description>5G NR standalone only (no LTE anchor; requires SA support)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>3g</format>
+                <description>3G UMTS/HSPA only</description>
+              </valueHelp>
+              <valueHelp>
+                <format>2g</format>
+                <description>2G GSM/GPRS/EDGE only</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(auto|lte|5g|5g-only|3g|2g)$</regex>
+              </constraint>
+              <constraintErrorMessage>Network mode must be auto, lte, 5g, 5g-only, 3g, or 2g</constraintErrorMessage>
+            </properties>
+            <defaultValue>auto</defaultValue>
+          </leafNode>
+          <!-- ── SIM management ──────────────────────────────────── -->
+          <node name="sim">
+            <properties>
+              <help>SIM card management</help>
+            </properties>
+            <children>
+              <leafNode name="primary-slot">
+                <properties>
+                  <help>Primary SIM card slot</help>
+                  <valueHelp>
+                    <format>u32:1-2</format>
+                    <description>SIM slot number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-2"/>
+                  </constraint>
+                  <constraintErrorMessage>SIM slot must be 1 or 2</constraintErrorMessage>
+                </properties>
+                <defaultValue>1</defaultValue>
+              </leafNode>
+              <!-- per-SIM tag node -->
+              <tagNode name="slot">
+                <properties>
+                  <help>Per-SIM slot configuration</help>
+                  <valueHelp>
+                    <format>u32:1-2</format>
+                    <description>SIM slot number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-2"/>
+                  </constraint>
+                  <constraintErrorMessage>SIM slot must be 1 or 2</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable this SIM slot</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="iccid">
+                    <properties>
+                      <help>ICCID lock — only accept this SIM card (tamper prevention)</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>19 or 20 digit ICCID</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[0-9]{19,20}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>ICCID must be 19 or 20 digits</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="apn">
+                    <properties>
+                      <help>Access Point Name (APN)</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>APN name</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="username">
+                    <properties>
+                      <help>Authentication username</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Username for APN authentication</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="password">
+                    <properties>
+                      <help>Authentication password</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Password for APN authentication</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="auth-type">
+                    <properties>
+                      <help>Authentication type</help>
+                      <completionHelp>
+                        <list>none pap chap both</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>none</format>
+                        <description>No authentication (default)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>pap</format>
+                        <description>PAP authentication</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>chap</format>
+                        <description>CHAP authentication</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>both</format>
+                        <description>PAP and CHAP</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(none|pap|chap|both)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Auth type must be none, pap, chap, or both</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>none</defaultValue>
+                  </leafNode>
+                  <leafNode name="pdp-type">
+                    <properties>
+                      <help>Packet Data Protocol type</help>
+                      <completionHelp>
+                        <list>ipv4 ipv6 ipv4v6</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 only</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 only</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4v6</format>
+                        <description>Dual-stack IPv4 and IPv6</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(ipv4|ipv6|ipv4v6)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>PDP type must be ipv4, ipv6, or ipv4v6</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>ipv4v6</defaultValue>
+                  </leafNode>
+                  <leafNode name="disable-roaming">
+                    <properties>
+                      <help>Disable roaming on visited networks (roaming is enabled by default)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="pin">
+                    <properties>
+                      <help>SIM PIN for automatic unlock</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>4 to 8 digit PIN</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[0-9]{4,8}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>PIN must be 4 to 8 digits</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="puk">
+                    <properties>
+                      <help>SIM PUK for automatic recovery (resets PIN)</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>8 digit PUK</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[0-9]{8}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>PUK must be exactly 8 digits</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="supported-bands">
+                    <properties>
+                      <help>Radio bands to enable</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Comma-separated band names or 'all' (default: all)</description>
+                      </valueHelp>
+                    </properties>
+                    <defaultValue>all</defaultValue>
+                  </leafNode>
+                  <leafNode name="preferred-carrier">
+                    <properties>
+                      <help>Preferred carrier for manual network selection</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>MCCMNC code (e.g. 302610) or carrier name</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="enable-network-scan">
+                    <properties>
+                      <help>Enable diagnostic network scan (results in status)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mtu">
+                    <properties>
+                      <help>Per-SIM MTU override</help>
+                      <valueHelp>
+                        <format>u32:0-1500</format>
+                        <description>MTU in bytes (0 = use interface MTU)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-1500"/>
+                      </constraint>
+                      <constraintErrorMessage>Per-SIM MTU must be 0-1500</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>0</defaultValue>
+                  </leafNode>
+                  <!-- per-SIM data limit -->
+                  <node name="data-limit">
+                    <properties>
+                      <help>Per-SIM data usage limit</help>
+                    </properties>
+                    <children>
+                      <leafNode name="size">
+                        <properties>
+                          <help>Data limit in bytes (0 = unlimited)</help>
+                          <valueHelp>
+                            <format>u32</format>
+                            <description>Data limit in bytes</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--non-negative"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>0</defaultValue>
+                      </leafNode>
+                      <leafNode name="action">
+                        <properties>
+                          <help>Action when data limit is reached</help>
+                          <completionHelp>
+                            <list>none disable sim-failover sim-failover-sticky</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>none</format>
+                            <description>Log only (default)</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>disable</format>
+                            <description>Disable the interface</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>sim-failover</format>
+                            <description>Switch to backup SIM</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>sim-failover-sticky</format>
+                            <description>Switch to backup SIM and stay there</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(none|disable|sim-failover|sim-failover-sticky)$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Action must be none, disable, sim-failover, or sim-failover-sticky</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>none</defaultValue>
+                      </leafNode>
+                      <leafNode name="billing-date">
+                        <properties>
+                          <help>Day of month when billing cycle resets</help>
+                          <valueHelp>
+                            <format>u32:1-28</format>
+                            <description>Day of month</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-28"/>
+                          </constraint>
+                          <constraintErrorMessage>Billing date must be 1-28</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>1</defaultValue>
+                      </leafNode>
+                      <leafNode name="warning">
+                        <properties>
+                          <help>Warning thresholds as comma-separated percentages</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>e.g. 75,90,95</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([0-9]{1,3})(,[0-9]{1,3})*$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Warning must be comma-separated percentages (e.g. 75,90,95)</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+              <!-- SIM failback -->
+              <node name="sim-failback">
+                <properties>
+                  <help>Automatically return to primary SIM after failover</help>
+                </properties>
+                <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable automatic failback to primary SIM</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="check-interval">
+                    <properties>
+                      <help>Interval to check if primary SIM is available again</help>
+                      <valueHelp>
+                        <format>u32:60-86400</format>
+                        <description>Interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 60-86400"/>
+                      </constraint>
+                      <constraintErrorMessage>Check interval must be 60-86400 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>600</defaultValue>
+                  </leafNode>
+                  <leafNode name="stability-time">
+                    <properties>
+                      <help>Time the primary SIM must be continuously present before failback</help>
+                      <valueHelp>
+                        <format>u32:60-86400</format>
+                        <description>Time in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 60-86400"/>
+                      </constraint>
+                      <constraintErrorMessage>Stability time must be 60-86400 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>300</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <!-- SIM failover -->
+              <node name="sim-failover">
+                <properties>
+                  <help>Automatic switchover to backup SIM on failure</help>
+                </properties>
+                <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable SIM failover</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="connect-retries">
+                    <properties>
+                      <help>Connection attempts before triggering failover</help>
+                      <valueHelp>
+                        <format>u32:1-10</format>
+                        <description>Number of retries</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-10"/>
+                      </constraint>
+                      <constraintErrorMessage>Connect retries must be 1-10</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>3</defaultValue>
+                  </leafNode>
+                  <leafNode name="signal-loss-timer">
+                    <properties>
+                      <help>Duration of signal loss before triggering failover</help>
+                      <valueHelp>
+                        <format>u32:10-3600</format>
+                        <description>Timer in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-3600"/>
+                      </constraint>
+                      <constraintErrorMessage>Signal loss timer must be 10-3600 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>60</defaultValue>
+                  </leafNode>
+                  <node name="signal-threshold">
+                    <properties>
+                      <help>Signal strength threshold for failover trigger (metric-specific)</help>
+                    </properties>
+                    <children>
+                      <leafNode name="rsrp">
+                        <properties>
+                          <help>RSRP threshold for LTE/5G-NR (3GPP coverage metric)</help>
+                          <valueHelp>
+                            <format>u32:-140--44</format>
+                            <description>RSRP in dBm</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range -140--44"/>
+                          </constraint>
+                          <constraintErrorMessage>RSRP threshold must be -140 to -44 dBm</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>-113</defaultValue>
+                      </leafNode>
+                      <leafNode name="rssi">
+                        <properties>
+                          <help>RSSI threshold for 2G/3G (legacy wideband metric)</help>
+                          <valueHelp>
+                            <format>u32:-120--50</format>
+                            <description>RSSI in dBm</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range -120--50"/>
+                          </constraint>
+                          <constraintErrorMessage>RSSI threshold must be -120 to -50 dBm</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>-93</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+          <!-- ── APN discovery ───────────────────────────────────── -->
+          <node name="apn-discovery">
+            <properties>
+              <help>APN auto-discovery settings</help>
+            </properties>
+            <children>
+<leafNode name="disable">
+                <properties>
+                  <help>Disable Android APN database lookup (enabled by default)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── IPv6 bridging (carrier /64 to one downstream LAN) ── -->
+          <!--
+            Assigns the carrier-supplied IPv6 prefix verbatim (typically /64)
+            to a single downstream interface.  The bearer's IPv6 address is
+            kept as /128 on wwan0; the same prefix becomes the on-link prefix
+            for the LAN, so SLAAC clients on the LAN get globally-routable
+            addresses.  This is NOT DHCPv6 PD — it is a one-prefix copy.
+            For real DHCPv6 PD (carrier-issued sub-prefix), use the standard
+            'dhcpv6-options pd ...' nodes above (handled by dhcp6c).
+          -->
+          <node name="ipv6-bridging">
+            <properties>
+              <help>Bridge carrier-assigned IPv6 prefix to a downstream LAN interface</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Downstream LAN interface to receive the carrier IPv6 prefix</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(eth|bond|br|en)[0-9a-z._]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Bridging interface must be a wired LAN interface</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="reconciliation-interval">
+                <properties>
+                  <help>Safety-net timer for re-checking the downstream LAN interface</help>
+                  <valueHelp>
+                    <format>u32:5-300</format>
+                    <description>Interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-300"/>
+                  </constraint>
+                  <constraintErrorMessage>Reconciliation interval must be 5-300 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>10</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── IP Passthrough (DOCSIS-modem-style single-host) ── -->
+          <node name="ip-passthrough">
+            <properties>
+              <help>Hand the carrier IP directly to a downstream device via DHCP/RA</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>LAN interface that delivers the carrier IP to the downstream device</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(eth|bond|br|en)[0-9a-z._]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Passthrough interface must be a wired LAN interface</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="mac">
+                <properties>
+                  <help>Pin the carrier IP to a specific downstream MAC (default: first MAC seen)</help>
+                  <valueHelp>
+                    <format>macaddr</format>
+                    <description>MAC address of downstream device (xx:xx:xx:xx:xx:xx)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="lease-time">
+                <properties>
+                  <help>DHCP lease time in seconds (short leases speed up IP-change recovery)</help>
+                  <valueHelp>
+                    <format>u32:30-600</format>
+                    <description>Lease duration in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-600"/>
+                  </constraint>
+                  <constraintErrorMessage>Lease time must be 30-600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>60</defaultValue>
+              </leafNode>
+              <leafNode name="management-address">
+                <properties>
+                  <help>Auto-provisioned IPv4 management address on the passthrough interface (Policy B: only applied if 'interfaces ethernet &lt;if&gt; address' is unset)</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address with prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+                <defaultValue>192.168.200.1/24</defaultValue>
+              </leafNode>
+              <leafNode name="management-address-ipv6">
+                <properties>
+                  <help>Auto-provisioned IPv6 management address on the passthrough interface (Policy B: only applied if 'interfaces ethernet &lt;if&gt; address' is unset)</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address with prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <defaultValue>fd00:6c61:6e30::1/64</defaultValue>
+              </leafNode>
+              <leafNode name="dns-server">
+                <properties>
+                  <help>Override DNS servers advertised to the downstream device (overrides carrier-supplied DNS; if unset, carrier DNS is used, falling back to public anycast)</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 DNS server address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 DNS server address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-mss-clamp">
+                <properties>
+                  <help>Disable TCP MSS clamping on the WWAN egress (default: enabled). MSS clamping rewrites TCP SYN segments so endpoints negotiate a segment size that fits the bearer MTU, transparently fixing oversized-frame drops for non-compliant downstream devices that ignore DHCP option 26 / RA MTU. Only disable for PMTUD debugging.</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Reconnection ────────────────────────────────────── -->
+          <node name="reconnection">
+            <properties>
+              <help>Enhanced reconnection strategy (signal-quality-aware)</help>
+            </properties>
+            <children>
+              <leafNode name="disable-enhanced">
+                <properties>
+                  <help>Fall back to basic fixed-interval reconnection</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="signal-threshold">
+                <properties>
+                  <help>Boundary between good and poor signal reconnection strategies (metric-specific)</help>
+                </properties>
+                <children>
+                  <leafNode name="rsrp">
+                    <properties>
+                      <help>RSRP boundary for LTE/5G-NR (3GPP coverage metric)</help>
+                      <valueHelp>
+                        <format>u32:-140--44</format>
+                        <description>RSRP in dBm</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range -140--44"/>
+                      </constraint>
+                      <constraintErrorMessage>RSRP threshold must be -140 to -44 dBm</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>-105</defaultValue>
+                  </leafNode>
+                  <leafNode name="rssi">
+                    <properties>
+                      <help>RSSI boundary for 2G/3G (legacy wideband metric)</help>
+                      <valueHelp>
+                        <format>u32:-120--50</format>
+                        <description>RSSI in dBm</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range -120--50"/>
+                      </constraint>
+                      <constraintErrorMessage>RSSI threshold must be -120 to -50 dBm</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>-85</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="retry-interval">
+                <properties>
+                  <help>Reconnection retry intervals based on signal quality</help>
+                </properties>
+                <children>
+                  <leafNode name="good-signal">
+                    <properties>
+                      <help>Retry interval when signal is above threshold</help>
+                      <valueHelp>
+                        <format>u32:5-600</format>
+                        <description>Interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 5-600"/>
+                      </constraint>
+                      <constraintErrorMessage>Retry interval must be 5-600 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>30</defaultValue>
+                  </leafNode>
+                  <leafNode name="poor-signal">
+                    <properties>
+                      <help>Retry interval when signal is below threshold</help>
+                      <valueHelp>
+                        <format>u32:10-3600</format>
+                        <description>Interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 10-3600"/>
+                      </constraint>
+                      <constraintErrorMessage>Retry interval must be 10-3600 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>120</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="max-wait-for-signal">
+                <properties>
+                  <help>Maximum time to wait for signal before giving up</help>
+                  <valueHelp>
+                    <format>u32:30-600</format>
+                    <description>Timeout in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-600"/>
+                  </constraint>
+                  <constraintErrorMessage>Max wait must be 30-600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>120</defaultValue>
+              </leafNode>
+              <leafNode name="signal-check-interval">
+                <properties>
+                  <help>Interval for polling signal strength during reconnection</help>
+                  <valueHelp>
+                    <format>u32:5-120</format>
+                    <description>Interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-120"/>
+                  </constraint>
+                  <constraintErrorMessage>Signal check interval must be 5-120 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>10</defaultValue>
+              </leafNode>
+              <leafNode name="signal-strength-buffer">
+                <properties>
+                  <help>Hysteresis buffer to avoid threshold oscillation</help>
+                  <valueHelp>
+                    <format>u32:0-20</format>
+                    <description>Buffer in dBm</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-20"/>
+                  </constraint>
+                  <constraintErrorMessage>Buffer must be 0-20 dBm</constraintErrorMessage>
+                </properties>
+                <defaultValue>5</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Interface management ────────────────────────────── -->
+          <node name="interface-management">
+            <properties>
+              <help>Bearer, registration, and IP monitoring subsystem</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable all interface management (bearer/registration/IP monitoring)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="bearer-disconnect-delay">
+                <properties>
+                  <help>Grace period before tearing down a disconnected bearer</help>
+                  <valueHelp>
+                    <format>u32:0-300</format>
+                    <description>Delay in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-300"/>
+                  </constraint>
+                  <constraintErrorMessage>Bearer disconnect delay must be 0-300 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>15</defaultValue>
+              </leafNode>
+              <leafNode name="registration-recovery-delay">
+                <properties>
+                  <help>Debounce for registration-lost events</help>
+                  <valueHelp>
+                    <format>u32:5-300</format>
+                    <description>Delay in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-300"/>
+                  </constraint>
+                  <constraintErrorMessage>Recovery delay must be 5-300 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>20</defaultValue>
+              </leafNode>
+              <leafNode name="registration-flap-count">
+                <properties>
+                  <help>Debounced registration losses that trigger SIM failover (0 = disabled)</help>
+                  <valueHelp>
+                    <format>u32:0-100</format>
+                    <description>Number of flaps</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-100"/>
+                  </constraint>
+                  <constraintErrorMessage>Flap count must be 0-100</constraintErrorMessage>
+                </properties>
+                <defaultValue>5</defaultValue>
+              </leafNode>
+              <leafNode name="registration-flap-window">
+                <properties>
+                  <help>Time window for registration flap counting</help>
+                  <valueHelp>
+                    <format>u32:60-3600</format>
+                    <description>Window in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 60-3600"/>
+                  </constraint>
+                  <constraintErrorMessage>Flap window must be 60-3600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>360</defaultValue>
+              </leafNode>
+              <leafNode name="ip-change-delay">
+                <properties>
+                  <help>Settle time after IP re-assignment</help>
+                  <valueHelp>
+                    <format>u32:0-5000</format>
+                    <description>Delay in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-5000"/>
+                  </constraint>
+                  <constraintErrorMessage>IP change delay must be 0-5000 milliseconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>500</defaultValue>
+              </leafNode>
+              <leafNode name="disable-ensure-link-up-on-connect">
+                <properties>
+                  <help>Do not enforce kernel link-up state after bearer connect</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-monitor-bearer-state">
+                <properties>
+                  <help>Do not track bearer state changes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-monitor-ip-changes">
+                <properties>
+                  <help>Do not detect IP address changes</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="interface-up-timeout">
+                <properties>
+                  <help>Max wait for kernel interface to come up after bearer connect</help>
+                  <valueHelp>
+                    <format>u32:5-120</format>
+                    <description>Timeout in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 5-120"/>
+                  </constraint>
+                  <constraintErrorMessage>Interface-up timeout must be 5-120 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>10</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Connectivity monitoring ─────────────────────────── -->
+          <node name="connectivity-monitoring">
+            <properties>
+              <help>Active ping probes to detect dead paths</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable connectivity monitoring</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="interval">
+                <properties>
+                  <help>Ping probe interval</help>
+                  <valueHelp>
+                    <format>u32:10-3600</format>
+                    <description>Interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-3600"/>
+                  </constraint>
+                  <constraintErrorMessage>Monitoring interval must be 10-3600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>60</defaultValue>
+              </leafNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Ping timeout per probe</help>
+                  <valueHelp>
+                    <format>u32:1-60</format>
+                    <description>Timeout in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-60"/>
+                  </constraint>
+                  <constraintErrorMessage>Timeout must be 1-60 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>10</defaultValue>
+              </leafNode>
+              <leafNode name="retry-count">
+                <properties>
+                  <help>Number of ping retries before declaring failure</help>
+                  <valueHelp>
+                    <format>u32:1-10</format>
+                    <description>Number of retries</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-10"/>
+                  </constraint>
+                  <constraintErrorMessage>Retry count must be 1-10</constraintErrorMessage>
+                </properties>
+                <defaultValue>3</defaultValue>
+              </leafNode>
+              <leafNode name="failure-threshold">
+                <properties>
+                  <help>Consecutive failures before triggering recovery</help>
+                  <valueHelp>
+                    <format>u32:1-10</format>
+                    <description>Number of failures</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-10"/>
+                  </constraint>
+                  <constraintErrorMessage>Failure threshold must be 1-10</constraintErrorMessage>
+                </properties>
+                <defaultValue>2</defaultValue>
+              </leafNode>
+              <leafNode name="disable-test-ipv4">
+                <properties>
+                  <help>Do not test IPv4 connectivity (on by default)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="test-ipv6">
+                <properties>
+                  <help>Enable IPv6 connectivity testing (off by default)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="require-both">
+                <properties>
+                  <help>Require both IPv4 and IPv6 probes to pass</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ipv4-targets">
+                <properties>
+                  <help>IPv4 ping targets (comma-separated)</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Comma-separated IPv4 addresses (default: 8.8.8.8,1.1.1.1)</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>8.8.8.8,1.1.1.1</defaultValue>
+              </leafNode>
+              <leafNode name="ipv6-targets">
+                <properties>
+                  <help>IPv6 ping targets (comma-separated)</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Comma-separated IPv6 addresses</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>2001:4860:4860::8888,2606:4700:4700::1111</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Data usage (global fallback) ────────────────────── -->
+          <node name="data-usage">
+            <properties>
+              <help>Global data usage monitoring and limits (per-SIM overrides take priority)</help>
+            </properties>
+            <children>
+              <leafNode name="monitoring-interval">
+                <properties>
+                  <help>Data usage counter polling interval</help>
+                  <valueHelp>
+                    <format>u32:10-3600</format>
+                    <description>Interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-3600"/>
+                  </constraint>
+                  <constraintErrorMessage>Monitoring interval must be 10-3600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>30</defaultValue>
+              </leafNode>
+              <leafNode name="size">
+                <properties>
+                  <help>Global data limit in bytes (0 = unlimited)</help>
+                  <valueHelp>
+                    <format>u32</format>
+                    <description>Data limit in bytes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--non-negative"/>
+                  </constraint>
+                </properties>
+                <defaultValue>0</defaultValue>
+              </leafNode>
+              <leafNode name="action">
+                <properties>
+                  <help>Action when global data limit is reached</help>
+                  <completionHelp>
+                    <list>none disable sim-failover sim-failover-sticky</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>none</format>
+                    <description>Log only (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>Disable the interface</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sim-failover</format>
+                    <description>Switch to backup SIM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sim-failover-sticky</format>
+                    <description>Switch to backup SIM and stay there</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(none|disable|sim-failover|sim-failover-sticky)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Action must be none, disable, sim-failover, or sim-failover-sticky</constraintErrorMessage>
+                </properties>
+                <defaultValue>none</defaultValue>
+              </leafNode>
+              <leafNode name="billing-date">
+                <properties>
+                  <help>Day of month when billing cycle resets</help>
+                  <valueHelp>
+                    <format>u32:1-28</format>
+                    <description>Day of month</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-28"/>
+                  </constraint>
+                  <constraintErrorMessage>Billing date must be 1-28</constraintErrorMessage>
+                </properties>
+                <defaultValue>1</defaultValue>
+              </leafNode>
+              <leafNode name="warning">
+                <properties>
+                  <help>Warning thresholds as comma-separated percentages</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>e.g. 75,90,95</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^([0-9]{1,3})(,[0-9]{1,3})*$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Warning must be comma-separated percentages (e.g. 75,90,95)</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Hardware reset ──────────────────────────────────── -->
+          <node name="hardware-reset">
+            <properties>
+              <help>Modem power-cycle recovery after unrecoverable failures</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable hardware reset</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="max-attempts">
+                <properties>
+                  <help>Maximum hardware reset attempts before giving up</help>
+                  <valueHelp>
+                    <format>u32:1-10</format>
+                    <description>Number of attempts</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-10"/>
+                  </constraint>
+                  <constraintErrorMessage>Max attempts must be 1-10</constraintErrorMessage>
+                </properties>
+                <defaultValue>3</defaultValue>
+              </leafNode>
+              <leafNode name="cooldown">
+                <properties>
+                  <help>Cooldown between hardware reset attempts</help>
+                  <valueHelp>
+                    <format>u32:60-3600</format>
+                    <description>Cooldown in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 60-3600"/>
+                  </constraint>
+                  <constraintErrorMessage>Cooldown must be 60-3600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>300</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Failed-state retry ──────────────────────────────── -->
+          <node name="failed-retry">
+            <properties>
+              <help>Periodic retry from FAILED state (data-plan top-up, transient errors)</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable failed-state retry</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="intervals">
+                <properties>
+                  <help>Stepped backoff intervals from FAILED state</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Comma-separated seconds (default: 600,1800,3600,7200)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^[0-9]+(,[0-9]+)*$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Intervals must be comma-separated integers (e.g. 600,1800,3600,7200)</constraintErrorMessage>
+                </properties>
+                <defaultValue>600,1800,3600,7200</defaultValue>
+              </leafNode>
+              <leafNode name="max-interval">
+                <properties>
+                  <help>Cap interval once the step list is exhausted</help>
+                  <valueHelp>
+                    <format>u32:60-86400</format>
+                    <description>Maximum interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 60-86400"/>
+                  </constraint>
+                  <constraintErrorMessage>Max interval must be 60-86400 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>7200</defaultValue>
+              </leafNode>
+              <leafNode name="escalation-threshold">
+                <properties>
+                  <help>Consecutive failures before escalating to modem disable/enable cycle (0 = never)</help>
+                  <valueHelp>
+                    <format>u32:0-20</format>
+                    <description>Number of failures</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-20"/>
+                  </constraint>
+                  <constraintErrorMessage>Escalation threshold must be 0-20</constraintErrorMessage>
+                </properties>
+                <defaultValue>3</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Network scan ────────────────────────────────────── -->
+          <node name="network-scan">
+            <properties>
+              <help>Network scan settings</help>
+            </properties>
+            <children>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Maximum wait for network scan completion</help>
+                  <valueHelp>
+                    <format>u32:10-300</format>
+                    <description>Timeout in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-300"/>
+                  </constraint>
+                  <constraintErrorMessage>Scan timeout must be 10-300 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>180</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Timeouts ────────────────────────────────────────── -->
+          <node name="timeouts">
+            <properties>
+              <help>Connection and monitoring timeouts</help>
+            </properties>
+            <children>
+              <leafNode name="connection">
+                <properties>
+                  <help>Maximum wait for MM Simple.Connect() to succeed</help>
+                  <valueHelp>
+                    <format>u32:30-600</format>
+                    <description>Timeout in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-600"/>
+                  </constraint>
+                  <constraintErrorMessage>Connection timeout must be 30-600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>120</defaultValue>
+              </leafNode>
+              <leafNode name="registration">
+                <properties>
+                  <help>Maximum wait for network registration</help>
+                  <valueHelp>
+                    <format>u32:30-600</format>
+                    <description>Timeout in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-600"/>
+                  </constraint>
+                  <constraintErrorMessage>Registration timeout must be 30-600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>180</defaultValue>
+              </leafNode>
+              <leafNode name="normal-monitoring-interval">
+                <properties>
+                  <help>Polling cycle in CONNECTED state</help>
+                  <valueHelp>
+                    <format>u32:10-600</format>
+                    <description>Interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-600"/>
+                  </constraint>
+                  <constraintErrorMessage>Monitoring interval must be 10-600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>30</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <!-- ── Logging ─────────────────────────────────────────── -->
+          <node name="logging">
+            <properties>
+              <help>Logging and diagnostic settings</help>
+            </properties>
+            <children>
+              <leafNode name="level">
+                <properties>
+                  <help>Log verbosity level</help>
+                  <completionHelp>
+                    <list>debug info warning error</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>debug</format>
+                    <description>Debug level (very verbose)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>info</format>
+                    <description>Informational (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>warning</format>
+                    <description>Warnings only</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>error</format>
+                    <description>Errors only</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(debug|info|warning|error)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Log level must be debug, info, warning, or error</constraintErrorMessage>
+                </properties>
+                <defaultValue>info</defaultValue>
+              </leafNode>
+              <leafNode name="sink">
+                <properties>
+                  <help>Log output destination</help>
+                  <completionHelp>
+                    <list>both journal syslog</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>both</format>
+                    <description>Write logs to both journal and syslog (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>journal</format>
+                    <description>Write logs only to systemd journal</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>syslog</format>
+                    <description>Write logs only to /dev/log syslog</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(both|journal|syslog)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Log sink must be both, journal, or syslog</constraintErrorMessage>
+                </properties>
+                <defaultValue>both</defaultValue>
+              </leafNode>
+              <leafNode name="disable-verbose">
+                <properties>
+                  <help>Disable verbose logging (enabled by default)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </tagNode>
     </children>

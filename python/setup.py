@@ -65,6 +65,10 @@ setup(
     url = "http://www.vyos.io",
     packages = packages('vyos'),
     long_description="VyOS configuration libraries",
+    install_requires=[
+        "dbus_next>=0.2.3",
+        "automaton>=2.1.0",
+    ],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Topic :: Utilities",
