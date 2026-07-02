@@ -1,38 +1,42 @@
 name: Context7 refresh
 
-# Listens for completion of "Update version tags" via workflow_run, then
-# refreshes the Context7 variant for the branch that fed it. The upstream
-# workflow is matched by name — DO NOT rename `Update version tags` without
-# updating the `workflows:` field below.
+# Refreshes the Context7 variant for the pushed branch. Context7 indexes
+# three variants of this library, all tracking a branch HEAD directly:
+#   - rolling  → default variant       (omit both `branch` and `tag`)
+#   - circinus → branch variant        `branch: "circinus"` (VyOS 1.5)
+#   - sagitta  → branch variant        `branch: "sagitta"`  (VyOS 1.4)
 #
-# Context7 API addresses variants by their TYPE:
-#   - default variant (rolling)     → omit both `branch` and `tag`
-#   - tag-backed variants (1.5/1.4) → `tag: "1.5"` / `tag: "1.4"`
-#   - branch-backed non-default     → `branch: "<name>"` (none used here)
-# `branch: "1.5"` returns 404 branch_not_found; `branch: "rolling"` returns
-# 400 branch-not-found. Empirically verified 2026-05-10 against the live API.
+# The circinus/sagitta variants are declared as branch entries in
+# context7.json `previousVersions`. There is no longer any git-tag
+# indirection — Context7 re-crawls the branch HEAD on refresh, so the
+# variant always reflects current branch content.
 #
-# OPERATOR NOTE: do NOT use GitHub's "Re-run jobs" on `Update version tags`.
-# Re-runs replay the original SHA, which would move the version tag
-# BACKWARD and trigger this workflow to refresh Context7 against stale
-# content. To force a Context7 refresh, use the workflow_dispatch input
-# below — it calls Context7 directly without touching any tag.
+# Docs-only gating: the `paths:` filter scopes to `docs/**` and
+# `context7.json`, so infra-only pushes (workflows, scripts, Docker,
+# README, etc.) never trigger a refresh — Context7 only ingests `docs/**`
+# (per context7.json `folders`) plus the config file itself.
 #
-# Docs-only gating is enforced upstream: `Update version tags` has a
-# `paths:` filter scoped to `docs/**` and `context7.json`, so infra-only
-# pushes (workflows, scripts, README, etc.) never fire that workflow and
-# this one never sees a workflow_run event for them.
+# NOTE: circinus/sagitta must be registered as BRANCH variants in the
+# Context7 dashboard (driven by the context7.json `previousVersions`
+# branch entries on the default branch). A refresh with `branch: "<name>"`
+# returns 404 until Context7 has crawled the config and registered the
+# branch variant.
 
 on:
-  workflow_run:
-    workflows: ["Update version tags"]
-    types: [completed]
+  push:
+    branches:
+      - rolling
+      - circinus
+      - sagitta
+    paths:
+      - 'docs/**'
+      - 'context7.json'
   workflow_dispatch:
     inputs:
       variant:
-        description: "Context7 variant to refresh (rolling = default; 1.5 = circinus; 1.4 = sagitta)"
+        description: "Context7 variant to refresh (rolling = default; circinus = 1.5; sagitta = 1.4)"
         type: choice
-        options: [rolling, "1.5", "1.4"]
+        options: [rolling, circinus, sagitta]
         default: rolling
 
 permissions: {}
@@ -40,58 +44,48 @@ permissions: {}
 concurrency:
   group: >-
     context7-refresh-${{
-      (contains(fromJSON('["rolling","1.5","1.4"]'), inputs.variant) && inputs.variant)
-      || (github.event.workflow_run.head_branch == 'circinus' && '1.5')
-      || (github.event.workflow_run.head_branch == 'sagitta' && '1.4')
-      || (github.event.workflow_run.head_branch == 'rolling' && 'rolling')
-      || 'invalid'
+      (github.event_name == 'workflow_dispatch' && inputs.variant)
+      || github.ref_name
     }}
   cancel-in-progress: true
 
 jobs:
   refresh:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       contains(fromJSON('["rolling","circinus","sagitta"]'), github.event.workflow_run.head_branch))
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: Refresh Context7 library
         env:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
           DISPATCH_VARIANT: ${{ inputs.variant }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           if [[ -z "${CONTEXT7_API_KEY:-}" ]]; then
             echo "ERROR: CONTEXT7_API_KEY is unset or empty" >&2
             exit 1
           fi
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             VARIANT="$DISPATCH_VARIANT"
           else
-            case "$HEAD_BRANCH" in
-              rolling)  VARIANT=rolling ;;
-              circinus) VARIANT=1.5 ;;
-              sagitta)  VARIANT=1.4 ;;
-              *) echo "Unexpected head_branch: $HEAD_BRANCH" >&2; exit 1 ;;
-            esac
+            VARIANT="$REF_NAME"
           fi
-          # Defense-in-depth: type:choice UI constraint is bypassable when
+          # Defense-in-depth: the type:choice UI constraint is bypassable when
           # workflow_dispatch is invoked via API (`gh workflow run -f variant=…`).
           case "$VARIANT" in
-            rolling|1.5|1.4) ;;
-            *) echo "Invalid variant: '${VARIANT}'. Expected one of: rolling, 1.5, 1.4." >&2; exit 1 ;;
+            rolling|circinus|sagitta) ;;
+            *) echo "Invalid variant: '${VARIANT}'. Expected one of: rolling, circinus, sagitta." >&2; exit 1 ;;
           esac
           echo "Refreshing Context7 variant: $VARIANT"
-          # rolling = default variant (no field). 1.5/1.4 = tag-backed.
+          # rolling = default variant (no field). circinus/sagitta = branch-backed.
           if [[ "$VARIANT" == "rolling" ]]; then
-            PAYLOAD="$(jq -nc --arg lib "/${{ github.repository }}" \
+            PAYLOAD="$(jq -nc --arg lib "/$REPO" \
               '{libraryName: $lib}')"
           else
-            PAYLOAD="$(jq -nc --arg lib "/${{ github.repository }}" --arg tg "$VARIANT" \
-              '{libraryName: $lib, tag: $tg}')"
+            PAYLOAD="$(jq -nc --arg lib "/$REPO" --arg br "$VARIANT" \
+              '{libraryName: $lib, branch: $br}')"
           fi
           curl -fsSL \
             --connect-timeout 10 \
