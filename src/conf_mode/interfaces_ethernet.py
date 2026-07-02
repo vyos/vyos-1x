@@ -24,6 +24,7 @@ from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_vrf_changed
 from vyos.configdict import get_flowtable_interfaces
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
@@ -195,6 +196,10 @@ def get_config(config=None):
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
         set_dependents('static_arp', conf)
+
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        set_dependents('firewall', conf)
 
     return ethernet
 
@@ -442,8 +447,9 @@ def apply(ethernet):
         e.remove()
     else:
         e.update(ethernet)
-    if 'static_arp' in ethernet:
-        call_dependents()
+
+    # run the dependents
+    call_dependents()
 
     vpp_iface_config = dict_search(f'vpp.settings.interface.{ifname}', ethernet)
     if vpp_iface_config is not None and is_systemd_service_running('vpp.service'):

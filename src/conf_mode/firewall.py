@@ -142,7 +142,9 @@ def get_config(config=None):
                 if 'vrf' in local_zone_member:
                     local_zone_conf['vrf_interfaces'] = {}
                     for vrf_name in local_zone_member['vrf']:
-                        local_zone_conf['vrf_interfaces'][vrf_name] = ','.join(get_vrf_members(vrf_name))
+                        local_zone_conf['vrf_interfaces'][vrf_name] = get_vrf_members(
+                            vrf_name
+                        )
                 continue
 
             local_zone_conf['from_local'] = {}

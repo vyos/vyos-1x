@@ -9,41 +9,71 @@
     },
     "interfaces_bonding": {
         "ethernet": ["interfaces_ethernet"],
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_bridge": {
         "vxlan": ["interfaces_vxlan"],
         "wlan": ["interfaces_wireless"],
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
+    "interfaces_dummy": {
+        "firewall": ["firewall"]
+    },
     "interfaces_ethernet": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_geneve": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_l2tpv3": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_macsec": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_openvpn": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_pppoe": {
+        "firewall": ["firewall"]
     },
     "interfaces_pseudo_ethernet": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_sstpc": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_tunnel": {
+        "firewall": ["firewall"]
     },
     "interfaces_virtual_ethernet": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
+    "interfaces_vti": {
+        "firewall": ["firewall"]
+    },
     "interfaces_vxlan": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_wireless": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_wwan": {
+        "firewall": ["firewall"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_wireguard": {
+        "firewall": ["firewall"],
         "vxlan": ["interfaces_vxlan"]
     },
     "load_balancing_wan": {

@@ -22,6 +22,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_vrf_changed
 from vyos.configdict import is_source_interface
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
@@ -86,6 +87,10 @@ def get_config(config=None):
         )
         wireguard['prev_fwmark'] = prev.get('fwmark')
         wireguard['prev_vrf'] = prev.get('vrf')
+
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        set_dependents('firewall', conf)
 
     return wireguard
 
@@ -206,6 +211,7 @@ def apply(wireguard):
             domain_action = 'stop'
     call(f'systemctl {domain_action} vyos-domain-resolver.service')
 
+    # run the dependents
     call_dependents()
 
     return None

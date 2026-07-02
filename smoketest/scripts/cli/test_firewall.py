@@ -1150,8 +1150,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['vrf', 'name', 'VRF-1', 'table', '101'])
         self.cli_set(['vrf', 'name', 'VRF-2', 'table', '102'])
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vrf', 'VRF-1'])
-        self.cli_set(['interfaces', 'vti', 'vti1', 'vrf', 'VRF-2'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '10', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'ethernet', 'eth3', 'vif-s', '10', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'ethernet', 'eth3', 'vif-s', '20', 'vif-c', '30', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'vti', 'vti1', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'vti', 'vti2', 'vrf', 'VRF-2'])
 
+        # commit the config
         self.cli_commit()
 
         nftables_search = [
@@ -1162,8 +1167,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_ZONE_FORWARD'],
             ['type filter hook forward priority filter + 1'],
             ['oifname { "eth1", "eth2" }', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname { "eth0", "vti1", "eth0.10", "eth3.10", "eth3.20.30" }', 'counter packets', 'jump VZONE_ZONE1'],
             ['oifname "VRF-1"', 'counter packets', 'jump VZONE_ZONE1'],
             ['oifname "vtun66"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['oifname "vti2"', 'counter packets', 'jump VZONE_ZONE2'],
             ['oifname "VRF-2"', 'counter packets', 'jump VZONE_ZONE2'],
             ['chain VYOS_ZONE_LOCAL'],
             ['type filter hook input priority filter + 1'],
@@ -1197,8 +1204,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_ZONE_FORWARD'],
             ['type filter hook forward priority filter + 1'],
             ['oifname { "eth1", "eth2" }', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname { "eth0", "vti1", "eth0.10", "eth3.10", "eth3.20.30" }', 'counter packets', 'jump VZONE_ZONE1'],
             ['oifname "VRF-1"', 'counter packets', 'jump VZONE_ZONE1'],
             ['oifname "vtun66"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['oifname "vti2"', 'counter packets', 'jump VZONE_ZONE2'],
             ['oifname "VRF-2"', 'counter packets', 'jump VZONE_ZONE2'],
             ['chain VYOS_ZONE_LOCAL'],
             ['type filter hook input priority filter + 1'],
@@ -1210,6 +1219,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
             ['chain VZONE_LOCAL_OUT'],
             ['oifname "vtun66"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
+            ['oifname "vti2"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
             ['oifname "VRF-2"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
             ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
             ['chain VZONE_ZONE1'],
@@ -1222,6 +1232,29 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['counter packets', 'drop', 'comment "zone_ZONE2 default-action drop"']
         ]
 
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
+
+        # change memberships in vrf plus delete and add subifs
+        self.cli_set(['interfaces', 'vti', 'vti1', 'vrf', 'VRF-2'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vif', '10'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth3', 'vif-s', '10'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth3', 'vif-s', '20', 'vif-c', '30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '20', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'ethernet', 'eth3', 'vif-s', '20', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'ethernet', 'eth3', 'vif-s', '20', 'vif-c', '40', 'vrf', 'VRF-1'])
+        self.cli_commit()
+
+        # make som verifications to ensure the interface swapped vrf
+        nftables_search = [
+            ['oifname { "eth0", "eth0.20", "eth3.20", "eth3.20.40" }', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname { "vti1", "vti2" }', 'counter packets', 'jump VZONE_ZONE2'],
+        ]
+
+        nftables_search_v6 = [
+            ['oifname { "eth0", "eth0.20", "eth3.20", "eth3.20.40" }', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname { "vti1", "vti2" }', 'counter packets', 'jump VZONE_ZONE2'],
+        ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
         self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
 

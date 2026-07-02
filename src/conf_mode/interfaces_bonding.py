@@ -19,6 +19,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_vrf_changed
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_member
 from vyos.configdict import is_source_interface
@@ -171,6 +172,11 @@ def get_config(config=None):
     if 'static_arp' in bond:
         set_dependents('static_arp', conf)
 
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        bond.update({'vrf_changed': {}})
+        set_dependents('firewall', conf)
+
     bond['vpp_ifaces'] = cli_ifaces_list(conf)
 
     return bond
@@ -298,7 +304,11 @@ def apply(bond):
     else:
         b.update(bond)
 
-    if dict_search('member.interface_remove', bond) or 'static_arp' in bond:
+    if (
+        dict_search('member.interface_remove', bond)
+        or 'static_arp' in bond
+        or 'vrf_changed' in bond
+    ):
         try:
             call_dependents()
         except ConfigError:
