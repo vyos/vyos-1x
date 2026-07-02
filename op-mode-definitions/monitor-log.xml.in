@@ -111,15 +111,6 @@
               </node>
             </children>
           </node>
-          <tagNode name="level">
-            <properties>
-              <help>Monitor log and filter messages by minimum priority level (includes all higher severities)</help>
-              <completionHelp>
-                <list>emerg alert crit err warning notice info debug</list>
-              </completionHelp>
-            </properties>
-            <command>SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot -p $4</command>
-          </tagNode>
           <tagNode name="facility">
             <properties>
               <help>Monitor last lines of messages file and filter by specified facility</help>
@@ -217,6 +208,15 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pppoe.service</command>
           </leafNode>
+          <tagNode name="priority">
+            <properties>
+              <help>Monitor last lines of messages file and filter by minimum priority level (includes all higher severities)</help>
+              <completionHelp>
+                <list>emerg alert crit err warning notice info debug</list>
+              </completionHelp>
+            </properties>
+            <command>SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot --priority=$4</command>
+          </tagNode>
           <node name="protocol">
             <properties>
               <help>Monitor routing protocol logs</help>
