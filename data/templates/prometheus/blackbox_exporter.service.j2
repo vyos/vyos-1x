@@ -1,4 +1,14 @@
-{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' runuser -u node_exporter -- ' if vrf is vyos_defined else '' %}
+{% set icmp_enabled = modules is vyos_defined and modules.icmp is vyos_defined and modules.icmp.name is vyos_defined %}
+{% if vrf is vyos_defined %}
+{%     if icmp_enabled %}
+{# j2lint: disable=operator-enclosed-by-spaces #}
+{%         set vrf_command = 'ip vrf exec ' ~ vrf ~ ' setpriv --reuid=node_exporter --regid=node_exporter --init-groups --inh-caps=+net_raw --ambient-caps=+net_raw -- ' %}
+{%     else %}
+{%         set vrf_command = 'ip vrf exec ' ~ vrf ~ ' runuser -u node_exporter -- ' %}
+{%     endif %}
+{% else %}
+{%     set vrf_command = '' %}
+{% endif %}
 [Unit]
 Description=Blackbox Exporter
 Documentation=https://github.com/prometheus/blackbox_exporter
@@ -7,6 +17,10 @@ After=network.target
 [Service]
 {% if vrf is not vyos_defined %}
 User=node_exporter
+{% endif %}
+{% if vrf is not vyos_defined and icmp_enabled %}
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
 {% endif %}
 ExecStart={{ vrf_command }}/usr/sbin/blackbox_exporter \
 {% if listen_address is vyos_defined %}
