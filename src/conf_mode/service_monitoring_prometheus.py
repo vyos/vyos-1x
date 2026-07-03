@@ -20,6 +20,8 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import is_node_changed
+from vyos.configdict import node_changed
+from vyos.configdiff import Diff
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.utils.process import call
@@ -76,6 +78,12 @@ def get_config(config=None):
     tmp = False
     for node in ['vrf', 'config-file']:
         tmp = tmp or is_node_changed(conf, base + ['blackbox-exporter', node])
+    modules_changed = node_changed(
+        conf,
+        base + ['blackbox-exporter', 'modules'],
+        expand_nodes=Diff.ADD | Diff.DELETE,
+    )
+    tmp = tmp or 'icmp' in modules_changed
     if tmp:
         monitoring.update({'blackbox_exporter_restart_required': {}})
 

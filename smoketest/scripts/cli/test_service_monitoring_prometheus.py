@@ -158,6 +158,52 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
 
+    def test_05_blackbox_exporter_with_icmp(self):
+        vrf_name = 'bbx'
+        be_path = base_path + ['blackbox-exporter']
+        self.cli_set(be_path + ['listen-address', listen_ip])
+        self.cli_set(
+            be_path
+            + ['modules', 'icmp', 'name', 'ping4', 'preferred-ip-protocol', 'ipv4']
+        )
+
+        self.cli_commit()
+
+        # Verify CAP_NET_RAW is granted when ICMP module is configured (no VRF case)
+        file_content = read_file(blackbox_exporter_service_file)
+        self.assertIn('AmbientCapabilities=CAP_NET_RAW', file_content)
+        self.assertIn('CapabilityBoundingSet=CAP_NET_RAW', file_content)
+
+        # Check for running process
+        self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
+
+        self.cli_delete(be_path + ['modules', 'icmp'])
+        self.cli_commit()
+
+        # Verify CAP_NET_RAW is removed when ICMP module is deleted
+        file_content = read_file(blackbox_exporter_service_file)
+        self.assertNotIn('CAP_NET_RAW', file_content)
+        self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
+
+        # VRF + ICMP should use setpriv with net_raw capabilities
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '1111'])
+        self.cli_set(be_path + ['vrf', vrf_name])
+        self.cli_set(
+            be_path
+            + ['modules', 'icmp', 'name', 'ping4', 'preferred-ip-protocol', 'ipv4']
+        )
+        self.cli_commit()
+
+        # Verify VRF uses setpriv instead of systemd capabilities
+        file_content = read_file(blackbox_exporter_service_file)
+        self.assertIn('setpriv', file_content)
+        self.assertIn('--ambient-caps=+net_raw', file_content)
+        self.assertIn('--inh-caps=+net_raw', file_content)
+        self.assertNotIn('AmbientCapabilities=CAP_NET_RAW', file_content)
+
+        # Cleanup VRF
+        self.cli_delete(['vrf', 'name', vrf_name])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
