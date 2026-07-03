@@ -424,24 +424,29 @@ def verify_vlan_config(config):
             verify_mtu_ipv6(c_vlan)
 
 
-def verify_diffie_hellman_length(file, min_keysize):
-    """ Verify Diffie-Hellamn keypair length given via file. It must be greater
-    then or equal to min_keysize """
+def verify_diffie_hellman_length(file: str, min_keysize: int):
+    """ Verify Diffie-Hellman keypair length given via file. It must be greater
+    than or equal to min_keysize.
+
+    Raises TypeError if min_keysize is not an integer and ValueError if it is
+    not a positive integer - both indicate a logic error in the caller. """
     import os
     import re
     from vyos.utils.process import cmd
 
-    try:
-        min_keysize_int = int(min_keysize)
-    except (TypeError, ValueError):
-        return False
+    if isinstance(min_keysize, bool) or not isinstance(min_keysize, int):
+        raise TypeError(
+            f'min_keysize must be an integer, got {type(min_keysize).__name__}')
+    if min_keysize < 1:
+        raise ValueError(
+            f'min_keysize must be a positive integer, got {min_keysize}')
 
     if os.path.exists(file):
-        out = cmd(f'openssl dhparam -inform PEM -in {file} -text')
-        prog = re.compile('\d+\s+bit')
+        out = cmd(['openssl', 'dhparam', '-inform', 'PEM', '-in', file, '-text'])
+        prog = re.compile(r'\d+\s+bit')
         if prog.search(out):
             bits = prog.search(out)[0].split()[0]
-            if int(bits) >= min_keysize_int:
+            if int(bits) >= min_keysize:
                 return True
 
     return False

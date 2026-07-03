@@ -18,14 +18,26 @@ from vyos.utils.process import cmd
 
 dh_file = '/tmp/dh.pem'
 
-class TestDictSearch(TestCase):
+class TestVerifyDiffieHellmanLength(TestCase):
     def setUp(self):
         pass
 
     def test_dh_key_none(self):
-        self.assertFalse(verify_diffie_hellman_length('/tmp/non_existing_file', '1024'))
+        self.assertFalse(verify_diffie_hellman_length('/tmp/non_existing_file', 1024))
 
     def test_dh_key_512(self):
-        key_len = '512'
+        key_len = 512
         cmd(f'openssl dhparam -out {dh_file} {key_len}')
         self.assertTrue(verify_diffie_hellman_length(dh_file, key_len))
+
+    def test_dh_keysize_not_integer(self):
+        with self.assertRaises(TypeError):
+            verify_diffie_hellman_length(dh_file, '1024')
+        with self.assertRaises(TypeError):
+            verify_diffie_hellman_length(dh_file, True)
+
+    def test_dh_keysize_not_positive(self):
+        with self.assertRaises(ValueError):
+            verify_diffie_hellman_length(dh_file, -512)
+        with self.assertRaises(ValueError):
+            verify_diffie_hellman_length(dh_file, 0)
