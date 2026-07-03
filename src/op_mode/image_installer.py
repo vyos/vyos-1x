@@ -1491,7 +1491,7 @@ if __name__ == '__main__':
             add_image(args.image_path, args.vrf,
                       args.username, args.password,
                       args.no_prompt, args.force)
-
+        sync()
         exit()
 
     except KeyboardInterrupt:
