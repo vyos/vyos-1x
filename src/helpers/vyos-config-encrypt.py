@@ -122,7 +122,9 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
         cmd(f'mount /dev/mapper/vyos_config {d}')
 
         # Move mount_path to encrypted volume
-        shutil.copytree(mount_path, d, copy_function=shutil.move, dirs_exist_ok=True)
+        shutil.copytree(
+            mount_path, d, symlinks=True, copy_function=shutil.move, dirs_exist_ok=True
+        )
         cmd(f'chgrp -R vyattacfg {d}')
         cmd(f'umount {d}')
 
@@ -207,7 +209,9 @@ def decrypt_config(key):
         cmd(f'mount /dev/mapper/vyos_config {d}')
 
         # Move encrypted volume to /opt/vyatta/etc/config
-        shutil.copytree(d, mount_path, copy_function=shutil.move, dirs_exist_ok=True)
+        shutil.copytree(
+            d, mount_path, symlinks=True, copy_function=shutil.move, dirs_exist_ok=True
+        )
         cmd(f'chgrp -R vyattacfg {mount_path}')
 
         cmd(f'umount {d}')
