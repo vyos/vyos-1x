@@ -246,7 +246,9 @@ class BasicInterfaceTest:
                 pid = process_named_running(process_name, cmdline=interface,
                                             timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(pid)
-                cmdline = read_file(f'/proc/{pid}/cmdline')
+                cmdline = read_file(f'/proc/{pid}/cmdline', defaultonfailure='')
+                self.assertTrue(cmdline,
+                    f'{process_name} cmdline unreadable after PID re-resolve')
             return cmdline
 
         def test_dhcp_disable_interface(self):
