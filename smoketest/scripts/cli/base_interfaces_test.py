@@ -16,6 +16,8 @@ import re
 import jmespath
 
 from json import loads
+from time import sleep
+from time import time
 from netifaces import ifaddresses # pylint: disable = no-name-in-module
 from socket import AF_INET
 from socket import AF_INET6
@@ -238,18 +240,26 @@ class BasicInterfaceTest:
         def get_process_cmdline(self, process_name, interface, pid):
             # dhclient re-executes itself while daemonizing - the PID found
             # right after commit may already be gone when /proc is read.
-            # Re-resolve the PID once instead of failing on the transient one.
-            # NB: read_file() re-raises on failure unless defaultonfailure is
-            # set to a non-None value.
+            # Poll PID discovery and the /proc read together until the
+            # deadline instead of failing on a transient PID. Returns the
+            # (pid, cmdline) pair that was actually validated so callers
+            # can assert against the same process.
+            # NB: read_file() re-raises on failure unless defaultonfailure
+            # is set to a non-None value.
+            time_expire = time() + PROCESS_WAIT_TIMEOUT
             cmdline = read_file(f'/proc/{pid}/cmdline', defaultonfailure='')
-            if not cmdline:
-                pid = process_named_running(process_name, cmdline=interface,
-                                            timeout=PROCESS_WAIT_TIMEOUT)
-                self.assertTrue(pid)
+            while not cmdline:
+                if time() > time_expire:
+                    break
+                sleep(0.250)
+                tmp = process_named_running(process_name, cmdline=interface)
+                if not tmp:
+                    continue
+                pid = tmp
                 cmdline = read_file(f'/proc/{pid}/cmdline', defaultonfailure='')
-                self.assertTrue(cmdline,
-                    f'{process_name} cmdline unreadable after PID re-resolve')
-            return cmdline
+            self.assertTrue(cmdline,
+                f'{process_name} cmdline unreadable for interface {interface}')
+            return pid, cmdline
 
         def test_dhcp_disable_interface(self):
             if not self._test_dhcp:
@@ -312,8 +322,8 @@ class BasicInterfaceTest:
                 self.assertIn(f'send user-class "{user_class}";', dhclient_config)
 
                 # and the commandline has the appropriate options
-                cmdline = self.get_process_cmdline(dhclient_process_name,
-                                                   interface, dhclient_pid)
+                dhclient_pid, cmdline = self.get_process_cmdline(
+                    dhclient_process_name, interface, dhclient_pid)
                 self.assertIn(f'-e\x00IF_METRIC={distance}', cmdline)
 
         def test_dhcp_vrf(self):
@@ -344,13 +354,16 @@ class BasicInterfaceTest:
                 dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface,
                                                      timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(dhclient_pid)
-                # .. inside the appropriate VRF instance
+                # The commandline must carry the appropriate options ..
+                # (get_process_cmdline() may re-resolve the PID, so it runs
+                # first and the VRF check below targets the same process)
+                dhclient_pid, cmdline = self.get_process_cmdline(
+                    dhclient_process_name, interface, dhclient_pid)
+                self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
+                # .. and the process must run inside the appropriate VRF
+                # instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
                 self.assertIn(str(dhclient_pid), vrf_pids)
-                # and the commandline has the appropriate options
-                cmdline = self.get_process_cmdline(dhclient_process_name,
-                                                   interface, dhclient_pid)
-                self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
 
             # T5103: remove interface from VRF instance and move DHCP client
             # back to default VRF. This must restart the DHCP client process
@@ -367,13 +380,16 @@ class BasicInterfaceTest:
                 dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface,
                                                      timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(dhclient_pid)
-                # .. inside the appropriate VRF instance
+                # The commandline must carry the appropriate options ..
+                # (get_process_cmdline() may re-resolve the PID, so it runs
+                # first and the VRF check below targets the same process)
+                dhclient_pid, cmdline = self.get_process_cmdline(
+                    dhclient_process_name, interface, dhclient_pid)
+                self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
+                # .. and the process must no longer run inside the VRF
+                # instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
                 self.assertNotIn(str(dhclient_pid), vrf_pids)
-                # and the commandline has the appropriate options
-                cmdline = self.get_process_cmdline(dhclient_process_name,
-                                                   interface, dhclient_pid)
-                self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
 
             self.cli_delete(['vrf', 'name', vrf_name])
 
@@ -1238,8 +1254,8 @@ class BasicInterfaceTest:
                 self.assertTrue(pid)
 
                 # DHCPv6 option "no-release" requires "-n" daemon startup option
-                dhcp6c_options = self.get_process_cmdline(dhcp6c_process_name,
-                                                          interface, pid)
+                pid, dhcp6c_options = self.get_process_cmdline(
+                    dhcp6c_process_name, interface, pid)
                 self.assertIn('-n', dhcp6c_options)
 
         def test_dhcpv6pd_auto_sla_id(self):
