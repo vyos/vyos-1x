@@ -530,6 +530,18 @@ that the router is able to resolve this dns query.
 ```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> source geoip country-code \<country\>
 ```
 
+```{cfgcmd} set firewall ipv4 forward filter rule \<1-999999\> source geoip asn \<1-4294967294\>
+```
+
+```{cfgcmd} set firewall ipv4 input filter rule \<1-999999\> source geoip asn \<1-4294967294\>
+```
+
+```{cfgcmd} set firewall ipv4 output filter rule \<1-999999\> source geoip asn \<1-4294967294\>
+```
+
+```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> source geoip asn \<1-4294967294\>
+```
+
 ```{cfgcmd} set firewall ipv4 forward filter rule \<1-999999\> destination geoip country-code \<country\>
 ```
 
@@ -540,6 +552,18 @@ that the router is able to resolve this dns query.
 ```
 
 ```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> destination geoip country-code \<country\>
+```
+
+```{cfgcmd} set firewall ipv4 forward filter rule \<1-999999\> destination geoip asn \<1-4294967294\>
+```
+
+```{cfgcmd} set firewall ipv4 input filter rule \<1-999999\> destination geoip asn \<1-4294967294\>
+```
+
+```{cfgcmd} set firewall ipv4 output filter rule \<1-999999\> destination geoip asn \<1-4294967294\>
+```
+
+```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> destination geoip asn \<1-4294967294\>
 ```
 
 ```{cfgcmd} set firewall ipv4 forward filter rule \<1-999999\> source geoip inverse-match
@@ -566,7 +590,8 @@ that the router is able to resolve this dns query.
 ```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> destination geoip inverse-match
 
 Match IP addresses based on its geolocation. More info: geoip matching.
-Use inverse-match to match anything except the given country-codes.
+Use country-code or asn to match based on geography or origin network.
+Use inverse-match to match anything except the given country code or ASN.
 ```
 
 Data is provided by DB-IP.com under CC-BY-4.0 license. Attribution required,
