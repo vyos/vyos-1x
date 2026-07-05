@@ -230,13 +230,20 @@ class TestKernelModules(unittest.TestCase):
 
         options_to_check = ['CONFIG_HYPERV_VSOCKETS', 'CONFIG_HYPERV_STORAGE',
                             'CONFIG_HYPERV_NET', 'CONFIG_HYPERV_KEYBOARD',
-                            'CONFIG_HYPERV_VTL_MODE', 'CONFIG_HYPERV_TIMER',
-                            'CONFIG_HYPERV_UTILS', 'CONFIG_HYPERV_BALLOON',
-                            'CONFIG_HYPERV_VMBUS', 'CONFIG_HYPERV_IOMMU']
+                            'CONFIG_HYPERV_TIMER', 'CONFIG_HYPERV_UTILS',
+                            'CONFIG_HYPERV_BALLOON', 'CONFIG_HYPERV_VMBUS',
+                            'CONFIG_HYPERV_IOMMU', 'CONFIG_PCI_HYPERV',
+                            'CONFIG_PCI_HYPERV_INTERFACE']
 
         for option in options_to_check:
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
+
+        # T8940: a kernel built with HYPERV_VTL_MODE "must run at VTL2, and
+        # will not run as a normal guest" - get_vtl() calls BUG() on every
+        # regular Hyper-V VM. This option must never be enabled.
+        tmp = re.findall(r'CONFIG_HYPERV_VTL_MODE=(y|m)', self._config_data)
+        self.assertFalse(tmp)
 
     def test_hypervisor_vmware(self):
         if IS_ARM64:
