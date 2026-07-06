@@ -48,6 +48,7 @@ from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.process import is_systemd_service_running
+from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.control_vpp import VPPControl
 from vyos import ConfigError
@@ -192,6 +193,7 @@ def get_config(config=None):
             get_first_key=True,
             no_tag_node_value_mangle=True,
         )
+        ethernet['vpp_bond_members'] = deps_bond_dict(conf)
 
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
@@ -481,6 +483,15 @@ def apply(ethernet):
             vpp_api.set_iface_mtu(lcp_name, mtu)
 
         sync_vpp_lcp_vrf_tables(ethernet, vpp_api)
+
+        # VPP requires promiscuous mode to pass VLAN-tagged traffic;
+        # also keep it enabled for VPP bond members
+        needs_promisc = (
+            'vif' in ethernet
+            or 'vif_s' in ethernet
+            or ifname in ethernet.get('vpp_bond_members')
+        )
+        vpp_api.set_promisc(ifname, enable=needs_promisc)
 
     return None
 
