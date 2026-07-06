@@ -29,7 +29,7 @@ information is distributed across the network.
 ## Common link parameters
 
 The following commands define link-level TE attributes that can be advertised
-by both IS-IS and OSPF (not supported yet).
+by both IS-IS and OSPF (although OSPF advertisement is not supported yet).
 
 ```{cfgcmd} set protocols traffic-engineering admin-group \<admin-group-name\> bit-position \<0-31\>
 
