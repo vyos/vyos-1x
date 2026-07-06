@@ -416,5 +416,41 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             # Validate and verify assigned IP addresses
             self._verify_interface_address(interface)
 
+    def test_pppoe_no_default_link_local(self):
+        # Verify no synthetic EUI64 /64 link-local is added when no-default-link-local is set
+        interface = self._interfaces[0]
+        (user, passwd) = self.u_p_dict[interface]
+
+        self.cli_set(base_path + [interface, 'authentication', 'username', user])
+        self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+        self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+        self.cli_set(base_path + [interface, 'no-peer-dns'])
+        self.cli_set(base_path + [interface, 'ipv6', 'address', 'no-default-link-local'])
+
+        # commit changes
+        self.cli_commit()
+
+        self.assertTrue(wait_for_interface(interface),
+                        msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+        tmp = get_interface_address(interface)
+        self.assertIn('addr_info', tmp)
+
+        link_locals = [
+            a for a in tmp['addr_info']
+            if a.get('family') == 'inet6'
+            and IPv6Address(a['local']).is_link_local
+        ]
+
+        # IPv6CP must have negotiated a link-local with the peer
+        self.assertTrue(link_locals,
+                        'No IPv6 link-local found: IPv6CP negotiation may have failed')
+
+        # No synthetic EUI64 /64 must be present on top of the IPv6CP-negotiated link-local
+        for addr in link_locals:
+            self.assertNotEqual(addr['prefixlen'], 64,
+                                'Synthetic EUI64 /64 link-local must not be present '
+                                'when no-default-link-local is configured')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
