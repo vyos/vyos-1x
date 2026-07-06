@@ -467,7 +467,9 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                   no_tag_node_value_mangle=True)
         dict.update({'static' : static})
     elif conf.exists_effective(static_cli_path):
-        dict.update({'static' : deleted_protocol})
+        # Use a copy - static.dhcp/static.pppoe below may be merged in,
+        # and deleted_protocol is shared by reference with other protocols
+        dict.update({'static' : deleted_protocol.copy()})
 
     # We need to check the CLI if the NHRP node is present and thus load in all the default
     # values present on the CLI - that's why we have if conf.exists()
@@ -487,6 +489,12 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
     tmp = get_pppoe_interfaces(conf)
     if tmp: dict_set_nested('static.pppoe', tmp, dict)
+
+    # T6991/T9054: "protocols static" may have been deleted while a DHCP or
+    # PPPoE interface still contributes a default route - in that case the
+    # static section must still be rendered, so drop the deletion marker
+    if 'static' in dict and ('dhcp' in dict['static'] or 'pppoe' in dict['static']):
+        dict['static'].pop('deleted', None)
 
     # keep a re-usable list of dependent VRFs
     dependent_vrfs_default = {}
@@ -615,7 +623,9 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                               no_tag_node_value_mangle=True)
                 dict_set_nested(f'{protocol_dict_path}.static', static, vrf)
             elif conf.exists_effective(static_vrf_path):
-                dict_set_nested(f'{protocol_dict_path}.static', deleted_protocol, vrf)
+                # Use a copy - static.dhcp/static.pppoe below may be merged in,
+                # and deleted_protocol is shared by reference with other protocols
+                dict_set_nested(f'{protocol_dict_path}.static', deleted_protocol.copy(), vrf)
 
             # T3680 - get a list of all interfaces currently configured to use DHCP
             tmp = get_dhcp_interfaces(conf, vrf_name)
@@ -623,6 +633,14 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
             tmp = get_pppoe_interfaces(conf, vrf_name)
             if tmp: dict_set_nested(f'name.{vrf_name}.protocols.static.pppoe', tmp, vrf)
+
+            # T6991/T9054: "protocols static" may have been deleted while a
+            # DHCP or PPPoE interface still contributes a default route - in
+            # that case the static section must still be rendered, so drop
+            # the deletion marker
+            static_dict = dict_search(f'{protocol_dict_path}.static', vrf)
+            if static_dict and ('dhcp' in static_dict or 'pppoe' in static_dict):
+                static_dict.pop('deleted', None)
 
             vrf_vni_path = ['vrf', 'name', vrf_name, 'vni']
             if conf.exists(vrf_vni_path):
