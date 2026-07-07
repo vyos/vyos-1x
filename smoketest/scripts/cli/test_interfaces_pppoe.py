@@ -416,5 +416,43 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             # Validate and verify assigned IP addresses
             self._verify_interface_address(interface)
 
+    def test_pppoe_default_route_survives_static_deletion(self):
+        # T6991/T9054: The PPPoE default route must not be withdrawn from FRR
+        # when "protocols static" is deleted - only the statically configured
+        # routes must disappear, the PPPoE-sourced default route must stay.
+        interface = self._interfaces[0]
+        (user, passwd) = self.u_p_dict[interface]
+        static_base_path = ['protocols', 'static']
+
+        self.cli_set(base_path + [interface, 'authentication', 'username', user])
+        self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+        self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+        self.cli_commit()
+
+        self.assertTrue(wait_for_interface(interface),
+                        msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+        default_route = rf'ip route 0.0.0.0/0 {interface} tag 210'
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(default_route, frrconfig)
+
+        # Add an unrelated static route - this is what triggers "protocols
+        # static" to exist on the CLI in the first place
+        self.cli_set(static_base_path + ['route', '10.0.0.0/8', 'blackhole'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(default_route, frrconfig)
+        self.assertIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
+
+        # Now delete "protocols static" entirely - the PPPoE default route
+        # must remain in the FRR configuration (and thus in the RIB/FIB)
+        self.cli_delete(static_base_path)
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('')
+        self.assertNotIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
+        self.assertIn(default_route, frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
