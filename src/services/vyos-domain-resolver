@@ -17,6 +17,8 @@ import json
 import time
 import logging
 import os
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 
 from vyos.configdict import dict_merge
 from vyos.configquery import ConfigTreeQuery
@@ -155,8 +157,18 @@ def update_remote_group(config):
             # Attempt to download file, use cached version if download fails
             try:
                 download(list_file, remote_config['url'], raise_error=True)
-            except:
-                logger.error(f'Failed to download list-file for {set_name} remote group')
+            except Exception as err:
+                url = urlsplit(remote_config['url'])
+                _, _, netloc = url.netloc.rpartition('@')
+                redacted_url = urlunsplit(url._replace(netloc=netloc, query='', fragment=''))
+                err_msg = str(err).replace(remote_config['url'], redacted_url)
+                logger.error(
+                    'Failed to download list-file for %s remote group: %s: %s',
+                    set_name,
+                    err.__class__.__name__,
+                    err_msg,
+                )
+                logger.debug('Download failure details for %s', set_name, exc_info=True)
                 logger.info(f'Using cached list-file for {set_name} remote group')
 
             # Read list file

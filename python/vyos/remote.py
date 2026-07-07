@@ -413,33 +413,46 @@ class HttpC:
             # Not only would it potentially mess up with the progress bar but
             # `shutil.copyfileobj(request.raw, file)` does not handle automatic decoding.
             s.headers.update({'Accept-Encoding': 'identity'})
+            final_urlstring = self.urlstring
+            size = None
             with s.head(self.urlstring,
                         allow_redirects=True,
                         timeout=self.timeout) as r:
-                # Abort early if the destination is inaccessible.
+                # Some servers (e.g. AbuseIPDB) reject HEAD with 405 but allow GET.
+                if r.status_code not in (405, 501):
+                    # Abort early if the destination is inaccessible.
+                    r.raise_for_status()
+                    # If the request got redirected, keep the last URL we ended up with.
+                    final_urlstring = r.url
+                    if r.history and self.progressbar:
+                        print_error('Redirecting to ' + final_urlstring)
+                    # Check for the prospective file size.
+                    try:
+                        size = int(r.headers['Content-Length'])
+                    # In case the server does not supply the header.
+                    except KeyError:
+                        size = None
+            with s.get(final_urlstring, stream=True, timeout=self.timeout) as r:
                 r.raise_for_status()
-                # If the request got redirected, keep the last URL we ended up with.
-                final_urlstring = r.url
-                if r.history and self.progressbar:
-                    print_error('Redirecting to ' + final_urlstring)
-                # Check for the prospective file size.
-                try:
-                    size = int(r.headers['Content-Length'])
-                # In case the server does not supply the header.
-                except KeyError:
-                    size = None
-            if self.check_space:
-                check_storage(location, size)
-            with s.get(final_urlstring, stream=True,
-                       timeout=self.timeout) as r, open(location, 'wb') as f:
-                if self.progressbar and size:
-                    with Progressbar(CHUNK_SIZE / size) as p:
-                        for chunk in iter(lambda: begin(p.increment(), r.raw.read(CHUNK_SIZE)), b''):
-                            f.write(chunk)
-                else:
-                    # We'll try to stream the download directly with `copyfileobj()` so that large
-                    #  files (like entire VyOS images) don't occupy much memory.
-                    shutil.copyfileobj(r.raw, f)
+                if size is None:
+                    try:
+                        size = int(r.headers['Content-Length'])
+                    except KeyError:
+                        size = None
+                if self.check_space:
+                    check_storage(location, size)
+                with open(location, 'wb') as f:
+                    if self.progressbar and size:
+                        with Progressbar(CHUNK_SIZE / size) as p:
+                            for chunk in iter(
+                                lambda: begin(p.increment(), r.raw.read(CHUNK_SIZE)),
+                                b'',
+                            ):
+                                f.write(chunk)
+                    else:
+                        # We'll try to stream the download directly with `copyfileobj()` so that large
+                        #  files (like entire VyOS images) don't occupy much memory.
+                        shutil.copyfileobj(r.raw, f)
 
     def upload(self, location: str):
         # Does not yet support progressbars.
