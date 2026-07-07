@@ -27,6 +27,8 @@ sflow {
 {% endif %}
 {% if enable_egress is vyos_defined %}
   psample { group=1 egress=on }
+{% elif vpp_sflow %}
+  psample { group=1 }
 {% endif %}
 {% if drop_monitor_limit is vyos_defined %}
   dropmon { limit={{ drop_monitor_limit }} start=on sw=on hw=off }
