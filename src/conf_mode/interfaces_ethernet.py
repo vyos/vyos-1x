@@ -455,20 +455,32 @@ def apply(ethernet):
     if vpp_iface_config is not None and is_systemd_service_running('vpp.service'):
         vpp_api = VPPControl()
 
-        # Enable ip4-dhcp-client-detect feature for DHCP-configured interfaces.
-        # This feature is required for VPP to process DHCP packets and assign addresses.
-        if 'dhcp' in ethernet.get('address', []):
-            vpp_api.enable_dhcp_client(ifname)
-        else:
-            vpp_api.disable_dhcp_client(ifname)
+        # Enable ip4-dhcp-client-detect/ip6-icmp-ra-punt features for
+        # DHCP/DHCPv6/autoconf-configured interfaces. These features are
+        # required for VPP to process DHCP(v6) packets and assign addresses.
+        # Applies to the interface itself and its VLAN sub-interfaces
+        # (vif, vif_s).vif-c (Q-in-Q) is intentionally excluded, as it is
+        # not currently functional under VPP.
+        dhcp_targets = [(ifname, ethernet)]
+        dhcp_targets += [
+            (vif['ifname'], vif) for vif in ethernet.get('vif', {}).values()
+        ]
+        dhcp_targets += [
+            (vif_s['ifname'], vif_s) for vif_s in ethernet.get('vif_s', {}).values()
+        ]
 
-        # Enable ip6-icmp-ra-punt feature for DHCPv6-configured interfaces.
-        if 'dhcpv6' in ethernet.get('address', []) or (
-            'autoconf' in ethernet.get('ipv6', {}).get('address', {})
-        ):
-            vpp_api.enable_icmpv6_ra_punt(ifname)
-        else:
-            vpp_api.disable_icmpv6_ra_punt(ifname)
+        for dhcp_ifname, dhcp_config in dhcp_targets:
+            if 'dhcp' in dhcp_config.get('address', []):
+                vpp_api.enable_dhcp_client(dhcp_ifname)
+            else:
+                vpp_api.disable_dhcp_client(dhcp_ifname)
+
+            if 'dhcpv6' in dhcp_config.get('address', []) or (
+                'autoconf' in dhcp_config.get('ipv6', {}).get('address', {})
+            ):
+                vpp_api.enable_icmpv6_ra_punt(dhcp_ifname)
+            else:
+                vpp_api.disable_icmpv6_ra_punt(dhcp_ifname)
 
         # If the interface is managed by the VPP DPDK driver, synchronize runtime
         # parameters between Linux and the corresponding VPP LCP interface
