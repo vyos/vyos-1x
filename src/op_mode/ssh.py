@@ -19,7 +19,7 @@ import json
 import sys
 import glob
 import vyos.opmode
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.configquery import ConfigTreeQuery
 from tabulate import tabulate
 
@@ -35,9 +35,9 @@ def show_fingerprints(raw: bool, ascii: bool):
         for keyfile in publickeys:
             try:
                 if ascii:
-                    keydata = cmd("ssh-keygen -l -v -E sha256 -f " + keyfile).splitlines()
+                    keydata = cmdl(['ssh-keygen', '-l', '-v', '-E', 'sha256', '-f', keyfile]).splitlines()
                 else:
-                    keydata = cmd("ssh-keygen -l -E sha256 -f " + keyfile).splitlines()
+                    keydata = cmdl(['ssh-keygen', '-l', '-E', 'sha256', '-f', keyfile]).splitlines()
                 type = keydata[0].split(None)[-1].strip("()")
                 key_size = keydata[0].split(None)[0]
                 fingerprint = keydata[0].split(None)[1]
@@ -70,12 +70,12 @@ def show_dynamic_protection(raw: bool):
     attackers = []
     try:
         # IPv4
-        attackers = attackers + json.loads(cmd("nft -j list set ip sshguard attackers"))["nftables"][1]["set"]["elem"]
+        attackers = attackers + json.loads(cmdl(['nft', '-j', 'list', 'set', 'ip', 'sshguard', 'attackers']))["nftables"][1]["set"]["elem"]
     except:
         pass
     try:
         # IPv6
-        attackers = attackers + json.loads(cmd("nft -j list set ip6 sshguard attackers"))["nftables"][1]["set"]["elem"]
+        attackers = attackers + json.loads(cmdl(['nft', '-j', 'list', 'set', 'ip6', 'sshguard', 'attackers']))["nftables"][1]["set"]["elem"]
     except:
         pass
     if attackers:

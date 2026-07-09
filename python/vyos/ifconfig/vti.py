@@ -44,18 +44,18 @@ class VTIIf(Interface):
         # not have a lookup key configuration - thus we shift the key by one
         # to also support a vti0 interface
         if_id = str(int(if_id) +1)
-        cmd = f'ip link add {self.ifname} type xfrm if_id {if_id}'
+        cmd = ['ip', 'link', 'add', self.ifname, 'type', 'xfrm', 'if_id', if_id]
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
             # by using isinstance()
             tmp = dict_search(vyos_key, self.config)
             if isinstance(tmp, dict):
-                cmd += f' {iproute2_key}'
+                cmd += [iproute2_key]
             elif tmp != None:
-                cmd += f' {iproute2_key} {tmp}'
+                cmd += [iproute2_key, str(tmp)]
 
-        self._cmd(cmd.format(**self.config))
+        self._cmdl(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_interface('admin_state', 'down')

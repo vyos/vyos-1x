@@ -38,23 +38,18 @@ ArgState = typing.Literal['reachable', 'stale', 'failed', 'permanent']
 
 def get_raw_data(family, interface=None, state=None):
     from json import loads
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
+    neigh_cmd = ['ip', '--family', family, '--json', 'neighbor', 'list']
     if interface:
         if not interface_exists(interface):
             raise ValueError(f"Interface '{interface}' does not exist in the system")
-        interface = f"dev {interface}"
-    else:
-        interface = ""
+        neigh_cmd += ['dev', interface]
 
     if state:
-        state = f"nud {state}"
-    else:
-        state = ""
+        neigh_cmd += ['nud', state]
 
-    neigh_cmd = f"ip --family {family} --json neighbor list {interface} {state}"
-
-    data = loads(cmd(neigh_cmd))
+    data = loads(cmdl(neigh_cmd))
 
     return data
 

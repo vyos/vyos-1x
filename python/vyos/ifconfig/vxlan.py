@@ -92,27 +92,28 @@ class VXLANIf(Interface):
             remote_list = self.config['remote'][1:]
             self.config['remote'] = self.config['remote'][0]
 
-        cmd = 'ip link add {ifname} type vxlan dstport {port}'
+        cmd = ['ip', 'link', 'add', self.ifname, 'type', 'vxlan',
+               'dstport', str(self.config['port'])]
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
             # by using isinstance()
             tmp = dict_search(vyos_key, self.config)
             if isinstance(tmp, dict):
-                cmd += f' {iproute2_key}'
+                cmd += [iproute2_key]
             elif tmp != None:
-                cmd += f' {iproute2_key} {tmp}'
+                cmd += [iproute2_key, str(tmp)]
 
-        self._cmd(cmd.format(**self.config))
+        self._cmdl(cmd)
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
 
         # VXLAN tunnel is always recreated on any change - see interfaces_vxlan.py
         if remote_list:
             for remote in remote_list:
-                cmd = f'bridge fdb append to 00:00:00:00:00:00 dst {remote} ' \
-                       'port {port} dev {ifname}'
-                self._cmd(cmd.format(**self.config))
+                cmd = ['bridge', 'fdb', 'append', 'to', '00:00:00:00:00:00',
+                       'dst', remote, 'port', str(self.config['port']), 'dev', self.ifname]
+                self._cmdl(cmd)
 
     def set_neigh_suppress(self, state):
         """

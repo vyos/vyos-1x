@@ -26,7 +26,7 @@ from uuid import UUID
 from vyos.flavor import get_image_serial_console
 from vyos.system import disk
 from vyos.template import render
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
 
 # Define variables
@@ -69,25 +69,27 @@ def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS', chro
         efi_dir (str): a path to '/boot/efi' directory
     """
 
-    if chroot:
-        chroot_cmd = f"chroot {chroot}"
-    else:
-        chroot_cmd = ""
+    chroot_prefix = ['chroot', chroot] if chroot else []
 
     efi_installation_arch = "x86_64"
     if platform.machine() == "aarch64":
         efi_installation_arch = "arm64"
     elif platform.machine() == "x86_64":
-        cmd(
-            f'{chroot_cmd} grub-install --no-floppy --target=i386-pc \
-            --boot-directory={boot_dir}  {drive_path} --force'
+        cmdl(
+            chroot_prefix + [
+                'grub-install', '--no-floppy', '--target=i386-pc',
+                f'--boot-directory={boot_dir}', drive_path, '--force',
+            ]
         )
 
-    cmd(
-        f'{chroot_cmd} grub-install --no-floppy --recheck --target={efi_installation_arch}-efi \
-            --force-extra-removable --boot-directory={boot_dir} \
-            --efi-directory={efi_dir} --bootloader-id="{id}" \
-            --uefi-secure-boot'
+    cmdl(
+        chroot_prefix + [
+            'grub-install', '--no-floppy', '--recheck',
+            f'--target={efi_installation_arch}-efi',
+            '--force-extra-removable', f'--boot-directory={boot_dir}',
+            f'--efi-directory={efi_dir}', f'--bootloader-id={id}',
+            '--uefi-secure-boot',
+        ]
     )
 
 
@@ -190,7 +192,7 @@ def read_env(env_file: str = '') -> dict[str, str]:
         root_dir: str = disk.find_persistence()
         env_file = f'{root_dir}/{GRUB_DIR_MAIN}/grubenv'
 
-    env_content: str = cmd(f'grub-editenv {env_file} list').splitlines()
+    env_content: str = cmdl(['grub-editenv', env_file, 'list']).splitlines()
     regex_filter = re_compile(r'^(?P<variable_name>.*)=(?P<variable_value>.*)$')
     env_dict: dict[str, str] = {}
     for env_item in env_content:

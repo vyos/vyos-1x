@@ -45,11 +45,9 @@ class PPPoEIf(Interface):
 
     def _remove_routes(self, vrf=None):
         # Always delete default routes when interface is removed
-        vrf_cmd = ''
-        if vrf:
-            vrf_cmd = f'-c "vrf {vrf}"'
-        self._cmd(f'vtysh -c "conf t" {vrf_cmd} -c "no ip route 0.0.0.0/0 {self.ifname} tag 210"')
-        self._cmd(f'vtysh -c "conf t" {vrf_cmd} -c "no ipv6 route ::/0 {self.ifname} tag 210"')
+        vrf_cmd = ['-c', f'vrf {vrf}'] if vrf else []
+        self._cmdl(['vtysh', '-c', 'conf t'] + vrf_cmd + ['-c', f'no ip route 0.0.0.0/0 {self.ifname} tag 210'])
+        self._cmdl(['vtysh', '-c', 'conf t'] + vrf_cmd + ['-c', f'no ipv6 route ::/0 {self.ifname} tag 210'])
 
     def remove(self):
         """
@@ -125,10 +123,10 @@ class PPPoEIf(Interface):
         super().update(config)
 
         # generate proper configuration string when VRFs are in use
-        vrf = ''
+        vrf = []
         if 'vrf' in config:
             tmp = config['vrf']
-            vrf = f'-c "vrf {tmp}"'
+            vrf = ['-c', f'vrf {tmp}']
 
         # learn default router in Router Advertisement.
         tmp = '0' if 'no_default_route' in config else '1'
@@ -137,10 +135,10 @@ class PPPoEIf(Interface):
         if 'no_default_route' not in config:
             # Set default route(s) pointing to PPPoE interface
             distance = config['default_route_distance']
-            self._cmd(f'vtysh -c "conf t" {vrf} -c "ip route 0.0.0.0/0 {self.ifname} tag 210 {distance}"')
+            self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ip route 0.0.0.0/0 {self.ifname} tag 210 {distance}'])
             if 'ipv6' in config:
-                self._cmd(f'vtysh -c "conf t" {vrf} -c "ipv6 route ::/0 {self.ifname} tag 210 {distance}"')
+                self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ipv6 route ::/0 {self.ifname} tag 210 {distance}'])
 
         # kick RS when IPv6 is up.
         if dict_search('ipv6.address.autoconf', config) is not None:
-            self._cmd(f'rdisc6 --single --retry 3 {self.ifname}')
+            self._cmdl(['rdisc6', '--single', '--retry', '3', self.ifname])

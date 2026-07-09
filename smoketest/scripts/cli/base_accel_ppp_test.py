@@ -22,7 +22,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
 from vyos.utils.cpu import get_core_count
 from vyos.utils.process import process_named_running
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 class BasicAccelPPPTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
@@ -134,9 +134,24 @@ class BasicAccelPPPTest:
             :return: part of config
             :rtype: str
             """
-            command = f'cat {self._config_file} | sed -n "/^\[{start}/,/^\[{end}/p"'
-            out = cmd(command)
-            return out
+            start_pattern = f'[{start}'
+            end_pattern = f'[{end}'
+            with open(self._config_file) as f:
+                lines = f.read().splitlines()
+
+            matched = []
+            in_range = False
+            for line in lines:
+                if not in_range:
+                    if line.startswith(start_pattern):
+                        in_range = True
+                        matched.append(line)
+                else:
+                    matched.append(line)
+                    if line.startswith(end_pattern):
+                        break
+
+            return '\n'.join(matched)
 
         def verify(self, conf):
             self.assertEqual(conf["core"]["thread-count"], str(get_core_count()))
@@ -234,7 +249,7 @@ class BasicAccelPPPTest:
             self.verify(conf)
 
             # check local users
-            tmp = cmd(f"sudo cat {self._chap_secrets}")
+            tmp = cmdl(['cat', self._chap_secrets], sudo=True)
             regex = f"{user}\s+\*\s+{password}\s+{static_ip}\s+{download}/{upload}"
             tmp = re.findall(regex, tmp)
             self.assertTrue(tmp)
@@ -247,7 +262,7 @@ class BasicAccelPPPTest:
             self.cli_commit()
 
             # check local users
-            tmp = cmd(f"sudo cat {self._chap_secrets}")
+            tmp = cmdl(['cat', self._chap_secrets], sudo=True)
             regex = f"{user}\s+\*\s+{password}\s+\*\s+{download}/{upload}"
             tmp = re.findall(regex, tmp)
             self.assertTrue(tmp)

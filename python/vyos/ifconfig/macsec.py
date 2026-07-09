@@ -42,32 +42,33 @@ class MACsecIf(Interface):
         """
 
         # create tunnel interface
-        cmd  = 'ip link add link {source_interface} {ifname} type macsec'.format(**self.config)
-        cmd += f' cipher {self.config["security"]["cipher"]}'
+        cmd = ['ip', 'link', 'add', 'link', self.config['source_interface'],
+               self.ifname, 'type', 'macsec',
+               'cipher', self.config['security']['cipher']]
 
         if 'encrypt' in self.config["security"]:
-            cmd += ' encrypt on'
+            cmd += ['encrypt', 'on']
 
-        self._cmd(cmd)
+        self._cmdl(cmd)
 
         # Check if using static keys
         if 'static' in self.config["security"]:
             # Set static TX key
-            cmd = 'ip macsec add {ifname} tx sa 0 pn 1 on key 00'.format(**self.config)
-            cmd += f' {self.config["security"]["static"]["key"]}'
-            self._cmd(cmd)
+            self._cmdl(['ip', 'macsec', 'add', self.ifname, 'tx', 'sa', '0',
+                        'pn', '1', 'on', 'key', '00',
+                        self.config['security']['static']['key']])
 
             for peer, peer_config in self.config["security"]["static"]["peer"].items():
                 if 'disable' in peer_config:
                     continue
 
                 # Create the address
-                cmd = 'ip macsec add {ifname} rx port 1 address'.format(**self.config)
-                cmd += f' {peer_config["mac"]}'
-                self._cmd(cmd)
+                cmd = ['ip', 'macsec', 'add', self.ifname, 'rx', 'port', '1',
+                       'address', peer_config['mac']]
+                self._cmdl(cmd)
                 # Add the encryption key to the address
-                cmd += f' sa 0 pn 1 on key 01 {peer_config["key"]}'
-                self._cmd(cmd)
+                cmd += ['sa', '0', 'pn', '1', 'on', 'key', '01', peer_config['key']]
+                self._cmdl(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')

@@ -30,16 +30,15 @@ class WiFiIf(Interface):
     }
     def _create(self):
         # all interfaces will be added in monitor mode
-        cmd = 'iw phy {physical_device} interface add {ifname} type monitor'
-        self._cmd(cmd.format(**self.config))
+        cmd = ['iw', 'phy', self.config['physical_device'], 'interface', 'add',
+               self.ifname, 'type', 'monitor']
+        self._cmdl(cmd)
 
         # wireless interface is administratively down by default
         self.set_admin_state('down')
 
     def _delete(self):
-        cmd = 'iw dev {ifname} del' \
-            .format(**self.config)
-        self._cmd(cmd)
+        self._cmdl(['iw', 'dev', self.ifname, 'del'])
 
     def update(self, config):
         """ General helper function which works on a dictionary retrieved by

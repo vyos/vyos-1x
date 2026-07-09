@@ -108,12 +108,12 @@ class TunnelIf(Interface):
         else:
             mapping = { **self.mapping, **self.mapping_ipv4 }
 
-        cmd = 'ip tunnel add {ifname} mode {encapsulation}'
+        cmd = ['ip', 'tunnel', 'add', self.ifname, 'mode', self.config['encapsulation']]
         if self.config['encapsulation'] in ['gretap', 'ip6gretap', 'erspan', 'ip6erspan']:
-            cmd = 'ip link add name {ifname} type {encapsulation}'
+            cmd = ['ip', 'link', 'add', 'name', self.ifname, 'type', self.config['encapsulation']]
             # ERSPAN requires the serialisation of packets
             if self.config['encapsulation'] in ['erspan', 'ip6erspan']:
-                cmd += ' seq'
+                cmd += ['seq']
 
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
@@ -121,11 +121,11 @@ class TunnelIf(Interface):
             # by using isinstance()
             tmp = dict_search(vyos_key, self.config)
             if isinstance(tmp, dict):
-                cmd += f' {iproute2_key}'
+                cmd += [iproute2_key]
             elif tmp != None:
-                cmd += f' {iproute2_key} {tmp}'
+                cmd += [iproute2_key, str(tmp)]
 
-        self._cmd(cmd.format(**self.config))
+        self._cmdl(cmd)
 
         self.set_admin_state('down')
 
@@ -139,18 +139,18 @@ class TunnelIf(Interface):
         else:
             mapping = { **self.mapping, **self.mapping_ipv4 }
 
-        cmd = 'ip tunnel change {ifname} mode {encapsulation}'
+        cmd = ['ip', 'tunnel', 'change', self.ifname, 'mode', self.config['encapsulation']]
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
             # by using isinstance()
             tmp = dict_search(vyos_key, self.config)
             if isinstance(tmp, dict):
-                cmd += f' {iproute2_key}'
+                cmd += [iproute2_key]
             elif tmp != None:
-                cmd += f' {iproute2_key} {tmp}'
+                cmd += [iproute2_key, str(tmp)]
 
-        self._cmd(cmd.format(**self.config))
+        self._cmdl(cmd)
 
     def get_mac(self):
         """ Get a synthetic MAC address. """

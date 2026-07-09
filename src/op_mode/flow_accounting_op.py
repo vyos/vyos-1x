@@ -21,7 +21,7 @@ import ipaddress
 
 from tabulate import tabulate
 from vyos.utils.kernel import is_module_loaded
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.logger import syslog
 from vyos.configquery import ConfigTreeQuery
 from vyos import ipt_netflow
@@ -74,7 +74,7 @@ def _netflow_running():
 # get list of interfaces
 def _get_ifaces_dict():
     # run command to get ifaces list
-    out = cmd('/bin/ip link show')
+    out = cmdl(['/bin/ip', 'link', 'show'])
 
     # read output
     ifaces_out = out.splitlines()

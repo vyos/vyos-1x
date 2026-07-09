@@ -15,13 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -70,10 +71,24 @@ def get_config(string=''):
     Retrieve current "running configuration" from FRR
     string:        search for a specific start string in the configuration
     """
-    command = 'cat /run/rsyslog/rsyslog.conf'
-    if string:
-        command += f' | sed -n "/^{string}$/,/}}/p"' # }} required to escape } in f-string
-    return cmd(command)
+    output = cmdl(['cat', '/run/rsyslog/rsyslog.conf'])
+    if not string:
+        return output
+
+    # Equivalent of: sed -n "/^{string}$/,/}}/p"
+    # Print from a line matching ^{string}$ through the next line containing '}'
+    extracted = []
+    in_range = False
+    for line in output.splitlines():
+        if not in_range:
+            if re.match(f'^{re.escape(string)}$', line):
+                in_range = True
+                extracted.append(line)
+        else:
+            extracted.append(line)
+            if '}' in line:
+                in_range = False
+    return '\n'.join(extracted)
 
 class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
     @classmethod

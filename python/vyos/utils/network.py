@@ -18,7 +18,7 @@ import hashlib
 from json import loads
 from socket import AF_INET
 from socket import AF_INET6
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 def _are_same_ip(one, two):
     from socket import inet_pton
@@ -72,11 +72,11 @@ def get_host_identity() -> str:
     uuid_file = '/sys/class/dmi/id/product_uuid'
 
     if os.path.exists(uuid_file):
-        uuid = cmd(f"sudo cat {uuid_file}").strip().replace("-", "").lower()
+        uuid = cmdl(['cat', uuid_file], sudo=True).strip().replace("-", "").lower()
     else:
         uuid = None
 
-    host = cmd("hostname").strip().lower()
+    host = cmdl(['hostname']).strip().lower()
 
     if uuid is not None:
         return f"{uuid}:{host}"
@@ -109,7 +109,7 @@ def gen_mac(name: str, addr: str, ident: str) -> str:
     return ":".join(f"{x:02x}" for x in b)
 
 def get_netns_all() -> list:
-    tmp = loads(cmd('ip --json netns ls'))
+    tmp = loads(cmdl(['ip', '--json', 'netns', 'ls']))
     return [ netns['name'] for netns in tmp ]
 
 def get_vrf_members(vrf: str) -> list:
@@ -122,7 +122,7 @@ def get_vrf_members(vrf: str) -> list:
     try:
         if not interface_exists(vrf):
             raise ValueError(f'VRF "{vrf}" does not exist!')
-        output = cmd(f'ip --json --brief link show vrf {vrf}')
+        output = cmdl(['ip', '--json', '--brief', 'link', 'show', 'vrf', vrf])
         answer = loads(output)
         for data in answer:
             if 'ifname' in data:
@@ -199,7 +199,7 @@ def get_interface_config(interface):
     """
     if not interface_exists(interface):
         return None
-    tmp = loads(cmd(f'ip --detail --json link show dev {interface}'))[0]
+    tmp = loads(cmdl(['ip', '--detail', '--json', 'link', 'show', 'dev', interface]))[0]
     return tmp
 
 def get_interface_address(interface):
@@ -208,7 +208,7 @@ def get_interface_address(interface):
     """
     if not interface_exists(interface):
         return None
-    tmp = loads(cmd(f'ip --detail --json addr show dev {interface}'))[0]
+    tmp = loads(cmdl(['ip', '--detail', '--json', 'addr', 'show', 'dev', interface]))[0]
     return tmp
 
 def get_interface_namespace(interface: str):
@@ -216,13 +216,13 @@ def get_interface_namespace(interface: str):
        Returns which netns the interface belongs to
     """
     # Bail out early if netns does not exist
-    tmp = cmd(f'ip --json netns ls')
+    tmp = cmdl(['ip', '--json', 'netns', 'ls'])
     if not tmp: return None
 
     for ns in loads(tmp):
         netns = f'{ns["name"]}'
         # Search interface in each netns
-        data = loads(cmd(f'ip netns exec {netns} ip --json link show'))
+        data = loads(cmdl(['ip', 'netns', 'exec', netns, 'ip', '--json', 'link', 'show']))
         for tmp in data:
             if interface == tmp["ifname"]:
                 return netns
@@ -274,7 +274,7 @@ def is_wwan_connected(interface):
     modem = interface.lstrip('wwan')
 
     try:
-        tmp = cmd(f'mmcli --modem {modem} --output-json')
+        tmp = cmdl(['mmcli', '--modem', modem, '--output-json'])
     except OSError:
         return False
 
@@ -287,12 +287,12 @@ def get_bridge_fdb(interface):
     """ Returns the forwarding database entries for a given interface """
     if not interface_exists(interface):
         return None
-    tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
+    tmp = loads(cmdl(['bridge', '-j', 'fdb', 'show', 'dev', interface]))
     return tmp
 
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
-    tmp = loads(cmd('ip --json vrf list'))
+    tmp = loads(cmdl(['ip', '--json', 'vrf', 'list']))
     # Result is of type [{"name":"red","table":1000},{"name":"blue","table":2000}]
     # so we will re-arrange it to a more nicer representation:
     # {'red': {'table': 1000}, 'blue': {'table': 2000}}
@@ -525,7 +525,7 @@ def is_wireguard_key_pair(private_key: str, public_key:str) -> bool:
     :return: If public/private keys are keypair returns True else False
     :rtype: bool
     """
-    gen_public_key = cmd('wg pubkey', input=private_key)
+    gen_public_key = cmdl(['wg', 'pubkey'], input=private_key)
     if gen_public_key == public_key:
         return True
     else:
@@ -541,7 +541,7 @@ def get_wireguard_peers(ifname: str) -> list:
     """
     if not interface_exists(ifname):
         return []
-    peers = cmd(f'wg show {ifname} peers')
+    peers = cmdl(['wg', 'show', ifname, 'peers'])
     return peers.splitlines()
 
 def is_subnet_connected(subnet, primary=False):
@@ -628,7 +628,7 @@ def get_vxlan_vlan_tunnels(interface: str) -> list:
     #     } ]
     #
     os_configured_vlan_ids = []
-    tmp = loads(cmd(f'bridge --json vlan tunnelshow dev {interface}'))
+    tmp = loads(cmdl(['bridge', '--json', 'vlan', 'tunnelshow', 'dev', interface]))
     if tmp:
         for tunnel in tmp[0].get('tunnels', {}):
             vlanStart = tunnel['vlan']
@@ -658,7 +658,7 @@ def get_vxlan_vni_filter(interface: str) -> list:
     #
     # Example output: ['10010', '10020', '10021', '10022']
     os_configured_vnis = []
-    tmp = loads(cmd(f'bridge --json vni show dev {interface}'))
+    tmp = loads(cmdl(['bridge', '--json', 'vni', 'show', 'dev', interface]))
     if tmp:
         for tunnel in tmp[0].get('vnis', {}):
             vniStart = tunnel['vni']
@@ -721,7 +721,7 @@ def get_nft_vrf_zone_mapping() -> dict:
     from jmespath import search
 
     output = []
-    tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+    tmp = loads(cmdl(['nft', '-j', 'list', 'table', 'inet', 'vrf_zones'], sudo=True))
     # {'nftables': [{'metainfo': {'json_schema_version': 1,
     #                     'release_name': 'Old Doc Yak #3',
     #                     'version': '1.0.9'}},

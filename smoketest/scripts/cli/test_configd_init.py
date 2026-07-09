@@ -20,7 +20,7 @@ from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.utils.process import is_systemd_service_running
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 service_name = 'vyos-configd.service'
 
@@ -32,13 +32,13 @@ class TestConfigdInit(unittest.TestCase):
 
     def tearDown(self):
         if not self.running_state:
-            cmd(f'sudo systemctl stop {service_name}')
+            cmdl(['systemctl', 'stop', service_name], sudo=True)
         # always forward to base class
         super().tearDown()
 
     def test_configd_init(self):
         if not self.running_state:
-            cmd(f'sudo systemctl start {service_name}')
+            cmdl(['systemctl', 'start', service_name], sudo=True)
             # allow time for init to succeed/fail
             sleep(2)
             self.assertTrue(is_systemd_service_running(service_name))

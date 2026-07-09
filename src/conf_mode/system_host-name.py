@@ -26,7 +26,7 @@ from vyos.configdict import leaf_node_changed
 from vyos.defaults import systemd_services
 from vyos.ifconfig import Section
 from vyos.template import is_ip
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import call
 from vyos.utils.process import process_named_running
 from vyos import ConfigError
@@ -170,7 +170,7 @@ def apply(config):
 
     # rsyslog runs into a race condition at boot time with systemd
     # restart rsyslog only if the hostname changed.
-    hostname_old = cmd('hostnamectl --static')
+    hostname_old = cmdl(['hostnamectl', '--static'])
     call(f'hostnamectl set-hostname --static {hostname_new}')
 
     # Restart services that use the hostname

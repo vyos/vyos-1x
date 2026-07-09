@@ -214,7 +214,7 @@ class WireGuardOperational(Operational):
                     print(f'WireGuard interface "{self.ifname}" peer "{peer_name}" disabled!')
                     continue
 
-                cmd = f'wg set {self.ifname} peer {peer_public_key} endpoint {new_endpoint}'
+                cmd = ['wg', 'set', self.ifname, 'peer', peer_public_key, 'endpoint', new_endpoint]
                 try:
                     if (peer_public_key in current_peers
                         and 'endpoint' in current_peers[peer_public_key]
@@ -226,11 +226,11 @@ class WireGuardOperational(Operational):
                         message = f'Resetting {self.ifname} peer {peer_public_key} endpoint to {new_endpoint} ... '
                     print(message, end='')
 
-                    self._cmd(cmd, env={'WG_ENDPOINT_RESOLUTION_RETRIES':
+                    self._cmdl(cmd, env={'WG_ENDPOINT_RESOLUTION_RETRIES':
                                         tmp['max_dns_retry']})
                     print('done')
                 except:
-                    print(f'Error\nPlease try to run command manually:\n{cmd}\n')
+                    print(f'Error\nPlease try to run command manually:\n{" ".join(cmd)}\n')
 
 
 @Interface.register
@@ -272,41 +272,42 @@ class WireGuardIf(Interface):
         on any interface."""
 
         # Wireguard base command is identical for every peer
-        base_cmd = f'wg set {self.ifname}'
+        base_cmd = ['wg', 'set', self.ifname]
 
-        interface_cmd = base_cmd
+        interface_cmd = list(base_cmd)
         if 'port' in config:
-            interface_cmd += ' listen-port {port}'
+            interface_cmd += ['listen-port', str(config['port'])]
         if 'fwmark' in config:
-            interface_cmd += ' fwmark {fwmark}'
+            interface_cmd += ['fwmark', str(config['fwmark'])]
 
         with NamedTemporaryFile('w') as tmp_file:
             tmp_file.write(config['private_key'])
             tmp_file.flush()
 
-            interface_cmd += f' private-key {tmp_file.name}'
-            interface_cmd = interface_cmd.format(**config)
+            interface_cmd += ['private-key', tmp_file.name]
             # T6490: execute command to ensure interface configured
-            self._cmd(interface_cmd)
+            self._cmdl(interface_cmd)
 
         current_peer_public_keys = get_wireguard_peers(self.ifname)
 
         if 'rebuild_required' in config:
             # Remove all existing peers that no longer exist in config
             current_public_keys = self.get_peer_public_keys(config)
-            cmd_remove_peers = [f' peer {public_key} remove'
-                                for public_key in current_peer_public_keys
-                                if public_key not in current_public_keys]
+            cmd_remove_peers = []
+            for public_key in current_peer_public_keys:
+                if public_key not in current_public_keys:
+                    cmd_remove_peers += ['peer', public_key, 'remove']
             if cmd_remove_peers:
-                self._cmd(base_cmd + ''.join(cmd_remove_peers))
+                self._cmdl(base_cmd + cmd_remove_peers)
 
         if 'peer' in config:
             # Group removal of disabled peers in one command
             current_disabled_peers = self.get_peer_public_keys(config, disabled=True)
-            cmd_disabled_peers = [f' peer {public_key} remove'
-                                  for public_key in current_disabled_peers]
+            cmd_disabled_peers = []
+            for public_key in current_disabled_peers:
+                cmd_disabled_peers += ['peer', public_key, 'remove']
             if cmd_disabled_peers:
-                self._cmd(base_cmd + ''.join(cmd_disabled_peers))
+                self._cmdl(base_cmd + cmd_disabled_peers)
 
             peer_cmds = []
             peer_domain_cmds = []
@@ -319,58 +320,56 @@ class WireGuardIf(Interface):
                 if 'disable' in peer_config:
                     continue
 
-                # start of with a fresh 'wg' command
-                peer_cmd = ' peer {public_key}'
-
-                cmd = peer_cmd
+                # start off with a fresh 'wg' peer command
+                cmd = ['peer', peer_config['public_key']]
 
                 if 'preshared_key' in peer_config:
                     with NamedTemporaryFile(mode='w', delete=False) as tmp_file:
                         tmp_file.write(peer_config['preshared_key'])
                         tmp_file.flush()
-                        cmd += f' preshared-key {tmp_file.name}'
+                        cmd += ['preshared-key', tmp_file.name]
                         peer_psk_files.append(tmp_file.name)
                 else:
                     # If no PSK is given remove it by using /dev/null - passing keys via
                     # the shell (usually bash) is considered insecure, thus we use a file
-                    cmd += f' preshared-key /dev/null'
+                    cmd += ['preshared-key', '/dev/null']
 
                 # Persistent keepalive is optional
                 if 'persistent_keepalive' in peer_config:
-                    cmd += ' persistent-keepalive {persistent_keepalive}'
+                    cmd += ['persistent-keepalive', str(peer_config['persistent_keepalive'])]
 
                 # Multiple allowed-ip ranges can be defined - ensure we are always
                 # dealing with a list
                 if isinstance(peer_config['allowed_ips'], str):
                     peer_config['allowed_ips'] = [peer_config['allowed_ips']]
-                cmd += ' allowed-ips ' + ','.join(peer_config['allowed_ips'])
+                cmd += ['allowed-ips', ','.join(peer_config['allowed_ips'])]
 
-                peer_cmds.append(cmd.format(**peer_config))
+                peer_cmds += cmd
 
-                cmd = peer_cmd
+                cmd = ['peer', peer_config['public_key']]
 
                 # Ensure peer is created even if dns not working
                 if {'address', 'port'} <= set(peer_config):
                     if is_ipv6(peer_config['address']):
-                        cmd += ' endpoint [{address}]:{port}'
+                        cmd += ['endpoint', f"[{peer_config['address']}]:{peer_config['port']}"]
                     elif is_ipv4(peer_config['address']):
-                        cmd += ' endpoint {address}:{port}'
+                        cmd += ['endpoint', f"{peer_config['address']}:{peer_config['port']}"]
                     else:
                         # don't set endpoint if address uses domain name
                         continue
                 elif {'host_name', 'port'} <= set(peer_config):
-                    cmd += ' endpoint {host_name}:{port}'
+                    cmd += ['endpoint', f"{peer_config['host_name']}:{peer_config['port']}"]
                 else:
                     continue
 
-                peer_domain_cmds.append(cmd.format(**peer_config))
+                peer_domain_cmds += cmd
 
             try:
                 if peer_cmds:
-                    self._cmd(base_cmd + ''.join(peer_cmds))
+                    self._cmdl(base_cmd + peer_cmds)
 
                 if peer_domain_cmds:
-                    self._cmd(base_cmd + ''.join(peer_domain_cmds), env={
+                    self._cmdl(base_cmd + peer_domain_cmds, env={
                         'WG_ENDPOINT_RESOLUTION_RETRIES': config['max_dns_retry']})
             except Exception as e:
                 Warning(f'Failed to apply Wireguard peers on {self.ifname}: {e}')

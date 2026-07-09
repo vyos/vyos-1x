@@ -20,7 +20,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.defaults import directories
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 base_path = ['show tech-support report']
 script_path = directories['op_mode'] + '/show_techsupport_report.py'
@@ -68,7 +68,7 @@ class TestTechSupportReport(VyOSUnitTestSHIM.TestCase):
             'proc-and-sysctl-info',
         )
 
-        report = cmd([script_path, '--reports'] + list(blocks))
+        report = cmdl([script_path, '--reports'] + list(blocks))
 
         for block in blocks:
             self.assertSectionIn(block, report)
@@ -78,7 +78,7 @@ class TestTechSupportReport(VyOSUnitTestSHIM.TestCase):
             self.assertSectionNotIn(block, report)
 
     def test_directory_output(self):
-        cmd([script_path, '--outdir', str(testdir)])
+        cmdl([script_path, '--outdir', str(testdir)])
 
         for block in all_blocks:
             file_path = testdir / block

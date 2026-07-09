@@ -37,7 +37,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.file import read_file
 from vyos.utils.kernel import check_kmod
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_intf_addr_assigned
@@ -322,9 +322,9 @@ def generate(options):
     if 'fips' in options:
         # ensure directory exists
         os.makedirs(os.path.dirname(openssl_fipsmodule_config), exist_ok=True)
-        cmd(
-            f'openssl fipsinstall -module /usr/lib/{arch}/ossl-modules/fips.so -out {openssl_fipsmodule_config}'
-        )
+        cmdl(['openssl', 'fipsinstall', '-module',
+             f'/usr/lib/{arch}/ossl-modules/fips.so',
+              '-out', openssl_fipsmodule_config])
     else:
         if os.path.exists(openssl_fipsmodule_config):
             os.remove(openssl_fipsmodule_config)
@@ -509,12 +509,12 @@ def apply(options):
     kexec_required, cmdline_new = generate_cmdline_for_kexec(options)
     if kexec_required:
         if not boot_configuration_complete() and os.getenv('VYOS_CONFIGD'):
-            cmd(
-                'kexec -l /boot/vmlinuz --initrd=/boot/initrd.img '
-                f'--command-line="{cmdline_new}" --kexec-file-syscall'
-            )
+            cmdl([
+                'kexec', '-l', '/boot/vmlinuz', '--initrd=/boot/initrd.img',
+                f'--command-line={cmdline_new}', '--kexec-file-syscall',
+            ])
             os.sync()
-            cmd('systemctl kexec')
+            cmdl(['systemctl', 'kexec'])
         elif boot_configuration_complete():
             Warning(
                 'Kernel configuration options have changed. '
@@ -524,9 +524,9 @@ def apply(options):
     # System bootup beep
     beep_service = 'vyos-beep.service'
     if 'startup_beep' in options:
-        cmd(f'systemctl enable {beep_service}')
+        cmdl(['systemctl', 'enable', beep_service])
     else:
-        cmd(f'systemctl disable {beep_service}')
+        cmdl(['systemctl', 'disable', beep_service])
 
     # Ctrl-Alt-Delete action
     if os.path.exists(systemd_action_file):
@@ -560,37 +560,35 @@ def apply(options):
 
     # tuned - performance tuning
     if 'performance' in options:
-        cmd('systemctl restart tuned.service')
+        cmdl(['systemctl', 'restart', 'tuned.service'])
         # wait until daemon has started before sending configuration
         while not is_systemd_service_running('tuned.service'):
             sleep(0.250)
-        performance = ' '.join(
-            list(tuned_profiles[profile] for profile in options['performance'])
-        )
-        cmd(f'tuned-adm profile {performance}')
+        performance = [tuned_profiles[profile] for profile in options['performance']]
+        cmdl(['tuned-adm', 'profile'] + performance)
     else:
-        cmd('systemctl stop tuned.service')
+        cmdl(['systemctl', 'stop', 'tuned.service'])
 
     call_dependents()
 
     # Keyboard layout - there will be always the default key inside the dict
     # but we check for key existence anyway
     if 'keyboard_layout' in options:
-        cmd('loadkeys {keyboard_layout}'.format(**options))
+        cmdl(['loadkeys', options['keyboard_layout']])
 
     # Enable/diable root-partition-auto-resize SystemD service
     if 'root_partition_auto_resize' in options:
-        cmd('systemctl enable root-partition-auto-resize.service')
+        cmdl(['systemctl', 'enable', 'root-partition-auto-resize.service'])
     else:
-        cmd('systemctl disable root-partition-auto-resize.service')
+        cmdl(['systemctl', 'disable', 'root-partition-auto-resize.service'])
 
     # Time format 12|24-hour
     if 'time_format' in options:
         time_format = time_format_to_locale.get(options['time_format'])
-        cmd(f'localectl set-locale LC_TIME={time_format}')
+        cmdl(['localectl', 'set-locale', f'LC_TIME={time_format}'])
 
     # Reload UDEV, required for USB auto suspend
-    cmd('udevadm control --reload-rules')
+    cmdl(['udevadm', 'control', '--reload-rules'])
 
     # Enable/disable dynamic debugging for kernel modules
     modules = ['wireguard']

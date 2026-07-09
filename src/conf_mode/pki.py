@@ -48,7 +48,7 @@ from vyos.utils.dict import dict_set_nested
 from vyos.utils.file import read_file
 from vyos.utils.network import check_port_availability
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
@@ -124,7 +124,8 @@ def certbot_delete(certificate):
     if not boot_configuration_complete():
         return
     if os.path.exists(f'{vyos_certbot_dir}/renewal/{certificate}.conf'):
-        cmd(f'certbot delete --non-interactive --config-dir {vyos_certbot_dir} --cert-name {certificate}')
+        cmdl(['certbot', 'delete', '--non-interactive', '--config-dir',
+              vyos_certbot_dir, '--cert-name', certificate])
 
 def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     # We do not call certbot when booting the system - there is no need to do so and
@@ -134,11 +135,14 @@ def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     if not boot_configuration_complete():
         return None
 
-    domains = '--domains ' + ' --domains '.join(config['domain_name'])
-    tmp = f'certbot certonly --non-interactive --config-dir {vyos_certbot_dir} --cert-name {name} '\
-          f'--standalone --agree-tos --no-eff-email --expand --server {config["url"]} '\
-          f'--email {config["email"]} --key-type rsa --rsa-key-size {config["rsa_key_size"]} '\
-          f'{domains}'
+    tmp = ['certbot', 'certonly', '--non-interactive', '--config-dir',
+           vyos_certbot_dir, '--cert-name', name,
+           '--standalone', '--agree-tos', '--no-eff-email', '--expand',
+           '--server', config['url'],
+           '--email', config['email'], '--key-type', 'rsa',
+           '--rsa-key-size', str(config['rsa_key_size'])]
+    for domain in config['domain_name']:
+        tmp += ['--domains', domain]
 
     listen_address = None
     if 'listen_address' in config:
@@ -149,21 +153,22 @@ def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     if ('used_by' in config and 'haproxy' in config['used_by'] and
         is_systemd_service_running(systemd_services['haproxy']) and
         not check_port_availability(listen_address, 80)):
-        tmp += f' --http-01-address 127.0.0.1 --http-01-port {internal_ports["certbot_haproxy"]}'
+        tmp += ['--http-01-address', '127.0.0.1', '--http-01-port',
+                str(internal_ports["certbot_haproxy"])]
     elif listen_address:
-        tmp += f' --http-01-address {listen_address}'
+        tmp += ['--http-01-address', listen_address]
 
     # verify() does not need to actually request a cert but only test for plausibility
     if dry_run:
-        tmp += ' --dry-run'
+        tmp += ['--dry-run']
 
-    cmd(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
+    cmdl(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
     return None
 
 def certbot_renew(config: dict, force: bool=False) -> None:
     """ Renew all certificates managed via certbot """
-    tmp = f'certbot renew --no-random-sleep-on-renew ' \
-          f'--config-dir {vyos_certbot_dir}'
+    tmp = ['certbot', 'renew', '--no-random-sleep-on-renew',
+           '--config-dir', vyos_certbot_dir]
 
     # Determine services using ACME based certificates
     pre_hook_services = []
@@ -178,18 +183,18 @@ def certbot_renew(config: dict, force: bool=False) -> None:
         for service in pre_hook_services:
             if service in systemd_services:
                 stop_services.append(systemd_services[service])
-        tmp += ' --pre-hook "systemctl stop ' + ' '.join(stop_services) + '"'
+        tmp += ['--pre-hook', 'systemctl stop ' + ' '.join(stop_services)]
 
     if force:
-        tmp += ' --force-renewal'
+        tmp += ['--force-renewal']
 
     try:
-        print(cmd(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
+        print(cmdl(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
     except ConfigError as e:
         print(e)
         for service in stop_services:
             print(f'Restarting "{service}" with non-renewed certificate...')
-            cmd(f'systemctl restart {service}')
+            cmdl(['systemctl', 'restart', service])
     return None
 
 def get_config(config=None):

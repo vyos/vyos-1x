@@ -35,7 +35,7 @@ from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.process import popen
 
@@ -183,7 +183,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         for interface in self._interfaces:
             # We do not use vyos.ethtool here to not have any chance
             # for invalid testcases. Re-gain data by hand
-            tmp = cmd(f'sudo ethtool --json --show-ring {interface}')
+            tmp = cmdl(['ethtool', '--json', '--show-ring', interface], sudo=True)
             tmp = loads(tmp)
             max_rx = str(tmp[0]['rx-max'])
             max_tx = str(tmp[0]['tx-max'])
@@ -194,7 +194,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_commit()
 
         for interface in self._interfaces:
-            tmp = cmd(f'sudo ethtool --json --show-ring {interface}')
+            tmp = cmdl(['ethtool', '--json', '--show-ring', interface], sudo=True)
             tmp = loads(tmp)
             max_rx = str(tmp[0]['rx-max'])
             max_tx = str(tmp[0]['tx-max'])
@@ -246,9 +246,9 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 # Force adaptive to be disabled if it is already enabled
                 params = coalesce.get_coalesce(interface)
                 if supported_rx_usecs and params['adaptive_rx']:
-                    cmd(f'sudo ethtool --coalesce {interface} adaptive-rx off')
+                    cmdl(['ethtool', '--coalesce', interface, 'adaptive-rx', 'off'], sudo=True)
                 if supported_tx_usecs and params['adaptive_tx']:
-                    cmd(f'sudo ethtool --coalesce {interface} adaptive-tx off')
+                    cmdl(['ethtool', '--coalesce', interface, 'adaptive-tx', 'off'], sudo=True)
 
                 # Commit CLI configuration to apply coalescing
                 self.cli_commit()

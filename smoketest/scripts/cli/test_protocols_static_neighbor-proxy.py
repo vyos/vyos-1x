@@ -20,7 +20,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.utils.system import sysctl_read
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 base_path = ['protocols', 'static', 'neighbor-proxy']
 interface = 'eth0'
@@ -45,7 +45,7 @@ class TestProtocolsStaticNeighborProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['arp', neighbor, 'interface', interface])
         self.cli_commit()
 
-        proxy_entries = cmd('ip -4 neigh show proxy')
+        proxy_entries = cmdl(['ip', '-4', 'neigh', 'show', 'proxy'])
         self.assertIn(f'{neighbor} dev {interface} proxy', proxy_entries)
 
         self.cli_delete(['interfaces', 'ethernet', interface, 'address', address])
@@ -62,7 +62,7 @@ class TestProtocolsStaticNeighborProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify proxy entries are installed
-        proxy_entries = cmd('ip -6 neigh show proxy')
+        proxy_entries = cmdl(['ip', '-6', 'neigh', 'show', 'proxy'])
         for iface in [interface, interface2]:
             self.assertIn(f'{neighbor} dev {iface} proxy', proxy_entries)
             # Verify proxy_ndp sysctl is enabled on both interfaces

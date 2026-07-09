@@ -20,7 +20,7 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 from vyos.ifconfig import Section
 
@@ -79,7 +79,7 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
                 self.cli_commit()
 
                 # Verify FDB entry exists with flag
-                fdb = cmd(f'bridge fdb show dev {br}')
+                fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
                 self.assertIn(f'{mac_address} master {br} permanent', fdb)
                 self.assertIn(f'{mac_address} self permanent', fdb)
 
@@ -87,7 +87,7 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
                 self.cli_delete(self._base_path + [peth, 'anycast-gateway'])
                 self.cli_commit()
 
-                fdb = cmd(f'bridge fdb show dev {br}')
+                fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
                 self.assertNotIn(f'{mac_address} master {br} permanent', fdb)
 
                 # Clean up temp bridge and peth

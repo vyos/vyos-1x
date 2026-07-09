@@ -32,7 +32,7 @@ from vyos.ifconfig import Section
 from vyos.pki import CERT_BEGIN
 from vyos.utils.file import read_file
 from vyos.utils.dict import dict_search
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_vrf
@@ -141,7 +141,7 @@ def is_mirrored_to(interface, mirror_if, qdisc) -> bool:
     if qdisc not in ['ffff', '1']:
         raise ValueError()
 
-    tmp = loads(cmd(f'tc -json filter ls dev {interface} parent {qdisc}:'))
+    tmp = loads(cmdl(['tc', '-json', 'filter', 'ls', 'dev', interface, 'parent', f'{qdisc}:']))
     # the following syntax looks odd but we need to filter out the first
     # result sets from tc which do not have "options.actions...".
     tmp = jmespath.search("[?options.actions[0].kind=='mirred'].options.actions[0].{mirred_action: mirred_action, to_dev: to_dev} | [0]", tmp)
@@ -362,7 +362,7 @@ class BasicInterfaceTest:
                 self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
                 # .. and the process must run inside the appropriate VRF
                 # instance
-                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
                 self.assertIn(str(dhclient_pid), vrf_pids)
 
             # T5103: remove interface from VRF instance and move DHCP client
@@ -388,7 +388,7 @@ class BasicInterfaceTest:
                 self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
                 # .. and the process must no longer run inside the VRF
                 # instance
-                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
                 self.assertNotIn(str(dhclient_pid), vrf_pids)
 
             self.cli_delete(['vrf', 'name', vrf_name])
@@ -421,7 +421,7 @@ class BasicInterfaceTest:
                                             timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
-                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
                 self.assertIn(str(tmp), vrf_pids)
 
             # T7135: remove interface from VRF instance and move DHCP client
@@ -441,7 +441,7 @@ class BasicInterfaceTest:
                                             timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
-                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
                 self.assertNotIn(str(tmp), vrf_pids)
 
 
@@ -1082,7 +1082,7 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 if cli_defined(self._base_path + ['ip'], 'adjust-mss'):
                     base_options = f'oifname "{interface}"'
-                    out = cmd('sudo nft list chain raw VYOS_TCP_MSS')
+                    out = cmdl(['nft', 'list', 'chain', 'raw', 'VYOS_TCP_MSS'], sudo=True)
                     for line in out.splitlines():
                         if line.startswith(base_options):
                             self.assertIn(f'tcp option maxseg size set {mss}', line)
@@ -1127,7 +1127,7 @@ class BasicInterfaceTest:
 
                 if cli_defined(self._base_path + ['ip'], 'source-validation'):
                     base_options = f'iifname "{interface}"'
-                    out = cmd('sudo nft list chain ip raw vyos_rpfilter')
+                    out = cmdl(['nft', 'list', 'chain', 'ip', 'raw', 'vyos_rpfilter'], sudo=True)
                     for line in out.splitlines():
                         if line.startswith(base_options):
                             self.assertIn('fib saddr oif 0', line)
@@ -1173,7 +1173,7 @@ class BasicInterfaceTest:
                 proc_base = f'/proc/sys/net/ipv6/conf/{interface}'
                 if cli_defined(self._base_path + ['ipv6'], 'adjust-mss'):
                     base_options = f'oifname "{interface}"'
-                    out = cmd('sudo nft list chain ip6 raw VYOS_TCP_MSS')
+                    out = cmdl(['nft', 'list', 'chain', 'ip6', 'raw', 'VYOS_TCP_MSS'], sudo=True)
                     for line in out.splitlines():
                         if line.startswith(base_options):
                             self.assertIn(f'tcp option maxseg size set {mss}', line)
@@ -1192,14 +1192,14 @@ class BasicInterfaceTest:
 
                 if cli_defined(self._base_path + ['ipv6'], 'source-validation'):
                     base_options = f'iifname "{interface}"'
-                    out = cmd('sudo nft list chain ip6 raw vyos_rpfilter')
+                    out = cmdl(['nft', 'list', 'chain', 'ip6', 'raw', 'vyos_rpfilter'], sudo=True)
                     for line in out.splitlines():
                         if line.startswith(base_options):
                             self.assertIn('fib saddr . iif oif 0', line)
                             self.assertIn('drop', line)
 
                 if cli_defined(self._base_path + ['ipv6', 'address'], 'interface-identifier'):
-                    tmp = cmd(f'ip -j token show dev {interface}')
+                    tmp = cmdl(['ip', '-j', 'token', 'show', 'dev', interface])
                     tmp = loads(tmp)[0]
                     self.assertEqual(tmp['token'], interface_identifier)
                     self.assertEqual(tmp['ifname'], interface)

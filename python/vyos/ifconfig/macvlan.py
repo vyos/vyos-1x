@@ -38,8 +38,9 @@ class MACVLANIf(Interface):
         down by default.
         """
         # please do not change the order when assembling the command
-        cmd = 'ip link add {ifname} link {source_interface} type macvlan mode {mode}'
-        self._cmd(cmd.format(**self.config))
+        cmd = ['ip', 'link', 'add', self.ifname, 'link', self.config['source_interface'],
+               'type', 'macvlan', 'mode', self.config['mode']]
+        self._cmdl(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
@@ -107,8 +108,7 @@ class MACVLANIf(Interface):
         return super().remove(skip_delete=skip_delete)
 
     def set_mode(self, mode):
-        cmd = f'ip link set dev {self.ifname} type macvlan mode {mode}'
-        return self._cmd(cmd)
+        return self._cmdl(['ip', 'link', 'set', 'dev', self.ifname, 'type', 'macvlan', 'mode', mode])
 
     def get_source_interface(self):
         interface_config = get_interface_config(self.ifname)

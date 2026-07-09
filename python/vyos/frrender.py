@@ -36,7 +36,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_set_nested
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
 from vyos.template import get_dhcp_router
 from vyos.template import render_to_string
@@ -880,4 +880,4 @@ class FRRender:
             raise ConfigError(emsg)
 
         # T3217: Save FRR configuration to /run/frr/config/frr.conf
-        return cmd('/usr/bin/vtysh -n --writeconfig')
+        return cmdl(['/usr/bin/vtysh', '-n', '--writeconfig'])

@@ -36,7 +36,7 @@ from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import popen
 from vyos.utils.system import sysctl_write
@@ -65,8 +65,8 @@ def has_rule(af : str, priority : int, table : str=None):
     """
     if af not in ['-4', '-6']:
         raise ValueError()
-    command = f'ip --detail --json {af} rule show'
-    for tmp in loads(cmd(command)):
+    command = ['ip', '--detail', '--json', af, 'rule', 'show']
+    for tmp in loads(cmdl(command)):
         if 'priority' in tmp and 'table' in tmp:
             if tmp['priority'] == priority and tmp['table'] == table:
                 return True
@@ -80,7 +80,7 @@ def is_nft_vrf_zone_rule_setup() -> bool:
     """
     Check if an nftables connection tracking rule already exists
     """
-    tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+    tmp = loads(cmdl(['nft', '-j', 'list', 'table', 'inet', 'vrf_zones'], sudo=True))
     num_rules = len(search("nftables[].rule[].chain", tmp))
     return bool(num_rules)
 
@@ -259,12 +259,13 @@ def apply(vrf):
                 vrf_iface.set_dhcpv6(False)
 
             # Remove nftables conntrack zone map item
-            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ \'"{tmp}"\' }}'
+            nft_del_element = ['delete', 'element', 'inet', 'vrf_zones', 'ct_iface_map',
+                                '{', f'"{tmp}"', '}']
             # Check if deleting is possible first to avoid raising errors
-            _, err = popen(f'nft --check {nft_del_element}')
+            _, err = popen(f'nft --check {" ".join(nft_del_element)}')
             if not err:
                 # Remove map element
-                cmd(f'nft {nft_del_element}')
+                cmdl(['nft'] + nft_del_element)
 
             # Remove WireGuard fwmark routing rules created for this VRF table
             table_id = get_vrf_tableid(tmp)
@@ -345,8 +346,9 @@ def apply(vrf):
             state = 'down' if 'disable' in config else 'up'
             vrf_if.set_admin_state(state)
             # Add nftables conntrack zone map item
-            nft_add_element = f'add element inet vrf_zones ct_iface_map {{ \'"{name}"\' : {table} }}'
-            cmd(f'nft {nft_add_element}')
+            nft_add_element = ['add', 'element', 'inet', 'vrf_zones', 'ct_iface_map',
+                                '{', f'"{name}"', ':', str(table), '}']
+            cmdl(['nft'] + nft_add_element)
 
         # Only call into nftables as long as there is nothing setup to avoid wasting
         # CPU time and thus lengthen the commit process
@@ -355,11 +357,11 @@ def apply(vrf):
         # Install nftables conntrack rules only once
         if vrf['conntrack'] and not nft_vrf_zone_rule_setup:
             for chain, rule in nftables_rules.items():
-                cmd(f'nft add rule inet vrf_zones {chain} {rule}')
+                cmdl(f'nft add rule inet vrf_zones {chain} {rule}'.split())
 
     if 'name' not in vrf or not vrf['conntrack']:
         for chain, rule in nftables_rules.items():
-            cmd(f'nft flush chain inet vrf_zones {chain}')
+            cmdl(f'nft flush chain inet vrf_zones {chain}'.split())
 
     # Return default ip rule values
     if 'name' not in vrf:

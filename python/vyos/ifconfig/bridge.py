@@ -378,8 +378,7 @@ class BridgeIf(Interface):
                     mac = entry.get('mac')
                     entry_vlan = entry.get('vlan')
                     if entry_vlan and mac and str(entry_vlan) == vlan:
-                        cmd = f'bridge fdb del {mac} dev {self.ifname} vlan {vlan}'
-                        self._cmd(cmd)
+                        self._cmdl(['bridge', 'fdb', 'del', mac, 'dev', self.ifname, 'vlan', str(vlan)])
 
             for vlan in config.get('vif', {}):
                 self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(vlan), 'self'])

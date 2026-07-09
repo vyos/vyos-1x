@@ -19,7 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -275,24 +275,24 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'redirect 302:http://block.vyos.net', sg_config)
 
         # local-block database
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-default/domains')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-block-default/domains'], sudo=True)
         for block in local_block:
             self.assertIn(f'{block}', tmp)
 
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-url-default/urls')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-block-url-default/urls'], sudo=True)
         for url in local_block_url:
             self.assertIn(f'{url}', tmp)
 
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-keyword-default/expressions')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-block-keyword-default/expressions'], sudo=True)
         for pattern in local_block_pattern:
             self.assertIn(f'{pattern}', tmp)
 
         # local-ok database
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-ok-default/domains')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-ok-default/domains'], sudo=True)
         for ok in local_ok:
             self.assertIn(f'{ok}', tmp)
 
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-ok-url-default/urls')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-ok-url-default/urls'], sudo=True)
         for url in local_ok_url:
             self.assertIn(f'{url}', tmp)
 

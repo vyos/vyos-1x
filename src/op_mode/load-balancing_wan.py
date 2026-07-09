@@ -21,7 +21,7 @@ import sys
 from datetime import datetime
 
 from vyos.config import Config
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 import vyos.opmode
 
@@ -87,7 +87,7 @@ def show_summary(raw: bool):
 
 @_verify
 def show_connection(raw: bool):
-    res = cmd('sudo conntrack -L -n')
+    res = cmdl(['conntrack', '-L', '-n'], sudo=True)
     lines = res.split("\n")
     filtered_lines = [line for line in lines if re.search(r' mark=[1-9]', line)]
 
@@ -99,7 +99,7 @@ def show_connection(raw: bool):
 
 @_verify
 def show_status(raw: bool):
-    res = cmd('sudo nft list chain ip vyos_wanloadbalance wlb_mangle_prerouting')
+    res = cmdl(['nft', 'list', 'chain', 'ip', 'vyos_wanloadbalance', 'wlb_mangle_prerouting'], sudo=True)
     lines = res.split("\n")
     filtered_lines = [line.replace("\t", "") for line in lines[3:-2] if 'meta mark set' not in line]
 

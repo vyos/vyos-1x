@@ -29,13 +29,13 @@ class Priority(QoSBase):
               f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
               f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
               f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} '
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         if 'class' in config:
             for cls in config['class']:
                 cls = int(cls)
                 tmp = f'tc qdisc add dev {self._interface} parent {self._parent:x}:{cls:x} pfifo'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
         # base class must be called last
         super().update(config, direction, priority=True)

@@ -48,17 +48,19 @@ class GeneveIf(Interface):
             'parameters.ipv6.flowlabel'  : 'flowlabel',
         }
 
-        cmd = 'ip link add name {ifname} type geneve id {vni} remote {remote} dstport {port}'
+        cmd = ['ip', 'link', 'add', 'name', self.ifname, 'type', 'geneve',
+               'id', str(self.config['vni']), 'remote', self.config['remote'],
+               'dstport', str(self.config['port'])]
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
             # by using isinstance()
             tmp = dict_search(vyos_key, self.config)
             if isinstance(tmp, dict):
-                cmd += f' {iproute2_key}'
+                cmd += [iproute2_key]
             elif tmp != None:
-                cmd += f' {iproute2_key} {tmp}'
+                cmd += [iproute2_key, str(tmp)]
 
-        self._cmd(cmd.format(**self.config))
+        self._cmdl(cmd)
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')

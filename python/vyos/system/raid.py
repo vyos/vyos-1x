@@ -19,7 +19,7 @@ from pathlib import Path
 from shutil import copy
 from dataclasses import dataclass
 
-from vyos.utils.process import cmd, run
+from vyos.utils.process import cmdl, run
 from vyos.system import disk
 
 
@@ -43,18 +43,17 @@ def raid_create(raid_members: list[str],
         raid_level (str, optional): an array level. Defaults to 'raid1'.
     """
     raid_devices_num: int = len(raid_members)
-    raid_members_str: str = ' '.join(raid_members)
     for part in raid_members:
         drive: str = disk.partition_parent(part)
         # set partition type GUID for raid member; cf.
         # https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_type_GUIDs
-        command: str = f'sgdisk --typecode=3:A19D880F-05FC-4D3B-A006-743F0F84911E {drive}'
-        cmd(command)
-    command: str = f'mdadm --create /dev/{raid_name} -R --metadata=1.0 \
-        --raid-devices={raid_devices_num} --level={raid_level} \
-        {raid_members_str}'
+        command: list[str] = ['sgdisk', '--typecode=3:A19D880F-05FC-4D3B-A006-743F0F84911E', drive]
+        cmdl(command)
+    command: list[str] = ['mdadm', '--create', f'/dev/{raid_name}', '-R', '--metadata=1.0',
+        f'--raid-devices={raid_devices_num}', f'--level={raid_level}',
+        *raid_members]
 
-    cmd(command)
+    cmdl(command)
 
     raid = RaidDetails(
         name = f'/dev/{raid_name}',
@@ -67,8 +66,8 @@ def raid_create(raid_members: list[str],
 
 def clear():
     """Deactivate all RAID arrays"""
-    command: str = 'mdadm --examine --scan'
-    raid_config = cmd(command)
+    command: list[str] = ['mdadm', '--examine', '--scan']
+    raid_config = cmdl(command)
     if not raid_config:
         return
     command: str = 'mdadm --run /dev/md?*'
@@ -85,8 +84,8 @@ def update_initramfs() -> None:
     copy('/usr/share/initramfs-tools/scripts/local-block/mdadm', mdadm_script)
     p = Path(mdadm_script)
     p.write_text(p.read_text().replace('$((COUNT + 1))', '20'))
-    command: str = 'update-initramfs -u'
-    cmd(command)
+    command: list[str] = ['update-initramfs', '-u']
+    cmdl(command)
 
 def update_default(target_dir: str) -> None:
     """Update /etc/default/mdadm to start MD monitoring daemon at boot
@@ -101,8 +100,8 @@ def update_default(target_dir: str) -> None:
 
 def get_uuid(device: str) -> str:
     """Get UUID of a device"""
-    command: str = f'tune2fs -l {device}'
-    l = cmd(command).splitlines()
+    command: list[str] = ['tune2fs', '-l', device]
+    l = cmdl(command).splitlines()
     uuid = next((x for x in l if x.startswith('Filesystem UUID')), '')
     return uuid.split(':')[1].strip() if uuid else ''
 

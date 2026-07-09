@@ -19,7 +19,7 @@ import json
 
 import vyos.opmode
 
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.base import Warning
 
 def _get_version_data():
@@ -42,7 +42,7 @@ def _get_cpus():
     return get_cpus()
 
 def _get_process_stats():
-    return cmd('top --iterations 1 --batch-mode --accum-time-toggle')
+    return cmdl(['top', '--iterations', '1', '--batch-mode', '--accum-time-toggle'])
 
 def _get_storage():
     from vyos.utils.disk import get_persistent_storage_stats
@@ -51,10 +51,10 @@ def _get_storage():
 
 def _get_devices():
     devices = {}
-    devices["pci"] = cmd("lspci")
+    devices["pci"] = cmdl(["lspci"])
 
     try:
-        devices["usb"] = cmd("lsusb")
+        devices["usb"] = cmdl(["lsusb"])
     except OSError:
         Warning("Could not retrieve information about USB devices")
         devices["usb"] = {}
@@ -67,7 +67,7 @@ def _get_memory():
     return read_file("/proc/meminfo")
 
 def _get_processes():
-    res = cmd("ps aux")
+    res = cmdl(["ps", "aux"])
 
     return res
 
@@ -82,7 +82,7 @@ def _get_interrupts():
 def _get_partitions():
     # XXX: as of parted 3.5, --json is completely broken
     # and cannot be used (outputs malformed JSON syntax)
-    res = cmd(f"parted --list")
+    res = cmdl(["parted", "--list"])
 
     return res
 
@@ -139,13 +139,13 @@ def _get_routes(proto):
 
     data = {}
 
-    summary = cmd(f"vtysh -c 'show {proto} route summary json'")
+    summary = cmdl(["vtysh", "-c", f"show {proto} route summary json"])
     summary = loads(summary)
 
     data["summary"] = summary
 
     if summary["routesTotal"] < MAX_ROUTES:
-        rib_routes = cmd(f"vtysh -c 'show {proto} route json'")
+        rib_routes = cmdl(["vtysh", "-c", f"show {proto} route json"])
         data["routes"] = loads(rib_routes)
 
     if summary["routesTotalFib"] < MAX_ROUTES:
@@ -164,25 +164,25 @@ def _get_ipv6_routes():
 def _get_ospfv2():
     # XXX: OSPF output when it's not configured is an empty string,
     # which is not a valid JSON
-    output = cmd("vtysh -c 'show ip ospf json'")
+    output = cmdl(["vtysh", "-c", "show ip ospf json"])
     if output:
         return json.loads(output)
     else:
         return {}
 
 def _get_ospfv3():
-    output = cmd("vtysh -c 'show ipv6 ospf6 json'")
+    output = cmdl(["vtysh", "-c", "show ipv6 ospf6 json"])
     if output:
         return json.loads(output)
     else:
 	    return {}
 
 def _get_bgp_summary():
-    output = cmd("vtysh -c 'show bgp summary json'")
+    output = cmdl(["vtysh", "-c", "show bgp summary json"])
     return json.loads(output)
 
 def _get_isis():
-    output = cmd("vtysh -c 'show isis summary json'")
+    output = cmdl(["vtysh", "-c", "show isis summary json"])
     if output:
         return json.loads(output)
     else:
@@ -190,31 +190,32 @@ def _get_isis():
 
 def _get_arp_table():
     from json import loads
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
-    arp_table = cmd("ip --json -4 neighbor show")
+    arp_table = cmdl(["ip", "--json", "-4", "neighbor", "show"])
     return loads(arp_table)
 
 def _get_ndp_table():
     from json import loads
 
-    arp_table = cmd("ip --json -6 neighbor show")
+    arp_table = cmdl(["ip", "--json", "-6", "neighbor", "show"])
     return loads(arp_table)
 
 def _get_nftables_rules():
-    nft_rules = cmd("nft list ruleset")
+    nft_rules = cmdl(["nft", "list", "ruleset"])
     return nft_rules
 
 def _get_connections():
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
-    return cmd("ss -apO")
+    return cmdl(["ss", "-apO"])
 
 def _get_system_packages():
     from re import split
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
-    dpkg_out = cmd(''' dpkg-query -W -f='${Package} ${Version} ${Architecture} ${db:Status-Abbrev}\n' ''')
+    dpkg_out = cmdl(['dpkg-query', '-W', '-f',
+                      '${Package} ${Version} ${Architecture} ${db:Status-Abbrev}\n'])
     pkg_lines = split(r'\n+', dpkg_out)
 
     # Discard the header, it's five lines long

@@ -34,4 +34,4 @@ class RateLimiter(QoSBase):
             latency = config['latency']
             tmp += f' latency {latency}ms'
 
-        self._cmd(tmp)
+        self._cmdl(tmp.split())

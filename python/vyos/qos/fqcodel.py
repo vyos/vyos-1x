@@ -34,7 +34,7 @@ class FQCodel(QoSBase):
             tmp += f' target {target}'
 
         tmp += f' noecn'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)

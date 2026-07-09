@@ -14,7 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.utils.disk import device_from_id
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 def raid_sets():
     """
@@ -54,9 +54,9 @@ def add_raid_member(raid_set_name: str, member: str, by_id: bool = False):
         raise ValueError(f"Partition {member} does not exist")
     if member in raid_set_members(raid_set_name):
         raise ValueError(f"Partition {member} is already a member of RAID set {raid_set_name}")
-    cmd(f'mdadm --add /dev/{raid_set_name} /dev/{member}')
-    disk = cmd(f'lsblk -ndo PKNAME /dev/{member}')
-    cmd(f'grub-install /dev/{disk}')
+    cmdl(['mdadm', '--add', f'/dev/{raid_set_name}', f'/dev/{member}'])
+    disk = cmdl(['lsblk', '-ndo', 'PKNAME', f'/dev/{member}'])
+    cmdl(['grub-install', f'/dev/{disk}'])
 
 def delete_raid_member(raid_set_name: str, member: str, by_id: bool = False):
     """
@@ -68,4 +68,4 @@ def delete_raid_member(raid_set_name: str, member: str, by_id: bool = False):
         raise ValueError(f"RAID set {raid_set_name} does not exist")
     if member not in raid_set_members(raid_set_name):
         raise ValueError(f"Partition {member} is not a member of RAID set {raid_set_name}")
-    cmd(f'mdadm --remove /dev/{raid_set_name} /dev/{member}')
+    cmdl(['mdadm', '--remove', f'/dev/{raid_set_name}', f'/dev/{member}'])

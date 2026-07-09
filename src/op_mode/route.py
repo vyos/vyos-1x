@@ -57,7 +57,7 @@ frr_command_template = Template("""
 ArgFamily = typing.Literal['inet', 'inet6']
 
 def show_summary(raw: bool, family: ArgFamily, table: typing.Optional[int], vrf: typing.Optional[str]):
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
     if family == 'inet':
         family_cmd = 'ip'
@@ -83,7 +83,8 @@ def show_summary(raw: bool, family: ArgFamily, table: typing.Optional[int], vrf:
     if raw:
         from json import loads
 
-        output = cmd(f"vtysh -c 'show {family_cmd} route {vrf_cmd} summary {table_cmd} json'").strip()
+        frr_command = re.sub(r'\s+', ' ', f'show {family_cmd} route {vrf_cmd} summary {table_cmd} json').strip()
+        output = cmdl(['vtysh', '-c', frr_command]).strip()
 
         # If there are no routes in a table, its "JSON" output is an empty string,
         # as of FRR 8.4.1
@@ -92,7 +93,8 @@ def show_summary(raw: bool, family: ArgFamily, table: typing.Optional[int], vrf:
         else:
             return {}
     else:
-        output = cmd(f"vtysh -c 'show {family_cmd} route {vrf_cmd} summary {table_cmd}'")
+        frr_command = re.sub(r'\s+', ' ', f'show {family_cmd} route {vrf_cmd} summary {table_cmd}').strip()
+        output = cmdl(['vtysh', '-c', frr_command])
         return output
 
 def show(raw: bool,
@@ -119,8 +121,8 @@ def show(raw: bool,
         frr_command = frr_command_template.render(kwargs)
         frr_command = re.sub(r'\s+', ' ', frr_command)
 
-        from vyos.utils.process import cmd
-        output = cmd(f"vtysh -c '{frr_command}'")
+        from vyos.utils.process import cmdl
+        output = cmdl(['vtysh', '-c', frr_command])
 
         if raw:
             from json import loads

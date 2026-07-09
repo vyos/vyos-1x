@@ -21,7 +21,7 @@ class Limiter(QoSBase):
 
     def update(self, config, direction):
         tmp = f'tc qdisc add dev {self._interface} handle {self._parent:x}: {direction}'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # base class must be called last
         super().update(config, direction)

@@ -19,7 +19,7 @@ import sys
 import typing
 
 from tabulate import tabulate
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 import vyos.opmode
 
@@ -32,7 +32,7 @@ def _get_raw_data(family, interface=None):
     tmp = f'{tmp} -j maddr show'
     if interface:
         tmp = f'{tmp} dev {interface}'
-    output = cmd(tmp)
+    output = cmdl(tmp.split())
     data = json.loads(output)
     if not data:
         return []

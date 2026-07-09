@@ -25,7 +25,7 @@ from vyos.template import address_from_cidr
 from vyos.template import bracketize_ipv6
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import call
 from vyos.utils.process import DEVNULL
 from vyos.utils.file import read_file
@@ -57,12 +57,12 @@ def get_engine_boots() -> int:
     """Query engineBoots directly from the running snmpd via SNMP"""
 
     engine_boots_oid = '1.3.6.1.6.3.10.2.1.2.0'
-    out = cmd(
-        f'snmpget -v3 -u {snmpv3_user} -l authPriv '
-        f'-a SHA -A {snmpv3_auth_pw} '
-        f'-x AES -X {snmpv3_priv_pw} '
-        f'127.0.0.1 {engine_boots_oid}'
-    )
+    out = cmdl([
+        'snmpget', '-v3', '-u', snmpv3_user, '-l', 'authPriv',
+        '-a', 'SHA', '-A', snmpv3_auth_pw,
+        '-x', 'AES', '-X', snmpv3_priv_pw,
+        '127.0.0.1', engine_boots_oid,
+    ])
     # Output: SNMP-FRAMEWORK-MIB::snmpEngineBoots.0 = INTEGER: 3
     return int(out.split()[-1]) if 'snmpEngineBoots' in out else 0
 

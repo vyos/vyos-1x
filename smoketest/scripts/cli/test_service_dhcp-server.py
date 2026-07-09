@@ -25,7 +25,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.kea import kea_add_lease
 from vyos.kea import kea_delete_lease
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.template import inc_ip
@@ -101,7 +101,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
     def verify_service_running(self):
         try:
-            tmp = cmd('grep -i kea /var/log/messages | tail -n 100')
+            out = cmdl(['cat', '/var/log/messages'])
+            matched = [line for line in out.splitlines() if 'kea' in line.lower()]
+            tmp = '\n'.join(matched[-100:])
         except OSError:
             tmp = 'No relevant log entries'
         self.assertTrue(
@@ -1749,8 +1751,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             for seq in client_range:
                 ip_addr = inc_ip(subnet, seq)
                 kea_delete_lease(4, None, ip_addr)
-                cmd(
-                    f'{HOSTSD_CLIENT} --delete-hosts --tag dhcp-server-{ip_addr} --apply'
+                cmdl(
+                    [HOSTSD_CLIENT, '--delete-hosts', '--tag', f'dhcp-server-{ip_addr}', '--apply']
                 )
 
         self.addClassCleanup(internal_cleanup)
@@ -1803,7 +1805,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         # 2. Verify that leases are not available in vyos-hostsd
         tag_regex = re.escape(f'dhcp-server-{subnet.rsplit(".", 1)[0]}')
-        host_json = cmd(f'{HOSTSD_CLIENT} --get-hosts {tag_regex}')
+        host_json = cmdl([HOSTSD_CLIENT, '--get-hosts', tag_regex])
         self.assertFalse(host_json.strip('{}'))
 
         # 3. Restart the service to trigger vyos-hostsd sync and wait for it to start
@@ -1811,7 +1813,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         # 4. Verify that leases are synced and available in vyos-hostsd
         tag_regex = re.escape(f'dhcp-server-{subnet.rsplit(".", 1)[0]}')
-        host_json = cmd(f'{HOSTSD_CLIENT} --get-hosts {tag_regex}')
+        host_json = cmdl([HOSTSD_CLIENT, '--get-hosts', tag_regex])
         self.assertTrue(host_json)
 
     def test_dhcp_log_level(self):

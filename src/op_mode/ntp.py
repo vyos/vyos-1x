@@ -20,7 +20,7 @@ from itertools import chain
 
 import vyos.opmode
 from vyos.configquery import ConfigTreeQuery
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 def _get_raw_data(command: str) -> dict:
     # Returns returns chronyc output as a dictionary
@@ -88,7 +88,7 @@ def _get_raw_data(command: str) -> dict:
 
     # Get -c option command line output, splitlines,
     # and save comma-separated values as a flat list
-    output = cmd(command).splitlines()
+    output = cmdl(command.split()).splitlines()
     values = csv.reader(output)
     values = list(chain.from_iterable(values))
 
@@ -128,7 +128,7 @@ def show_activity(raw: bool):
     else:
         command = _extend_command_vrf() + command
         command += f" activity"
-        return cmd(command)
+        return cmdl(command.split())
 
 def show_sources(raw: bool):
     _is_configured()
@@ -140,7 +140,7 @@ def show_sources(raw: bool):
     else:
         command = _extend_command_vrf() + command
         command += f" sources -v"
-        return cmd(command)
+        return cmdl(command.split())
 
 def show_tracking(raw: bool):
     _is_configured()
@@ -152,7 +152,7 @@ def show_tracking(raw: bool):
     else:
         command = _extend_command_vrf() + command
         command += f" tracking"
-        return cmd(command)
+        return cmdl(command.split())
 
 def show_sourcestats(raw: bool):
     _is_configured()
@@ -164,7 +164,7 @@ def show_sourcestats(raw: bool):
     else:
         command = _extend_command_vrf() + command
         command += f" sourcestats -v"
-        return cmd(command)
+        return cmdl(command.split())
 
 
 if __name__ == '__main__':

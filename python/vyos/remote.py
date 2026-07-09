@@ -53,7 +53,7 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.io import is_interactive
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
 from vyos.version import get_version
 from vyos.base import Warning
@@ -477,21 +477,23 @@ class TftpC:
                  source_port=0,
                  timeout=10,
                  vrf=None):
-        source_option = f'--interface {source_host} --local-port {source_port}' if source_host else ''
-        progress_flag = '--progress-bar' if progressbar else '--silent'
-        self.command = f'curl {source_option} {progress_flag} --connect-timeout {timeout}'
+        self.command = ['curl']
+        if source_host:
+            self.command += ['--interface', str(source_host), '--local-port', str(source_port)]
+        self.command += ['--progress-bar'] if progressbar else ['--silent']
+        self.command += ['--connect-timeout', str(timeout)]
         self.urlstring = urllib.parse.urlunsplit(url)
         self.vrf = vrf
 
     def download(self, location: str):
         with open(location, 'wb') as f:
-            f.write(cmd(f'{self.command} "{self.urlstring}"',
-                        vrf=self.vrf).encode())
+            f.write(cmdl(self.command + [self.urlstring],
+                         vrf=self.vrf).encode())
 
     def upload(self, location: str):
         with open(location, 'rb') as f:
-            cmd(f'{self.command} --upload-file - "{self.urlstring}"',
-                input=f.read(), vrf=self.vrf)
+            cmdl(self.command + ['--upload-file', '-', self.urlstring],
+                 input=f.read(), vrf=self.vrf)
 
 class GitC:
     def __init__(self,

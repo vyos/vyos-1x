@@ -25,7 +25,7 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
 from vyos.utils.network import interface_exists
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.template import is_ipv6
 from vyos import ConfigError
@@ -142,7 +142,7 @@ def generate(nat):
 def apply(nat):
     check_kmod(k_mod)
 
-    cmd(f'nft --file {nftables_nat66_config}')
+    cmdl(['nft', '--file', nftables_nat66_config])
 
     if not nat or 'deleted' in nat:
         os.unlink(nftables_nat66_config)

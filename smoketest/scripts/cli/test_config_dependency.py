@@ -18,7 +18,7 @@ import unittest
 from time import sleep
 
 from vyos.utils.process import is_systemd_service_running
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.configsession import ConfigSessionError
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -33,7 +33,7 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
         cls.running_state = is_systemd_service_running('vyos-configd.service')
 
         if not cls.running_state:
-            cmd('sudo systemctl start vyos-configd.service')
+            cmdl(['systemctl', 'start', 'vyos-configd.service'], sudo=True)
             # allow time for init
             sleep(1)
 
@@ -45,7 +45,7 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
 
         # return to running_state
         if not cls.running_state:
-            cmd('sudo systemctl stop vyos-configd.service')
+            cmdl(['systemctl', 'stop', 'vyos-configd.service'], sudo=True)
 
     def test_configdep_error(self):
         address_group = 'AG'

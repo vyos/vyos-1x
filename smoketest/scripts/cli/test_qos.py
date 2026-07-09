@@ -23,13 +23,13 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section, Interface
 from vyos.qos import CAKE
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 base_path = ['qos']
 
 
 def get_tc_qdisc_json(interface, all=False) -> dict:
-    tmp = cmd(f'tc -detail -json qdisc show dev {interface}')
+    tmp = cmdl(['tc', '-detail', '-json', 'qdisc', 'show', 'dev', interface])
     tmp = loads(tmp)
 
     if all:
@@ -42,11 +42,11 @@ def get_tc_filter_json(interface, direction=None) -> list:
     if direction not in ['ingress', 'egress', None]:
         raise ValueError()
 
-    cmd_stmt = f'tc -detail -json filter show dev {interface}'
+    cmd_stmt = ['tc', '-detail', '-json', 'filter', 'show', 'dev', interface]
     if direction:
-        cmd_stmt += f' {direction}'
+        cmd_stmt += [direction]
 
-    tmp = cmd(cmd_stmt)
+    tmp = cmdl(cmd_stmt)
     tmp = loads(tmp)
     return tmp
 
@@ -56,11 +56,11 @@ def get_tc_filter_details(interface, direction=None) -> list:
     if direction not in ['ingress', 'egress', None]:
         raise ValueError()
 
-    cmd_stmt = f'tc -details filter show dev {interface}'
+    cmd_stmt = ['tc', '-details', 'filter', 'show', 'dev', interface]
     if direction:
-        cmd_stmt += f' {direction}'
+        cmd_stmt += [direction]
 
-    tmp = cmd(cmd_stmt)
+    tmp = cmdl(cmd_stmt)
     return tmp
 
 
@@ -646,7 +646,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                 f'prio 7 rate {default_bandwidth}Mbit ceil {default_ceil}Mbit'
             )
 
-            output = cmd(f'tc class show dev {interface}')
+            output = cmdl(['tc', 'class', 'show', 'dev', interface])
 
             for config_entry in config_entries:
                 self.assertIn(config_entry, output)
@@ -680,7 +680,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # check root htb config
-        output = cmd(f'tc class show dev {interface}')
+        output = cmdl(['tc', 'class', 'show', 'dev', interface])
 
         config_entries = (
             f'prio 0 rate {class_bandwidth}Mbit ceil 50Mbit burst 15Kb',  # specified class
@@ -689,7 +689,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, output)
 
-        output = cmd(f'tc -d qdisc show dev {interface}')
+        output = cmdl(['tc', '-d', 'qdisc', 'show', 'dev', interface])
         config_entries = (
             'qdisc red',  # use random detect
             'limit 72Kb min 9Kb max 18Kb ewma 3 probability 0.1',  # default config for random detect
@@ -711,7 +711,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        output = cmd(f'tc -d qdisc show dev {interface}')
+        output = cmdl(['tc', '-d', 'qdisc', 'show', 'dev', interface])
         config_entries = (
             'qdisc red',  # use random detect
             'limit 1Mb min 16Kb max 32Kb ewma 3 probability 0.1',  # default config for random detect
@@ -744,7 +744,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
         # check root htb config
-        output = cmd(f'tc class show dev {interface}')
+        output = cmdl(['tc', 'class', 'show', 'dev', interface])
 
         config_entries = (
             f'prio 5 rate {class_bandwidth}Mbit ceil {class_ceiling}Mbit burst 15Kb',  # specified class
@@ -753,11 +753,11 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, output)
 
-        self.assertTrue('' != cmd(f'tc filter show dev {interface}'))
+        self.assertTrue('' != cmdl(['tc', 'filter', 'show', 'dev', interface]))
         # self.cli_delete(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'match', 'ADDRESS30'])
         self.cli_delete(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'match', 'ADDRESS30', 'ip', 'source', 'address', src_address])
         self.cli_commit()
-        self.assertEqual('', cmd(f'tc filter show dev {interface}'))
+        self.assertEqual('', cmdl(['tc', 'filter', 'show', 'dev', interface]))
 
     def test_14_policy_limiter_marked_traffic(self):
         policy_name = 'smoke_test'
@@ -772,7 +772,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_policy_path + ['default', 'burst', '125000000b'])
         self.cli_commit()
 
-        tc_filters = cmd(f'tc filter show dev {self._interfaces[0]} ingress')
+        tc_filters = cmdl(['tc', 'filter', 'show', 'dev', self._interfaces[0], 'ingress'])
         # class 100
         self.assertIn('filter parent ffff: protocol all pref 20 fw chain 0', tc_filters)
         self.assertIn('action order 1:  police 0x1 rate 20Gbit burst 3760Kb mtu 2Kb action drop overhead 0b', tc_filters)
@@ -803,7 +803,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_policy_path + ['default', 'queue-type', 'fair-queue'])
         self.cli_commit()
 
-        tc_filters_old = cmd(f'tc -details filter show dev {interface}')
+        tc_filters_old = cmdl(['tc', '-details', 'filter', 'show', 'dev', interface])
         self.assertIn('match 00280000/00ff0000', tc_filters_old)
         self.assertIn('match 00880000/00ff0000', tc_filters_old)
         self.assertIn('match 00980000/00ff0000', tc_filters_old)
@@ -814,7 +814,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_policy_path)
         self.cli_delete(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
         self.cli_commit()
-        self.assertEqual('', cmd(f'tc -s filter show dev {interface}'))
+        self.assertEqual('', cmdl(['tc', '-s', 'filter', 'show', 'dev', interface]))
 
         self.cli_set(['qos', 'interface', interface, 'egress', 'VyOS-HTB'])
         # prepare traffic match group
@@ -845,7 +845,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_policy_path + ['default', 'queue-type', 'fair-queue'])
         self.cli_commit()
 
-        self.assertEqual(tc_filters_old, cmd(f'tc -details filter show dev {interface}'))
+        self.assertEqual(tc_filters_old, cmdl(['tc', '-details', 'filter', 'show', 'dev', interface]))
 
     def test_16_wrong_traffic_match_group(self):
         interface = self._interfaces[0]
@@ -1138,7 +1138,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # use raw because tc json is incorrect here
-        tmp = cmd(f'tc -details qdisc show dev {interface}')
+        tmp = cmdl(['tc', '-details', 'qdisc', 'show', 'dev', interface])
         for rec in tmp.split('\n'):
             rec = rec.strip()
             if 'root' in rec:
@@ -1149,7 +1149,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                     r'qdisc sfq \S+: parent 1:2 limit 127p quantum 1514b depth 127 flows 128 divisor 1024 perturb 10sec',
                 )
         # use raw because tc json is incorrect here
-        tmp = cmd(f'tc -details class show dev {interface}')
+        tmp = cmdl(['tc', '-details', 'class', 'show', 'dev', interface])
         for rec in tmp.split('\n'):
             rec = rec.strip().lower()
             if 'root' in rec:
@@ -1172,7 +1172,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             )
         self.cli_commit()
 
-        tmp = cmd(f'tc -details class show dev {interface}')
+        tmp = cmdl(['tc', '-details', 'class', 'show', 'dev', interface])
         for rec in tmp.split('\n'):
             rec = rec.strip().lower()
             if 'hfsc 1:2' in rec:
@@ -1200,10 +1200,10 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         )
         self.cli_commit()
 
-        tmp = cmd(f'tc -details qdisc show dev {interface}')
+        tmp = cmdl(['tc', '-details', 'qdisc', 'show', 'dev', interface])
         self.assertEqual(4, len(tmp.split('\n')))
 
-        tmp = cmd(f'tc -details class show dev {interface}')
+        tmp = cmdl(['tc', '-details', 'class', 'show', 'dev', interface])
         tmp = tmp.lower()
 
         self.assertTrue(
@@ -1248,7 +1248,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         iif = Interface(self._interfaces[0]).get_ifindex()
-        tc_filters = cmd(f'tc filter show dev {self._interfaces[0]} ingress')
+        tc_filters = cmdl(['tc', 'filter', 'show', 'dev', self._interfaces[0], 'ingress'])
 
         # class 100
         self.assertIn('filter parent ffff: protocol all pref 20 basic chain 0', tc_filters)
@@ -1288,7 +1288,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             f'prio 7 rate {default_bandwidth}Mbit ceil {default_ceil}Mbit'
         )
 
-        output = cmd(f'tc class show dev {interface}')
+        output = cmdl(['tc', 'class', 'show', 'dev', interface])
 
         for config_entry in config_entries:
             self.assertIn(config_entry, output)

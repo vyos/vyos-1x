@@ -110,9 +110,9 @@ def get_available_cpus():
     """
     import json
 
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
-    out = json.loads(cmd('lscpu --extended -b --json'))
+    out = json.loads(cmdl(['lscpu', '--extended', '-b', '--json']))
 
     return out['cpus']
 

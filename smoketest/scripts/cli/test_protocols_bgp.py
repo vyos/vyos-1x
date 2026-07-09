@@ -24,7 +24,7 @@ from vyos.ifconfig import Section
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.process import process_named_running
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.file import read_file
 from vyos.frrender import bgp_daemon
 
@@ -1978,7 +1978,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # restart bgpd to apply "-M bmp" and update PID
-        cmd(f'sudo kill -9 {self.daemon_pid}')
+        cmdl(['kill', '-9', str(self.daemon_pid)], sudo=True)
         # let the bgpd process recover
         sleep(10)
         # update daemon PID - this was a planned daemon restart

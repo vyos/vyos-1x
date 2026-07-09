@@ -32,7 +32,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.system import sysctl_read
 
@@ -63,7 +63,7 @@ def verify(nat64) -> None:
     base_rule = base + ['source', 'rule']
 
     # Load in existing instances so we can destroy any unknown
-    lines = cmd('jool instance display --csv').splitlines()
+    lines = cmdl(['jool', 'instance', 'display', '--csv']).splitlines()
     for _, instance, _ in csv.reader(lines):
         match = INSTANCE_REGEX.fullmatch(instance)
         if not match:

@@ -18,9 +18,11 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+import re
+
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig.vrrp import VRRP
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.template import inc_ip
 
@@ -32,9 +34,20 @@ vrrp_interface = 'eth1'
 groups = ['VLAN77', 'VLAN78', 'VLAN201']
 
 def getConfig(string, end='}'):
-    command = f'cat {KEEPALIVED_CONF} | sed -n "/^{string}/,/^{end}/p"'
-    out = cmd(command)
-    return out
+    # Equivalent of: cat KEEPALIVED_CONF | sed -n "/^{string}/,/^{end}/p"
+    start_pattern = re.compile(r'^' + string)
+    end_pattern = re.compile(r'^' + end)
+    content = cmdl(['cat', KEEPALIVED_CONF])
+    lines = []
+    in_section = False
+    for line in content.splitlines():
+        if not in_section and start_pattern.search(line):
+            in_section = True
+        if in_section:
+            lines.append(line)
+            if end_pattern.search(line):
+                break
+    return '\n'.join(lines)
 
 class TestVRRP(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):

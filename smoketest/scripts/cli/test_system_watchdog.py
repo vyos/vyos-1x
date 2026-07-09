@@ -17,7 +17,7 @@ import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 base_path = ['system', 'watchdog']
 
@@ -35,7 +35,7 @@ class TestSystemWatchdog(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['module', 'softdog'])
         self.cli_commit()
         # Check if softdog module is loaded
-        lsmod = cmd('lsmod')
+        lsmod = cmdl(['lsmod'])
         self.assertIn('softdog', lsmod)
         # Check /dev/watchdog0 exists
         self.assertTrue(

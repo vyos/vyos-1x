@@ -25,7 +25,7 @@ from tabulate import tabulate
 import vyos.opmode
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.dict import dict_search
 
 ArgDirection = typing.Literal['source', 'destination']
@@ -43,7 +43,7 @@ def _get_xml_translation(direction, family, address=None):
     tmp = f'conntrack --dump --family {family} {opt} --output xml'
     if address:
         tmp += f' --src {address}'
-    return cmd(tmp)
+    return cmdl(tmp.split())
 
 
 def _xml_to_dict(xml):
@@ -67,7 +67,7 @@ def _get_json_data(direction, family):
     if direction == 'destination':
         chain = 'PREROUTING'
     family = 'ip6' if family == 'inet6' else 'ip'
-    return cmd(f'nft --json list chain {family} vyos_nat {chain}')
+    return cmdl(['nft', '--json', 'list', 'chain', family, 'vyos_nat', chain])
 
 
 def _get_raw_data_rules(direction, family):

@@ -21,7 +21,7 @@ import json
 
 from vyos.config import Config
 from vyos.utils.dict import dict_search
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -660,7 +660,7 @@ def get_vlan_ids(interface):
     """
     vlan_ids = set()
 
-    bridge_status = cmd('bridge -j vlan show', shell=True)
+    bridge_status = cmdl(['bridge', '-j', 'vlan', 'show'])
     vlan_filter_status = json.loads(bridge_status)
 
     if vlan_filter_status is not None:
@@ -677,7 +677,7 @@ def get_vlan_ids(interface):
 def get_vlans_ids_and_range(interface):
     vlan_ids = set()
 
-    vlan_filter_status = json.loads(cmd(f'bridge -j -d vlan show dev {interface}'))
+    vlan_filter_status = json.loads(cmdl(['bridge', '-j', '-d', 'vlan', 'show', 'dev', interface]))
 
     if vlan_filter_status is not None:
         for interface_status in vlan_filter_status:

@@ -22,7 +22,7 @@ from tabulate import tabulate
 
 import vyos.opmode
 from vyos.configquery import op_mode_config_dict
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.network import interface_exists
 
 def detailed_output(dataset, headers):
@@ -91,8 +91,8 @@ def show_shaper(raw: bool, ifname: typing.Optional[str], classn: typing.Optional
         if not policy_name:
             continue        
 
-        class_data = json.loads(cmd(f"tc -j -s class show dev {i}"))
-        qdisc_data = json.loads(cmd(f"tc -j qdisc show dev {i}"))
+        class_data = json.loads(cmdl(['tc', '-j', '-s', 'class', 'show', 'dev', i]))
+        qdisc_data = json.loads(cmdl(['tc', '-j', 'qdisc', 'show', 'dev', i]))
 
         if class_dict:
             # Gather qdisc information (e.g. Queue Type)
@@ -224,13 +224,13 @@ def show_cake(raw: bool, ifname: typing.Optional[str]):
     if not interface_exists(ifname):
         raise vyos.opmode.Error(f"{ifname} does not exist!")
         
-    cake_data = json.loads(cmd(f"tc -j -s qdisc show dev {ifname}"))[0]
+    cake_data = json.loads(cmdl(['tc', '-j', '-s', 'qdisc', 'show', 'dev', ifname]))[0]
     if cake_data:
         if cake_data.get('kind') == 'cake':
             if raw:
                 return {'qos': {ifname: cake_data}}
             else:
-                print(cmd(f"tc -s qdisc show dev {ifname}"))
+                print(cmdl(['tc', '-s', 'qdisc', 'show', 'dev', ifname]))
 
 if __name__ == '__main__':
     try:

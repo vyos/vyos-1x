@@ -20,7 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -59,7 +59,7 @@ def apply(sysctl):
 
     # We silently ignore all errors
     # See: https://bugzilla.redhat.com/show_bug.cgi?id=1264080
-    cmd(f'sysctl -f {config_file}')
+    cmdl(['sysctl', '-f', config_file])
     return None
 
 if __name__ == '__main__':
