@@ -97,6 +97,20 @@
             </properties>
             <command>dmesg</command>
           </leafNode>
+          <node name="kdump">
+            <properties>
+              <help>Show kernel crash dump (kdump) status and configuration</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/kdump.py show_status</command>
+            <children>
+              <leafNode name="dumps">
+                <properties>
+                  <help>Show recorded kernel crash dumps</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/kdump.py show_dumps</command>
+              </leafNode>
+            </children>
+          </node>
           <node name="login">
             <properties>
               <help>Show user accounts</help>

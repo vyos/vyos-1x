@@ -543,6 +543,11 @@ REPORTS: dict[str, tuple[BaseSpec]] = {
         CommandSpec('', 'vppctl show mpls tunnel'),
         CommandSpec('', 'vppctl show trace'),
     ),
+    'kernel-dump': (
+        CommandSpec('Kdump status and configuration', op('show system kdump')),
+        CommandSpec('', 'kdump-config show'),
+        CommandSpec('Recorded kernel crash dumps', op('show system kdump dumps')),
+    ),
 }
 
 

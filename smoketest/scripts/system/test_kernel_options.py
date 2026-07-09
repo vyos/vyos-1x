@@ -168,6 +168,18 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=y', self._config_data)
             self.assertTrue(tmp)
 
+    def test_kdump(self):
+        options = [
+            'CONFIG_KEXEC',
+            'CONFIG_CRASH_DUMP',
+            'CONFIG_DEBUG_INFO',
+            'CONFIG_PROC_VMCORE',
+        ]
+        for option in options:
+            with self.subTest(option=option):
+                tmp = re.findall(f'{option}=y', self._config_data)
+                self.assertTrue(tmp, msg='Required kdump option must be enabled')
+
     def test_openvpn_dco(self):
         options_to_check = ['CONFIG_OVPN']
         for option in options_to_check:

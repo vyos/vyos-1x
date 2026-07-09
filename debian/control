@@ -109,7 +109,11 @@ Depends:
   iproute2 (>= 6.0.0),
   linux-cpupower,
   hwloc,
+# For "system option kdump"
   kexec-tools,
+  kdump-tools,
+  makedumpfile,
+# End "system option kdump"
 # ipaddrcheck is widely used in IP value validators
   ipaddrcheck,
   ethtool (>= 6.10),

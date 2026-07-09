@@ -17,9 +17,17 @@ import os
 from typing import Tuple
 from typing import Optional
 
+from vyos.utils.file import read_file
+
 # A list of used Kernel constants
 # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/wireguard/messages.h?h=linux-6.6.y#n45
 WIREGUARD_REKEY_AFTER_TIME = 120
+
+CMDLINE_PATH = '/proc/cmdline'
+
+# Kernel interface files exposing crash kernel state at runtime
+KEXEC_CRASH_LOADED = '/sys/kernel/kexec_crash_loaded'
+KEXEC_CRASH_SIZE = '/sys/kernel/kexec_crash_size'
 
 def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
     """Load a kernel module via modprobe.
@@ -172,3 +180,65 @@ def get_kernel_serial_console() -> Tuple[Optional[str], Optional[str], Optional[
         )
 
     return (None, None, None)
+
+
+def get_kernel_boot_arg(argument=None) -> str | None:
+    """Read and parse kernel boot arguments from the kernel command line.
+
+    Args:
+        argument: The name of a specific boot argument to look up (e.g.
+                  'crashkernel'). If omitted or None, the full raw command
+                  line string is returned.
+
+    Returns:
+        If argument is None: the full kernel command line string.
+        If argument is given: the value of that argument (the part after '='),
+        or None if the argument is not present on the command line.
+
+    Examples:
+        >>> get_kernel_boot_arg()
+        'ro quiet crashkernel=256M console=tty0'
+
+        >>> get_kernel_boot_arg('crashkernel')
+        '256M'
+
+        >>> get_kernel_boot_arg('quiet')
+        ''
+
+        >>> get_kernel_boot_arg('nonexistent')
+        None
+    """
+    cmdline = read_file(CMDLINE_PATH)
+    if not argument:
+        return cmdline
+
+    # Kernel arguments with values are formatted as 'key=value' tokens
+    # separated by spaces. Build the prefix to match against:
+    key = f'{argument}='
+
+    # Kernel parses the command line from left to right.
+    # A later argument will overwrite an earlier one.
+    for part in reversed(cmdline.split()):
+        if part.startswith(key):
+            # Strip the 'key=' prefix and return only the value portion
+            return part[len(key) :]
+        elif part == argument:
+            # Statement without value portion should be return empty string
+            return ''
+
+    return None
+
+
+def is_crash_kernel_loaded() -> bool:
+    """Return True when a capture kernel is currently loaded via kexec"""
+    return read_file(KEXEC_CRASH_LOADED, defaultonfailure='0') == '1'
+
+
+def get_crash_kernel_size() -> int:
+    """Return the number of bytes reserved for the capture kernel"""
+
+    if not is_crash_kernel_loaded():
+        return 0
+
+    raw = read_file(KEXEC_CRASH_SIZE, defaultonfailure='0')
+    return int(raw) if raw.isdigit() else 0
