@@ -1,11 +1,11 @@
 # The Linux kernel selects configuration 2 by default, but that does not work with ModemManager - configuration 3 (MBIM mode) is a better choice
 
 # HP LT4132 which is a re-brand of Huawei ME906s-158
-ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="a31d", ATTR{bConfigurationValue}!="3", ATTR{bConfigurationValue}:="0"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="a31d", ATTR{bConfigurationValue}!="3", ATTR{bConfigurationValue}="0"
 ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="03f0", ATTR{idProduct}=="a31d", ATTR{bConfigurationValue}!="3", RUN+="/bin/sh -c 'sleep 1; echo 3 > %S%p/bConfigurationValue'"
-ACTION=="add|change", SUBSYSTEM=="net", ATTRS{idVendor}=="03f0", ATTRS{idProduct}=="a31d", ATTR{cdc_ncm/ndp_to_end}=="N", ATTR{cdc_ncm/ndp_to_end}:="Y"
+ACTION=="add|change", SUBSYSTEM=="net", ATTRS{idVendor}=="03f0", ATTRS{idProduct}=="a31d", ATTR{cdc_ncm/ndp_to_end}=="N", ATTR{cdc_ncm/ndp_to_end}="Y"
 
 # Huawei Technologies Co., Ltd. ME906s LTE M.2
-ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="12d1", ATTR{idProduct}=="15c1", ATTR{bConfigurationValue}!="3", ATTR{bConfigurationValue}:="0"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="12d1", ATTR{idProduct}=="15c1", ATTR{bConfigurationValue}!="3", ATTR{bConfigurationValue}="0"
 ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="12d1", ATTR{idProduct}=="15c1", ATTR{bConfigurationValue}!="3", RUN+="/bin/sh -c 'sleep 1; echo 3 > %S%p/bConfigurationValue'"
-ACTION=="add|change", SUBSYSTEM=="net", ATTRS{idVendor}=="12d1", ATTRS{idProduct}=="15c1", ATTR{cdc_ncm/ndp_to_end}=="N", ATTR{cdc_ncm/ndp_to_end}:="Y"
+ACTION=="add|change", SUBSYSTEM=="net", ATTRS{idVendor}=="12d1", ATTRS{idProduct}=="15c1", ATTR{cdc_ncm/ndp_to_end}=="N", ATTR{cdc_ncm/ndp_to_end}="Y"
