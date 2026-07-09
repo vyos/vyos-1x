@@ -49,6 +49,7 @@ systemd_services = {
     'openconnect': 'ocserv.service',
     'syslog' : 'syslog.service',
     'snmpd' : 'snmpd.service',
+    'kdump': 'kdump-tools.service',
 }
 
 internal_ports = {

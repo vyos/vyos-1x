@@ -25,11 +25,13 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
+from vyos.system import image
 from vyos.system import grub_util
 from vyos.template import render
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.convert import range_str_to_list
 from vyos.utils.convert import list_to_range_str
+from vyos.utils.convert import human_to_bytes
 from vyos.utils.cpu import get_cpus
 from vyos.utils.cpu import get_available_cpus
 from vyos.utils.dict import dict_search
@@ -64,6 +66,15 @@ tuned_profiles = {
     'virtual-guest': 'virtual-guest',
     'virtual-host': 'virtual-host',
 }
+
+# Path to the kdump-tools configuration file controlling dump behaviour
+KDUMP_CONFIG_FILE = '/etc/default/kdump-tools'
+
+# initramfs-tools drop-in configuration applied during kdump initrd
+# generation. Named with 'zzzz-' prefix to ensure it is sourced last,
+# overriding any conflicting settings from other drop-ins (including the
+# `MODULES=dep` override written by the kdump-tools kernel postinst hook).
+KDUMP_INITRAMFS_HOOK = '/etc/initramfs-tools/conf.d/zzzz-kdump-vyos-overlay'
 
 MANAGED_PARAMS = {
     'hugepages1g': {
@@ -160,6 +171,11 @@ MANAGED_PARAMS = {
         'clean': r'numa_balancing=\S+',
         'type': str,
     },
+    'crashkernel': {
+        'parse': r'crashkernel=(?P<crashkernel>\S+)',
+        'clean': r'crashkernel=\S+',
+        'type': str,
+    },
 }
 
 # Compiled regex pattern for parsing command line options
@@ -183,6 +199,79 @@ def _get_total_hugepages_and_memory(config):
     return total_pages, total_bytes
 
 
+def _parse_crashkernel_ranges(value: str) -> list[dict]:
+    """Parse a tiered crashkernel= range string into a list of range entries.
+
+    The format is a comma-separated list of range specifiers:
+        <low>-<high>:<size>[,<low>-<high>:<size>,...]
+
+    Where ``high`` may be omitted to mean unbounded (e.g. `64G-:1G`).
+    Example:
+        1G-8G:512M,8G-64G:768M,64G-:1G
+
+    Args:
+        value: Raw crashkernel= value string.
+
+    Returns:
+        List of dicts with keys:
+
+        - `raw`        - original range token for use in error messages
+        - `low_bytes`  - lower RAM bound in bytes (inclusive)
+        - `high_bytes` - upper RAM bound in bytes (exclusive), or None
+        - `size_bytes` - crash kernel reservation size in bytes
+
+    Raises:
+        ValueError: When any token does not match the expected format or
+                    contains a value that cannot be converted to bytes.
+    """
+    entries = []
+
+    for token in value.split(','):
+        token = token.strip()
+        if ':' not in token or '-' not in token.split(':')[0]:
+            raise ValueError(
+                f'Invalid range token {token!r} - '
+                'expected format is <low>-<high>:<size>'
+            )
+
+        range_spec, size_str = token.split(':', 1)
+
+        # Split on the first '-' only; 'low' may itself be a unit string
+        # like '64G' which contains no hyphen, so the separator is always
+        # the hyphen between the two bounds
+        low_str, high_str = range_spec.split('-', 1)
+
+        entry = {
+            'low_bytes': human_to_bytes(low_str) if low_str else None,
+            'high_bytes': human_to_bytes(high_str) if high_str else None,
+            'size_bytes': human_to_bytes(size_str),
+        }
+        entries.append(entry)
+
+    return entries
+
+
+def _find_applicable_crashkernel_range(value: str, total_bytes: int) -> dict | None:
+    """Return the range entry that applies to *total_bytes* of RAM.
+
+    A range matches when `low_bytes <= total_bytes < high_bytes`.
+    An unbounded range (`high_bytes` is None) matches when `total_bytes >= low_bytes`.
+
+    Args:
+        value: Raw crashkernel= value string.
+        total_bytes: Total system RAM in bytes.
+
+    Returns:
+        The matching entry dict, or None when no range covers *total_bytes*.
+    """
+    for entry in _parse_crashkernel_ranges(value):
+        low = entry['low_bytes'] or 0
+        high = entry['high_bytes']
+        if total_bytes >= low and (high is None or total_bytes < high):
+            return entry
+    return None
+
+
 def get_config(config=None):
     if config:
         conf = config
@@ -190,8 +279,16 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'option']
     options = conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, with_recursive_defaults=True
+        base,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        with_recursive_defaults=True,
+        with_pki=True,
     )
+
+    if 'kdump' in options:
+        options['kdump']['is_live_boot'] = image.is_live_boot()
+        options['kdump']['disabled'] = not conf.exists(base + ['kdump'])
 
     if 'performance' in options:
         # Update IPv4/IPv6 and sysctl options after tuned applied it's settings
@@ -301,6 +398,48 @@ def verify(options):
                     f'({reserved_gb} GB is reserved for system usage and services)'
                 )
 
+    if 'kdump' in options and not options['kdump']['disabled']:
+        kdump = options['kdump']
+
+        if kdump.get('is_live_boot'):
+            raise ConfigError('kdump is not supported on live boot images')
+
+        # Check that the configured crash kernel memory does not exceed the
+        # total system RAM for the applicable range
+        memory = kdump.get('memory')
+        if memory and memory != 'auto':
+            virtual_memory = psutil.virtual_memory()
+            memory_bytes = None
+
+            try:
+                # Plain scalar value (e.g. '256M', '1G')
+                memory_bytes = human_to_bytes(memory)
+            except ValueError:
+                # Value is not a plain scalar - attempt to parse as a tiered range
+                # string (e.g. '1G-8G:512M,8G-64G:768M,64G-:1G'):
+                try:
+                    applicable = _find_applicable_crashkernel_range(
+                        memory, virtual_memory.total
+                    )
+                except ValueError as e:
+                    raise ConfigError(
+                        f'Invalid kdump memory value {memory!r}: {e}'
+                    ) from e
+
+                if applicable is None:
+                    raise ConfigError(
+                        f'No valid memory range in {memory!r} which covers the system RAM. '
+                        'Add a matching range or use a plain value'
+                    )
+
+                memory_bytes = applicable['size_bytes']
+
+            # Ensure that specified memory does not exceed total virtual memory
+            if memory_bytes >= virtual_memory.total:
+                raise ConfigError(
+                    f'Specified kdump memory {memory!r} exceeds the available system RAM'
+                )
+
     return None
 
 
@@ -375,6 +514,51 @@ def generate(options):
             count = settings.get('hugepage_count')
             if count:
                 cmdline_options.append(f'hugepages={count}')
+
+    kdump = options.get('kdump')
+    if kdump and not kdump['disabled']:
+        # Crash kernel memory reservation
+        kdump_memory = kdump.get('memory')
+        if kdump_memory:
+            if kdump_memory == 'auto':
+                # Tiered auto-sizing based on total system RAM, determined by
+                # empirical testing across representative VyOS deployments:
+                #   1G  -  8G RAM  ->  reserve 512M
+                #   8G  - 64G RAM  ->  reserve 768M
+                #   64G+      RAM  ->  reserve 1G
+                kdump_memory = '1G-8G:512M,8G-64G:768M,64G-:1G'
+
+            # The `crashkernel=` parameter instructs the boot kernel to reserve a
+            # dedicated memory region for the capture kernel.
+            cmdline_options.append(f'crashkernel={kdump_memory}')
+
+        # Create the dump directory before the kdump-tools service starts
+        dump_path = kdump.get('dump_path')
+        if dump_path:
+            os.makedirs(dump_path, exist_ok=True)
+
+        # Render the kdump-tools configuration file from the Jinja2 template
+        render(KDUMP_CONFIG_FILE, 'system/kdump_tools.conf.j2', kdump)
+
+        # VyOS uses an OverlayFS root filesystem. When mkinitramfs runs with
+        # `MODULES=dep`, it attempts to determine which kernel modules are needed
+        # by walking up the device tree from /. On a real block device
+        # this works correctly, but OverlayFS has no backing block device to walk from,
+        # causing mkinitramfs to fail with:
+        #   mkinitramfs: failed to determine device for /
+        write_file(KDUMP_INITRAMFS_HOOK, 'MODULES=most')
+    else:
+        # kdump is not configured or has been disabled - render the
+        # kdump-tools configuration with the disabled flag so the service
+        # starts in a no-op state rather than attempting to load a capture
+        # kernel with stale or missing parameters.
+        render(KDUMP_CONFIG_FILE, 'system/kdump_tools.conf.j2', {'disabled': True})
+
+        # Remove ephemeral files after the feature is disabled
+        kdump_delete_files = (KDUMP_INITRAMFS_HOOK,)
+        for delete_file in kdump_delete_files:
+            if os.path.exists(delete_file):
+                os.unlink(delete_file)
 
     cmdline_options_str = ' '.join(cmdline_options)
 

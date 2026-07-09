@@ -407,6 +407,45 @@
                #include <include/source-interface.xml.i>
              </children>
            </node>
+           <node name="kdump">
+             <properties>
+               <help>Kernel crash dump (kdump) settings</help>
+             </properties>
+             <children>
+               <leafNode name="memory">
+                 <properties>
+                   <help>Amount of memory to reserve for the crash kernel</help>
+                   <valueHelp>
+                     <format>auto</format>
+                     <description>Automatically determine memory reservation</description>
+                   </valueHelp>
+                   <valueHelp>
+                     <format>txt</format>
+                     <description>Memory size with unit, e.g. 256M or 1G</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>auto|[0-9\-:,MG]+</regex>
+                   </constraint>
+                   <constraintErrorMessage>Memory must be 'auto' or a size like 256M or 1G</constraintErrorMessage>
+                 </properties>
+                 <defaultValue>auto</defaultValue>
+               </leafNode>
+               <leafNode name="dump-path">
+                 <properties>
+                   <help>Local directory to store kernel crash dumps</help>
+                   <valueHelp>
+                     <format>txt</format>
+                     <description>Absolute path to crash dump directory</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>/[^\s]+</regex>
+                   </constraint>
+                   <constraintErrorMessage>Path must be an absolute path starting with '/'</constraintErrorMessage>
+                 </properties>
+                 <defaultValue>/var/crash</defaultValue>
+               </leafNode>
+             </children>
+           </node>
            <leafNode name="startup-beep">
              <properties>
                <help>plays sound via system speaker when you can login</help>

@@ -111,6 +111,8 @@ Depends:
   linux-cpupower,
   hwloc,
   kexec-tools,
+  kdump-tools,
+  makedumpfile,
 # ipaddrcheck is widely used in IP value validators
   ipaddrcheck,
   ethtool (>= 6.10),

@@ -16,17 +16,26 @@
 
 import os
 import unittest
+import tempfile
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.defaults import systemd_services
 from vyos.utils.cpu import get_cpus
 from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_read
 from vyos.system import image
 
 base_path = ['system', 'option']
+kdump_path = base_path + ['kdump']
+
+
+def _get_grub_config():
+    """Read GRUB config file for current running image"""
+    return read_file(f'{image.grub.GRUB_DIR_VYOS_VERS}/{image.get_running_image()}.cfg')
 
 class TestSystemOption(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
@@ -128,7 +137,7 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Read GRUB config file for current running image
-        tmp = read_file(f'{image.grub.GRUB_DIR_VYOS_VERS}/{image.get_running_image()}.cfg')
+        tmp = _get_grub_config()
         self.assertIn(' mitigations=off', tmp)
         self.assertIn(' intel_idle.max_cstate=0 processor.max_cstate=1', tmp)
         self.assertIn(' quiet', tmp)
@@ -142,6 +151,171 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
 
         if cpu_vendor == 'AuthenticAMD':
             self.assertIn(f' initcall_blacklist=acpi_cpufreq_init amd_pstate={amd_pstate_mode}', tmp)
+
+
+class TestSystemKdump(VyOSUnitTestSHIM.TestCase):
+    """Integration tests for the kdump configuration subsystem"""
+
+    config_file = '/etc/default/kdump-tools'
+    initramfs_hook = '/etc/initramfs-tools/conf.d/zzzz-kdump-vyos-overlay'
+    service = systemd_services['kdump']
+
+    # Tiered crashkernel= value produced when memory is set to 'auto'
+    auto_memory = '1G-8G:512M,8G-64G:768M,64G-:1G'
+
+    def setUp(self):
+        super().setUp()
+
+        self.dump_path = tempfile.TemporaryDirectory(prefix='kdump-test-')
+
+    def tearDown(self):
+        self.cli_delete(kdump_path)
+        self.cli_commit()
+        super().tearDown()
+
+        self.dump_path.cleanup()
+
+    def test_kdump_base(self):
+        # Test basic kdump functionality
+
+        dump_path = self.dump_path.name
+
+        self.cli_set(kdump_path + ['dump-path', dump_path])
+        self.cli_commit()
+
+        self.assertTrue(
+            os.path.exists(self.config_file),
+            'kdump-tools config file was not created after enabling kdump',
+        )
+
+        self.assertTrue(
+            os.path.isdir(dump_path),
+            f'dump-path directory {dump_path!r} was not created on commit',
+        )
+        self.assertTrue(
+            os.path.exists(self.initramfs_hook),
+            'initramfs conf.d hook was not created after enabling kdump',
+        )
+
+        hook_content = read_file(self.initramfs_hook)
+        self.assertIn(
+            'MODULES=most',
+            hook_content,
+            'initramfs hook must contain MODULES=most to work on OverlayFS root',
+        )
+
+        self.assertTrue(
+            is_systemd_service_active(self.service),
+            f'{self.service} must be active after enabling kdump',
+        )
+
+        # Disabling kdump must remove the initramfs conf.d drop-in
+        self.cli_delete(kdump_path)
+        self.cli_commit()
+
+        self.assertFalse(
+            os.path.exists(self.initramfs_hook),
+            'initramfs hook must be removed after disabling kdump',
+        )
+
+        self.assertTrue(
+            os.path.exists(self.config_file),
+            'kdump-tools config file must still exist after disabling kdump',
+        )
+        config_content = read_file(self.config_file)
+        self.assertIn(
+            'USE_KDUMP=0',
+            config_content,
+            'Disabled kdump-tools config must contain USE_KDUMP=0',
+        )
+
+    def test_kdump_memory(self):
+        # Test memory reservation logic
+
+        cases = (
+            '32M',
+            '1G',
+            '1M-256M:64M,256M-1G:128M,1G-64G:768M,64G-:1G',
+            '-256M:64M,256M-2G:128M,2G-:1G',
+            '-256M:32M,256M-:64M',
+        )
+        for case in cases:
+            with self.subTest(case=case):
+                memory = case
+                self.cli_set(kdump_path + ['memory', memory])
+                self.cli_commit()
+
+                grub_cfg = _get_grub_config()
+                self.assertIn(
+                    f'crashkernel={memory}',
+                    grub_cfg,
+                    '`crashkernel` value not found in GRUB config after setting explicit memory',
+                )
+
+        self.cli_set(kdump_path + ['memory', 'auto'])
+        self.cli_commit()
+
+        grub_cfg = _get_grub_config()
+        self.assertIn(
+            f'crashkernel={self.auto_memory}',
+            grub_cfg,
+            "'memory auto' did not produce the expected tiered `crashkernel` value in GRUB config",
+        )
+
+    def test_kdump_memory_error(self):
+        # Test special cases where invalid memory range values should raise an error
+
+        special_cases = (
+            '-256M:64M,256M-2G:128M,2G:-:1G',  # Invalid range with negative low (2G:-:1G)
+            '1M-128M:64M',  # Missing high bound, invalid
+            '256G-512G:64M',  # Invalid high bound exceeds typical limits
+            '1M-256G:768G',  # Memory range exceeds available range
+        )
+        for case in special_cases:
+            with self.subTest(case=case):
+                self.cli_set(kdump_path + ['memory', case])
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+
+    def test_op_show_kdump_status(self):
+        # Test operational mode command 'show system kdump'
+        result = self.op_mode(['show', 'system', 'kdump'])
+        self.assertIn('not configured', result)
+
+        memory = '512M'
+        self.cli_set(kdump_path + ['memory', memory])
+        self.cli_commit()
+
+        result = self.op_mode(['show', 'system', 'kdump'])
+        self.assertIn('Crash kernel', result)
+        self.assertIn(memory, result)
+
+    def test_op_show_kdump_dumps(self):
+        # Test operational mode command 'show system kdump dumps'
+        dump_path = self.dump_path.name
+
+        self.cli_set(kdump_path + ['dump-path', dump_path])
+        self.cli_commit()
+
+        result = self.op_mode(['show', 'system', 'kdump', 'dumps'])
+        self.assertIn('No kernel crash dumps recorded', result)
+
+        timestamp1 = '202607070802'
+        timestamp2 = '202607070939'
+
+        for ts in (timestamp1, timestamp2):
+            sub = os.path.join(dump_path, ts)
+            os.makedirs(sub)
+
+            # Write a small synthetic vmcore so the size check is non-trivial
+            write_file(os.path.join(sub, f'dump.{ts}'), '0' * 1024)
+            write_file(os.path.join(sub, f'dmesg.{ts}'), f'synthetic dmesg {ts}')
+
+        result = self.op_mode(['show', 'system', 'kdump', 'dumps'])
+
+        self.assertIn(f'{dump_path}/{timestamp1}', result)
+        self.assertIn(f'{dump_path}/{timestamp2}', result)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
