@@ -134,10 +134,7 @@ Depends:
   efibootmgr,
   libefivar1,
   dosfstools,
-  grub-efi-amd64-signed [amd64],
   grub-efi-arm64-bin [arm64],
-  mokutil,
-  shim-signed [amd64],
   sbsigntool,
 # Image signature verification tool
   minisign,
