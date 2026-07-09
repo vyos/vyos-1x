@@ -210,6 +210,59 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             )
             self.assertTrue(icmpv6_ra_punt_feature.is_enabled)
 
+        # DHCP/DHCPv6 must also work on VLAN sub-interfaces
+        vlan = '10'
+        vif_interface = f'{interface}.{vlan}'
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'address', 'dhcp']
+        )
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'address', 'dhcpv6']
+        )
+        self.cli_commit()
+
+        # check 'ip4-dhcp-client-detect' feature is enabled
+        vif_client_detect_feature = vpp.api.feature_is_enabled(
+            sw_if_index=vpp.get_sw_if_index(vif_interface),
+            feature_name='ip4-dhcp-client-detect',
+            arc_name='ip4-unicast',
+        )
+        self.assertTrue(vif_client_detect_feature.is_enabled)
+
+        # check 'ip6-icmp-ra-punt' feature is enabled
+        # for ip6-unicast and ip6-multicast arcs
+        for arc_name in ['ip6-unicast', 'ip6-multicast']:
+            vif_icmpv6_ra_punt_feature = vpp.api.feature_is_enabled(
+                sw_if_index=vpp.get_sw_if_index(vif_interface),
+                feature_name='ip6-icmp-ra-punt',
+                arc_name=arc_name,
+            )
+            self.assertTrue(vif_icmpv6_ra_punt_feature.is_enabled)
+
+        # remove DHCP/DHCPv6 from the VLAN sub-interface
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan, 'address'])
+        self.cli_commit()
+
+        # check 'ip4-dhcp-client-detect' feature is disabled
+        vif_client_detect_feature = vpp.api.feature_is_enabled(
+            sw_if_index=vpp.get_sw_if_index(vif_interface),
+            feature_name='ip4-dhcp-client-detect',
+            arc_name='ip4-unicast',
+        )
+        self.assertFalse(vif_client_detect_feature.is_enabled)
+
+        # check 'ip6-icmp-ra-punt' feature is disabled
+        for arc_name in ['ip6-unicast', 'ip6-multicast']:
+            vif_icmpv6_ra_punt_feature = vpp.api.feature_is_enabled(
+                sw_if_index=vpp.get_sw_if_index(vif_interface),
+                feature_name='ip6-icmp-ra-punt',
+                arc_name=arc_name,
+            )
+            self.assertFalse(vif_icmpv6_ra_punt_feature.is_enabled)
+
+        # cleanup: delete the VLAN sub-interface
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
+
     def test_02_vpp_vxlan(self):
         vxlan_path = interfaces_path + ['vxlan']
         vni = '23'
