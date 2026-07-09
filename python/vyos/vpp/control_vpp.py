@@ -688,3 +688,16 @@ class VPPControl:
                 arc_name=arc_name,
                 feature_name='ip6-icmp-ra-punt',
             )
+
+    @_Decorators.api_call
+    def set_promisc(self, ifname: str, enable: bool = True) -> None:
+        """Set promiscuous mode for interface
+
+        Args:
+            ifname (str): name of an interface
+            enable (bool): enable or disable promiscuous mode
+        """
+        self.__vpp_api_client.api.sw_interface_set_promisc(
+            sw_if_index=self.get_sw_if_index(ifname),
+            promisc_on=enable,
+        )

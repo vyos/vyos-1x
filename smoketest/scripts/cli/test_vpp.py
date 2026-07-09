@@ -1527,6 +1527,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
+
     def test_23_1_vpp_acl_subinterface(self):
         base_acl = base_path + ['acl', 'ip']
         vlan = '200'
@@ -1566,6 +1569,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(
             list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
         )
+
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
 
     def test_23_2_vpp_acl_bond_with_vif(self):
         base_acl = base_path + ['acl', 'ip']
@@ -1717,6 +1723,36 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', test_vrf])
         self.cli_delete(['vrf', 'name', mgmt_vrf])
         self.cli_commit()
+
+    def test_25_vpp_promisc_vlan(self):
+        # T9018: promiscuous mode must be enabled automatically when VLANs
+        # are configured on a VPP interface and disabled when removed.
+        vlan = '100'
+        address = '192.168.10.1/24'
+
+        self.cli_commit()
+
+        # Verify promisc is off initially
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertNotRegex(out, r'flags:.*\bpromisc\b')
+
+        # Add VLAN sub-interface
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'address', address]
+        )
+        self.cli_commit()
+
+        # Verify promisc is enabled
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+
+        # Remove VLAN sub-interface
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
+        self.cli_commit()
+
+        # Verify promisc is disabled
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertNotRegex(out, r'flags:.*\bpromisc\b')
 
 
 if __name__ == '__main__':
