@@ -151,5 +151,25 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         tmp = cmd(f'ip vrf pids {vrf}')
         self.assertIn(PROCESS_NAME, tmp)
 
+    def test_sflow_egress(self):
+        interface = 'eth0'
+        server = '192.0.2.254'
+
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['server', server])
+        self.cli_commit()
+
+        # ingress sampling must work even without enable-egress configured
+        hsflowd = read_file(hsflowd_conf)
+        self.assertIn('psample { group=1 }', hsflowd)
+
+        # enable-egress only appends "egress=on", it must not gate the group
+        self.cli_set(base_path + ['enable-egress'])
+        self.cli_commit()
+
+        hsflowd = read_file(hsflowd_conf)
+        self.assertIn('psample { group=1 egress=on }', hsflowd)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
