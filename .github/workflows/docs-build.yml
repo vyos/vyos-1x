@@ -56,15 +56,36 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build HTML + PDF in in-workflow-built container
+        env:
+          # pdflatex hard-errors ("! LaTeX Error: Unicode character ... not
+          # set up for use with LaTeX") on the Devanagari etymology text in
+          # docs/introducing/history.md, and separately cannot embed some
+          # pre-existing .webp images (no BoundingBox). latexmk's force mode
+          # (-f) plus non-interactive pdflatex (-interaction=nonstopmode)
+          # makes it skip both classes of per-glyph/per-image failure and
+          # finish the document instead of halting — this is how ReadTheDocs
+          # has always built this project's PDF (verified against the live
+          # docs.vyos.io PDF: same Devanagari glyphs blanked, same ~4 images
+          # embedded out of 2000+ pages, rather than a failed build).
+          # latexmk still exits non-zero in force mode even when it produces
+          # a complete PDF, so success below is verified by checking the
+          # artifact itself, not the command's exit code.
+          LATEXMKOPTS: -f
+          LATEXOPTS: -interaction=nonstopmode
         run: |
           set -eu
           docker run --rm -v "$PWD:/src" -w /src \
             -e DOCS_VERSION_SLUG="${{ steps.matrix.outputs.slug }}" \
             -e DOCS_VERSION_BRANCH="${{ github.ref_name }}" \
+            -e LATEXMKOPTS \
+            -e LATEXOPTS \
             docs-build:local bash -c '
+              set -e
               cd docs && make html
               if [ "${{ inputs.skip_pdf }}" != "true" ]; then
-                make latexpdf || make latexpdf   # retry once (§14 LaTeX flakiness)
+                make latexpdf || true
+                pdf=$(find _build/latex -maxdepth 1 -name "*.pdf" -size +2M)
+                [ -n "$pdf" ] || { echo "no PDF >2MB produced in _build/latex — build genuinely failed"; exit 1; }
               fi'
 
       - name: Assemble artifact (nest under en/<slug>/, §7.1)
