@@ -69,7 +69,13 @@ jobs:
           # embedded out of 2000+ pages, rather than a failed build).
           # latexmk still exits non-zero in force mode even when it produces
           # a complete PDF, so success below is verified by checking the
-          # artifact itself, not the command's exit code.
+          # produced artifact directly (exact filename + page count), not the
+          # command's exit code. A bare existence/size check would let a
+          # truncated-but-large PDF (LaTeX aborting partway through) pass, so
+          # the completeness signal is pdfinfo's page count instead of file
+          # size. The retry-once below (§14 LaTeX flakiness) still applies
+          # first; the trailing `|| true` only swallows latexmk -f's expected
+          # non-zero exit on a genuinely complete document.
           LATEXMKOPTS: -f
           LATEXOPTS: -interaction=nonstopmode
         run: |
@@ -83,9 +89,19 @@ jobs:
               set -e
               cd docs && make html
               if [ "${{ inputs.skip_pdf }}" != "true" ]; then
-                make latexpdf || true
-                pdf=$(find _build/latex -maxdepth 1 -name "*.pdf" -size +2M)
-                [ -n "$pdf" ] || { echo "no PDF >2MB produced in _build/latex — build genuinely failed"; exit 1; }
+                make latexpdf || make latexpdf || true
+                pdf=_build/latex/VyOS.pdf
+                [ -f "$pdf" ] || { echo "$pdf not produced — build genuinely failed"; exit 1; }
+                # Page-count floor as a completeness signal (a truncated forced-mode
+                # run can still leave behind a file that exists and is large). rolling
+                # is verified ~2000+ pages; 1.4/1.5 page counts have not been
+                # individually verified, so 1000 is a conservative floor intended to
+                # clear all three release branches without masking a real truncation.
+                pages=$(pdfinfo "$pdf" 2>/dev/null | awk "/^Pages:/{print \$2}")
+                case "$pages" in
+                  ""|*[!0-9]*) pages=0 ;;
+                esac
+                [ "$pages" -ge 1000 ] || { echo "$pdf has $pages pages (<1000) — build genuinely failed"; exit 1; }
               fi'
 
       - name: Assemble artifact (nest under en/<slug>/, §7.1)

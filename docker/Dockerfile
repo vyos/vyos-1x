@@ -25,7 +25,8 @@ RUN apt-get update && apt-get install -y \
     gosu \
     graphviz \
     curl \
-    dos2unix
+    dos2unix \
+    poppler-utils
 
 RUN pip3 install --break-system-packages \
     Sphinx \
