@@ -1,0 +1,11 @@
+.vyos-version-picker-item { list-style: none; }
+#vyos-version-picker { display: flex; align-items: center; gap: .5em; padding: .4em 0; font-size: .9em; }
+#vyos-version-picker select { max-width: 14em; padding: .15em .3em; }
+#vyos-version-picker select:focus { outline: 2px solid #ffae12; outline-offset: 1px; }
+.vyos-pdf-link { font-weight: 600; }
+.vyos-version-banner { position: relative; padding: .6em 2.2em .6em 1em; font-size: .95em; line-height: 1.4; }
+.vyos-banner-dev { background: #e7f2fa; color: #2a6496; }
+.vyos-banner-newer-lts { background: #fff6e5; color: #6b5900; }
+.vyos-banner-eol { background: #fdecea; color: #8a1f11; }
+.vyos-version-banner a { text-decoration: underline; color: inherit; font-weight: 600; }
+.vyos-banner-dismiss { position: absolute; right: .5em; top: .35em; background: none; border: 0; font-size: 1.2em; cursor: pointer; color: inherit; }

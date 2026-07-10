@@ -1,0 +1,340 @@
+name: Docs build + deploy (Cloudflare Workers)
+
+on:
+  push:
+    branches: [rolling, circinus, sagitta]
+  workflow_dispatch:
+    inputs:
+      skip_pdf:
+        description: "SKIP_PDF: carry forward last-good PDF from registry (broken-LaTeX escape hatch)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: docs-build-${{ github.ref_name }}
+  # false (not true): a cancel mid-promote would leave production unverified and the
+  # registry pointer stale — queued runs are safe because the check_head guard (§7.1)
+  # skips any run whose SHA is no longer the branch tip.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY_BUCKET: vyos-docs-artifacts
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve matrix entry
+        id: matrix
+        run: |
+          set -eu
+          entry=$(jq -r --arg b "${{ github.ref_name }}" '.[$b] // empty' workers/matrix.json)
+          [ -n "$entry" ] || { echo "branch not in matrix"; exit 1; }
+          echo "worker=$(echo "$entry" | jq -r .worker)" >> "$GITHUB_OUTPUT"
+          echo "slug=$(echo "$entry" | jq -r .slug)" >> "$GITHUB_OUTPUT"
+          echo "pdf=$(jq -r --arg s "$(echo "$entry" | jq -r .slug)" \
+            '.versions[] | select(.slug==$s) | .pdf // empty' workers/versions.json)" >> "$GITHUB_OUTPUT"
+
+      # Build image in-workflow from docker/Dockerfile (plan v4.1: digest pin dropped —
+      # no published ghcr.io image exists; the checked-out commit IS the pin, and the
+      # buildx GHA cache makes repeat builds cheap).
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build docs image (buildx GHA cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/
+          load: true
+          tags: docs-build:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build HTML + PDF in in-workflow-built container
+        run: |
+          set -eu
+          docker run --rm -v "$PWD:/src" -w /src \
+            -e DOCS_VERSION_SLUG="${{ steps.matrix.outputs.slug }}" \
+            -e DOCS_VERSION_BRANCH="${{ github.ref_name }}" \
+            docs-build:local bash -c '
+              cd docs && make html
+              if [ "${{ inputs.skip_pdf }}" != "true" ]; then
+                make latexpdf || make latexpdf   # retry once (§14 LaTeX flakiness)
+              fi'
+
+      - name: Assemble artifact (nest under en/<slug>/, §7.1)
+        run: |
+          set -eu
+          slug='${{ steps.matrix.outputs.slug }}'
+          mkdir -p "dist/assets/en/$slug"
+          cp -r docs/_build/html/. "dist/assets/en/$slug/"
+          npx --yes pagefind@1.5.2 --site "dist/assets/en/$slug"
+
+      - name: PDF into artifact (build or registry carry-forward)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DOCS_CF_LIVE: ${{ vars.DOCS_CF_LIVE }}
+        run: |
+          set -eu
+          slug='${{ steps.matrix.outputs.slug }}'
+          dest="dist/assets/en/$slug/vyos-documentation.pdf"
+          if [ "${{ inputs.skip_pdf }}" = "true" ]; then
+            # §5 + §7.1.4: SKIP_PDF refuses to run when registry is stale vs production.
+            # Registry layout is pointer-indirected (§7.1.4 atomicity): resolve
+            # $slug/latest.json → sha, then read the sha-scoped generation.
+            cd workers && npm ci && npx wrangler r2 object get "$REGISTRY_BUCKET/$slug/latest.json" --file /tmp/latest.json --remote && cd ..
+            reg_sha=$(jq -r .sha /tmp/latest.json)
+            if [ "$DOCS_CF_LIVE" = "true" ]; then
+              prod_sha=$(curl -sI "https://docs.vyos.io/en/$slug/" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-docs-build"{print $2}')
+              [ "$reg_sha" = "$prod_sha" ] || { echo "registry stale ($reg_sha != $prod_sha) — SKIP_PDF refused"; exit 1; }
+            else
+              echo "DOCS_CF_LIVE=false — pre-cutover: trusting registry meta without production comparison"
+            fi
+            cd workers && npx wrangler r2 object get "$REGISTRY_BUCKET/$slug/$reg_sha/pdf" --file "../$dest" --remote && cd ..
+          else
+            cp docs/_build/latex/*.pdf "$dest"
+          fi
+
+      - name: Fetch previous-build metadata (for count-delta gate)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eo pipefail
+          set -u
+          slug='${{ steps.matrix.outputs.slug }}'
+          cd workers
+          # Missing-object (no pointer yet, or the pointed-at generation's meta.json is
+          # gone) is the legitimate bootstrap case — this slug has never shipped before,
+          # so proceed with no previous-meta.json (the count-delta gate below no-ops when
+          # the file is absent). Any OTHER failure (auth, network, transient API error)
+          # must FAIL the workflow — silently swallowing those would bypass the
+          # count-collapse gate instead of just skipping it on a genuinely first deploy.
+          fetch_optional() {
+            set +e
+            out=$(npx wrangler r2 object get "$1" --file "$2" --remote 2>&1)
+            rc=$?
+            set -e
+            echo "$out"
+            [ "$rc" -eq 0 ] && return 0
+            if echo "$out" | grep -qiE 'does not exist|not found|no such key|404'; then
+              return 1
+            fi
+            echo "::error::registry fetch of $1 failed for a reason other than 'missing object' — failing the build (see spec §7.1 count-delta gate)"
+            exit "$rc"
+          }
+          if fetch_optional "$REGISTRY_BUCKET/$slug/latest.json" /tmp/latest.json; then
+            reg_sha=$(jq -r .sha /tmp/latest.json)
+            if [ -z "$reg_sha" ] || [ "$reg_sha" = "null" ]; then
+              echo "::error::registry pointer latest.json is malformed (no .sha)"
+              exit 1
+            fi
+            if ! fetch_optional "$REGISTRY_BUCKET/$slug/$reg_sha/meta.json" ../previous-meta.json; then
+              echo "::notice::registry pointer names $reg_sha but its meta.json is missing — treating as bootstrap"
+            fi
+          else
+            echo "::notice::no registry entry yet for $slug — treating as bootstrap (no previous-meta)"
+          fi
+
+      - name: Sanity gates (deploy blockers, §7.1)
+        run: |
+          python -m scripts.docs_gates.gates \
+            --artifact dist/assets --slug '${{ steps.matrix.outputs.slug }}' \
+            --versions workers/versions.json \
+            $( [ -f previous-meta.json ] && echo --previous-meta previous-meta.json )
+
+      - name: check_head guard (§7.1)
+        run: |
+          set -eu
+          remote=$(git ls-remote origin "refs/heads/${{ github.ref_name }}" | cut -f1)
+          [ "$remote" = "${{ github.sha }}" ] || { echo "branch moved — skipping deploy"; exit 78; }
+
+      - name: Install workers deps
+        run: cd workers && npm ci
+
+      - name: Deploy CANDIDATE
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd workers && npx wrangler deploy --config branch/wrangler.$( \
+              case '${{ steps.matrix.outputs.slug }}' in rolling) echo rolling;; 1.5) echo v15;; 1.4) echo v14;; esac \
+            ).jsonc \
+            --name '${{ steps.matrix.outputs.worker }}-candidate' \
+            --var DOCS_BUILD_SHA:'${{ github.sha }}' --var DOCS_ENV:canary
+
+      - name: Pre-traffic smoke via canary apex (§7.1.2)
+        id: smoke
+        run: |
+          set -eu
+          # NOTE: never use the GHA "cond AND format(...)" expression trick for optional
+          # args here — an empty/false result renders the literal string "false" into the
+          # shell. (Any double-curly GHA expression written literally in this script gets
+          # template-expanded by GitHub Actions before the shell ever runs it, so such an
+          # example cannot even be spelled out in a comment here.) Plain shell instead:
+          pdf_arg=""
+          if [ -n "${{ steps.matrix.outputs.pdf }}" ]; then
+            pdf_arg="--pdf ${{ steps.matrix.outputs.pdf }}"
+          fi
+          python -m scripts.docs_gates.smoke \
+            --host docs-next.vyos.io --slug '${{ steps.matrix.outputs.slug }}' \
+            --expect-sha '${{ github.sha }}' \
+            --access-id '${{ secrets.CF_ACCESS_CLIENT_ID }}' \
+            --access-secret '${{ secrets.CF_ACCESS_CLIENT_SECRET }}' \
+            $pdf_arg
+
+      - name: Candidate reset on smoke failure (§7.1.3)
+        if: failure() && steps.smoke.conclusion == 'failure'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DOCS_CF_LIVE: ${{ vars.DOCS_CF_LIVE }}
+        run: |
+          set -eu
+          slug='${{ steps.matrix.outputs.slug }}'
+          cd workers
+          # Registry layout is pointer-indirected (§7.1.4 atomicity): resolve
+          # $slug/latest.json → sha, then read the sha-scoped generation.
+          npx wrangler r2 object get "$REGISTRY_BUCKET/$slug/latest.json" --file /tmp/latest.json --remote \
+            || { echo "::warning::no registry entry yet (first deploys) — candidate reset skipped"; exit 0; }
+          reg_sha=$(jq -r .sha /tmp/latest.json)
+          if [ "$DOCS_CF_LIVE" = "true" ]; then
+            prod_sha=$(curl -sI "https://docs.vyos.io/en/$slug/" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-docs-build"{print $2}')
+            [ "$reg_sha" = "$prod_sha" ] || { echo "::warning::registry stale — candidate reset SKIPPED (manual registry-repair needed)"; exit 0; }
+          fi
+          npx wrangler r2 object get "$REGISTRY_BUCKET/$slug/$reg_sha/tar.zst" --file /tmp/lastgood.tar.zst --remote
+          rm -rf ../dist/assets && mkdir -p ../dist/assets
+          tar --zstd -xf /tmp/lastgood.tar.zst -C ../dist/assets
+          npx wrangler deploy --config branch/wrangler.$(case "$slug" in rolling) echo rolling;; 1.5) echo v15;; 1.4) echo v14;; esac).jsonc \
+            --name '${{ steps.matrix.outputs.worker }}-candidate' \
+            --var DOCS_BUILD_SHA:"$reg_sha" --var DOCS_ENV:canary
+
+      - name: PROMOTE (capture rollback id → deploy → purge → registry, §7.1.4)
+        id: promote
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_ZONE_ID: ${{ vars.CF_ZONE_ID_VYOS_IO }}
+        run: |
+          set -eu
+          slug='${{ steps.matrix.outputs.slug }}'
+          worker='${{ steps.matrix.outputs.worker }}'
+          cd workers
+          # Rollback target: verify this JSON shape on the FIRST real deploy —
+          # `npx wrangler deployments list --name "$worker" --json | jq .` — and adjust
+          # the jq path if wrangler's output differs (their JSON shape has churned across
+          # majors; the ID needed is the CURRENT deployment's, i.e. the newest entry).
+          # FIRST-DEPLOY BOOTSTRAP: the production Worker does not exist before the very
+          # first promote — `deployments list` fails/returns empty. That is a valid state:
+          # rollback_id stays empty, the deploy CREATES the Worker, and the post-promote
+          # step knows an empty id means "nothing to roll back to".
+          if deps=$(npx wrangler deployments list --name "$worker" --json 2>/dev/null); then
+            rollback_id=$(echo "$deps" | jq -r '.[0].id // empty')
+          else
+            rollback_id=""
+            echo "first deploy for $worker — no prior deployment; rollback disabled for this run"
+          fi
+          echo "rollback_id=$rollback_id" >> "$GITHUB_OUTPUT"
+          npx wrangler deploy --config branch/wrangler.$(case "$slug" in rolling) echo rolling;; 1.5) echo v15;; 1.4) echo v14;; esac).jsonc \
+            --name "$worker" --var DOCS_BUILD_SHA:'${{ github.sha }}' --var DOCS_ENV:production
+          if [ "${{ vars.DOCS_CF_LIVE }}" = "true" ]; then
+            # hostname-scoped purge (§3.3; all-plans since 2025-04)
+            curl -sf -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+              --data '{"hosts":["docs.vyos.io"]}'
+          else
+            echo "DOCS_CF_LIVE=false — pre-cutover: skipping production hostname purge"
+          fi
+          # registry generation upload — SHA-scoped immutable objects (§7.1.4). The
+          # $slug/latest.json POINTER is deliberately NOT published here: it moves to a
+          # dedicated step AFTER the post-promote probe/auto-rollback below, so a probe
+          # failure (and the rollback it triggers) leaves the pointer on the previous
+          # good generation instead of advancing it to a generation that just got rolled
+          # back. Uploading straight to $slug/last-good.* let a concurrent reader observe
+          # a half-written generation (e.g. new tar.zst, still-old meta.json) mid upload.
+          # Uploading under $slug/<sha>/* first — a key no prior generation ever reused —
+          # keeps readers of the OLD pointer seeing a full, untouched old generation.
+          cd .. && tar --zstd -cf lastgood.tar.zst -C dist/assets .
+          page_count=$(find "dist/assets/en/$slug" -name '*.html' | wc -l | tr -d ' ')
+          sha='${{ github.sha }}'
+          printf '{"sha":"%s","page_count":%s}' "$sha" "$page_count" > lastgood.meta.json
+          printf '{"sha":"%s"}' "$sha" > latest.json
+          cd workers
+          upload_generation() {
+            npx wrangler r2 object put "$REGISTRY_BUCKET/$slug/$sha/tar.zst" --file ../lastgood.tar.zst --remote &&
+            npx wrangler r2 object put "$REGISTRY_BUCKET/$slug/$sha/pdf" --file "../dist/assets/en/$slug/vyos-documentation.pdf" --remote &&
+            npx wrangler r2 object put "$REGISTRY_BUCKET/$slug/$sha/meta.json" --file ../lastgood.meta.json --remote
+          }
+          if ! (upload_generation || upload_generation); then
+            echo "::error::registry generation upload failed twice — REGISTRY STALE (see spec §7.1.4)"
+            exit 1
+          fi
+
+      - name: Post-promote probe + auto-rollback (§7.1.5)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_ZONE_ID: ${{ vars.CF_ZONE_ID_VYOS_IO }}
+          DOCS_CF_LIVE: ${{ vars.DOCS_CF_LIVE }}
+        run: |
+          set -eu
+          if [ "$DOCS_CF_LIVE" != "true" ]; then
+            echo "DOCS_CF_LIVE=false — pre-cutover: docs.vyos.io still serves RTD; skipping production probe"
+            exit 0
+          fi
+          slug='${{ steps.matrix.outputs.slug }}'
+          # Retry loop: the purge above is asynchronous, so an immediate probe can still
+          # observe a stale edge response and trigger a false rollback. Poll up to 6 times
+          # (60s budget) before concluding the promote genuinely failed.
+          got=""
+          for attempt in 1 2 3 4 5 6; do
+            got=$(curl -sI "https://docs.vyos.io/en/$slug/" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-docs-build"{print $2}')
+            if [ "$got" = '${{ github.sha }}' ]; then
+              break
+            fi
+            if [ "$attempt" -lt 6 ]; then
+              echo "::notice::post-promote probe attempt $attempt/6 saw stale edge (got $got) — retrying in 10s"
+              sleep 10
+            fi
+          done
+          if [ "$got" != '${{ github.sha }}' ]; then
+            if [ -z '${{ steps.promote.outputs.rollback_id }}' ]; then
+              echo "::error::post-promote probe failed (got $got) on FIRST deploy — no prior version to roll back to; investigate manually"
+              exit 1
+            fi
+            echo "::error::post-promote probe failed (got $got) — rolling back"
+            cd workers && npx wrangler rollback '${{ steps.promote.outputs.rollback_id }}' \
+              --name '${{ steps.matrix.outputs.worker }}' --yes
+            curl -sf -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+              --data '{"hosts":["docs.vyos.io"]}'
+            exit 1
+          fi
+
+      - name: Publish registry pointer (§7.1.4)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          slug='${{ steps.matrix.outputs.slug }}'
+          sha='${{ github.sha }}'
+          cd workers
+          # Runs only after the post-promote probe/auto-rollback step above has passed (or
+          # was a pre-cutover no-op). Repointing $slug/latest.json is the sole remaining
+          # step of the §7.1.4 atomic-publish sequence — the sha-scoped generation objects
+          # were already uploaded in PROMOTE. If this fails, the sha-scoped objects landed
+          # under $slug/$sha/ but latest.json still points at the previous generation.
+          publish_pointer() {
+            npx wrangler r2 object put "$REGISTRY_BUCKET/$slug/latest.json" --file ../latest.json --remote
+          }
+          if ! (publish_pointer || publish_pointer); then
+            echo "::error::registry pointer publish failed twice — sha-scoped objects landed under $slug/$sha/ but latest.json still points at the previous generation (see spec §7.1.4)"
+            exit 1
+          fi

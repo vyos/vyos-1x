@@ -1,0 +1,5 @@
+{
+  "allow": ["Googlebot", "bingbot", "DuckDuckBot", "YandexBot", "Applebot", "UptimeRobot"],
+  "log":   ["GPTBot", "CCBot", "ClaudeBot", "Google-Extended", "Bytespider", "PerplexityBot", "meta-externalagent"],
+  "block": []
+}

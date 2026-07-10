@@ -1,0 +1,43 @@
+name: Docs preview cleanup
+on:
+  pull_request_target:
+    types: [closed]
+  schedule:
+    - cron: "17 3 * * *"   # nightly sweep (§10)
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete R2 prefixes for closed PRs (bulk, S3 API)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            aws s3 rm "s3://vyos-docs-previews/pr-${{ github.event.pull_request.number }}/" \
+              --recursive --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          else
+            # nightly: every prefix whose PR is closed. Capture-first (not pipe-into-while):
+            # pipefail + set -e fail the job when the listing itself fails (a piped while
+            # would swallow it via empty stdin), and the per-prefix failure flag survives
+            # (a piped while runs in a subshell, so `failed=1` there would be lost).
+            prefixes=$(aws s3api list-objects-v2 --bucket vyos-docs-previews --delimiter / \
+              --endpoint-url "$R2_ENDPOINT" --query 'CommonPrefixes[].Prefix' --output text \
+              | tr '\t' '\n' | sed -n 's|^pr-\([0-9]*\)/$|\1|p')
+            failed=0
+            while read -r n; do
+              [ -n "$n" ] || continue
+              state=$(gh pr view "$n" --repo '${{ github.repository }}' --json state --jq .state || echo GONE)
+              [ "$state" = "OPEN" ] || aws s3 rm "s3://vyos-docs-previews/pr-$n/" \
+                --recursive --endpoint-url "$R2_ENDPOINT" --only-show-errors \
+                || { echo "::error::SWEEP-FAIL: pr-$n/ not deleted"; failed=1; }
+            done <<< "$prefixes"
+            exit "$failed"
+          fi

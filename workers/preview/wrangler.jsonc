@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vyos-docs-preview",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Route managed manually (v4.2 amendment — CI token has no Workers Routes group):
+  // operator creates docs-preview.vyos.io/* → vyos-docs-preview once, alongside the canary route.
+  "r2_buckets": [{ "binding": "PREVIEWS", "bucket_name": "vyos-docs-previews" }]
+}

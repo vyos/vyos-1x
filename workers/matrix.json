@@ -1,0 +1,5 @@
+{
+  "rolling":  { "worker": "vyos-docs-rolling-en", "slug": "rolling" },
+  "circinus": { "worker": "vyos-docs-v15-en",     "slug": "1.5" },
+  "sagitta":  { "worker": "vyos-docs-v14-en",     "slug": "1.4" }
+}

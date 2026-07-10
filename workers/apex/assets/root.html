@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VyOS Documentation</title>
+<meta http-equiv="refresh" content="0; url=/en/rolling/">
+<link rel="canonical" href="/en/rolling/">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: #16181d; color: #e8e8e8; display: flex; min-height: 100vh;
+         margin: 0; align-items: center; justify-content: center; }
+  main { text-align: center; max-width: 32rem; padding: 2rem; }
+  h1 { font-size: 1.75rem; margin: 0 0 0.5rem; color: #FFAE12; }
+  a { color: #FFAE12; }
+</style>
+</head>
+<body>
+<!--
+  Fallback static shell for "/" — the Worker normally issues a 301 to
+  /en/<default_version>/ (see specialPathFor in src/special.ts) before this
+  file is ever reached. Kept as a static asset so the root path degrades to
+  a working, on-brand page (client-side redirect) if it is ever served
+  directly from the ASSETS binding without passing through the Worker.
+-->
+<main>
+  <h1>VyOS Documentation</h1>
+  <p>Redirecting to the <a href="/en/rolling/">latest documentation</a>&hellip;</p>
+</main>
+</body>
+</html>

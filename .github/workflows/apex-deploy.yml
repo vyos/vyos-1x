@@ -1,0 +1,74 @@
+name: Apex + preview worker deploy
+
+on:
+  push:
+    branches: [rolling]
+    paths: ["workers/**"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: apex-deploy-${{ github.ref_name }}
+  # false (not true): a mid-job cancel can leave the apex/preview worker pair
+  # half-updated; queuing subsequent runs is safe.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: cd workers && npm ci && npx vitest run
+
+  deploy-canary:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Preflight — every service-binding target must already exist (Task 1.8)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          cd workers && npm ci
+          missing=0
+          for w in vyos-docs-rolling-en vyos-docs-v15-en vyos-docs-v14-en vyos-docs-legacy; do
+            for suffix in "" "-candidate"; do
+              npx wrangler deployments list --name "$w$suffix" --json >/dev/null 2>&1 \
+                || { echo "::error::binding target $w$suffix does not exist — run workers/bootstrap.sh first (Task 1.8)"; missing=1; }
+            done
+          done
+          exit $missing
+      - name: Deploy apex (canary) + preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd workers && npm ci
+          npx wrangler deploy --config apex/wrangler.jsonc --env canary \
+            --var APEX_BUILD_SHA:'${{ github.sha }}'
+          npx wrangler deploy --config preview/wrangler.jsonc
+
+  deploy-production:
+    needs: deploy-canary
+    runs-on: ubuntu-latest
+    environment: docs-production   # requires reviewer approval (§7.2)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Deploy apex (production)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_DOCS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd workers && npm ci
+          npx wrangler deploy --config apex/wrangler.jsonc --env production \
+            --var APEX_BUILD_SHA:'${{ github.sha }}'

@@ -1,0 +1,9 @@
+# Paths relative to en/<slug>/ that must exist in every deployable build.
+# Verified 2026-07-10 against a real `sphinx-build -b html docs docs/_build/html-verify`
+# of the `rolling` tree (Python 3.12 venv; coverage.md excluded — pre-existing,
+# unrelated CfgcmdList/HTML5Translator crash, not touched by this task).
+index.html
+installation/index.html
+configuration/index.html
+cli.html
+search.html

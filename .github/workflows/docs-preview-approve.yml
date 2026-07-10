@@ -1,0 +1,35 @@
+name: Docs preview approval record
+on:
+  pull_request_target:
+    types: [labeled, synchronize]
+permissions:
+  statuses: write
+  pull-requests: write
+  issues: write      # `gh pr edit --remove-label` mutates labels via the issues API
+jobs:
+  strip-on-push:
+    if: github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove preview label on every new push (§10 one-label-one-deploy)
+        run: gh pr edit '${{ github.event.pull_request.number }}' --remove-label preview --repo '${{ github.repository }}' || true
+        env: { GH_TOKEN: "${{ github.token }}" }
+  record-approval:
+    if: github.event.action == 'labeled' && github.event.label.name == 'preview'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify labeler permission; record approval on exact head SHA
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          SENDER: "${{ github.event.sender.login }}"
+        run: |
+          set -eu
+          perm=$(gh api "repos/${{ github.repository }}/collaborators/$SENDER/permission" --jq .permission)
+          case "$perm" in admin|write|maintain) ;; *)
+            gh pr edit '${{ github.event.pull_request.number }}' --remove-label preview --repo '${{ github.repository }}'
+            echo "::error::labeler lacks write permission — label removed"; exit 1;;
+          esac
+          sha='${{ github.event.pull_request.head.sha }}'
+          gh api -X POST "repos/${{ github.repository }}/statuses/$sha" \
+            -f state=success -f context=docs-preview-approved \
+            -f description="preview approved by $SENDER"

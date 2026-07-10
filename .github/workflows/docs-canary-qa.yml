@@ -1,0 +1,47 @@
+name: Docs canary QA (nightly per-entry sweep + parity)
+on:
+  schedule:
+    - cron: "45 2 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Per-entry sweep (one page + PDF per versions.json entry, §3.4 gate c)
+        run: |
+          set -eu
+          # Capture-first (not pipe/process-substitution-into-while): a malformed
+          # versions.json must fail this step loudly. Piping/process-substituting jq
+          # directly into the while loop hides a jq failure from `set -e` (the loop just
+          # sees empty stdin and "passes" with zero iterations) — capture the output into
+          # a variable first so a non-zero jq exit trips `set -e` before the loop runs.
+          versions=$(jq -ce '.versions[]' workers/versions.json)
+          fail=0
+          while read -r v; do
+            slug=$(echo "$v" | jq -r .slug); pdf=$(echo "$v" | jq -r '.pdf // empty')
+            if ! python -m scripts.docs_gates.smoke --host docs-next.vyos.io --slug "$slug" \
+              --expect-sha SKIP --access-id '${{ secrets.CF_ACCESS_CLIENT_ID }}' \
+              --access-secret '${{ secrets.CF_ACCESS_CLIENT_SECRET }}' \
+              ${pdf:+--pdf "$pdf"}; then
+              echo "sweep-fail=$slug" | tee -a "$GITHUB_STEP_SUMMARY"
+              fail=1
+            fi
+          done <<< "$versions"
+          exit $fail   # a broken advertised version MUST fail nightly QA (§3.4 gate c)
+        # --expect-sha SKIP = presence-only assert; implemented in smoke.docs_build_ok (Task 3.2).
+      - name: URL parity vs RTD (pre-cutover truth)
+        run: |
+          # --slugs pinned to CF-built versions: 1.3/1.2 have no RTD sitemaps (§15a.5);
+          # legacy parity is the snapshot repo's crawl-inventory job (defense in depth
+          # alongside the matching parity.py DEFAULT_SLUGS)
+          python -m scripts.docs_gates.parity \
+            --sitemap-host docs.vyos.io --probe-host docs-next.vyos.io \
+            --slugs rolling,1.5,1.4 \
+            --access-id '${{ secrets.CF_ACCESS_CLIENT_ID }}' \
+            --access-secret '${{ secrets.CF_ACCESS_CLIENT_SECRET }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: parity-report, path: parity-report.json }

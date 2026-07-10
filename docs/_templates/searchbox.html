@@ -1,0 +1,13 @@
+{#- Full override (sphinx_rtd_theme/layout.html does a plain {% include "searchbox.html" %},
+   not a named block, so there is nothing to {% extends %} + {% block %} here). Only mounts
+   the Pagefind UI on CF-Workers builds (conf.py sets html_context['vyos_cf_build'] from
+   DOCS_VERSION_SLUG) — ReadTheDocs runs plain Sphinx with no Pagefind step, so the mount's
+   assets would 404 there. On RTD (and any other non-CF build) fall through to the theme's
+   stock server-side search form via Sphinx's "!" bang-prefix (forces resolution from the
+   theme, bypassing this override, per sphinx/jinja2glue.py). #}
+{% if vyos_cf_build %}
+<div id="vyos-search" role="search"></div>
+<noscript>{% include "!searchbox.html" %}</noscript>
+{% else %}
+{% include "!searchbox.html" %}
+{% endif %}

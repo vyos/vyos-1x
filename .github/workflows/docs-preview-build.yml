@@ -1,0 +1,26 @@
+name: Docs preview build
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths: ["docs/**", "workers/versions.json"]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # untrusted PR code runs in this job; token is read-only but no reason to leave it on disk
+      - name: Build HTML (no PDF in previews, §10)
+        run: |
+          pip install -r requirements.txt
+          cd docs && DOCS_VERSION_SLUG=rolling make html
+      - name: Pagefind + package
+        run: |
+          mkdir -p out/en/rolling && cp -r docs/_build/html/. out/en/rolling/
+          npx --yes pagefind --site out/en/rolling
+          echo '${{ github.event.pull_request.number }}' > out/PR_NUMBER
+          echo '${{ github.event.pull_request.head.sha }}' > out/HEAD_SHA
+      - uses: actions/upload-artifact@v4
+        with: { name: docs-preview, path: out/, retention-days: 3 }

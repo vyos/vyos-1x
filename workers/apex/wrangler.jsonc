@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vyos-docs-apex",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": { "directory": "assets", "binding": "ASSETS", "run_worker_first": true },
+  "env": {
+    "canary": {
+      // Routes are MANAGED MANUALLY (v4.2 amendment): the account-owned CI token has no
+      // Workers Routes group, and — decisive — docs.vyos.io is ALREADY orange-cloud, so a
+      // config-managed production route would capture live traffic on first env deploy.
+      // Canary route (docs-next.vyos.io/* → this worker, env canary) is created once by the
+      // operator/dashboard (Task 3.6 step 2c); the production route IS the cutover (Task 6.2).
+      "vars": { "APEX_BUILD_SHA": "dev", "DOCS_ENV": "canary" },
+      "services": [
+        { "binding": "DOCS_ROLLING", "service": "vyos-docs-rolling-en-candidate" },
+        { "binding": "DOCS_V15",     "service": "vyos-docs-v15-en-candidate" },
+        { "binding": "DOCS_V14",     "service": "vyos-docs-v14-en-candidate" },
+        { "binding": "DOCS_LEGACY",  "service": "vyos-docs-legacy-candidate" }
+      ],
+      // §5 apex PDF fallback: same bucket as production — there's only one copy of the
+      // (single, immutable) oversized 1.3 PDF artifact, not a per-env candidate/live pair.
+      "r2_buckets": [{ "binding": "DOCS_PDFS", "bucket_name": "vyos-docs-artifacts" }]
+    },
+    "production": {
+      // production route deliberately ABSENT — created manually at cutover (Task 6.2); see canary note above
+      "vars": { "APEX_BUILD_SHA": "dev", "DOCS_ENV": "production" },
+      "services": [
+        { "binding": "DOCS_ROLLING", "service": "vyos-docs-rolling-en" },
+        { "binding": "DOCS_V15",     "service": "vyos-docs-v15-en" },
+        { "binding": "DOCS_V14",     "service": "vyos-docs-v14-en" },
+        { "binding": "DOCS_LEGACY",  "service": "vyos-docs-legacy" }
+      ],
+      "r2_buckets": [{ "binding": "DOCS_PDFS", "bucket_name": "vyos-docs-artifacts" }]
+    }
+  }
+}

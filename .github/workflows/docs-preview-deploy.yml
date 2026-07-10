@@ -1,0 +1,86 @@
+name: Docs preview deploy
+on:
+  workflow_run:
+    workflows: ["Docs preview build"]
+    types: [completed]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write        # label removal + PR comment go through the issues API
+  statuses: read
+  actions: read        # cross-run artifact download
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # BASE repo code only — never PR head (§10)
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-preview
+          path: out
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Authorization gate (approval record + SHA match, §10)
+        id: gate
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          set -eu
+          # TRUST MODEL (§10): out/PR_NUMBER + out/HEAD_SHA come from the UNPRIVILEGED
+          # run and are attacker-controlled. Trusted anchors: the workflow_run event's
+          # head_sha, and the approval record (commit status) written by the privileged
+          # approve workflow. The artifact is accepted only when all three agree.
+          event_sha='${{ github.event.workflow_run.head_sha }}'
+          art_sha=$(cat out/HEAD_SHA)
+          [ "$art_sha" = "$event_sha" ] || { echo "::error::artifact SHA ($art_sha) != workflow_run head_sha ($event_sha)"; exit 1; }
+          # Validate the artifact's claimed PR number BEFORE it's used anywhere — it comes
+          # from the unprivileged run and must be a bare digit string.
+          art_pr=$(cat out/PR_NUMBER)
+          case "$art_pr" in
+            ''|*[!0-9]*) echo "::error::artifact PR_NUMBER is not a bare digit string: '$art_pr'"; exit 1 ;;
+          esac
+          # Resolve EVERY PR associated with the trusted head SHA — a single commit can be
+          # the head of more than one open PR, so picking just .[0].number is not reliable.
+          # Never trust out/PR_NUMBER for authorization on its own: require it to be a
+          # MEMBER of this trusted list. The membership check happens in bash (below), not
+          # inside a jq filter, so the untrusted artifact value is never interpolated into
+          # jq code.
+          pr_list=$(gh api "repos/${{ github.repository }}/commits/$event_sha/pulls" --jq '.[].number')
+          [ -n "$pr_list" ] || { echo "no open PR for $event_sha"; exit 78; }
+          pr=""
+          while IFS= read -r candidate; do
+            if [ "$candidate" = "$art_pr" ]; then
+              pr="$candidate"
+              break
+            fi
+          done <<< "$pr_list"
+          [ -n "$pr" ] || { echo "::error::artifact PR number ($art_pr) is not among the trusted PRs for $event_sha ($pr_list)"; exit 1; }
+          state=$(gh pr view "$pr" --repo '${{ github.repository }}' --json state,labels)
+          echo "$state" | jq -e '.state == "OPEN"' >/dev/null || { echo "PR closed"; exit 78; }
+          echo "$state" | jq -e '.labels[].name | select(. == "preview")' >/dev/null || { echo "no preview label"; exit 78; }
+          gh api "repos/${{ github.repository }}/commits/$event_sha/statuses" \
+            --jq '.[] | select(.context=="docs-preview-approved" and .state=="success")' | grep -q . \
+            || { echo "::error::no approval record on $event_sha — artifact predates/postdates labeling"; exit 1; }
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+      - name: Upload to R2 prefix (bulk, S3 API — §10 MIME via content-type detection)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          set -eu
+          pr='${{ steps.gate.outputs.pr }}'
+          rm -f out/PR_NUMBER out/HEAD_SHA
+          # aws s3 sync = parallel bulk upload + per-file Content-Type guessing.
+          # Sequential per-file `wrangler r2 object put` was rejected: one Node
+          # process per file × thousands of files ≈ runner-timeout territory.
+          aws s3 sync out "s3://vyos-docs-previews/pr-$pr/" \
+            --endpoint-url "$R2_ENDPOINT" --delete --only-show-errors
+      - name: Consume label + comment URL (§10)
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          pr='${{ steps.gate.outputs.pr }}'
+          gh pr edit "$pr" --remove-label preview --repo '${{ github.repository }}' || true
+          gh pr comment "$pr" --repo '${{ github.repository }}' \
+            --body "📖 Docs preview: https://docs-preview.vyos.io/pr-$pr/en/rolling/ (label consumed — re-apply \`preview\` to redeploy after new pushes)"
