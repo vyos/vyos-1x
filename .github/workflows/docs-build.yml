@@ -73,9 +73,11 @@ jobs:
           # command's exit code. A bare existence/size check would let a
           # truncated-but-large PDF (LaTeX aborting partway through) pass, so
           # the completeness signal is pdfinfo's page count instead of file
-          # size. The retry-once below (§14 LaTeX flakiness) still applies
-          # first; the trailing `|| true` only swallows latexmk -f's expected
-          # non-zero exit on a genuinely complete document.
+          # size. The §14 retry-once is gated on artifact ABSENCE: latexmk -f
+          # exits non-zero even on a fully-produced PDF, so an unconditional
+          # `|| make latexpdf` would double the ~10-min LaTeX step on every
+          # forced success. Each `|| true` only swallows that expected
+          # non-zero exit; the validation below is the real success signal.
           LATEXMKOPTS: -f
           LATEXOPTS: -interaction=nonstopmode
         run: |
@@ -89,8 +91,11 @@ jobs:
               set -e
               cd docs && make html
               if [ "${{ inputs.skip_pdf }}" != "true" ]; then
-                make latexpdf || make latexpdf || true
                 pdf=_build/latex/VyOS.pdf
+                make latexpdf || true
+                # retry ONLY when no artifact was produced (§14 LaTeX flakiness) —
+                # latexmk -f exits non-zero even on success, so exit code cannot gate this
+                [ -f "$pdf" ] || make latexpdf || true
                 [ -f "$pdf" ] || { echo "$pdf not produced — build genuinely failed"; exit 1; }
                 # Page-count floor as a completeness signal (a truncated forced-mode
                 # run can still leave behind a file that exists and is large). rolling
