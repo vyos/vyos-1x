@@ -30,6 +30,7 @@ from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
 from vyos.geoip import geoip_refresh, geoip_update
 from vyos.template import render
+from vyos.utils.convert import human_to_seconds
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
@@ -543,6 +544,13 @@ def verify(firewall):
             for group_name, group in firewall['group']['remote_group'].items():
                 if 'url' not in group:
                     raise ConfigError(f'remote-group {group_name} must have a url configured')
+                if 'interval' in group:
+                    interval = human_to_seconds(group['interval'])
+                    if not 60 <= interval <= 2419200:
+                        raise ConfigError(
+                            f'remote-group {group_name} interval must be '
+                            'between 60 seconds and 4 weeks'
+                        )
 
     offload_chains_v4 = set()
     offload_chains_v6 = set()

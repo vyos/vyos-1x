@@ -27,6 +27,7 @@ from vyos.firewall import fqdn_resolve
 from vyos.ifconfig import WireGuardIf
 from vyos.remote import download
 from vyos.utils.commit import commit_in_progress
+from vyos.utils.convert import human_to_seconds
 from vyos.utils.dict import dict_search_args
 from vyos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
 from vyos.utils.file import makedir, chmod_775, write_file, read_file
@@ -45,6 +46,7 @@ base_interfaces = ['interfaces']
 firewall_config_dir = "/config/firewall"
 
 domain_state = {}
+remote_group_last_update = {}
 
 ipv4_tables = {
     'ip vyos_mangle',
@@ -131,9 +133,16 @@ def nft_valid_sets():
     except:
         return []
 
+def remote_group_interval(remote_config):
+    # Per-group update interval, falling back to the global resolver interval
+    if 'interval' in remote_config:
+        return human_to_seconds(remote_config['interval'])
+    return timeout
+
 def update_remote_group(config):
     conf_lines = []
     count = 0
+    now = time.time()
     valid_sets = nft_valid_sets()
 
     remote_groups = dict_search_args(config, 'group', 'remote_group')
@@ -146,6 +155,10 @@ def update_remote_group(config):
         for set_name, remote_config in remote_groups.items():
             if 'url' not in remote_config:
                 continue
+            interval = remote_group_interval(remote_config)
+            last_update = remote_group_last_update.get(set_name, 0)
+            if now - last_update < interval:
+                continue
             nft_ip_set_name = f'R_{set_name}'
             nft_ip6_set_name = f'R6_{set_name}'
 
@@ -157,7 +170,12 @@ def update_remote_group(config):
             # Attempt to download file, use cached version if download fails
             try:
                 download(list_file, remote_config['url'], raise_error=True)
+                remote_group_last_update[set_name] = now
             except Exception as err:
+                # Retry failed downloads at the resolver cadence instead of
+                # waiting the full group interval
+                retry = min(interval, timeout)
+                remote_group_last_update[set_name] = now - interval + retry
                 url = urlsplit(remote_config['url'])
                 _, _, netloc = url.netloc.rpartition('@')
                 redacted_url = urlunsplit(url._replace(netloc=netloc, query='', fragment=''))
@@ -204,10 +222,11 @@ def update_remote_group(config):
 
             count += 1
 
-    nft_conf_str = "\n".join(conf_lines) + "\n"
-    code = run(f'nft --file -', input=nft_conf_str)
+    if count:
+        nft_conf_str = "\n".join(conf_lines) + "\n"
+        code = run(f'nft --file -', input=nft_conf_str)
 
-    logger.info(f'Updated {count} remote-groups in firewall - result: {code}')
+        logger.info(f'Updated {count} remote-groups in firewall - result: {code}')
 
 
 def update_fqdn(config, node):
@@ -320,9 +339,25 @@ if __name__ == '__main__':
 
     logger.info(f'interval: {timeout}s - cache: {cache}')
 
+    remote_groups = dict_search_args(firewall, 'group', 'remote_group') or {}
+
+    last_fqdn_update = 0
     while True:
-        update_fqdn(firewall, 'firewall')
-        update_fqdn(nat, 'nat')
+        now = time.time()
+
+        if now - last_fqdn_update >= timeout:
+            last_fqdn_update = now
+            update_fqdn(firewall, 'firewall')
+            update_fqdn(nat, 'nat')
+            update_interfaces(interfaces, 'interfaces')
+
         update_remote_group(firewall)
-        update_interfaces(interfaces, 'interfaces')
-        time.sleep(timeout)
+
+        # Sleep until the next scheduled update
+        next_due = [last_fqdn_update + timeout]
+        for set_name, remote_config in remote_groups.items():
+            if 'url' not in remote_config:
+                continue
+            next_due.append(remote_group_last_update.get(set_name, 0) +
+                            remote_group_interval(remote_config))
+        time.sleep(max(min(next_due) - time.time(), 1))

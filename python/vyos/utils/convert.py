@@ -26,9 +26,13 @@ time_units = {
 
 
 def human_to_seconds(time_str):
-    """ Converts a human-readable interval such as 1w4d18h35m59s
-    to number of seconds
+    """Converts a human-readable interval such as 1w4d18h35m59s
+    to number of seconds. A plain number is taken as seconds.
     """
+
+    time_str = str(time_str)
+    if time_str.isdigit():
+        return int(time_str)
 
     time_patterns = {
         'y': r'(\d+)\s*y',

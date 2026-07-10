@@ -148,6 +148,24 @@
             </properties>
             <children>
               #include <include/url-http-https.xml.i>
+              <leafNode name="interval">
+                <properties>
+                  <help>Update interval for this remote group (defaults to global-options resolver-interval)</help>
+                  <valueHelp>
+                    <format>u32:60-2419200</format>
+                    <description>Update interval in seconds</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;number&gt;&lt;suffix&gt;</format>
+                    <description>Update interval with time unit suffix s/m/h/d/w (e.g. 4h)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 60-2419200"/>
+                    <regex>(\d+[smhdw])+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Interval must be seconds or use a s/m/h/d/w suffix</constraintErrorMessage>
+                </properties>
+              </leafNode>
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
