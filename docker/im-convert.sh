@@ -18,6 +18,21 @@
 # Route .svg sources through rsvg-convert directly; everything else (webp,
 # gif, pdf, ...) goes through ImageMagick's `convert` as before — webp support
 # is compiled into this ImageMagick build, so that path needs no delegate.
+#
+# Output size is constrained: the docs pipeline's per-file size gate
+# (scripts/docs_gates/gates.py) enforces the Cloudflare Workers 25 MiB
+# asset cap on the built PDF, and naive full-resolution truecolor PNG
+# conversion inflates it to ~183 MiB (the ~170 source .webp files are
+# lossy-compressed; decoded to truecolor PNG they explode ~6x). The raster
+# policy below (cap at 1000px on the long edge — only shrinking, never
+# enlarging — plus non-dithered 128-color palette quantization and max PNG
+# compression) brings the summed image payload to ~10 MiB (~15 MiB final
+# PDF). Sphinx's imgconverter fixes the destination extension to .png (from
+# the conversion rule's target mimetype) and pdflatex picks its decoder by
+# extension, so switching photographic sources to JPEG is not available
+# here — resolution + palette are the levers. 1000px at the PDF's ~6.3in
+# text width is ~158 dpi; spot-checked legible on screenshots, diagrams,
+# and photos alike.
 set -euo pipefail
 
 # sphinx.ext.imgconverter's is_available() probes the converter with a
@@ -42,6 +57,12 @@ case "$plain_src" in
         exec rsvg-convert -o "$dst" "$plain_src"
         ;;
     *)
-        exec convert "$src" "$dst"
+        # See the size-cap rationale in the header comment. `1000x1000>`
+        # only shrinks images larger than 1000px on either edge; `+dither`
+        # disables dithering (IM6 semantics: -dither enables, +dither
+        # disables), which quantizes flat UI colors cleanly AND compresses
+        # far better than dithered output; `-quality 95` for PNG means
+        # zlib level 9 + adaptive row filtering.
+        exec convert "$src" -resize '1000x1000>' -strip +dither -colors 128 -quality 95 "$dst"
         ;;
 esac
