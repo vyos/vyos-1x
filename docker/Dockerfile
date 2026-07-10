@@ -25,7 +25,13 @@ RUN apt-get update && apt-get install -y \
     gosu \
     graphviz \
     curl \
-    dos2unix \
+    dos2unix
+
+# Image-conversion toolchain for the PDF build (sphinx.ext.imgconverter via
+# docker/im-convert.sh). Installed with --no-install-recommends (Trivy
+# DS-0029) on a separate line: the texlive line above deliberately keeps
+# recommends, which carry font packages LaTeX needs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     librsvg2-bin
 
