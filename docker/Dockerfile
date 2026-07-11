@@ -27,13 +27,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     dos2unix
 
-# Image-conversion toolchain for the PDF build (sphinx.ext.imgconverter via
-# docker/im-convert.sh). Installed with --no-install-recommends (Trivy
-# DS-0029) on a separate line: the texlive line above deliberately keeps
-# recommends, which carry font packages LaTeX needs.
+# PDF-build toolchain extras, installed with --no-install-recommends (Trivy
+# DS-0029) on a separate line — the texlive line above deliberately keeps
+# recommends, which carry font packages LaTeX needs:
+# - imagemagick + librsvg2-bin: sphinx.ext.imgconverter via docker/im-convert.sh
+# - poppler-utils: pdfinfo for the docs-build workflow's page-count validation
 RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
-    librsvg2-bin
+    librsvg2-bin \
+    poppler-utils
 
 RUN pip3 install --break-system-packages \
     Sphinx \

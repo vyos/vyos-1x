@@ -56,15 +56,57 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build HTML + PDF in in-workflow-built container
+        env:
+          # pdflatex hard-errors ("! LaTeX Error: Unicode character ... not
+          # set up for use with LaTeX") on the Devanagari etymology text in
+          # docs/introducing/history.md, and separately cannot embed some
+          # pre-existing .webp images (no BoundingBox). latexmk's force mode
+          # (-f) plus non-interactive pdflatex (-interaction=nonstopmode)
+          # makes it skip both classes of per-glyph/per-image failure and
+          # finish the document instead of halting — this is how ReadTheDocs
+          # has always built this project's PDF (verified against the live
+          # docs.vyos.io PDF: same Devanagari glyphs blanked, same ~4 images
+          # embedded out of 2000+ pages, rather than a failed build).
+          # latexmk still exits non-zero in force mode even when it produces
+          # a complete PDF, so success below is verified by checking the
+          # produced artifact directly (exact filename + page count), not the
+          # command's exit code. A bare existence/size check would let a
+          # truncated-but-large PDF (LaTeX aborting partway through) pass, so
+          # the completeness signal is pdfinfo's page count instead of file
+          # size. The §14 retry-once is gated on artifact ABSENCE: latexmk -f
+          # exits non-zero even on a fully-produced PDF, so an unconditional
+          # `|| make latexpdf` would double the ~10-min LaTeX step on every
+          # forced success. Each `|| true` only swallows that expected
+          # non-zero exit; the validation below is the real success signal.
+          LATEXMKOPTS: -f
+          LATEXOPTS: -interaction=nonstopmode
         run: |
           set -eu
           docker run --rm -v "$PWD:/src" -w /src \
             -e DOCS_VERSION_SLUG="${{ steps.matrix.outputs.slug }}" \
             -e DOCS_VERSION_BRANCH="${{ github.ref_name }}" \
+            -e LATEXMKOPTS \
+            -e LATEXOPTS \
             docs-build:local bash -c '
+              set -e
               cd docs && make html
               if [ "${{ inputs.skip_pdf }}" != "true" ]; then
-                make latexpdf || make latexpdf   # retry once (§14 LaTeX flakiness)
+                pdf=_build/latex/VyOS.pdf
+                make latexpdf || true
+                # retry ONLY when no artifact was produced (§14 LaTeX flakiness) —
+                # latexmk -f exits non-zero even on success, so exit code cannot gate this
+                [ -f "$pdf" ] || make latexpdf || true
+                [ -f "$pdf" ] || { echo "$pdf not produced — build genuinely failed"; exit 1; }
+                # Page-count floor as a completeness signal (a truncated forced-mode
+                # run can still leave behind a file that exists and is large). rolling
+                # is verified ~2000+ pages; 1.4/1.5 page counts have not been
+                # individually verified, so 1000 is a conservative floor intended to
+                # clear all three release branches without masking a real truncation.
+                pages=$(pdfinfo "$pdf" 2>/dev/null | awk "/^Pages:/{print \$2}")
+                case "$pages" in
+                  ""|*[!0-9]*) pages=0 ;;
+                esac
+                [ "$pages" -ge 1000 ] || { echo "$pdf has $pages pages (<1000) — build genuinely failed"; exit 1; }
               fi'
 
       - name: Assemble artifact (nest under en/<slug>/, §7.1)

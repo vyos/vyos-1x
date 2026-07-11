@@ -6,11 +6,12 @@ lastproofread: '2024-02-21'
 
 # DMVPN Dual HUB Dual Cloud
 
-This document is to describe a basic setup to build DMVPN network with two Hubs and two clouds using DMVPN Phase3.
+This document is to describe a basic setup to build DMVPN network with two Hubs
+and two clouds using DMVPN Phase3.
 OSPF is used as routing protocol inside DMVPN.
 
-In this example we use VyOS 1.5 as HUBs and Spokes (HUB-1, HUB-2, SPOKE-2, SPOKE-3) and Cisco IOSv 15.5(3)M (SPOKE-1)
-as a Spoke.
+In this example we use VyOS 1.5 as HUBs and Spokes (HUB-1, HUB-2, SPOKE-2,
+SPOKE-3) and Cisco IOSv 15.5(3)M (SPOKE-1) as a Spoke.
 
 ## Network Topology
 
@@ -79,10 +80,12 @@ set protocols static route 0.0.0.0/0 next-hop 10.0.13.1
 
 ### NHRP configuration
 
-The next step is to configure the NHRP protocol. In a Dual cloud network, every HUB has to be configured with one GRE
-multipoint tunnel interface and every spoke has to be configured with two tunnel interfaces, one tunnel to each hub.
-In this example tunnel networks are 10.100.100.0/24 for the first cloud and 10.100.101.0/24 for the second cloud.
-But VyOS uses FRR for NHRP, that is why the tunnel address mask must be /32.
+The next step is to configure the NHRP protocol. In a Dual cloud network, every
+HUB has to be configured with one GRE multipoint tunnel interface and every
+spoke has to be configured with two tunnel interfaces, one tunnel to each hub.
+In this example tunnel networks are 10.100.100.0/24 for the first cloud
+and 10.100.101.0/24 for the second cloud. But VyOS uses FRR for NHRP, that is
+why the tunnel address mask must be /32.
 
 HUB-1
 
@@ -209,8 +212,10 @@ set protocols nhrp tunnel tun101 shortcut
 
 ### Overlay configuration
 
-The last step is to configure the routing protocol. In this scenario, OSPF was chosen as the dynamic routing protocol.
-But you can use iBGP or eBGP. To form fast convergence it is possible to use BFD protocol.
+The last step is to configure the routing protocol. In this scenario, OSPF was
+chosen as the dynamic routing protocol.
+But you can use iBGP or eBGP. To form fast convergence it is possible to use
+BFD protocol.
 
 HUB-1
 
@@ -380,10 +385,31 @@ SPOKE-1
      tunnel protection ipsec profile gre_protection shared
 ```
 
+Because GRE forwarding in DMVPN is independent of IPSec, there can be conditions
+when traffic is routed over the tunnel but there is no active IPsec SA for
+a peer that would get that packets encrypted at that moment.
+That may result in unencrypted GRE leaving the router.
+
+To prevent this, drop any GRE that is not protected by an outbound IPSec policy.
+Add the following rule on the VyOS nodes (HUB-1, HUB-2, SPOKE-2 and SPOKE-3),
+and make sure it comes before any rule that permits GRE.
+
+Note that this disables unencrypted GRE on the node entirely,
+so any plain GRE tunnels without IPSec will stop working.
+If your setup requires unencrypted GRE tunnels together with DMVPN,
+you have to find a way to exempt their traffic from that filter.
+See {ref}`vpn-dmvpn` for the full explanation.
+
+```none
+set firewall ipv4 output filter rule 10 action 'drop'
+set firewall ipv4 output filter rule 10 protocol 'gre'
+set firewall ipv4 output filter rule 10 ipsec match-none-out
+```
 
 ## Monitoring
 
-All spokes created IPSec tunnels to Hubs, are registered on Hubs using NHRP protocol and formed adjacency in OSPF.
+All spokes created IPSec tunnels to Hubs, are registered on Hubs using NHRP
+protocol and formed adjacency in OSPF.
 
 ```none
 vyos@HUB-1:~$ show vpn ipsec sa
@@ -472,7 +498,8 @@ trace to 192.168.11.2, 8 hops max, press Ctrl+C to stop
 ```
 
 First trace goes via HUB but the second goes directly from SPOKE-1 to SPOKE-2.
-Now routing tables are changed. LAN networks 192.168.12.0/24 and 192.168.11.0/24 available directly via SPOKES.
+Now routing tables are changed. LAN networks 192.168.12.0/24
+and 192.168.11.0/24 available directly via SPOKES.
 
 ```none
 vyos@SPOKE-2:~$ show ip route
@@ -545,8 +572,10 @@ dmvpn-NHRPVPN-tun101-child  up       5m58s     5K/4K           62/51            
 
 ## Summary
 
-If one of the Hubs loses connectivity to the Internet, the other Hub will be available and take the main role.
-This is a simple example where only one internet connection is used. But in the real world, there can be two
-connections to the Internet. In this case, there is a recommendation to build each tunnel via each Internet connection,
-choose the main cloud, and manipulate traffic via a routing protocol. It allows the creation failover on link-level
+If one of the Hubs loses connectivity to the Internet, the other Hub will be
+available and take the main role. This is a simple example where only one
+internet connection is used. But in the real world, there can be two
+connections to the Internet. In this case, there is a recommendation to build
+each tunnel via each Internet connection, choose the main cloud, and manipulate
+traffic via a routing protocol. It allows the creation failover on link-level
 connections too.

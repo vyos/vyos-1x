@@ -63,8 +63,8 @@ set interfaces tunnel tun100 source-interface 'eth0'
 
   :::{note}
   The IP-address is assigned as host prefix to tunnel interface.
-  NHRP will automatically create additional host routes pointing to tunnel interface
-  when a connection with these hosts is established.
+  NHRP will automatically create additional host routes pointing to tunnel
+  interface when a connection with these hosts is established.
   :::
 
 The tunnel interface subnet prefix should be announced by routing protocol
@@ -114,12 +114,13 @@ then destination NBMA address (or addresses) are learnt dynamically.
 
 * **network-id** - NHRP network id <1-4294967295>
 
-Enable NHRP on this interface and set the interface’s network ID. The network ID
-is used to allow creating multiple nhrp domains on a router when multiple interfaces
-are configured on the router. Interfaces configured with the same ID are part of the
-same logical NBMA network. The ID is a local only parameter and is not sent to other
-NHRP nodes and so IDs on different nodes do not need to match. When NHRP packets are
-received on an interface they are assigned to the local NHRP domain for that interface.
+Enable NHRP on this interface and set the interface’s network ID.
+The network ID is used to allow creating multiple nhrp domains on a router when
+multiple interfaces are configured on the router. Interfaces configured with
+the same ID are part of the same logical NBMA network. The ID is a local only
+parameter and is not sent to other NHRP nodes and so IDs on different nodes
+do not need to match. When NHRP packets are received on an interface they
+are assigned to the local NHRP domain for that interface.
 ```
 
 ```{cfgcmd} set protocols nhrp tunnel \<tunnel\> nhs tunnel-ip \<tunnel-ip\> nbma \<nbma-ip\>
@@ -127,39 +128,40 @@ received on an interface they are assigned to the local NHRP domain for that int
 * **tunnel-ip** - Tunnel ip address in format **x.x.x.x** or **dynamic**
 * **nbma-ip** - NBMA ip address in format **x.x.x.x**
 
-Configure the Next Hop Server address and its NBMA address. If dynamic is specified
-then Next Hop Server can have dynamic address which maps to its NBMA address.
+Configure the Next Hop Server address and its NBMA address. If dynamic is
+specified then Next Hop Server can have dynamic address which maps to
+its NBMA address.
 ```
 
 ```{cfgcmd} set protocols nhrp tunnel \<tunnel\> redirect
 
 This enable redirect replies on the NHS similar to ICMP redirects except this is
-managed by the nhrp protocol. This setting allows spokes to communicate with each
-others directly.
+managed by the nhrp protocol. This setting allows spokes to communicate with
+each others directly.
 ```
 
 ```{cfgcmd} set protocols nhrp tunnel \<tunnel\> registration-no-unique
 
-Allow the client to not set the unique flag in the NHRP packets. This is useful when
-a station has a dynamic IP address that could change over time.
+Allow the client to not set the unique flag in the NHRP packets. This is useful
+when a station has a dynamic IP address that could change over time.
 ```
 
 ```{cfgcmd} set protocols nhrp tunnel \<tunnel\> shortcut
 
-Enable shortcut (spoke-to-spoke) tunnels to allow NHC to talk to each others directly
-after establishing a connection without going through the hub.
+Enable shortcut (spoke-to-spoke) tunnels to allow NHC to talk to each others
+directly after establishing a connection without going through the hub.
 ```
 
 
 ### IPSEC configuration
 
-- Please refer to the {ref}`ipsec_general` documentation for the individual IPSec
-  related options.
+- Please refer to the {ref}`ipsec_general` documentation for the individual
+  IPSec related options.
 
 :::{note}
 NHRP daemon based on FRR nhrpd. It controls IPSEC. That's why 'close-action'
-parameter in IKE configuration always is set to 'close' and 'dead-peer-detection action'
-always is set to 'clear'.
+parameter in IKE configuration always is set to 'close'
+and 'dead-peer-detection action' always is set to 'clear'.
 :::
 
 ```{cfgcmd} set vpn ipsec profile \<profile-name\> authentication mode pre-shared-secret
@@ -186,6 +188,59 @@ Map ESP group to IPSEC profile
 
 Map IKE group to IPSEC profile
 ```
+
+
+### Protecting against unencrypted traffic leaks
+
+In DMVPN, the mGRE tunnel and the IPSec SA that protects it are handled
+independently: GRE forwarding follows the DMVPN/NHRP routing decisions on its
+own and does not depend on IPSec SAs being established.
+
+Because peers are discovered and IPSec SAs are negotiated on demand,
+there are conditions when traffic is routed over the tunnel while there is
+no active IPSec security association for a given peer—for example, while
+the SA for a newly discovered spoke is still being negotiated, or after an
+existing SA has expired.
+
+Such conditions can be short-lived, but they can also persist for a long time
+depending on the state of IPSec.
+Whenever they occur, the affected packets may leave the router as
+unencrypted GRE. This is an inherent property of running GRE and IPSec
+independently and is common to DMVPN implementations in general.
+
+To close this gap you can add a firewall rule that drops any GRE traffic that is
+not protected by an outbound IPSec policy. The `match-none-out` matcher matches
+packets leaving the router that did not match any outbound IPSec policy, so
+combined with `protocol gre` and `action drop` it discards GRE that would
+otherwise leave the router in cleartext:
+
+```none
+set firewall ipv4 output filter rule 10 action 'drop'
+set firewall ipv4 output filter rule 10 protocol 'gre'
+set firewall ipv4 output filter rule 10 ipsec match-none-out
+```
+
+:::{note}
+This rule must be evaluated before any rule that permits GRE. Give it a low rule
+number (here `rule 10`) so that it is placed ahead of any GRE-permitting rules
+in the `output` filter. Only GRE that is already protected by IPSec
+(i.e., matches an outbound IPSec policy) will then be allowed out.
+:::
+
+:::{note}
+Because this rule drops all GRE that is not protected by IPSec, it disables
+In that case, refine the rule so that it only matches the DMVPN traffic you want
+to protect (for example, by also matching on the tunnel source).
+Alternatively, you can explicitly allow traffic of known unencrypted tunnels
+by their source or destination addresses, or other criteria.
+to protect (for example, by also matching on the tunnel source).
+Alternatively, you can explicitly allow traffic of known unencrypted tunnels
+by their source or destination addresses, or other criteria.
+:::
+
+- Please refer to the {ref}`firewall-ipv4-configuration` documentation for
+details on the `set firewall ipv4 output filter rule <N> ipsec match-none-out`
+matcher and other firewall options.
 
 
 ## Monitoring
