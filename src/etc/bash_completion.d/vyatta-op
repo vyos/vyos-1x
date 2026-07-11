@@ -35,6 +35,39 @@ test -z "$_vyatta_default_pager" && \
 test -z "$VYATTA_PAGER" && \
     declare -x VYATTA_PAGER=$_vyatta_default_pager
 
+# Handler for the '?' key. Outside of a quoted string, '?' shows the
+# completion help as before. Inside a quoted string (or after a
+# backslash), it self-inserts, so values like URLs with query strings
+# can be typed without Ctrl-V:
+#   set firewall group remote-group X url 'https://example.com/list?key=abc'
+_vyatta_question_mark ()
+{
+  local head=${READLINE_LINE:0:READLINE_POINT}
+  local i c in_sq='' in_dq='' esc=''
+  for (( i=0; i<${#head}; i++ )); do
+    c=${head:i:1}
+    if [[ -n $esc ]]; then
+      esc=''
+      continue
+    fi
+    case $c in
+      \\) [[ -z $in_sq ]] && esc=1 ;;
+      \') [[ -z $in_dq ]] && { [[ -n $in_sq ]] && in_sq='' || in_sq=1; } ;;
+      \") [[ -z $in_sq ]] && { [[ -n $in_dq ]] && in_dq='' || in_dq=1; } ;;
+    esac
+  done
+  if [[ -n $in_sq || -n $in_dq || -n $esc ]]; then
+    READLINE_LINE=${READLINE_LINE:0:READLINE_POINT}\?${READLINE_LINE:READLINE_POINT}
+    (( READLINE_POINT++ ))
+  else
+    # 'bind -x' handlers cannot invoke readline functions directly, so
+    # ask the terminal for a Device Status Report (DSR); the terminal's
+    # reply (ESC [ 0 n) is bound to possible-completions below, which
+    # re-enters the standard help path with the line unchanged.
+    printf '\e[5n'
+  fi
+}
+
 _vyatta_op_do_key_bindings ()
 {
   if [[ "$SHELL" != "/bin/vbash" && "$SHELL" != "/sbin/radius_shell" ]]; then
@@ -45,10 +78,11 @@ _vyatta_op_do_key_bindings ()
   shopt -u nullglob
   case "$-" in
     *i*)
-      bind '"?": possible-completions' 
-      bind 'set show-all-if-ambiguous on' 
+      bind -x '"?": _vyatta_question_mark'
+      bind '"\e[0n": possible-completions'
+      bind 'set show-all-if-ambiguous on'
       bind_cmds=$(grep '^bind .* # vyatta key binding$' $HOME/.bashrc)
-      eval $bind_cmds 
+      eval $bind_cmds
     ;;
   esac
   eval $nullglob_save
