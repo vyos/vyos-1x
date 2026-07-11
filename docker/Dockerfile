@@ -27,9 +27,14 @@ RUN apt-get update && apt-get install -y \
     curl \
     dos2unix
 
-# pdfinfo (PDF page-count validation in the docs-build workflow) ships in the
-# main poppler-utils package — no recommends needed.
+# PDF-build toolchain extras, installed with --no-install-recommends (Trivy
+# DS-0029) on a separate line — the texlive line above deliberately keeps
+# recommends, which carry font packages LaTeX needs:
+# - imagemagick + librsvg2-bin: sphinx.ext.imgconverter via docker/im-convert.sh
+# - poppler-utils: pdfinfo for the docs-build workflow's page-count validation
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    imagemagick \
+    librsvg2-bin \
     poppler-utils
 
 RUN pip3 install --break-system-packages \
@@ -58,5 +63,13 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 #     standard_init_linux.go:175: exec user process caused
 #     "no such file or directory"
 RUN dos2unix /usr/local/bin/entrypoint.sh
+
+# sphinx.ext.imgconverter's `image_converter` command (docs/conf.py sets
+# image_converter = 'im-convert'). Routes .svg sources to rsvg-convert
+# directly, since Debian's imagemagick package is built --without-rsvg and
+# its built-in SVG coder can't handle embedded base64 raster <image>
+# elements. See docker/im-convert.sh for the full rationale.
+COPY im-convert.sh /usr/local/bin/im-convert
+RUN dos2unix /usr/local/bin/im-convert && chmod +x /usr/local/bin/im-convert
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

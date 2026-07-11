@@ -53,6 +53,18 @@ extensions = ['sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               'sphinx.ext.ifconfig',
               'sphinx.ext.graphviz',
+              # LaTeX-only: converts image formats the LaTeX/PDF builder can't
+              # embed natively (webp, svg, ...) to PNG at build time. The
+              # LaTeX builder's supported_image_types is ['application/pdf',
+              # 'image/png', 'image/jpeg'] — without this, unsupported
+              # images (nearly all of ours are .webp) are silently dropped
+              # from the PDF output. No effect on the HTML builder, which
+              # supports webp/svg natively in the browser; imgconverter
+              # only fires post-transforms when the active builder's
+              # supported_image_types doesn't already cover the source
+              # format. See `image_converter` below + docker/im-convert.sh
+              # for the conversion command this depends on.
+              'sphinx.ext.imgconverter',
               'notfound.extension',
               'autosectionlabel',
               'myst_parser',
@@ -61,6 +73,20 @@ extensions = ['sphinx.ext.intersphinx',
               'sphinx_llms_txt',
               'sphinx_sitemap',
 ]
+
+# sphinx.ext.imgconverter: use a thin wrapper (docker/im-convert.sh, installed
+# on PATH as `im-convert`) instead of ImageMagick's `convert` directly.
+# Debian's `imagemagick` package is built --without-rsvg, so its built-in SVG
+# coder (a minimal libxml2-based renderer, not a librsvg wrapper) can't
+# rasterize SVGs that embed a base64 raster <image> element — common in
+# diagrams exported from draw.io/diagrams.net — and fails with "unable to
+# open image `image/png;base64,...'". The wrapper routes .svg sources to
+# `rsvg-convert` (from librsvg2-bin) directly and everything else (webp,
+# gif, pdf, ...) through ImageMagick's `convert` as usual. If `im-convert`
+# isn't on PATH (e.g. a build environment other than docker/Dockerfile),
+# imgconverter's own `is_available()` check logs a warning and skips
+# conversion rather than failing the build.
+image_converter = 'im-convert'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
