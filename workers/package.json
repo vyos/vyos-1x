@@ -8,7 +8,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.8.19",
+    "@cloudflare/vitest-pool-workers": "^0.18.4",
     "typescript": "^5.5.0",
     "vitest": "~3.2.0",
     "wrangler": "^4.34.0"
