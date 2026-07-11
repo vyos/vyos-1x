@@ -27,6 +27,11 @@ RUN apt-get update && apt-get install -y \
     curl \
     dos2unix
 
+# pdfinfo (PDF page-count validation in the docs-build workflow) ships in the
+# main poppler-utils package — no recommends needed.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    poppler-utils
+
 RUN pip3 install --break-system-packages \
     Sphinx \
     sphinx-rtd-theme \
