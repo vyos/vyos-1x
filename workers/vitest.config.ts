@@ -1,15 +1,14 @@
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { defineConfig } from "vitest/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 
-export default defineWorkersConfig({
-  test: {
-    poolOptions: {
-      workers: {
-        // Each suite provides its own wrangler config via miniflare option overrides;
-        // apex tests read workers/apex/wrangler.jsonc to assert config congruence.
-        miniflare: {
-          compatibilityDate: "2026-07-01",
-        },
+export default defineConfig({
+  plugins: [
+    // Each suite provides its own wrangler config via miniflare option overrides;
+    // apex tests read workers/apex/wrangler.jsonc to assert config congruence.
+    cloudflareTest({
+      miniflare: {
+        compatibilityDate: "2026-07-01",
       },
-    },
-  },
+    }),
+  ],
 });
