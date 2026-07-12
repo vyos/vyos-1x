@@ -9,9 +9,10 @@ on:
   workflow_dispatch: {}
 
 concurrency:
-  # PR runs group per head ref so pushes to the same PR queue/cancel independently
-  # of the rolling deploy group.
-  group: apex-deploy-${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+  # PR runs group per PR number (not head ref — same-named branches from
+  # different forks would otherwise share a group) so pushes to the same PR
+  # queue/cancel independently of the rolling deploy group.
+  group: apex-deploy-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref_name }}
   # false (not true): a mid-job cancel can leave the apex/preview worker pair
   # half-updated; queuing subsequent runs is safe.
   cancel-in-progress: false
