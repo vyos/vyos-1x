@@ -18,11 +18,14 @@
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import has_vlan_subinterface_configured
 from vyos.configdict import is_node_changed
+from vyos.configdict import leaf_node_changed
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_mtu_ipv6
 from vyos import ConfigError
 from vyos.utils.assertion import assert_mac
+from vyos.utils.dict import dict_search
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig import Interface
@@ -116,6 +119,21 @@ def get_config(config=None) -> dict:
             config.update({'rebuild_required': {}})
 
     config['bond_members'] = deps_bond_dict(conf)
+
+    # Members that get detached (removed from the bond, or temporarily
+    # detached and re-attached during a rebuild) keep promiscuous mode
+    # enabled if they have their own VLAN (vif/vif-s) sub-interfaces
+    # configured
+    removed_members = (
+        leaf_node_changed(conf, iface_path + ['member', 'interface']) or []
+    )
+    current_members = dict_search('member.interface', config, default=[])
+    vlan_candidates = set(removed_members + current_members)
+    config['vlan_members'] = [
+        member
+        for member in vlan_candidates
+        if has_vlan_subinterface_configured(conf, member)
+    ]
 
     # Dependency
     config['xconn_members'] = deps_xconnect_dict(conf)
