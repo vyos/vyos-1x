@@ -42,10 +42,10 @@ test -z "$VYATTA_PAGER" && \
 #   set firewall group remote-group X url 'https://example.com/list?key=abc'
 _vyatta_question_mark ()
 {
-  local head=${READLINE_LINE:0:READLINE_POINT}
+  local head="${READLINE_LINE:0:READLINE_POINT}"
   local i c in_sq='' in_dq='' esc=''
   for (( i=0; i<${#head}; i++ )); do
-    c=${head:i:1}
+    c="${head:i:1}"
     if [[ -n $esc ]]; then
       esc=''
       continue
@@ -57,14 +57,15 @@ _vyatta_question_mark ()
     esac
   done
   if [[ -n $in_sq || -n $in_dq || -n $esc ]]; then
-    READLINE_LINE=${READLINE_LINE:0:READLINE_POINT}\?${READLINE_LINE:READLINE_POINT}
+    READLINE_LINE="${READLINE_LINE:0:READLINE_POINT}?${READLINE_LINE:READLINE_POINT}"
     (( READLINE_POINT++ ))
   else
     # 'bind -x' handlers cannot invoke readline functions directly, so
     # ask the terminal for a Device Status Report (DSR); the terminal's
     # reply (ESC [ 0 n) is bound to possible-completions below, which
     # re-enters the standard help path with the line unchanged.
-    printf '\e[5n'
+    # Write to /dev/tty so help still works if stdout is redirected.
+    printf '\e[5n' > /dev/tty
   fi
 }
 
