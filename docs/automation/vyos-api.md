@@ -439,6 +439,22 @@ The API processes each request in a session and commits it. For components such
 as DHCP and PPPoE servers, IPsec, VXLAN, and other tunnels, VyOS requires the
 entire configuration block for a commit.
 
+Because every request is committed immediately, the fields of a single
+configuration node cannot be staged across separate requests: everything the
+commit validators require must arrive in the same request, passed as a list
+of operations (see below). Common examples:
+
+| Node | Must be set in the same request |
+|------|---------------------------------|
+| `system task-scheduler task <name>` | `executable` together with `interval` (or `crontab-spec`) |
+| `nat destination rule <N>` | `translation` together with the other rule fields |
+| `firewall ... rule <N>` | `action` and `protocol` together with `description`, `port`, or `port-group` |
+
+Sending such fields in separate requests fails validation with errors such as
+`Protocol must be defined if specifying a port or port-group` or
+`must define either interval or crontab-spec`, because each request is
+validated as a complete commit on its own.
+
 The endpoint can process multiple commands if you pass them as a list to
 the `data` field.
 
