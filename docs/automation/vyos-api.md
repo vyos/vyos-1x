@@ -486,11 +486,12 @@ configuration node cannot be staged across separate requests: everything the
 commit validators require must arrive in the same request, passed as a list
 of operations (see below). Common examples:
 
-| Node | Must be set in the same request |
-|------|---------------------------------|
-| `system task-scheduler task <name>` | `executable` together with `interval` (or `crontab-spec`) |
-| `nat destination rule <N>` | `translation` together with the other rule fields |
-| `firewall ... rule <N>` | `action` in the request that creates the rule; `protocol` together with `port` or `port-group` |
+- `system task-scheduler task <name>`: `executable` together with
+  `interval` (or `crontab-spec`).
+- `nat destination rule <N>`: `translation` together with the other rule
+  fields.
+- `firewall ... rule <N>`: `action` in the request that creates the rule;
+  `protocol` together with `port` or `port-group`.
 
 Sending such fields in separate requests fails validation with errors such as
 `Protocol must be defined if specifying a port or port-group` or
@@ -618,9 +619,11 @@ Large applies over the API (initial provisioning, firewall migrations with
 hundreds of operations) benefit from a few precautions:
 
 - Prefer several requests of moderate size over one very large list of
-  operations, and retry per operation on failure. A very large single
-  commit can run longer than the HTTP gateway allows and return a timeout
-  even though the commit itself eventually succeeds.
+  operations. A very large single commit can run longer than the HTTP
+  gateway allows and return a timeout even though the commit itself
+  eventually succeeds — after a timeout, reconcile the configuration
+  state (for example with `/retrieve`) before retrying, so an
+  already-applied change is not replayed.
 - Commits that reference `geoip` country codes or `remote-group` URLs are
   significantly more expensive than plain set operations, because they
   trigger database or remote-list processing. Apply those one per request.
