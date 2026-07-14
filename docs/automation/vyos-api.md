@@ -381,6 +381,27 @@ response:
 }
 ```
 
+The endpoint can also export the running configuration as flat `set`
+commands, equivalent to the operational mode command
+`show configuration commands`. This is convenient for mirroring, diffing,
+or backing up a configuration:
+
+```none
+curl -k --location --request POST 'https://vyos/show' \
+--form data='{"op": "show", "path": ["configuration", "commands"]}' \
+--form key='MY-HTTPS-API-PLAINTEXT-KEY'
+
+response (shortened):
+{
+   "success": true,
+   "data": "set interfaces ethernet eth0 address 'dhcp'\n
+            set interfaces ethernet eth0 hw-id '50:00:00:01:00:00'\n
+            set system host-name 'vyos'\n
+            ...",
+   "error": null
+}
+```
+
 
 ### /generate
 
