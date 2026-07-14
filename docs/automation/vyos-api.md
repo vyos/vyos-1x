@@ -610,6 +610,24 @@ response:
 ```
 
 
+## Bulk configuration
+
+Large applies over the API (initial provisioning, firewall migrations with
+hundreds of operations) benefit from a few precautions:
+
+- Prefer several requests of moderate size over one very large list of
+  operations, and retry per operation on failure. A very large single
+  commit can run longer than the HTTP gateway allows and return a timeout
+  even though the commit itself eventually succeeds.
+- Commits that reference `geoip` country codes or `remote-group` URLs are
+  significantly more expensive than plain set operations, because they
+  trigger database or remote-list processing. Apply those one per request.
+- The request body size is limited by
+  `service https request-body-size-limit` (1 MB by default); a very large
+  operation list or `config-file` string can exceed it.
+- Consider commit-confirm (below) as a safety net when reconfiguring a
+  remote system.
+
 ## Commit-confirm
 
 For the previous two endpoints, a `commit` command is executed automatically
