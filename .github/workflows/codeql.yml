@@ -33,4 +33,5 @@ jobs:
     uses: vyos/.github/.github/workflows/codeql-analysis.yml@production
     secrets: inherit
     with:
-      languages: "['python']"
+      languages: "['python', 'c-cpp']"
+      build-mode: "none"
