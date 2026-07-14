@@ -1,0 +1,30 @@
+name: "Perform CodeQL Analysis"
+
+on:
+  push:
+    branches:
+      - rolling
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
+  pull_request:
+    branches:
+      - rolling
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
+  schedule:
+    - cron: '38 11 * * 0'
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  codeql-analysis-call:
+    uses: vyos/.github/.github/workflows/codeql-analysis.yml@production
+    with:
+      languages: "['python', 'javascript-typescript']"
