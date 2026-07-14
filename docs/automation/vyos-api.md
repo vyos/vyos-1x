@@ -266,6 +266,27 @@ response:
 }
 ```
 
+Note that `showConfig` returns an error (HTTP 400) for a path that is valid
+in the schema but has no configuration under it:
+
+```none
+curl -k --location --request POST 'https://vyos/retrieve' \
+--form data='{"op": "showConfig", "path": ["firewall", "ipv4", "forward"]}' \
+--form key='MY-HTTPS-API-PLAINTEXT-KEY'
+
+response:
+{
+   "success": false,
+   "data": null,
+   "error": "Configuration under specified path is empty"
+}
+```
+
+Automation that compares a desired state against a fresh or partially
+configured system should either probe the path with `exists` first, or
+treat this specific error as "no configuration present" rather than as a
+failed request.
+
 
 ### /reset
 
