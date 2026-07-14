@@ -149,9 +149,9 @@
                     <description>Maximum interval in seconds</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="numeric" argument="--range 1-7200"/>
+                    <validator name="numeric" argument="--range 0-0 --range 1-7200"/>
                   </constraint>
-                  <constraintErrorMessage>Maximum interval must be between 1 and 7200 seconds</constraintErrorMessage>
+                  <constraintErrorMessage>RDNSS lifetime must be 0 or between 1 and 7200 seconds</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="other-config-flag">
