@@ -490,12 +490,14 @@ of operations (see below). Common examples:
 |------|---------------------------------|
 | `system task-scheduler task <name>` | `executable` together with `interval` (or `crontab-spec`) |
 | `nat destination rule <N>` | `translation` together with the other rule fields |
-| `firewall ... rule <N>` | `action` and `protocol` together with `description`, `port`, or `port-group` |
+| `firewall ... rule <N>` | `action` in the request that creates the rule; `protocol` together with `port` or `port-group` |
 
 Sending such fields in separate requests fails validation with errors such as
 `Protocol must be defined if specifying a port or port-group` or
 `must define either interval or crontab-spec`, because each request is
-validated as a complete commit on its own.
+validated as a complete commit on its own. Likewise, setting an attribute
+such as `description` on a rule that no request has created yet fails with
+`Configuration path ... is not valid`.
 
 The endpoint can process multiple commands if you pass them as a list to
 the `data` field.
