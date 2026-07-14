@@ -513,6 +513,19 @@ response:
 }
 ```
 
+A list of operations is applied and committed as a single transaction: if
+any operation fails, nothing is committed. The error message may not
+identify which operation in the list failed, so if a large list fails
+validation, retry the operations in smaller lists (or one per request) to
+locate the offending one.
+
+:::{note}
+The `/configure` endpoint commits changes to the running configuration but
+does not save them to disk, and it does not accept `{"op": "save"}` (that
+returns HTTP 400). To persist changes across reboots, send
+`{"op": "save"}` to the `/config-file` endpoint.
+:::
+
 
 ### /config-file
 
