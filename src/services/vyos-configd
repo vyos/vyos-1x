@@ -25,7 +25,6 @@ import typing
 import logging
 import signal
 import traceback
-import importlib.util
 import io
 from contextlib import redirect_stdout
 from enum import Enum
@@ -42,6 +41,7 @@ from vyos.config import Config
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
+from vyos.configmanager import ConfigManager
 
 CFG_GROUP = 'vyattacfg'
 
@@ -72,60 +72,11 @@ class Response(Enum):
     ERROR_COMMIT_APPLY = 16
 
 
-vyos_conf_scripts_dir = directories['conf_mode']
-configd_include_file = os.path.join(directories['data'], 'configd-include.json')
+## config session vyshim env var
 configd_env_set_file = os.path.join(directories['data'], 'vyos-configd-env-set')
 configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-unset')
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
-
-
-def key_name_from_file_name(f):
-    return os.path.splitext(f)[0]
-
-
-def module_name_from_key(k):
-    return k.replace('-', '_')
-
-
-def path_from_file_name(f):
-    return os.path.join(vyos_conf_scripts_dir, f)
-
-
-# opt-in to be run by daemon
-with open(configd_include_file) as f:
-    try:
-        include = json.load(f)
-    except OSError as e:
-        logger.critical(f'configd include file error: {e}')
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        logger.critical(f'JSON load error: {e}')
-        sys.exit(1)
-
-
-# import conf_mode scripts
-(_, _, filenames) = next(iter(os.walk(vyos_conf_scripts_dir)))
-filenames.sort()
-
-load_filenames = [f for f in filenames if f in include]
-imports = [key_name_from_file_name(f) for f in load_filenames]
-module_names = [module_name_from_key(k) for k in imports]
-paths = [path_from_file_name(f) for f in load_filenames]
-to_load = list(zip(module_names, paths))
-
-modules = []
-
-for x in to_load:
-    spec = importlib.util.spec_from_file_location(x[0], x[1])
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    modules.append(module)
-
-conf_mode_scripts = dict(zip(imports, modules))
-
-exclude_set = {key_name_from_file_name(f) for f in filenames if f not in include}
-include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 
 
 def write_stdout_log(file_name, msg):
@@ -135,15 +86,16 @@ def write_stdout_log(file_name, msg):
         f.write(msg)
 
 
-def run_script(script_name, config, args) -> tuple[Response, str]:
+def run_script(
+    config_manager: ConfigManager, script_name: str, args: list
+) -> tuple[Response, str]:
     # pylint: disable=broad-exception-caught
 
-    script = conf_mode_scripts[script_name]
-    script.argv = args
+    config = config_manager.config
     config.set_level([])
     try:
-        c = script.get_config(config)
-        script.verify(c)
+        c = config_manager.get_config(script_name, args)
+        config_manager.verify(script_name, c)
     except ConfigError as e:
         logger.error(e)
         return Response.ERROR_COMMIT, str(e)
@@ -153,8 +105,8 @@ def run_script(script_name, config, args) -> tuple[Response, str]:
         return Response.ERROR_COMMIT, tb
 
     try:
-        script.generate(c)
-        script.apply(c)
+        config_manager.generate(script_name, c)
+        config_manager.apply(script_name, c)
     except ConfigError as e:
         logger.error(e)
         return Response.ERROR_COMMIT_APPLY, str(e)
@@ -166,7 +118,7 @@ def run_script(script_name, config, args) -> tuple[Response, str]:
     return Response.SUCCESS, ''
 
 
-def initialization(socket):
+def initialization(config_manager: ConfigManager, socket):
     # pylint: disable=broad-exception-caught,too-many-locals
 
     # Reset config strings:
@@ -217,6 +169,7 @@ def initialization(socket):
             running_config_text=active_string, session_config_text=session_string
         )
     except ConfigSourceError as e:
+        config_manager.set_config(None)
         logger.debug(e)
         return None
 
@@ -230,14 +183,20 @@ def initialization(socket):
     scripts_called = []
     setattr(config, 'scripts_called', scripts_called)
 
+    config_manager.set_config(config)
+
     return config
 
 
-def process_node_data(config, data, _last: bool = False) -> tuple[Response, str]:
+def process_node_data(config_manager: ConfigManager, data) -> tuple[Response, str]:
+    # pylint: disable=too-many-locals
+    config = config_manager.config
     if not config:
-        out = 'Empty config'
+        out = 'Empty config: missing initialization'
         logger.critical(out)
         return Response.ERROR_DAEMON, out
+
+    include_list = list(config_manager.components)
 
     script_name = None
     os.environ['VYOS_TAGNODE_VALUE'] = ''
@@ -264,11 +223,11 @@ def process_node_data(config, data, _last: bool = False) -> tuple[Response, str]
     scripts_called = getattr(config, 'scripts_called', [])
     scripts_called.append(script_record)
 
-    if script_name not in include_set:
+    if script_name not in include_list:
         return Response.PASS, ''
 
     with redirect_stdout(io.StringIO()) as o:
-        result, err_out = run_script(script_name, config, args)
+        result, err_out = run_script(config_manager, script_name, args)
     amb_out = o.getvalue()
     o.close()
 
@@ -363,6 +322,9 @@ if __name__ == '__main__':
     remove_if_file(configd_env_file)
     os.symlink(configd_env_set_file, configd_env_file)
 
+    # init ConfigManager; caching off pending use
+    config_manager = ConfigManager(cache_config=False)
+
     # We only need one long-lived instance of FRRender
     frr = FRRender()
 
@@ -376,9 +338,9 @@ if __name__ == '__main__':
         if message['type'] == 'init':
             resp = 'init'
             socket.send(resp.encode())
-            config = initialization(socket)
+            config = initialization(config_manager, socket)
         elif message['type'] == 'node':
-            res, out = process_node_data(config, message['data'], message['last'])
+            res, out = process_node_data(config_manager, message['data'])
 
             if message['last'] and config:
                 scripts_called = getattr(config, 'scripts_called', [])
