@@ -26,6 +26,7 @@ from vyos.configdict import is_vrf_changed
 from vyos.configdict import is_source_interface
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
+from vyos.configdep import called_as_dependent
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -114,7 +115,14 @@ def verify(wireguard):
     if 'private_key' not in wireguard:
         raise ConfigError('Wireguard private-key not defined')
 
-    if 'port' in wireguard and 'port_changed' in wireguard:
+    # T8921: Skip the port-availability check on a qos.py-triggered
+    # dependent re-run: by then this interface already holds the port
+    # itself, so the check would always false-positive as busy.
+    if (
+        'port' in wireguard
+        and 'port_changed' in wireguard
+        and not called_as_dependent()
+    ):
         listen_port = int(wireguard['port'])
         if check_port_availability(None, listen_port, protocol='udp') is not True:
             raise ConfigError(f'UDP port {listen_port} is busy or unavailable and '
