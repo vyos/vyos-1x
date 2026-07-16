@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import platform
 import psutil
 import re
 
@@ -51,7 +52,14 @@ from vyos.vpp.config_resource_checks.resource_defaults import default_resource_m
 
 airbag.enable()
 
+arch_map = {
+    "x86_64": "x86_64-linux-gnu",
+    "aarch64": "aarch64-linux-gnu",
+}
+arch = arch_map.get(platform.machine())
 curlrc_config = r'/etc/curlrc'
+openssl_config = '/etc/ssl/openssl.cnf'
+openssl_fipsmodule_config = '/run/ssl/fipsmodule.cnf'
 ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 usb_autosuspend = r'/etc/udev/rules.d/40-usb-autosuspend.rules'
@@ -203,6 +211,11 @@ def get_config(config=None):
 
 
 def verify(options):
+    if 'fips' in options:
+        fips_module = f'/usr/lib/{arch}/ossl-modules/fips.so'
+        if not os.path.exists(fips_module):
+            raise ConfigError(f'OpenSSL FIPS module not found: {fips_module}')
+
     if 'http_client' in options:
         config = options['http_client']
         if 'source_interface' in config:
@@ -305,7 +318,19 @@ def verify(options):
 
 
 def generate(options):
+
+    if 'fips' in options:
+        # ensure directory exists
+        os.makedirs(os.path.dirname(openssl_fipsmodule_config), exist_ok=True)
+        cmd(
+            f'openssl fipsinstall -module /usr/lib/{arch}/ossl-modules/fips.so -out {openssl_fipsmodule_config}'
+        )
+    else:
+        if os.path.exists(openssl_fipsmodule_config):
+            os.remove(openssl_fipsmodule_config)
+
     render(curlrc_config, 'system/curlrc.j2', options)
+    render(openssl_config, 'openssl/openssl.cnf.j2', options)
     render(ssh_config, 'system/ssh_config.j2', options)
     render(usb_autosuspend, 'system/40_usb_autosuspend.j2', options)
 
@@ -511,6 +536,10 @@ def apply(options):
             os.symlink('/lib/systemd/system/reboot.target', systemd_action_file)
         elif options['ctrl_alt_delete'] == 'poweroff':
             os.symlink('/lib/systemd/system/poweroff.target', systemd_action_file)
+
+    # FIPS
+    if 'fips' in options:
+        Warning('FIPS 140-3 support is incomplete and may behave unexpectedly!')
 
     # Configure HTTP client
     if 'http_client' not in options:

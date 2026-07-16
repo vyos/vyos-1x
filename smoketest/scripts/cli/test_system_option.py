@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import subprocess
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -142,6 +143,37 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
 
         if cpu_vendor == 'AuthenticAMD':
             self.assertIn(f' initcall_blacklist=acpi_cpufreq_init amd_pstate={amd_pstate_mode}', tmp)
+
+    def test_fips(self):
+        # Enable FIPS
+        self.cli_set(['system', 'option', 'fips'])
+        self.cli_commit()
+
+        # Verify OpenSSL config is updated
+        tmp = read_file('/etc/ssl/openssl.cnf')
+        self.assertIn('.include /run/ssl/fipsmodule.cnf', tmp)
+        self.assertIn('fips = fips_sect', tmp)
+
+        # Verify OpenSSL provider is active
+        out = subprocess.check_output(['openssl', 'list', '-providers'], text=True)
+
+        self.assertIn('fips', out)
+        self.assertIn('OpenSSL FIPS Provider', out)
+        self.assertIn('status: active', out)
+
+        # Remove FIPS
+        self.cli_delete(['system', 'option'])
+        self.cli_commit()
+
+        # Verify config cleanup
+        tmp = read_file('/etc/ssl/openssl.cnf')
+        self.assertNotIn('.include /run/ssl/fipsmodule.cnf', tmp)
+        self.assertNotIn('fips = fips_sect', tmp)
+
+        # Verify FIPS provider is no longer active
+        out = subprocess.check_output(['openssl', 'list', '-providers'], text=True)
+        self.assertNotIn('OpenSSL FIPS Provider', out)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
