@@ -69,7 +69,7 @@ case "$action" in
       lease_ip=${!lease_ip_var}
       lease_prefix_len=${!lease_prefix_len_var}
 
-      logger -s -t on-dhcpv6-event "Processing PD route for ${lease_addr}/${lease_prefix_len}. Link local: ${requester_link_local} ifname: ${ifname}"
+      logger -s -t on-dhcpv6-event "Processing PD route for ${lease_ip}/${lease_prefix_len}. Link local: ${requester_link_local} ifname: ${ifname}"
       
       sudo -n /sbin/ip -6 route replace ${lease_ip}/${lease_prefix_len} \
         via ${requester_link_local} \
