@@ -148,6 +148,15 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = 'DNSSL ' + ' '.join(dnssl) + ' {'
         self.assertIn(tmp, config)
 
+        # Lifetime 0 withdraws RDNSS (RFC 8106); CLI must accept it (T9084).
+        ns_lifetime = '0'
+        self.cli_set(base_path + ['name-server-lifetime', ns_lifetime])
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        tmp = f'AdvRDNSSLifetime {ns_lifetime};'
+        self.assertIn(tmp, config)
+
     def test_deprecate_prefix(self):
         self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
         self.cli_set(base_path + ['prefix', prefix, 'deprecate-prefix'])
