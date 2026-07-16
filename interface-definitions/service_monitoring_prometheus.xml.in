@@ -47,6 +47,101 @@
                     <defaultValue>9342</defaultValue>
                   </leafNode>
                   #include <include/interface/vrf.xml.i>
+                  <node name="collector">
+                    <properties>
+                      <help>Collector specific configuration</help>
+                    </properties>
+                    <children>
+                      <node name="bgp">
+                        <properties>
+                          <help>BGP collector specific options</help>
+                        </properties>
+                        <children>
+                          <leafNode name="accept-filtered-prefixes">
+                            <properties>
+                              <help>Enable retrieval of accepted and filtered BGP prefix counts</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="advertised-prefixes">
+                            <properties>
+                              <help>Enable count of advertised prefixes to a BGP peer (for FRR versions without PfxSnt field)</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="peer-description">
+                            <properties>
+                              <help>Add the BGP peer description as a label to peer metrics</help>
+                              <completionHelp>
+                                <list>json plain-text</list>
+                              </completionHelp>
+                              <valueHelp>
+                                <format>json</format>
+                                <description>Use the value of the desc key from the JSON formatted BGP peer description</description>
+                              </valueHelp>
+                              <valueHelp>
+                                <format>plain-text</format>
+                                <description>Use the full text of the BGP peer description</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>(json|plain-text)</regex>
+                              </constraint>
+                            </properties>
+                            <defaultValue>json</defaultValue>
+                          </leafNode>
+                          <leafNode name="peer-group">
+                            <properties>
+                              <help>Add the peer group name of the BGP peer as a label to peer metrics</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="peer-hostname">
+                            <properties>
+                              <help>Add the hostname of the BGP peer as a label to peer metrics</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="peer-type">
+                            <properties>
+                              <help>Enable metrics for the number of established BGP peers per type, defined by the type key in the JSON formatted peer description</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <leafNode name="bgp-l2-vpn">
+                        <properties>
+                          <help>Enable BGP L2VPN collector</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ospf-instance">
+                        <properties>
+                          <help>OSPF instance ID when using multiple OSPF instances</help>
+                          <valueHelp>
+                            <format>u32:1-65535</format>
+                            <description>OSPF instance ID</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="pim">
+                        <properties>
+                          <help>Enable PIM collector</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="detailed-routes">
+                        <properties>
+                          <help>Enable detailed route count of each route type</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </node>
               <node name="blackbox-exporter">

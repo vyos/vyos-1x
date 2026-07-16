@@ -65,6 +65,22 @@ def get_config(config=None):
                 with_recursive_defaults=True,
             )
 
+    if 'frr_exporter' in monitoring:
+        # Optional collectors to enable, translated from the CLI node name
+        # to the upstream frr_exporter collector flag
+        collector_flags = {'bgp_l2_vpn': 'bgpl2vpn', 'pim': 'pim'}
+        collector = monitoring['frr_exporter'].get('collector', {})
+        monitoring['frr_exporter']['optional_collectors'] = [
+            flag for node, flag in collector_flags.items() if node in collector
+        ]
+        # peer-description carries a default value (json) which is merged into
+        # the config dict by with_recursive_defaults - the BGP peer description
+        # collector option is opt-in, so drop the default if it was never set
+        if not conf.exists(
+            base + ['frr-exporter', 'collector', 'bgp', 'peer-description']
+        ):
+            collector.get('bgp', {}).pop('peer_description', None)
+
     tmp = is_node_changed(conf, base + ['node-exporter', 'vrf'])
     if tmp:
         monitoring.update({'node_exporter_restart_required': {}})

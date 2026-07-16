@@ -9,7 +9,41 @@ After=network.target
 User=frr
 {% endif %}
 ExecStart={{ vrf_command }}/usr/sbin/frr_exporter \
-          --collector.bgp6 \
+        --collector.bgp6 \
+{% if optional_collectors is vyos_defined %}
+{%     for collector in optional_collectors %}
+        --collector.{{ collector }} \
+{%     endfor %}
+{% endif %}
+{% if collector is vyos_defined %}
+{%     if collector.bgp.accept_filtered_prefixes is vyos_defined %}
+        --collector.bgp.accepted-filtered-prefixes \
+{%     endif %}
+{%     if collector.bgp.advertised_prefixes is vyos_defined %}
+        --collector.bgp.advertised-prefixes \
+{%     endif %}
+{%     if collector.bgp.peer_description is vyos_defined %}
+        --collector.bgp.peer-descriptions \
+{%         if collector.bgp.peer_description is vyos_defined('plain-text') %}
+        --collector.bgp.peer-descriptions.plain-text \
+{%         endif %}
+{%     endif %}
+{%     if collector.bgp.peer_group is vyos_defined %}
+        --collector.bgp.peer-groups \
+{%     endif %}
+{%     if collector.bgp.peer_hostname is vyos_defined %}
+        --collector.bgp.peer-hostnames \
+{%     endif %}
+{%     if collector.bgp.peer_type is vyos_defined %}
+        --collector.bgp.peer-types \
+{%     endif %}
+{%     if collector.ospf_instance is vyos_defined %}
+        --collector.ospf.instances={{ collector.ospf_instance | join(',') }} \
+{%     endif %}
+{%     if collector.detailed_routes is vyos_defined %}
+        --collector.route.detailed-routes \
+{%     endif %}
+{% endif %}
 {% if listen_address is vyos_defined %}
 {%     for address in listen_address %}
         --web.listen-address={{ address | bracketize_ipv6 }}:{{ port }}
