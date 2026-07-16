@@ -18,6 +18,8 @@
 
 from vyos.ifconfig import Interface
 from vyos.ifconfig.vpp.interface import VPPInterface
+from vyos.utils.network import gen_mac
+from vyos.utils.network import get_host_identity
 
 
 class VPPLoopbackInterface(Interface, VPPInterface):
@@ -34,6 +36,7 @@ class VPPLoopbackInterface(Interface, VPPInterface):
 
         self.index = self.vpp.get_sw_if_index(self.vpp_ifname)
         self.state = 'up' if 'disable' not in config else 'down'
+        self.mac = config.get('mac')
 
     def _create(self):
         pass
@@ -49,6 +52,13 @@ class VPPLoopbackInterface(Interface, VPPInterface):
         self.vpp.api.create_loopback_instance(
             is_specified=True, user_instance=self.instance
         )
+        # VPP's default loopback MAC is based only on the instance
+        # number (de:ad:00:00:00:<instance>), so two nodes configuring the
+        # same instance always conflict. Otherwise, use a host-unique MAC
+        # so bridging a loopback as a BVI across nodes never conflicts.
+        if not self.mac:
+            self.mac = gen_mac(self.ifname, '', get_host_identity())
+        self.vpp.set_iface_mac(self.vpp_ifname, self.mac)
         # Add LCP pair (kernel) interface
         self.kernel_add()
         # Set interface state
