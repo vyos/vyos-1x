@@ -18,12 +18,15 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configdict import node_changed
 from vyos.configdiff import Diff
 from vyos.configverify import verify_vrf
 from vyos.template import render
+from vyos.utils.network import check_port_availability
+from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
 from vyos import ConfigError
@@ -41,6 +44,50 @@ frr_exporter_systemd_service = 'frr_exporter.service'
 blackbox_exporter_service_file = '/etc/systemd/system/blackbox_exporter.service'
 blackbox_exporter_systemd_service = 'blackbox_exporter.service'
 
+vpp_exporter_service_file = '/etc/systemd/system/vpp_exporter.service'
+vpp_exporter_systemd_service = 'vpp_exporter.service'
+vpp_exporter_enable_link = '/etc/systemd/system/vpp.service.wants/vpp_exporter.service'
+vpp_exporter_process_name = 'vpp_prometheus_export'
+
+vpp_stat_group_patterns = {
+    'interfaces': '^/interfaces',
+    'err': '^/err',
+    'buffer-pools': '^/buffer-pools',
+    'system': '^/sys',
+    'workers': '^/workers',
+    'nodes': '^/nodes',
+    'memory': '^/mem',
+}
+vpp_default_stat_groups = [
+    'interfaces',
+    'err',
+    'buffer-pools',
+    'system',
+    'workers',
+    'memory',
+]
+
+
+def build_vpp_stat_patterns(vpp_exporter):
+    selected_groups = vpp_exporter.get('stat_group', [])
+    custom_patterns = vpp_exporter.get('stat_pattern', [])
+
+    if not selected_groups and not custom_patterns:
+        selected_groups = vpp_default_stat_groups
+
+    selected_groups = set(selected_groups)
+    patterns = [
+        pattern
+        for group_name, pattern in vpp_stat_group_patterns.items()
+        if group_name in selected_groups
+    ]
+
+    for pattern in custom_patterns:
+        if pattern not in patterns:
+            patterns.append(pattern)
+
+    return patterns
+
 
 def get_config(config=None):
     if config:
@@ -56,6 +103,7 @@ def get_config(config=None):
         'node_exporter': base + ['node-exporter'],
         'frr_exporter': base + ['frr-exporter'],
         'blackbox_exporter': base + ['blackbox-exporter'],
+        'vpp_exporter': base + ['vpp-exporter'],
     }
 
     for exporter_name, exporter_base in exporters.items():
@@ -82,6 +130,41 @@ def get_config(config=None):
             base + ['frr-exporter', 'collector', 'bgp', 'peer-description']
         ):
             collector.get('bgp', {}).pop('peer_description', None)
+    if 'vpp_exporter' in monitoring:
+        vpp_exporter = monitoring['vpp_exporter']
+        vpp_exporter['patterns'] = build_vpp_stat_patterns(vpp_exporter)
+        vpp_exporter['vpp_per_node_counters_enabled'] = conf.exists(
+            [
+                'vpp',
+                'settings',
+                'resource-allocation',
+                'memory',
+                'stats',
+                'per-node-counters',
+            ]
+        )
+        vpp_exporter['vpp_configured'] = conf.exists(['vpp'])
+
+        configured_groups = conf.return_values(base + ['vpp-exporter', 'stat-group'])
+        configured_patterns = conf.return_values(
+            base + ['vpp-exporter', 'stat-pattern']
+        )
+        effective_groups = conf.return_effective_values(
+            base + ['vpp-exporter', 'stat-group']
+        )
+        effective_patterns = conf.return_effective_values(
+            base + ['vpp-exporter', 'stat-pattern']
+        )
+
+        nodes_requested = 'nodes' in configured_groups or any(
+            pattern.startswith('^/nodes') for pattern in configured_patterns
+        )
+        nodes_requested_effective = 'nodes' in effective_groups or any(
+            pattern.startswith('^/nodes') for pattern in effective_patterns
+        )
+        vpp_exporter['nodes_selection_newly_enabled'] = (
+            nodes_requested and not nodes_requested_effective
+        )
 
     tmp = is_node_changed(conf, base + ['node-exporter', 'vrf'])
     if tmp:
@@ -102,6 +185,9 @@ def get_config(config=None):
     tmp = tmp or 'icmp' in modules_changed
     if tmp:
         monitoring.update({'blackbox_exporter_restart_required': {}})
+
+    if is_node_changed(conf, base + ['vpp-exporter']):
+        monitoring.update({'vpp_exporter_restart_required': {}})
 
     return monitoring
 
@@ -132,6 +218,43 @@ def verify(monitoring):
                         f'query name not specified in dns module {mod_name}'
                     )
 
+    if 'vpp_exporter' in monitoring:
+        vpp_exporter = monitoring['vpp_exporter']
+        verify_vrf(vpp_exporter)
+
+        if not vpp_exporter.get('vpp_configured'):
+            raise ConfigError(
+                'No VPP configuration exists. Configure VPP before configuring '
+                'VPP-exporter.'
+            )
+
+        port = int(vpp_exporter['port'])
+        if not check_port_availability(
+            None, port, 'tcp', vrf=vpp_exporter.get('vrf')
+        ) and not is_listen_port_bind_service(port, vpp_exporter_process_name):
+            raise ConfigError(f'TCP port "{port}" is used by another service!')
+
+        for group_name in vpp_exporter.get('stat_group', []):
+            if group_name not in vpp_stat_group_patterns:
+                raise ConfigError(f'Invalid stat-group "{group_name}"')
+
+        for pattern in vpp_exporter.get('stat_pattern', []):
+            if not pattern.startswith('^/'):
+                raise ConfigError(
+                    f'Invalid stat-pattern "{pattern}". Pattern must start with "^/"'
+                )
+
+        if vpp_exporter.get('nodes_selection_newly_enabled') and not vpp_exporter.get(
+            'vpp_per_node_counters_enabled'
+        ):
+            Warning(
+                'VPP node metrics requested but per-node-counters setting is not '
+                'enabled. Enable it using the following command for "nodes" metrics '
+                'to be available:\n'
+                '"set vpp settings resource-allocation memory stats '
+                'per-node-counters".'
+            )
+
     return None
 
 
@@ -150,6 +273,13 @@ def generate(monitoring):
         # Delete systemd files
         if os.path.isfile(blackbox_exporter_service_file):
             os.unlink(blackbox_exporter_service_file)
+
+    if not monitoring or 'vpp_exporter' not in monitoring:
+        # Delete systemd files
+        if os.path.isfile(vpp_exporter_service_file):
+            os.unlink(vpp_exporter_service_file)
+        if os.path.islink(vpp_exporter_enable_link):
+            os.unlink(vpp_exporter_enable_link)
 
     if not monitoring:
         return None
@@ -191,6 +321,14 @@ def generate(monitoring):
             monitoring['blackbox_exporter'],
         )
 
+    if 'vpp_exporter' in monitoring:
+        # Render vpp_exporter service_file
+        render(
+            vpp_exporter_service_file,
+            'prometheus/vpp_exporter.service.j2',
+            monitoring['vpp_exporter'],
+        )
+
     return None
 
 
@@ -206,6 +344,9 @@ def apply(monitoring):
     if not monitoring or 'blackbox_exporter' not in monitoring:
         if is_systemd_service_active(blackbox_exporter_systemd_service):
             call(f'systemctl stop {blackbox_exporter_systemd_service}')
+    if not monitoring or 'vpp_exporter' not in monitoring:
+        if is_systemd_service_active(vpp_exporter_systemd_service):
+            call(f'systemctl stop {vpp_exporter_systemd_service}')
 
     if not monitoring:
         return
@@ -233,6 +374,15 @@ def apply(monitoring):
             systemd_action = 'restart'
 
         call(f'systemctl {systemd_action} {blackbox_exporter_systemd_service}')
+
+    if 'vpp_exporter' in monitoring:
+        call(f'systemctl enable {vpp_exporter_systemd_service}')
+
+        systemd_action = 'reload-or-restart'
+        if 'vpp_exporter_restart_required' in monitoring:
+            systemd_action = 'restart'
+
+        call(f'systemctl {systemd_action} {vpp_exporter_systemd_service}')
 
 
 if __name__ == '__main__':
