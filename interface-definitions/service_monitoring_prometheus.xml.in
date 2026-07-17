@@ -220,6 +220,62 @@
                   </node>
                 </children>
               </node>
+              <node name="vpp-exporter">
+                <properties>
+                  <help>Prometheus exporter for VPP metrics</help>
+                </properties>
+                <children>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>9482</defaultValue>
+                  </leafNode>
+                  #include <include/interface/vrf.xml.i>
+                  <leafNode name="stat-group">
+                    <properties>
+                      <help>VPP stat groups to be exported</help>
+                      <valueHelp>
+                        <format>interfaces</format>
+                        <description>Interface counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>err</format>
+                        <description>Error counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>buffer-pools</format>
+                        <description>Buffer pool counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>system</format>
+                        <description>System counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>workers</format>
+                        <description>Worker counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>nodes</format>
+                        <description>Node counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>memory</format>
+                        <description>Memory counters</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(interfaces|err|buffer-pools|system|workers|nodes|memory)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid stat-group. Allowed values: interfaces, err, buffer-pools, system, workers, nodes, memory</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="stat-pattern">
+                    <properties>
+                      <help>Regex pattern to export filtered VPP stats. Examples: ^/interfaces, ^/interfaces/.*/rx$</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
         </children>

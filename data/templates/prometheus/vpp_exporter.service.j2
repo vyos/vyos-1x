@@ -1,0 +1,15 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+[Unit]
+Description=VPP Prometheus Exporter
+After=network.target vpp.service
+Wants=vpp.service
+PartOf=vpp.service
+BindsTo=vpp.service
+
+[Service]
+ExecStart={{ vrf_command }}/usr/bin/vpp_prometheus_export v2 socket-name /run/vpp/stats.sock port {{ port }} {{ patterns | join(' ') }}
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=vpp.service

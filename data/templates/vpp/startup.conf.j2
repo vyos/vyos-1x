@@ -131,6 +131,9 @@ linux-nl {
 
 {% if resource_allocation.memory.stats is vyos_defined %}
 statseg {
+{%     if resource_allocation.memory.stats.per_node_counters is vyos_defined %}
+    per-node-counters on
+{%     endif %}
 {%     if resource_allocation.memory.stats.size is vyos_defined %}
     size {{ resource_allocation.memory.stats.size }}
 {%     endif %}
