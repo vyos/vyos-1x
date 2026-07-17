@@ -31,7 +31,7 @@ from vyos.base import Warning
 from vyos.config import Config, config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
-from vyos.configdict import node_changed, is_member
+from vyos.configdict import node_changed, is_member, is_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_virtual_interface_exists
 from vyos.ifconfig import Section
@@ -328,6 +328,12 @@ def get_config(config=None):
     base = ['vpp']
     base_settings = ['vpp', 'settings']
 
+    if is_node_changed(
+        conf,
+        base_settings + ['resource-allocation', 'memory', 'stats', 'per-node-counters'],
+    ):
+        set_dependents('vpp_per_node_counters', conf)
+
     # find interfaces removed from VPP
     effective_config = conf.get_config_dict(
         base,
@@ -380,6 +386,9 @@ def get_config(config=None):
             'pppoe_ifaces': pppoe_ifaces,
             'rmem_max_configured': conf.return_value(
                 ['system', 'sysctl', 'parameter', 'net.core.rmem_max', 'value']
+            ),
+            'vpp_exporter_configured': conf.exists(
+                ['service', 'monitoring', 'prometheus', 'vpp-exporter']
             ),
             'remove': {},
         }
@@ -613,6 +622,12 @@ def get_config(config=None):
 
 
 def verify(config):
+    if 'remove' in config and config.get('vpp_exporter_configured'):
+        raise ConfigError(
+            'VPP cannot be removed while the VPP Prometheus exporter is configured. '
+            'Remove the VPP exporter first.'
+        )
+
     if config.get('interfaces_vpp') and 'remove' in config:
         raise ConfigError(
             'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
