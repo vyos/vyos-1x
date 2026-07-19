@@ -26,7 +26,7 @@ from vyos.defaults import config_status
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.configtree import ConfigTree
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.file import write_file
 
 STATUS_FILE = config_status
@@ -103,8 +103,9 @@ def failsafe(config_file_name):
                                       'authentication',
                                       'encrypted-password'])
 
-    cmd(f"useradd --create-home --no-user-group --shell /bin/vbash --password '{passwd}' "\
-        "--groups frr,frrvty,vyattacfg,sudo,adm,dip,disk vyos")
+    cmdl(['useradd', '--create-home', '--no-user-group', '--shell', '/bin/vbash',
+        '--password', passwd,
+        '--groups', 'frr,frrvty,vyattacfg,sudo,adm,dip,disk', 'vyos'])
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

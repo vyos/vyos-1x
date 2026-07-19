@@ -236,13 +236,13 @@ class EthernetIf(Interface):
                 # bail out early as nothing is to change
                 return
 
-        cmd = f'ethtool --change {ifname}'
+        cmd = ['ethtool', '--change', ifname]
         try:
             if speed == 'auto' or duplex == 'auto':
-                cmd += ' autoneg on'
+                cmd += ['autoneg', 'on']
             else:
-                cmd += f' speed {speed} duplex {duplex} autoneg off'
-            return self._cmd(cmd)
+                cmd += ['speed', str(speed), 'duplex', str(duplex), 'autoneg', 'off']
+            return self._cmdl(cmd)
         except PermissionError:
             # Some NICs do not tell that they don't support settings speed/duplex,
             # but they do not actually support it either.
@@ -547,7 +547,7 @@ class EthernetIf(Interface):
             if code != 0:
                 print(f'{ifname} does not support switchdev mode')
         elif not enable and enabled:
-            self._cmd(f'/sbin/devlink dev eswitch set pci/{addr} mode legacy')
+            self._cmdl(['/sbin/devlink', 'dev', 'eswitch', 'set', f'pci/{addr}', 'mode', 'legacy'])
 
     def update(self, config):
         """General helper function which works on a dictionary retrieved by

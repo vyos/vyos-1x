@@ -61,10 +61,10 @@ class TrafficShaper(QoSBase):
 
         default_minor_id = int(class_id_max) +1
         tmp = f'tc qdisc replace dev {self._interface} root handle {self._parent:x}: htb r2q {r2q} default {default_minor_id:x}' # default is in hex
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         tmp = f'tc class replace dev {self._interface} parent {self._parent:x}: classid {self._parent:x}:1 htb rate {speed}'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         if 'class' in config:
             for cls, cls_config in config['class'].items():
@@ -94,10 +94,10 @@ class TrafficShaper(QoSBase):
                 if 'ceiling' in cls_config:
                     f_ceil = self._rate_convert(cls_config['ceiling'])
                     tmp += f' ceil {f_ceil}'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
                 tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{cls:x} sfq'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
         if 'default' in config:
                 if config['default']['bandwidth'].endswith('%'):
@@ -118,10 +118,10 @@ class TrafficShaper(QoSBase):
                     else:
                         f_ceil = self._rate_convert(config['default']['ceiling'])
                     tmp += f' ceil {f_ceil}'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
                 tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{default_minor_id:x} sfq'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)
@@ -163,10 +163,10 @@ class TrafficShaperHFSC(QoSBase):
                     f' m2 {self._rate_convert(param["m2"])}'
                 )
 
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{cls:x} sfq perturb 10'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
     def update(self, config, direction):
         class_id_max = self._get_class_max_id(config)
@@ -175,13 +175,13 @@ class TrafficShaperHFSC(QoSBase):
         speed = self._rate_convert(config['bandwidth'])
 
         tmp = f'tc qdisc replace dev {self._interface} root handle {self._parent:x}: hfsc default {default_cls_id:x}'  # default is in hex
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         tmp = f'tc class replace dev {self._interface} parent {self._parent:x}: classid {self._parent:x}:1 hfsc sc rate {speed} ul rate {speed}'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # tmp = f'tc qdisc add dev {self._interface} parent {self._parent:x}:1 handle f1: sfq perturb 10'
-        # self._cmd(tmp)
+        # self._cmdl(tmp.split())
 
         if 'class' in config:
             for cls, cls_config in config['class'].items():

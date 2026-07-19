@@ -19,7 +19,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.dict import dict_search_args
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -150,9 +150,9 @@ def generate(lb):
 
 def apply(lb):
     if not lb:
-        cmd(f'systemctl stop {service}')
+        cmdl(['systemctl', 'stop', service])
     else:
-        cmd(f'systemctl restart {service}')
+        cmdl(['systemctl', 'restart', service])
 
     call_dependents()
 

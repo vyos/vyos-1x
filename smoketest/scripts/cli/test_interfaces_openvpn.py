@@ -24,7 +24,7 @@ from netifaces import interfaces # pylint: disable = no-name-in-module
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.template import address_from_cidr
@@ -241,7 +241,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
 
-            pw = cmd(f'sudo cat {pw_file}')
+            pw = cmdl(['cat', pw_file], sudo=True)
             self.assertIn(f'{interface}user', pw)
             self.assertIn(f'{interface}secretpw', pw)
 

@@ -68,11 +68,11 @@ class L2TPv3If(Interface):
         wait_for_add_l2tpv3(cmd=c)
 
         # setup session
-        cmd = 'ip l2tp add session name {ifname}'
-        cmd += ' tunnel_id {tunnel_id}'
-        cmd += ' session_id {session_id}'
-        cmd += ' peer_session_id {peer_session_id}'
-        self._cmd(cmd.format(**self.config))
+        cmd = ['ip', 'l2tp', 'add', 'session', 'name', self.ifname,
+               'tunnel_id', str(self.config['tunnel_id']),
+               'session_id', str(self.config['session_id']),
+               'peer_session_id', str(self.config['peer_session_id'])]
+        self._cmdl(cmd)
 
         # No need for interface shut down. There exist no function to permanently enable tunnel.
         # But you can disable interface permanently with shutdown/disable command.
@@ -101,12 +101,12 @@ class L2TPv3If(Interface):
             self._del_interface_from_ct_iface_map()
 
             if {'tunnel_id', 'session_id'} <= set(self.config):
-                cmd = 'ip l2tp del session tunnel_id {tunnel_id}'
-                cmd += ' session_id {session_id}'
-                self._cmd(cmd.format(**self.config))
+                self._cmdl(['ip', 'l2tp', 'del', 'session',
+                            'tunnel_id', str(self.config['tunnel_id']),
+                            'session_id', str(self.config['session_id'])])
 
             if 'tunnel_id' in self.config:
-                cmd = 'ip l2tp del tunnel tunnel_id {tunnel_id}'
-                self._cmd(cmd.format(**self.config))
+                self._cmdl(['ip', 'l2tp', 'del', 'tunnel',
+                            'tunnel_id', str(self.config['tunnel_id'])])
 
             # No need to call the baseclass as the interface is now already gone

@@ -32,7 +32,8 @@ def begin0(*args):
 
 def install_into_config(conf, config_paths, override_prompt=True):
     # Allows op-mode scripts to install values if called from an active config session
-    # config_paths: dict of config paths
+    # config_paths: list of config paths, each path a list of node/value components,
+    #               e.g. ['pki', 'ca', name, 'crl', crl_pem]
     # override_prompt: if True, user will be prompted before existing nodes are overwritten
     if not config_paths:
         return None
@@ -42,12 +43,12 @@ def install_into_config(conf, config_paths, override_prompt=True):
     from vyos.config import Config
     from vyos.defaults import base_dir
     from vyos.utils.io import ask_yes_no
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
     if not Config().in_session():
         print('You are not in configure mode, commands to install manually from configure mode:')
         for path in config_paths:
-            print(f'set {path}')
+            print('set ' + ' '.join(str(p) for p in path))
         return None
 
     count = 0
@@ -58,15 +59,18 @@ def install_into_config(conf, config_paths, override_prompt=True):
     env['vyos_validators_dir'] = f'{base_dir}/validators'
 
     for path in config_paths:
-        if override_prompt and conf.exists(path) and not conf.is_multi(path):
-            if not ask_yes_no(f'Config node "{path}" already exists. Do you want to overwrite it?'):
+        # exists()/is_multi() are called with a string: the live-session
+        # config source backend requires it (it does " ".join(level) + " " + path)
+        path_str = ' '.join(str(p) for p in path)
+        if override_prompt and conf.exists(path_str) and not conf.is_multi(path_str):
+            if not ask_yes_no(f'Config node "{path_str}" already exists. Do you want to overwrite it?'):
                 continue
 
         try:
-            cmd(f'/opt/vyatta/sbin/my_set {path}', env=env)
+            cmdl(['/opt/vyatta/sbin/my_set'] + [str(p) for p in path], env=env)
             count += 1
         except:
-            failed.append(path)
+            failed.append(path_str)
 
     if failed:
         print(f'Failed to install {len(failed)} value(s). Commands to manually install:')

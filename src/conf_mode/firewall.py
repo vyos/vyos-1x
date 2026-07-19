@@ -35,7 +35,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.file import write_file
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import get_interface_vrf
@@ -733,7 +733,7 @@ def apply(firewall):
         raise ConfigError(f'Failed to apply firewall: {output}')
 
     # Apply firewall global-options sysctl settings
-    cmd(f'sysctl -f {sysctl_file}')
+    cmdl(['sysctl', '-f', sysctl_file])
 
     call_dependents()
 

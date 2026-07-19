@@ -18,7 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.network import is_netns_interface
 from vyos.utils.network import get_netns_all
 
@@ -32,7 +32,7 @@ class NetNSTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # There should be no network namespace remaining
-        tmp = cmd('ip netns ls')
+        tmp = cmdl(['ip', 'netns', 'ls'])
         self.assertFalse(tmp)
 
         # always forward to base class
@@ -71,7 +71,7 @@ class NetNSTest(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        netns_iface_list = cmd(f'sudo ip netns exec {netns} ip link show')
+        netns_iface_list = cmdl(['ip', 'netns', 'exec', netns, 'ip', 'link', 'show'], sudo=True)
 
         for interface in interfaces:
             self.assertFalse(is_netns_interface(interface, netns))

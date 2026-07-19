@@ -63,7 +63,7 @@ from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import call
 from vyos.utils.permission import chown
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import interface_exists
 
@@ -848,7 +848,7 @@ def apply(openvpn):
     # or if address will be assign later
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
-            cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
+            cmdl(['sysctl', '-w', 'net.ipv4.ip_nonlocal_bind=1'])
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process

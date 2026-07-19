@@ -23,7 +23,7 @@ from json import loads
 
 from vyos.utils.network import interface_list
 from vyos.utils.network import vrf_list
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import call
 
 import vyos.opmode
@@ -199,7 +199,7 @@ def mtr(
             command = options[key]['mtr'].format(command=command, value=val)
 
     if json:
-        output = cmd(f'{command} {host}')
+        output = cmdl(command.split() + [host])
         if for_api:
             output = loads(output)
         print(output)

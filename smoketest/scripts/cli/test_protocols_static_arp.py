@@ -19,7 +19,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 base_path = ['protocols', 'static', 'arp']
 interface = 'eth0'
@@ -67,7 +67,7 @@ class TestARP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        arp_table = json.loads(cmd('ip -j -4 neigh show'))
+        arp_table = json.loads(cmdl(['ip', '-j', '-4', 'neigh', 'show']))
         for host, host_config in test_data.items():
             # As we search within a list of hosts we need to mark if it was
             # found or not. This ensures all hosts from test_data are processed

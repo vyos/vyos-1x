@@ -25,7 +25,7 @@ from logging.handlers import SysLogHandler
 from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.template import render
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag
@@ -416,11 +416,11 @@ def generate(config):
 def apply(config):
     if 'deleted' in config:
         # Cleanup cgnat
-        cmd('nft delete table ip cgnat')
+        cmdl(['nft', 'delete', 'table', 'ip', 'cgnat'])
         if os.path.isfile(nftables_cgnat_config):
             os.unlink(nftables_cgnat_config)
     else:
-        cmd(f'nft --file {nftables_cgnat_config}')
+        cmdl(['nft', '--file', nftables_cgnat_config])
 
     # Delete conntrack entries
     # if the pool configuration has changed

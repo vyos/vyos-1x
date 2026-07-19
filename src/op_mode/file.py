@@ -29,7 +29,7 @@ from vyos.remote import download
 from vyos.remote import upload
 from vyos.utils.io import ask_yes_no
 from vyos.utils.io import print_error
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 
 
@@ -85,7 +85,7 @@ def zealous_copy(source: str, destination: str) -> None:
     os.chown(destination, stats.st_uid, stats.st_gid)
 
 def get_file_type(path: str) -> str:
-    return cmd(['file', '-sb', path])
+    return cmdl(['file', '-sb', path])
 
 def print_header(string: str) -> None:
     print('#' * 10, string, '#' * 10)
@@ -135,7 +135,7 @@ def print_file_data(path: str) -> None:
                 print(line, end='')
     # All other binaries get hexdumped.
     else:
-        print(cmd(['hexdump', '-C', path]))
+        print(cmdl(['hexdump', '-C', path]))
 
 def parse_image_path(image_path: str) -> str:
     """
@@ -169,7 +169,7 @@ def show_locally(path: str) -> None:
             if os.path.isdir(location):
                 print_header('DIRECTORY LISTING')
                 print('Path:\t', location)
-                print(cmd(['ls', '-hlFGL', '--group-directories-first', location]))
+                print(cmdl(['ls', '-hlFGL', '--group-directories-first', location]))
             elif os.path.isfile(location):
                 print_file_info(location)
                 print()
@@ -179,7 +179,7 @@ def show_locally(path: str) -> None:
                 sys.exit(1)
             sys.stdout.flush()
         # Call `less(1)` and wait for it to terminate before going forward.
-        cmd(['/usr/bin/less', '-X', temp.name], stdout=sys.stdout)
+        cmdl(['/usr/bin/less', '-X', temp.name], stdout=sys.stdout)
     # The stream to the temporary file could break for any reason.
     # It's much less fragile than if we streamed directly to the process stdin.
     # But anything could still happen and we don't want to scare the user.

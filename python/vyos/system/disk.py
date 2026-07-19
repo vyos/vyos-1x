@@ -20,7 +20,7 @@ from time import sleep
 
 from psutil import disk_partitions
 
-from vyos.utils.process import run, cmd
+from vyos.utils.process import run, cmdl
 
 
 @dataclass
@@ -103,7 +103,7 @@ def partition_list(drive_path: str) -> list[str]:
     Returns:
         list[str]: a list of partition paths
     """
-    lsblk: str = cmd(f'lsblk -Jp {drive_path}')
+    lsblk: str = cmdl(['lsblk', '-Jp', drive_path])
     drive_info: dict = json_loads(lsblk)
     device: list = drive_info.get('blockdevices')
     children: list[str] = device[0].get('children', []) if device else []
@@ -120,7 +120,7 @@ def partition_parent(partition_path: str) -> str:
     Returns:
         str: path to a parent device
     """
-    parent: str = cmd(f'lsblk -ndpo pkname {partition_path}')
+    parent: str = cmdl(['lsblk', '-ndpo', 'pkname', partition_path])
     return parent
 
 
@@ -234,7 +234,7 @@ def disks_size() -> dict[str, int]:
         dict[str, int]: a dictionary with name: size mapping
     """
     disks_size: dict[str, int] = {}
-    lsblk: str = cmd('lsblk -Jbp')
+    lsblk: str = cmdl(['lsblk', '-Jbp'])
     blk_list = json_loads(lsblk)
     for device in blk_list.get('blockdevices'):
         if device['type'] == 'disk':

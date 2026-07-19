@@ -47,7 +47,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import move_recursive
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.permission import chown
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import call
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
@@ -365,34 +365,36 @@ def apply(login):
         for user, user_config in login['user'].items():
             # make new user using vyatta shell and make home directory (-m),
             # default group of 100 (users)
-            command = 'useradd --create-home --no-user-group '
+            command_name = 'useradd'
+            command = ['useradd', '--create-home', '--no-user-group']
             # check if user already exists:
             if user in get_local_users():
                 # update existing account
-                command = 'usermod'
+                command_name = 'usermod'
+                command = ['usermod']
 
             # all accounts use /bin/vbash
-            command += ' --shell /bin/vbash'
-            # we need to use '' quotes when passing formatted data to the shell
-            # else it will not work as some data parts are lost in translation
+            command += ['--shell', '/bin/vbash']
+            # no shell is involved when using cmdl(), so no quoting is required
+            # even if the values contain whitespace
             tmp = dict_search('authentication.encrypted_password', user_config)
-            if tmp: command += f" --password '{tmp}'"
+            if tmp: command += ['--password', str(tmp)]
 
             tmp = dict_search('full_name', user_config)
-            if tmp: command += f" --comment '{tmp}'"
+            if tmp: command += ['--comment', str(tmp)]
 
             home_directory = dict_search('home_directory', user_config)
             if not home_directory:
                 home_directory = f'/home/{user}'
-            command += f" --home '{home_directory}'"
+            command += ['--home', str(home_directory)]
 
             if 'operator' not in user_config:
-                command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea,vpp'
+                command += ['--groups', 'frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea,vpp']
 
-            command += f' {user}'
+            command += [user]
 
             try:
-                cmd(command)
+                cmdl(command)
                 # we should not rely on the value stored in user_config['home_directory'], as a
                 # crazy user will choose username root or any other system user which will fail.
                 #
@@ -424,7 +426,7 @@ def apply(login):
             #
             # More details: https://github.com/vyos/vyos-1x/pull/4678#pullrequestreview-3169648265
             backup_directory = f"/var/.users_backups/{user}"
-            if command.startswith('useradd') and os.path.exists(backup_directory):
+            if command_name == 'useradd' and os.path.exists(backup_directory):
                 move_recursive(backup_directory, home_dir)
                 chown(home_dir, user=user, group='users', recursive=True)
 
@@ -455,7 +457,7 @@ def apply(login):
             lock_unlock = '--unlock'
             if 'disable' in user_config:
                 lock_unlock = '--lock'
-            cmd(f'usermod {lock_unlock} {user}')
+            cmdl(['usermod', lock_unlock, user])
 
     if 'rm_users' in login:
         for user in login['rm_users']:
@@ -497,27 +499,27 @@ def apply(login):
                 raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
 
     # Enable/disable RADIUS in PAM configuration
-    cmd('pam-auth-update --disable radius-mandatory radius-optional')
+    cmdl(['pam-auth-update', '--disable', 'radius-mandatory', 'radius-optional'])
     if 'radius' in login:
         if login['radius'].get('security_mode', '') == 'mandatory':
             pam_profile = 'radius-mandatory'
         else:
             pam_profile = 'radius-optional'
-        cmd(f'pam-auth-update --enable {pam_profile}')
+        cmdl(['pam-auth-update', '--enable', pam_profile])
 
     # Enable/disable TACACS+ in PAM configuration
-    cmd('pam-auth-update --disable tacplus-mandatory tacplus-optional')
+    cmdl(['pam-auth-update', '--disable', 'tacplus-mandatory', 'tacplus-optional'])
     if 'tacacs' in login:
         if login['tacacs'].get('security_mode', '') == 'mandatory':
             pam_profile = 'tacplus-mandatory'
         else:
             pam_profile = 'tacplus-optional'
-        cmd(f'pam-auth-update --enable {pam_profile}')
+        cmdl(['pam-auth-update', '--enable', pam_profile])
 
     # Enable/disable Google authenticator
-    cmd('pam-auth-update --disable mfa-google-authenticator')
+    cmdl(['pam-auth-update', '--disable', 'mfa-google-authenticator'])
     if enable_otp:
-        cmd('pam-auth-update --enable mfa-google-authenticator')
+        cmdl(['pam-auth-update', '--enable', 'mfa-google-authenticator'])
 
     call_dependents()
     return None

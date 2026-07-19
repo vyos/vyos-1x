@@ -175,41 +175,6 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
     return code
 
 
-def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, raising=None, message='',
-        expect=[0], vrf=None, netns=None):
-    """
-    A wrapper around popen, which returns the stdout and
-    will raise the error code of a command
-
-    raising: specify which call should be used when raising
-             the class should only require a string as parameter
-             (default is OSError) with the error code
-    expect:  a list of error codes to consider as normal
-    """
-    decoded, code = popen(
-        command, flag,
-        stdout=stdout, stderr=stderr,
-        input=input, timeout=timeout,
-        env=env, shell=shell,
-        decode='utf-8',
-        vrf=vrf,
-        netns=netns,
-    )
-    if code not in expect:
-        wrapper = get_wrapper(vrf, netns)
-        command = f'{wrapper} {command}'
-        feedback = message + '\n' if message else ''
-        feedback += f'failed to run command: {command}\n'
-        feedback += f'returned: {decoded}\n'
-        feedback += f'exit code: {code}'
-        if raising is None:
-            # error code can be recovered with .errno
-            raise OSError(code, feedback)
-        else:
-            raise raising(feedback)
-    return decoded
-
 def cmdl(command: list[str], flag: str = '', input: str | bytes | None = None,
          timeout: float | None = None, env: dict[str, str] | None = None,
          stdout: int = PIPE, stderr: int = PIPE,
@@ -217,7 +182,8 @@ def cmdl(command: list[str], flag: str = '', input: str | bytes | None = None,
          expect: list[int] | None = None, vrf: str | None = None,
          netns: str | None = None, sudo: bool = False) -> str:
     """
-    A list-argument variant of cmd() for safer subprocess execution.
+    A wrapper around popen() for safer subprocess execution, which returns
+    the stdout and will raise the error code of a command.
 
     command must be a list of strings; no shell interpolation is performed,
     which eliminates a class of command-injection risks present when building
@@ -339,8 +305,8 @@ def is_systemd_service_active(service: str, vrf=None, netns=None) -> bool:
     """ Test is a specified systemd service is activated.
     Returns True if service is active, false otherwise.
     Copied from: https://unix.stackexchange.com/a/435317 """
-    tmp = cmd(f'systemctl show --value -p ActiveState {service}',
-              vrf=vrf, netns=netns)
+    tmp = cmdl(['systemctl', 'show', '--value', '-p', 'ActiveState', service],
+               vrf=vrf, netns=netns)
     return bool((tmp == 'active'))
 
 def stop_systemd_unit(service: str, retries: int=3, delay_s: float=0.250,
@@ -382,14 +348,14 @@ def is_systemd_service_running(service):
     """ Test is a specified systemd service is actually running.
     Returns True if service is running, false otherwise.
     Copied from: https://unix.stackexchange.com/a/435317 """
-    tmp = cmd(f'systemctl show --value -p SubState {service}')
+    tmp = cmdl(['systemctl', 'show', '--value', '-p', 'SubState', service])
     return bool((tmp == 'running'))
 
 def ip_cmd(args, json=True):
     """ A helper for easily calling iproute2 commands """
     if json:
         from json import loads
-        res = cmd(f"ip --json {args}").strip()
+        res = cmdl(['ip', '--json'] + args.split()).strip()
         if res:
             return loads(res)
         else:
@@ -397,7 +363,7 @@ def ip_cmd(args, json=True):
             # return an empty string
             return None
     else:
-        res = cmd(f"ip {args}")
+        res = cmdl(['ip'] + args.split())
         return res
 
 

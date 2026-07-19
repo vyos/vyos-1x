@@ -28,7 +28,7 @@ from base_vyostest_shim import ignore_warning
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.pki import CERT_BEGIN
 from vyos.pki import encode_certificate
@@ -248,7 +248,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify nginx is running inside the VRF
-        tmp = cmd(f'ip vrf pids {vrf}')
+        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
         self.assertIn(PROCESS_NAME, tmp)
 
         self.cli_delete(['interfaces', 'dummy', interface])

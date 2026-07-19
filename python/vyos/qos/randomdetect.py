@@ -24,7 +24,7 @@ class RandomDetect(QoSBase):
         # # Generalized Random Early Detection
         handle = self._parent
         tmp = f'tc qdisc add dev {self._interface} root handle {self._parent}:0 gred setup DPs 8 default 0 grio'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
         bandwidth = self._rate_convert(config['bandwidth'])
 
         # set VQ (virtual queue) parameters
@@ -40,7 +40,7 @@ class RandomDetect(QoSBase):
             )
             tmp = f'tc qdisc change dev {self._interface} handle {handle}:0 gred limit {qparams["limit"]} min {qparams["min_val"]} max {qparams["max_val"]} avpkt {qparams["avg_pkt"]} '
             tmp += f'burst {qparams["burst"]} bandwidth {bandwidth} probability {qparams["probability"]} DP {precedence} prio {8 - precedence:x}'
-            self._cmd(tmp)
+            self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)

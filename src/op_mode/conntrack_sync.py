@@ -27,7 +27,7 @@ from vyos.configquery import CliShellApiConfigQuery
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 
 conntrackd_bin = '/usr/sbin/conntrackd'
@@ -99,7 +99,7 @@ def restart():
         raise vyos.opmode.CommitInProgress('Cannot restart conntrackd while a commit is in progress')
 
     syslog.syslog('Restarting conntrack sync service...')
-    cmd('systemctl restart conntrackd.service')
+    cmdl(['systemctl', 'restart', 'conntrackd.service'])
     # request resynchronization with other systems
     request_sync()
     # send bulk update of internal-cache to other systems
@@ -130,7 +130,7 @@ def reset_internal_cache():
 
 def _show_cache(raw, opts):
     is_configured()
-    out = cmd(f'{conntrackd_bin} -C {conntrackd_config} {opts} -x')
+    out = cmdl([conntrackd_bin, '-C', conntrackd_config] + opts.split() + ['-x'])
     return from_xml(raw, out)
 
 def show_external_cache(raw: bool):

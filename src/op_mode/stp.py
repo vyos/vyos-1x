@@ -20,7 +20,7 @@ import json
 from tabulate import tabulate
 
 import vyos.opmode
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.network import interface_exists
 
 def detailed_output(dataset, headers):
@@ -34,7 +34,7 @@ def detailed_output(dataset, headers):
 def _get_bridge_vlan_data(iface):
     allowed_vlans = []
     native_vlan = None
-    vlanData = json.loads(cmd(f"bridge -j -d vlan show"))
+    vlanData = json.loads(cmdl(['bridge', '-j', '-d', 'vlan', 'show']))
     for vlans in vlanData:
         if vlans['ifname'] == iface:
             for allowed in vlans['vlans']:
@@ -69,8 +69,8 @@ def _get_stp_data(ifname, brInfo, brStatus):
     #tmpInfo['bridge_id'] = brInfo.get('linkinfo').get('info_data').get('bridge_id')
     #tmpInfo['root_id'] = brInfo.get('linkinfo').get('info_data').get('root_id')
 
-    tmpInfo['bridge_id'] = cmd(f"cat /sys/class/net/{brInfo.get('ifname')}/bridge/bridge_id").split('.')
-    tmpInfo['root_id'] = cmd(f"cat /sys/class/net/{brInfo.get('ifname')}/bridge/root_id").split('.')
+    tmpInfo['bridge_id'] = cmdl(['cat', f"/sys/class/net/{brInfo.get('ifname')}/bridge/bridge_id"]).split('.')
+    tmpInfo['root_id'] = cmdl(['cat', f"/sys/class/net/{brInfo.get('ifname')}/bridge/root_id"]).split('.')
 
     # The "/sys/class/net" structure stores the IDs without separators like ':' or '.'
     # This adds a ':' after every 2 characters to make it resemble a MAC Address
@@ -125,12 +125,15 @@ def show_stp(raw: bool, ifname: typing.Optional[str], detail: bool):
     else:
         ifname = ""
 
-    bridgeInfo = json.loads(cmd(f"ip -j -d -s link show type bridge {ifname}"))
+    ip_link_cmd = ['ip', '-j', '-d', '-s', 'link', 'show', 'type', 'bridge']
+    if ifname:
+        ip_link_cmd.append(ifname)
+    bridgeInfo = json.loads(cmdl(ip_link_cmd))
 
     if not bridgeInfo:
         raise vyos.opmode.Error(f"No Bridges configured!")
 
-    bridgeStatus = json.loads(cmd(f"bridge -j -s -d link show"))
+    bridgeStatus = json.loads(cmdl(['bridge', '-j', '-s', '-d', 'link', 'show']))
 
     for bridges in bridgeInfo:
         output_list = []

@@ -22,7 +22,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from collections import OrderedDict
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.template import range_to_regex
 from configparser import ConfigParser
 from configparser import RawConfigParser
@@ -107,7 +107,7 @@ class TestServiceIPoEServer(BasicAccelPPPTest.TestCase):
         self.verify(conf)
 
         # check local users
-        tmp = cmd(f"sudo cat {self._chap_secrets}")
+        tmp = cmdl(['cat', self._chap_secrets], sudo=True)
         regex = f"{interface}\s+\*\s+{mac_address}\s+\*"
         tmp = re.findall(regex, tmp)
         self.assertTrue(tmp)
@@ -292,7 +292,7 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.verify(conf)
 
         # check local users
-        tmp = cmd(f'sudo cat {self._chap_secrets}')
+        tmp = cmdl(['cat', self._chap_secrets], sudo=True)
         regex = f'{interface}\s+\*\s+{mac_address}\s+{ip_address}'
         tmp = re.findall(regex, tmp)
         self.assertTrue(tmp)

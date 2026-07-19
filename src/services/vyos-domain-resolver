@@ -31,7 +31,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
 from vyos.utils.file import makedir, chmod_775, write_file, read_file
 from vyos.utils.network import is_valid_ipv4_address_or_range, is_valid_ipv6_address_or_range
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.xml_ref import get_defaults
 
@@ -117,7 +117,7 @@ def nft_output(table, set_name, ip_list):
 def nft_valid_sets():
     try:
         valid_sets = []
-        sets_json = cmd('nft --json list sets')
+        sets_json = cmdl(['nft', '--json', 'list', 'sets'])
         sets_obj = json.loads(sets_json)
 
         for obj in sets_obj['nftables']:

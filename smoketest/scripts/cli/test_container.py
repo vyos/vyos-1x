@@ -24,7 +24,7 @@ from ipaddress import ip_interface
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.network import get_interface_vrf
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
 base_path = ['container']
@@ -35,7 +35,7 @@ busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
 
 def cmd_to_json(command):
-    c = cmd(command + ' --format=json')
+    c = cmdl(['podman'] + command + ['--format=json'], sudo=True)
     data = json.loads(c)[0]
     return data
 
@@ -47,7 +47,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # Load image for smoketest provided in vyos-1x-smoketest
         if not os.path.exists(busybox_image_path):
             cls.fail(cls, f'{busybox_image} image not available')
-        cmd(f'sudo podman load -i {busybox_image_path}')
+        cmdl(['podman', 'load', '-i', busybox_image_path], sudo=True)
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -58,7 +58,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     def tearDownClass(cls):
         super(TestContainer, cls).tearDownClass()
         # Cleanup podman image
-        cmd(f'sudo podman image rm -f {busybox_image}')
+        cmdl(['podman', 'image', 'rm', '-f', busybox_image], sudo=True)
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -109,10 +109,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(process_named_running(PROCESS_NAME), pid)
 
         # verify
-        tmp = cmd(f'sudo podman exec -it {cont_name} sysctl kernel.msgmax')
+        tmp = cmdl(['podman', 'exec', '-it', cont_name, 'sysctl', 'kernel.msgmax'], sudo=True)
         self.assertEqual(tmp, 'kernel.msgmax = 4096')
 
-        l = cmd_to_json(f'sudo podman container inspect {cont_name}')
+        l = cmd_to_json(['container', 'inspect', cont_name])
         self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
         self.assertEqual(l['Config']['Healthcheck']['Test'], ['NONE'])
 
@@ -128,7 +128,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'health-check', 'retry', '2'])
         self.cli_commit()
 
-        l = cmd_to_json(f'sudo podman container inspect {cont_name}')
+        l = cmd_to_json(['container', 'inspect', cont_name])
         self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
         self.assertEqual(l['Config']['Healthcheck']['Test'], ['CMD-SHELL', 'true'])
         self.assertEqual(l['Config']['Healthcheck']['Interval'], 10000000000)
@@ -165,10 +165,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', net_name, 'no-name-server'])
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman inspect {cont_name}')
+        n = cmd_to_json(['inspect', cont_name])
         self.assertEqual(n['HostConfig']['Dns'], name_servers)
 
-        tmp = cmd(f'sudo podman exec -it {cont_name} cat /etc/resolv.conf')
+        tmp = cmdl(['podman', 'exec', '-it', cont_name, 'cat', '/etc/resolv.conf'], sudo=True)
         self.assertIn(name_server, tmp)
 
     def test_cpu_limit(self):
@@ -212,34 +212,34 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman network inspect macvlan1')
+        n = cmd_to_json(['network', 'inspect', 'macvlan1'])
         self.assertEqual(n['driver'], 'macvlan')
         self.assertEqual(n['network_interface'], 'eth0')
         self.assertEqual(n['options']['mode'], 'bridge')
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.0.0/24')
         self.assertEqual(n['subnets'][0]['gateway'], '10.0.0.1')
 
-        n = cmd_to_json(f'sudo podman network inspect macvlan2')
+        n = cmd_to_json(['network', 'inspect', 'macvlan2'])
         self.assertEqual(n['driver'], 'macvlan')
         self.assertEqual(n['network_interface'], 'eth0.100')
         self.assertEqual(n['options']['mode'], 'private')
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.100.0/24')
         self.assertEqual(n['subnets'][0]['gateway'], '10.0.100.5')
 
-        n = cmd_to_json(f'sudo podman network inspect macvlan3')
+        n = cmd_to_json(['network', 'inspect', 'macvlan3'])
         self.assertEqual(n['driver'], 'macvlan')
         self.assertEqual(n['network_interface'], 'eth0.101')
         self.assertEqual(n['options']['mode'], 'vepa')
         self.assertEqual(n['subnets'][0]['subnet'], '2001::/64')
         self.assertEqual(n['subnets'][0]['gateway'], '2001::1')
 
-        n = cmd_to_json(f'sudo podman network inspect bridge1')
+        n = cmd_to_json(['network', 'inspect', 'bridge1'])
         self.assertEqual(n['driver'], 'bridge')
         self.assertEqual(n['network_interface'], 'pod-bridge1')
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.1.0/24')
         self.assertEqual(n['subnets'][0]['gateway'], '10.0.1.1')
 
-        n = cmd_to_json(f'sudo podman network inspect bridge2')
+        n = cmd_to_json(['network', 'inspect', 'bridge2'])
         self.assertEqual(n['driver'], 'bridge')
         self.assertEqual(n['network_interface'], 'pod-bridge2')
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.2.0/24')
@@ -259,9 +259,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'mac', '02:00:00:00:00:02'])
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman container inspect test1')
+        n = cmd_to_json(['container', 'inspect', 'test1'])
         self.assertEqual(n['NetworkSettings']['Networks']['bridge1']['MacAddress'], '02:00:00:00:00:01')
-        n = cmd_to_json(f'sudo podman container inspect test2')
+        n = cmd_to_json(['container', 'inspect', 'test2'])
         self.assertEqual(n['NetworkSettings']['Networks']['bridge1']['MacAddress'], '02:00:00:00:00:02')
 
     def test_ipv4_network(self):
@@ -294,13 +294,13 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['name', tmp])
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        n = cmd_to_json(['network', 'inspect', net_name])
         self.assertEqual(n['subnets'][0]['subnet'], prefix)
 
         # skip first container, it was never created
         for ii in range(2, 6):
             name = f'{base_name}-{ii}'
-            c = cmd_to_json(f'sudo podman container inspect {name}')
+            c = cmd_to_json(['container', 'inspect', name])
             self.assertEqual(
                 c['NetworkSettings']['Networks'][net_name]['Gateway'],
                 str(ip_interface(prefix).ip + 1),
@@ -340,13 +340,13 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['name', tmp])
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        n = cmd_to_json(['network', 'inspect', net_name])
         self.assertEqual(n['subnets'][0]['subnet'], prefix)
 
         # skip first container, it was never created
         for ii in range(2, 6):
             name = f'{base_name}-{ii}'
-            c = cmd_to_json(f'sudo podman container inspect {name}')
+            c = cmd_to_json(['container', 'inspect', name])
             self.assertEqual(
                 c['NetworkSettings']['Networks'][net_name]['IPv6Gateway'],
                 str(ip_interface(prefix).ip + 1),
@@ -399,14 +399,14 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['name', tmp])
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        n = cmd_to_json(['network', 'inspect', net_name])
         self.assertEqual(n['subnets'][0]['subnet'], prefix4)
         self.assertEqual(n['subnets'][1]['subnet'], prefix6)
 
         # skip first container, it was never created
         for ii in range(2, 6):
             name = f'{base_name}-{ii}'
-            c = cmd_to_json(f'sudo podman container inspect {name}')
+            c = cmd_to_json(['container', 'inspect', name])
             self.assertEqual(
                 c['NetworkSettings']['Networks'][net_name]['IPv6Gateway'],
                 str(ip_interface(prefix6).ip + 1),
@@ -447,7 +447,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         )
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        n = cmd_to_json(['network', 'inspect', net_name])
         self.assertEqual(n['dns_enabled'], False)
 
     def test_network_mtu(self):
@@ -473,7 +473,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         )
         self.cli_commit()
 
-        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        n = cmd_to_json(['network', 'inspect', net_name])
         self.assertEqual(n['options']['mtu'], '1280')
 
     def test_uid_gid(self):
@@ -493,9 +493,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify
-        tmp = cmd(f'sudo podman exec -it {cont_name} id -u')
+        tmp = cmdl(['podman', 'exec', '-it', cont_name, 'id', '-u'], sudo=True)
         self.assertEqual(tmp, uid)
-        tmp = cmd(f'sudo podman exec -it {cont_name} id -g')
+        tmp = cmdl(['podman', 'exec', '-it', cont_name, 'id', '-g'], sudo=True)
         self.assertEqual(tmp, gid)
 
     def test_api_socket(self):
@@ -510,8 +510,11 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Query API about running containers
-        tmp = cmd(
-            "sudo curl --unix-socket /run/podman/podman.sock -H 'content-type: application/json' -sf http://localhost/containers/json"
+        tmp = cmdl(
+            ['curl', '--unix-socket', '/run/podman/podman.sock', '-H',
+             'content-type: application/json', '-sf',
+             'http://localhost/containers/json'],
+            sudo=True,
         )
         tmp = json.loads(tmp)
 

@@ -20,7 +20,7 @@ import os
 import re
 import psutil
 
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.vpp.utils import human_memory_to_bytes
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 
@@ -74,7 +74,8 @@ def get_vpp_used_memory() -> int:
     Returns memory currently used by VPP in bytes (RSS value)
     """
     try:
-        out = cmd('ps -o rss= -p $(pidof vpp)')
+        pid = cmdl(['pidof', 'vpp']).strip()
+        out = cmdl(['ps', '-o', 'rss=', '-p', pid])
     except OSError:
         out = 0
     return int(out) << 10
@@ -84,7 +85,7 @@ def get_numa_count():
     """
     Run `numactl --hardware` and parse the 'available:' line.
     """
-    out = cmd('numactl --hardware')
+    out = cmdl(['numactl', '--hardware'])
     # e.g. "available: 2 nodes (0-1)"
     m = re.search(r'available:\s*(\d+)\s+nodes', out)
     return int(m.group(1)) if m else 0

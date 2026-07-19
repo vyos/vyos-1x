@@ -22,16 +22,16 @@ class RoundRobin(QoSBase):
     # https://man7.org/linux/man-pages/man8/tc-drr.8.html
     def update(self, config, direction):
         tmp = f'tc qdisc add dev {self._interface} root handle 1: drr'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         if 'class' in config:
             for cls in config['class']:
                 cls = int(cls)
                 tmp = f'tc class replace dev {self._interface} parent 1:1 classid 1:{cls:x} drr'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
                 tmp = f'tc qdisc replace dev {self._interface} parent 1:{cls:x} pfifo'
-                self._cmd(tmp)
+                self._cmdl(tmp.split())
 
         if 'default' in config:
             class_id_max = self._get_class_max_id(config)
@@ -39,7 +39,7 @@ class RoundRobin(QoSBase):
 
             # class ID via CLI is in range 1-4095, thus 1000 hex = 4096
             tmp = f'tc class replace dev {self._interface} parent 1:1 classid 1:{default_cls_id:x} drr'
-            self._cmd(tmp)
+            self._cmdl(tmp.split())
 
             # You need to add at least one filter to classify packets
             # otherwise, all packets will be dropped.
@@ -49,7 +49,7 @@ class RoundRobin(QoSBase):
                 'u32 match u32 0 0 '
                 f'flowid {self._parent}:{default_cls_id}'
             )
-            self._cmd(filter_cmd)
+            self._cmdl(filter_cmd.split())
 
         # call base class
         super().update(config, direction, priority=True)

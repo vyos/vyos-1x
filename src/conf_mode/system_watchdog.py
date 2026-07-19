@@ -22,7 +22,7 @@ from vyos.config import Config
 from vyos.base import Warning
 from vyos.template import render
 from vyos.utils.kernel import load_module
-from vyos.utils.process import call, cmd
+from vyos.utils.process import call, cmdl
 from vyos import ConfigError
 from vyos import airbag
 
@@ -89,7 +89,7 @@ def _verify_watchdog_module(module: str) -> None:
 
     # Ensure the module looks like a watchdog driver and not an arbitrary module.
     # Use modinfo filename location as the heuristic.
-    filename = cmd(['modinfo', '-F', 'filename', module], raising=ConfigError)
+    filename = cmdl(['modinfo', '-F', 'filename', module], raising=ConfigError)
     filename_l = filename.strip().lower()
 
     # Accept modules located under drivers/watchdog, plus explicit exception for

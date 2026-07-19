@@ -65,7 +65,7 @@ class CAKE(QoSBase):
         tmp += ' nat' if 'flow_isolation_nat' in config else ' nonat'
         tmp += ' no-split-gso' if 'no_split_gso' in config else ' split-gso'
 
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)

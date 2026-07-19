@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import glob
+
 from sys import exit
 
 from vyos.defaults import directories
 from vyos.utils.io import ask_yes_no
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.commit import commit_in_progress
 
 if not ask_yes_no('Do you really want to remove the existing SSH host keys?'):
@@ -30,6 +32,12 @@ if commit_in_progress():
 
 conf_mode_dir = directories['conf_mode']
 
-cmd('rm -v /etc/ssh/ssh_host_*')
-cmd('dpkg-reconfigure openssh-server')
-cmd(f'{conf_mode_dir}/service_ssh.py')
+host_key_files = glob.glob('/etc/ssh/ssh_host_*')
+if not host_key_files:
+    # Match cmdl()'s default behavior of raising OSError on a non-zero exit
+    # code (rm would fail with "No such file or directory" if the shell glob
+    # had not expanded to any files)
+    raise OSError('No such file or directory: /etc/ssh/ssh_host_*')
+cmdl(['rm', '-v'] + host_key_files)
+cmdl(['dpkg-reconfigure', 'openssh-server'])
+cmdl([f'{conf_mode_dir}/service_ssh.py'])

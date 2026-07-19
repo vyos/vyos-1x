@@ -24,7 +24,7 @@
 import re
 
 from vyos.configtree import ConfigTree
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 
 tz_base = ['system', 'time-zone']
@@ -38,7 +38,7 @@ def migrate(config: ConfigTree) -> None:
 
     # retrieve all valid timezones
     try:
-        tz_data_raw = cmd('timedatectl list-timezones')
+        tz_data_raw = cmdl(['timedatectl', 'list-timezones'])
     except OSError:
         tz_data_raw = ''
     tz_data = tz_data_raw.split('\n')

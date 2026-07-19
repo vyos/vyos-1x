@@ -24,7 +24,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.firewall import find_nftables_rule
 from vyos.utils.file import read_file
 from vyos.utils.file import read_json
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.system import sysctl_read
 from vyos.xml_ref import default_value
 
@@ -43,7 +43,7 @@ def chain_priority_conntrack_compatible(table, chain, chain_type, hook):
     # Verify that base chain priority is a number greater than -200 (lower priority)
     # Priority must be lower than conntrack in order to read or update conntrack entries
 
-    chain_contents = cmd(f'sudo nft list chain {table} {chain}')
+    chain_contents = cmdl(['nft', 'list', 'chain'] + table.split() + [chain], sudo=True)
     chain_search = re.search(
         rf'type {chain_type} hook {hook} priority (-*\d+)\;',
         chain_contents,

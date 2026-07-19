@@ -25,7 +25,7 @@ from sys import argv
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.locking import Lock
 from vyos.migrate import ConfigMigrate
@@ -87,7 +87,7 @@ def get_biosdevname(ifname: str) -> str:
     time.sleep(1)
 
     try:
-        biosname = cmd(f'/sbin/biosdevname --policy all_ethN -i {ifname}')
+        biosname = cmdl(['/sbin/biosdevname', '--policy', 'all_ethN', '-i', ifname])
     except Exception as e:
         logger.error(f'biosdevname error: {e}')
         biosname = ''

@@ -19,7 +19,7 @@
 
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos import ConfigError
 
 module_name = 'ipt_NETFLOW'
@@ -35,8 +35,8 @@ def _iptables_get_rules(command, chain, table):
     rules = []
 
     # run iptables, save output and split it by lines
-    iptables_command = f'{command} -vn -t {table} -L {chain}'
-    tmp = cmd(iptables_command, message='Failed to get flows list')
+    iptables_command = [command, '-vn', '-t', table, '-L', chain]
+    tmp = cmdl(iptables_command, message='Failed to get flows list')
     lines = tmp.splitlines()
 
     # Sample output to parse:
@@ -114,7 +114,7 @@ def _iptables_config(command, configured_ifaces, direction):
     rulenums_delete.sort(reverse=True)
     for rulenum in rulenums_delete:
         iptables_commands.append(
-            f'{command} -t {iptables_table} -D {iptables_chain} {rulenum}'
+            [command, '-t', iptables_table, '-D', iptables_chain, str(rulenum)]
         )
 
     # do not create new rules for already configured interfaces
@@ -127,12 +127,13 @@ def _iptables_config(command, configured_ifaces, direction):
         iface = iface_extended['iface']
         iface_option = "o" if direction == "egress" else "i"
         # iptables -t raw -A PREROUTING -j NETFLOW -i eth0
-        rule_definition = f'{command} -t {iptables_table} -A {iptables_chain} -j NETFLOW -{iface_option} {iface}'
+        rule_definition = [command, '-t', iptables_table, '-A', iptables_chain,
+                            '-j', 'NETFLOW', f'-{iface_option}', iface]
         iptables_commands.append(rule_definition)
 
     # change iptables
     for command in iptables_commands:
-        cmd(command, raising=ConfigError)
+        cmdl(command, raising=ConfigError)
 
 
 def _iptables_config_v4_and_v6(configured_ifaces, direction):

@@ -17,11 +17,11 @@
 import sys
 
 from vyos.utils.io import ask_yes_no
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import DEVNULL
 
 if not ask_yes_no("This will clear all currently tracked and expected connections. Continue?"):
     sys.exit(1)
 else:
-    cmd('/usr/sbin/conntrack -F', stderr=DEVNULL)
-    cmd('/usr/sbin/conntrack -F expect', stderr=DEVNULL)
+    cmdl(['/usr/sbin/conntrack', '-F'], stderr=DEVNULL)
+    cmdl(['/usr/sbin/conntrack', '-F', 'expect'], stderr=DEVNULL)

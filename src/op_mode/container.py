@@ -22,7 +22,7 @@ import subprocess
 
 from pathlib import Path
 from vyos.defaults import directories
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 import vyos.opmode
@@ -56,8 +56,8 @@ def clean_layer(name: str) -> int:
     purge_layer_by_id(layer_id)
 
     # Reinitiate the container's overlay layer
-    cmd(f"rm -f /run/{unit}.cid /run/{unit}.pid")
-    cmd(f"systemctl reset-failed {unit}")
+    cmdl(['rm', '-f', f'/run/{unit}.cid', f'/run/{unit}.pid'])
+    cmdl(['systemctl', 'reset-failed', unit])
     result = run(f"systemctl start {unit}")
     return result
 
@@ -65,7 +65,7 @@ def _get_json_data(command: str) -> list:
     """
     Get container command format JSON
     """
-    return cmd(f'{command} --format json')
+    return cmdl(command.split() + ['--format', 'json'])
 
 def _get_raw_data(command: str) -> list:
     json_data = _get_json_data(command)
@@ -106,7 +106,7 @@ def delete_image(name: str, force: typing.Optional[bool] = False):
 
     if name == 'all':
         # gather list of all images and pass them to the removal list
-        name = cmd('sudo podman image ls --quiet')
+        name = cmdl(['podman', 'image', 'ls', '--quiet'], sudo=True)
         # If there are no container images left, we cannot delete them all
         if not name: return
         # replace newline with whitespace
@@ -145,7 +145,7 @@ def show_container(raw: bool):
     if raw:
         return container_data
     else:
-        return cmd(command)
+        return cmdl(command.split())
 
 def show_image(raw: bool):
     command = 'podman image ls'
@@ -153,7 +153,7 @@ def show_image(raw: bool):
     if raw:
         return container_data
     else:
-        return cmd(command)
+        return cmdl(command.split())
 
 def show_network(raw: bool):
     command = 'podman network ls'
@@ -161,7 +161,7 @@ def show_network(raw: bool):
     if raw:
         return container_data
     else:
-        return cmd(command)
+        return cmdl(command.split())
 
 def restart(name: str):
     from vyos.utils.process import rc_cmd

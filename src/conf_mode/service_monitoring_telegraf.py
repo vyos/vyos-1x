@@ -28,7 +28,7 @@ from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chown
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -42,7 +42,7 @@ systemd_override = '/run/systemd/system/telegraf.service.d/10-override.conf'
 def get_nft_filter_chains():
     """ Get nft chains for table filter """
     try:
-        nft = cmd('nft --json list table ip vyos_filter')
+        nft = cmdl(['nft', '--json', 'list', 'table', 'ip', 'vyos_filter'])
     except Exception:
         print('nft table ip vyos_filter not found')
         return []

@@ -31,7 +31,7 @@ from vyos.utils.dict import dict_set_nested
 from vyos.utils.io import catch_broken_pipe
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import interface_exists
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import call
 from vyos.configquery import op_mode_config_dict
@@ -100,7 +100,7 @@ def _split_text(text, used=0):
     """
     no_tty = call('tty -s')
 
-    returned = cmd('stty size') if not no_tty else ''
+    returned = cmdl(['stty', 'size']) if not no_tty else ''
     returned = returned.split()
     if len(returned) == 2:
         _, columns = tuple(int(_) for _ in returned)
@@ -147,7 +147,7 @@ def _get_counter_val(prev, now):
     return value
 
 def _pppoe(ifname):
-    out = cmd('ps -C pppd -f')
+    out = cmdl(['ps', '-C', 'pppd', '-f'])
     if ifname in out:
         return 'C'
     if ifname in [_.split('/')[-1] for _ in glob.glob('/etc/ppp/peers/pppoe*')]:
@@ -198,14 +198,14 @@ def _get_raw_data(ifname: typing.Optional[str],
         res_intf = {}
         cache = interface.operational.load_counters()
 
-        out = cmd(f'ip -json addr show {interface.ifname}')
+        out = cmdl(['ip', '-json', 'addr', 'show', interface.ifname])
         res_intf_l = json.loads(out)
         res_intf = res_intf_l[0]
 
         if res_intf['link_type'] == 'tunnel6':
             # Note that 'ip -6 tun show {interface.ifname}' is not json
             # aware, so find in list
-            out = cmd('ip -json -6 tun show')
+            out = cmdl(['ip', '-json', '-6', 'tun', 'show'])
             tunnel = json.loads(out)
             res_intf['tunnel6'] = _find_intf_by_ifname(tunnel,
                                                        interface.ifname)
@@ -302,15 +302,14 @@ def _get_counter_data(ifname: typing.Optional[str],
 
 def _get_kernel_data(raw, ifname = None, detail = False,
                      statistics = False):
+    address_show_cmd = ['ip', '-j', '-d', '-s', 'address', 'show']
     if ifname:
         # Check if the interface exists
         if not interface_exists(ifname):
             raise vyos.opmode.IncorrectValue(f"{ifname} does not exist!")
-        int_name = f'dev {ifname}'
-    else:
-        int_name = ''
+        address_show_cmd += ['dev', ifname]
 
-    kernel_interface = json.loads(cmd(f'ip -j -d -s address show {int_name}'))
+    kernel_interface = json.loads(cmdl(address_show_cmd))
 
     # Return early if raw
     if raw:
@@ -345,7 +344,7 @@ def _format_kernel_data(data, detail, statistics):
         if 'parentdev' in interface:
             parentdev = interface['parentdev']
             if re.match(r'^[0-9a-fA-F]{4}:', parentdev):
-                dev_model = cmd(f'lspci -nn -s {parentdev}').split(']:')[1].strip()
+                dev_model = cmdl(['lspci', '-nn', '-s', parentdev]).split(']:')[1].strip()
 
         # Get the IP addresses on interface
         ip_list = []
@@ -664,7 +663,7 @@ def show_vlan_to_vni(raw: bool, intf_name: typing.Optional[str],
     if not vid:
         vid = "all"
 
-    tunnel_data = json.loads(cmd(f"bridge -j vlan tunnelshow dev {intf_name} vid {vid}"))
+    tunnel_data = json.loads(cmdl(['bridge', '-j', 'vlan', 'tunnelshow', 'dev', intf_name, 'vid', vid]))
 
     if not tunnel_data:
         if vid == "all":
@@ -672,7 +671,7 @@ def show_vlan_to_vni(raw: bool, intf_name: typing.Optional[str],
         else:
             raise vyos.opmode.UnconfiguredObject(f"No VLAN-to-VNI mapping found for VLAN {vid}\n")
 
-    statistics_data = json.loads(cmd(f"bridge -j -s vlan tunnelshow dev {intf_name} vid {vid}"))[0]
+    statistics_data = json.loads(cmdl(['bridge', '-j', '-s', 'vlan', 'tunnelshow', 'dev', intf_name, 'vid', vid]))[0]
 
     mapping_config = op_mode_config_dict(['interfaces', 'vxlan', intf_name, 'vlan-to-vni'],
                         get_first_key=True)

@@ -34,7 +34,7 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.utils.auth import DEFAULT_PASSWORD
 from vyos.utils.auth import get_current_user
 from vyos.utils.auth import get_local_passwd_entries
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.template import inc_ip
@@ -137,11 +137,11 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         # Load images for smoketest provided in vyos-1x-smoketest
         if not os.path.exists(tac_image_path):
             cls.fail(cls, f'{tac_image} image not available')
-        cmd(f'sudo podman load -i {tac_image_path}')
+        cmdl(['podman', 'load', '-i', tac_image_path], sudo=True)
 
         if not os.path.exists(radius_image_path):
             cls.fail(cls, f'{radius_image} image not available')
-        cmd(f'sudo podman load -i {radius_image_path}')
+        cmdl(['podman', 'load', '-i', radius_image_path], sudo=True)
 
         cls.ssh_test_command_result = cls.op_mode(cls, ['show', 'version'])
 
@@ -162,8 +162,8 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         super(TestSystemLogin, cls).tearDownClass()
 
         # Cleanup container images
-        cmd(f'sudo podman image rm -f {tac_image}')
-        cmd(f'sudo podman image rm -f {radius_image}')
+        cmdl(['podman', 'image', 'rm', '-f', tac_image], sudo=True)
+        cmdl(['podman', 'image', 'rm', '-f', radius_image], sudo=True)
 
     def tearDown(self):
         # Delete individual users from configuration
@@ -225,14 +225,14 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['user', locked_user, 'disable'])
         self.cli_commit()
         # check if account is locked
-        tmp = cmd(f'sudo passwd -S {locked_user}')
+        tmp = cmdl(['passwd', '-S', locked_user], sudo=True)
         self.assertIn(f'{locked_user} L ', tmp)
 
         # unlock account
         self.cli_delete(base_path + ['user', locked_user, 'disable'])
         self.cli_commit()
         # check if account is unlocked
-        tmp = cmd(f'sudo passwd -S {locked_user}')
+        tmp = cmdl(['passwd', '-S', locked_user], sudo=True)
         self.assertIn(f'{locked_user} P ', tmp)
 
     def test_system_login_weak_password_warning(self):
@@ -265,7 +265,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check if OTP key was written properly
-        tmp = cmd(f'sudo head -1 /home/{otp_user}/.google_authenticator')
+        tmp = cmdl(['head', '-1', f'/home/{otp_user}/.google_authenticator'], sudo=True)
         self.assertIn(otp_key, tmp)
 
         self.cli_delete(base_path + ['user', otp_user])
@@ -285,7 +285,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check that SSH key was written properly
-        tmp = cmd(f'sudo cat /home/{ssh_user}/.ssh/authorized_keys')
+        tmp = cmdl(['cat', f'/home/{ssh_user}/.ssh/authorized_keys'], sudo=True)
         key = f'{type} ' + ssh_pubkey.replace('\n','')
         self.assertIn(key, tmp)
 
@@ -378,7 +378,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # this file must be read with higher permissions
-        pam_radius_auth_conf = cmd('sudo cat /etc/pam_radius_auth.conf')
+        pam_radius_auth_conf = cmdl(['cat', '/etc/pam_radius_auth.conf'], sudo=True)
 
         for radius_server in radius_servers:
             if is_ipv6(radius_server):

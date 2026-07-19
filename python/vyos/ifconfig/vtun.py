@@ -33,8 +33,9 @@ class VTunIf(Interface):
         server can be reached, thus we might need to create this interface in
         advance for the service to be operational. """
         try:
-            cmd = 'openvpn --mktun --dev-type {device_type} --dev {ifname}'.format(**self.config)
-            return self._cmd(cmd)
+            cmd = ['openvpn', '--mktun', '--dev-type', self.config['device_type'],
+                   '--dev', self.ifname]
+            return self._cmdl(cmd)
         except PermissionError:
             # interface created by OpenVPN daemon in the meantime ...
             pass

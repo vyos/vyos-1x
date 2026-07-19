@@ -25,7 +25,7 @@ class FairQueue(QoSBase):
         if 'queue_limit' in config:
             tmp += f' limit {config["queue_limit"]}'
 
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)

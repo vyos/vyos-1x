@@ -36,7 +36,7 @@ from vyos.utils.cpu import get_core_count
 from vyos.utils.file import write_file
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.network import gen_mac
 from vyos.utils.network import get_host_identity
@@ -58,15 +58,15 @@ config_storage = '/etc/containers/storage.conf'
 systemd_unit_path = '/run/systemd/system'
 
 
-def _cmd(command):
+def _cmdl(command):
     if os.path.exists('/tmp/vyos.container.debug'):
         print(command)
-    return cmd(command)
+    return cmdl(command)
 
 
 def network_exists(name):
     # Check explicit name for network, returns True if network exists
-    c = _cmd(f'podman network ls --quiet --filter name=^{name}$')
+    c = _cmdl(['podman', 'network', 'ls', '--quiet', '--filter', f'name=^{name}$'])
     return bool(c)
 
 
@@ -668,7 +668,7 @@ def apply(container):
 
             if 'disable' in container_config:
                 # check if there is a container by that name running
-                tmp = _cmd('podman ps -a --format "{{.Names}}"')
+                tmp = _cmdl(['podman', 'ps', '-a', '--format', '{{.Names}}'])
                 if name in tmp:
                     file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
                     call(f'systemctl stop vyos-container-{name}.service')
@@ -678,7 +678,7 @@ def apply(container):
                 continue
 
             if 'container_restart' in container and name in container['container_restart']:
-                cmd(f'systemctl restart vyos-container-{name}.service')
+                cmdl(['systemctl', 'restart', f'vyos-container-{name}.service'])
 
     if disabled_new:
         call('systemctl daemon-reload')

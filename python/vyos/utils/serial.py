@@ -20,7 +20,7 @@ from typing import List
 
 from vyos.base import Warning
 from vyos.utils.io import ask_yes_no
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 GLOB_GETTY_UNITS = 'serial-getty@*.service'
 RE_GETTY_DEVICES = re.compile(r'.+@(.+).service$')
@@ -31,7 +31,7 @@ UTMP_PATH = '/run/utmp'
 def get_serial_units(include_devices=[]):
     # Since we cannot depend on the current config for decommissioned ports,
     # we just grab everything that systemd knows about.
-    tmp = cmd(f'systemctl list-units {GLOB_GETTY_UNITS} --all --output json --no-pager')
+    tmp = cmdl(['systemctl', 'list-units', GLOB_GETTY_UNITS, '--all', '--output', 'json', '--no-pager'])
     getty_units = json.loads(tmp)
     for sdunit in getty_units:
         m = RE_GETTY_DEVICES.search(sdunit['unit'])
@@ -62,7 +62,7 @@ def get_authenticated_ports(units):
     #
     # We can safely skip blank or LOGIN sessions with valid device names.
     #
-    for line in cmd(f'utmpdump {UTMP_PATH}').splitlines():
+    for line in cmdl(['utmpdump', UTMP_PATH]).splitlines():
         row = line.split('] [')
         user_name = row[3].strip()
         user_term = row[4].strip()
@@ -85,7 +85,7 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
     # quiet intentionally does not suppress a vyos.base.Warning() for malformed
     # device names in _get_serial_units().
     #
-    cmd('systemctl daemon-reload')
+    cmdl(['systemctl', 'daemon-reload'])
 
     units = get_serial_units(devices)
     connected = get_authenticated_ports(units)
@@ -112,10 +112,10 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
         unit_name = unit['unit']
         unit_device = unit['device']
         if os.path.exists(os.path.join(SD_UNIT_PATH, unit_name)):
-            cmd(f'systemctl restart {unit_name}')
+            cmdl(['systemctl', 'restart', unit_name])
         else:
             # Deleted stubs don't need to be restarted, just shut them down.
-            cmd(f'systemctl stop {unit_name}')
+            cmdl(['systemctl', 'stop', unit_name])
 
     return True
 

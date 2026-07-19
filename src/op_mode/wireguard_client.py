@@ -23,7 +23,7 @@ from ipaddress import ip_interface
 from vyos.ifconfig import Section
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import popen
 
 if os.geteuid() != 0:
@@ -71,8 +71,11 @@ if __name__ == '__main__':
     if interface not in Section.interfaces('wireguard'):
         exit(f'WireGuard interface "{interface}" does not exist!')
 
-    wg_pubkey = cmd(f'wg show {interface} | grep "public key"').split(':')[-1].lstrip()
-    wg_port = cmd(f'wg show {interface} | grep "listening port"').split(':')[-1].lstrip()
+    wg_show_out = cmdl(['wg', 'show', interface])
+    wg_pubkey_line = next((l for l in wg_show_out.splitlines() if 'public key' in l), '')
+    wg_pubkey = wg_pubkey_line.split(':')[-1].lstrip()
+    wg_port_line = next((l for l in wg_show_out.splitlines() if 'listening port' in l), '')
+    wg_port = wg_port_line.split(':')[-1].lstrip()
 
     # Generate WireGuard private key
     privkey,_ = popen('wg genkey')

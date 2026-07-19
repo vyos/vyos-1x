@@ -25,7 +25,7 @@ def device_from_id(id):
 def get_storage_stats(directory, human_units=True):
     """ Return basic storage stats for given directory """
     from re import sub as re_sub
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
     from vyos.utils.convert import human_to_bytes
 
     # XXX: using `df -h` and converting human units to bytes
@@ -40,7 +40,7 @@ def get_storage_stats(directory, human_units=True):
     # Filesystem      Size  Used Avail Use%
     # /dev/sda1        16G  7.6G  7.3G  51%
 
-    out = cmd(f"df -h --output=source,size,used,avail,pcent {directory}")
+    out = cmdl(['df', '-h', '--output=source,size,used,avail,pcent', str(directory)])
     lines = out.splitlines()
     lists = [l.split() for l in lines]
     res = {lists[0][i]: lists[1][i] for i in range(len(lists[0]))}

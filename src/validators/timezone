@@ -17,7 +17,7 @@
 import argparse
 import sys
 
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 
 if __name__ == '__main__':
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument("--validate", action="store", required=True, help="Check if timezone is valid")
     args = parser.parse_args()
 
-    tz_data = cmd('timedatectl list-timezones')
+    tz_data = cmdl(['timedatectl', 'list-timezones'])
     tz_data = tz_data.split('\n')
 
     if args.validate not in tz_data:

@@ -46,9 +46,9 @@ class VethIf(Interface):
             return
 
         # create virtual-ethernet interface
-        cmd = f'ip link add {self.ifname} type veth'
-        cmd += f' peer name {self.config["peer_name"]}'
-        self._cmd(cmd)
+        cmd = ['ip', 'link', 'add', self.ifname, 'type', 'veth']
+        cmd += ['peer', 'name', self.config['peer_name']]
+        self._cmdl(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')

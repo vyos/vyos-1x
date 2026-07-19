@@ -69,7 +69,7 @@ from vyos.utils.io import select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.process import rc_cmd
 from vyos.version import get_version_data
@@ -701,9 +701,10 @@ def download_file(local_file: str, remote_path: str, vrf: str,
         download(local_file, remote_path, progressbar=progressbar,
                  check_space=check_space, raise_error=True)
     else:
-        vrf_cmd = f'ip vrf exec {vrf} {external_download_script} \
-                    --local-file {local_file} --remote-path {remote_path}'
-        cmd(vrf_cmd, env=environ)
+        cmdl([external_download_script,
+              '--local-file', local_file,
+              '--remote-path', remote_path],
+             env=environ, vrf=vrf)
 
 def image_fetch(image_path: str, vrf: str = None,
                 no_prompt: bool = False) -> Path:
@@ -895,7 +896,7 @@ def validate_compatibility(iso_path: str, force: bool = False) -> None:
     """
     current_data = get_version_data()
     current_flavor = current_data.get('flavor')
-    current_architecture = current_data.get('architecture') or cmd('dpkg --print-architecture')
+    current_architecture = current_data.get('architecture') or cmdl(['dpkg', '--print-architecture'])
 
     new_data = get_version_data(f'{iso_path}/version.json')
     new_flavor = new_data.get('flavor')

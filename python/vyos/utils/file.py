@@ -39,8 +39,8 @@ def read_file(fname, defaultonfailure=None, sudo=False):
     try:
         # Some files can only be read by root - emulate sudo cat call
         if sudo:
-            from vyos.utils.process import cmd
-            data = cmd(['sudo', 'cat', fname])
+            from vyos.utils.process import cmdl
+            data = cmdl(['cat', fname], sudo=True)
         else:
             # If not sudo, just read the file
             with open(fname, 'r') as f:

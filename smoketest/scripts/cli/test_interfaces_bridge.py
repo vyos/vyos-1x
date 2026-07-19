@@ -26,7 +26,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.template import ip_from_cidr
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import interface_exists
@@ -271,7 +271,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         def _check_vlan_filter(interface, vifs) -> None:
             configured_vlan_ids = []
 
-            bridge_json = cmd(f'bridge -j vlan show dev {interface}')
+            bridge_json = cmdl(['bridge', '-j', 'vlan', 'show', 'dev', interface])
             bridge_json = json.loads(bridge_json)
             self.assertIsNotNone(bridge_json)
 

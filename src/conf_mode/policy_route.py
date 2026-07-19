@@ -28,7 +28,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.file import write_file
 from vyos.utils.process import call
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import interface_exists
@@ -241,7 +241,7 @@ def update_domain_resolver(policy):
 def apply_table_marks(policy):
     for route in ['route', 'route6']:
         if route in policy:
-            cmd_str = 'ip' if route == 'route' else 'ip -6'
+            cmd_list = ['ip'] if route == 'route' else ['ip', '-6']
             tables = []
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
@@ -265,11 +265,12 @@ def apply_table_marks(policy):
                                 continue
                             tables.append(vrf_table_id)
                             table_mark = mark_offset - vrf_table_id
-                            cmd(f'{cmd_str} rule add pref {vrf_table_id} fwmark {table_mark} table {vrf_table_id}')
+                            cmdl(cmd_list + ['rule', 'add', 'pref', str(vrf_table_id),
+                                              'fwmark', str(table_mark), 'table', str(vrf_table_id)])
 
 def cleanup_table_marks():
-    for cmd_str in ['ip', 'ip -6']:
-        json_rules = cmd(f'{cmd_str} -j -N rule list')
+    for cmd_list in [['ip'], ['ip', '-6']]:
+        json_rules = cmdl(cmd_list + ['-j', '-N', 'rule', 'list'])
         rules = loads(json_rules)
         for rule in rules:
             if 'fwmark' not in rule or 'table' not in rule:
@@ -279,7 +280,7 @@ def cleanup_table_marks():
             if fwmark[:2] == '0x':
                 fwmark = int(fwmark, 16)
             if (int(fwmark) == (mark_offset - table)):
-                cmd(f'{cmd_str} rule del fwmark {fwmark} table {table}')
+                cmdl(cmd_list + ['rule', 'del', 'fwmark', str(fwmark), 'table', str(table)])
 
 def apply(policy):
     install_result = run(f'nft --file {nftables_conf}')

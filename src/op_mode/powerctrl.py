@@ -116,11 +116,11 @@ def check_unsaved_config():
         pass
 
 def execute_shutdown(time, reboot=True, ask=True):
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
     check_unsaved_config()
 
-    host = cmd("hostname --fqdn")
+    host = cmdl(['hostname', '--fqdn'])
 
     action = "reboot" if reboot else "poweroff"
     if not ask:
@@ -133,17 +133,17 @@ def execute_shutdown(time, reboot=True, ask=True):
         chk_vyatta_based_reboots()
         ###
 
-        out = cmd(f'/sbin/shutdown {action_cmd} now', stderr=STDOUT)
+        out = cmdl(['/sbin/shutdown', action_cmd, 'now'], stderr=STDOUT)
         print(out.split(",", 1)[0])
         return
     elif len(time) == 1:
         # Assume the argument is just time
         ts = parse_time(time[0])
         if ts:
-            cmd(f'/sbin/shutdown {action_cmd} {time[0]}', stderr=STDOUT)
+            cmdl(['/sbin/shutdown', action_cmd, time[0]], stderr=STDOUT)
             # Inform all other logged in users about the reboot/shutdown
             wall_msg = f'System {action} is scheduled {time[0]}'
-            cmd(f'/usr/bin/wall "{wall_msg}"')
+            cmdl(['/usr/bin/wall', wall_msg])
         else:
             exit(f'Invalid time "{time[0]}". The valid format is HH:MM')
     elif len(time) == 2:
@@ -155,10 +155,10 @@ def execute_shutdown(time, reboot=True, ask=True):
             td = t - datetime.now()
             t2 = 1 + int(td.total_seconds())//60  # Get total minutes
 
-            cmd(f'/sbin/shutdown {action_cmd} {t2}', stderr=STDOUT)
+            cmdl(['/sbin/shutdown', action_cmd, str(t2)], stderr=STDOUT)
             # Inform all other logged in users about the reboot/shutdown
             wall_msg = f'System {action} is scheduled {time[1]} {time[0]}'
-            cmd(f'/usr/bin/wall "{wall_msg}"')
+            cmdl(['/usr/bin/wall', wall_msg])
         else:
             if not ts:
                 exit(f'Invalid time "{time[0]}". Uses 24 Hour Clock format')

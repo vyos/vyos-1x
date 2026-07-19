@@ -23,14 +23,14 @@ from tabulate import tabulate
 import vyos.opmode
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 CGNAT_TABLE = 'cgnat'
 
 
 def _get_raw_data(external_address: str = '', internal_address: str = '') -> list[dict]:
     """Get CGNAT dictionary and filter by external or internal address if provided."""
-    cmd_output = cmd(f'nft --json list table ip {CGNAT_TABLE}')
+    cmd_output = cmdl(['nft', '--json', 'list', 'table', 'ip', CGNAT_TABLE])
     data = json.loads(cmd_output)
 
     elements = data['nftables'][2]['map']['elem']

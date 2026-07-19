@@ -22,7 +22,7 @@ class DropTail(QoSBase):
         if 'queue_limit' in config:
             limit = config["queue_limit"]
             tmp += f' limit {limit}'
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)

@@ -81,7 +81,7 @@ ArgFamily = typing.Literal['inet', 'inet6', 'l2vpn']
 ArgFamilyModifier = typing.Literal['unicast', 'labeled_unicast', 'multicast', 'vpn', 'flowspec']
 
 def reset(command: str):
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
     tokens = command.split()
 
@@ -101,35 +101,35 @@ def reset(command: str):
             tokens[index] = "*"
 
     command = " ".join(tokens)
-    cmd(f'vtysh -c "{command}"')
+    cmdl(['vtysh', '-c', command])
 
 def show_summary(raw: bool):
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
 
     if raw:
         from json import loads
 
-        output = cmd(f"vtysh -c 'show bgp summary json'").strip()
+        output = cmdl(['vtysh', '-c', 'show bgp summary json']).strip()
 
         # FRR 8.5 correctly returns an empty object when BGP is not running,
         # we don't need to do anything special here
         return loads(output)
     else:
-        output = cmd(f"vtysh -c 'show bgp summary'")
+        output = cmdl(['vtysh', '-c', 'show bgp summary'])
         return output
 
 def show_neighbors(raw: bool):
-    from vyos.utils.process import cmd
+    from vyos.utils.process import cmdl
     from vyos.utils.dict import dict_to_list
 
     if raw:
         from json import loads
 
-        output = cmd(f"vtysh -c 'show bgp neighbors json'").strip()
+        output = cmdl(['vtysh', '-c', 'show bgp neighbors json']).strip()
         d = loads(output)
         return dict_to_list(d, save_key_to="neighbor")
     else:
-        output = cmd(f"vtysh -c 'show bgp neighbors'")
+        output = cmdl(['vtysh', '-c', 'show bgp neighbors'])
         return output
 
 def show(raw: bool,
@@ -152,8 +152,8 @@ def show(raw: bool,
         frr_command = frr_command_template.render(kwargs)
         frr_command = re.sub(r'\s+', ' ', frr_command)
 
-        from vyos.utils.process import cmd
-        output = cmd(f"vtysh -c '{frr_command}'")
+        from vyos.utils.process import cmdl
+        output = cmdl(['vtysh', '-c', frr_command])
 
         if raw:
             from json import loads

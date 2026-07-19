@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from vyos.utils.process import cmd
+from vyos.utils.process import cmdl
 
 modules = {
     "intel": ["e1000", "e1000e", "igb", "ixgbe", "ixgbevf", "i40e",
@@ -37,7 +37,7 @@ class TestKernelModules(unittest.TestCase):
                 # We want to uncover all modules that fail,
                 # not fail at the first one
                 try:
-                    cmd(f'modprobe {m}')
+                    cmdl(['modprobe', m])
                 except:
                     success = False
                     not_found.append(m)
