@@ -322,7 +322,8 @@ def apply(wifi):
     call(f'systemctl stop wpa_supplicant@{interface}.service')
 
     if 'deleted' in wifi:
-        WiFiIf(**wifi).remove()
+        if interface_exists(interface):
+            WiFiIf(**wifi).remove()
 
         # run the dependents and return
         call_dependents()
