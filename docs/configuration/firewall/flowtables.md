@@ -62,24 +62,24 @@ To use flowtables, you need to configure the following:
 Creating a flow table:
 
 ```{cfgcmd} set firewall flowtable \<flow_table_name\> interface \<iface\>
-
 Specify interfaces to use in the flowtable.
 ```
 
 ```{cfgcmd} set firewall flowtable \<flow_table_name\> description \<text\>
-```
 
 Provide a description for the flow table.
+```
 
 ```{cfgcmd} set firewall flowtable \<flow_table_name\> offload \<hardware | software\>
 
 Specify the offload type the flowtable uses: ``hardware`` or
 ``software``. The default is ``software`` offload.
 ```
+
 :::{note}
 **Hardware offload**: Make sure your network interface controller
 (NIC) supports hardware offloading and that you have the necessary drivers
-> installed before enabling this option.
+installed before enabling this option.
 :::
 
 Creating rules for using flow tables:
@@ -95,6 +95,19 @@ Create a firewall rule in the forward chain with the action set to
 Create a firewall rule in the forward chain and specify which flowtable
 to use. Only applicable if the action is ``offload``.
 ```
+
+### Interface Selection
+
+:::{important}
+Always configure the flowtable with the interface that VyOS observes
+at the forward hook — which is not necessarily the physical interface.
+When traffic is received or transmitted via a logical interface, VyOS
+tracks that logical interface, not the underlying physical device. Registering
+the wrong interface in the flowtable causes every flow lookup to miss,
+falling back to the classic forwarding path and defeating the purpose of
+fast-path offload.
+:::
+
 
 ## Configuration Example
 
@@ -122,7 +135,6 @@ set firewall ipv4 forward filter default-action 'drop'
 set firewall ipv4 forward filter rule 10 action 'offload'
 set firewall ipv4 forward filter rule 10 offload-target 'FT01'
 set firewall ipv4 forward filter rule 10 state 'established'
-set firewall ipv4 forward filter rule 10 state 'related'
 set firewall ipv4 forward filter rule 20 action 'accept'
 set firewall ipv4 forward filter rule 20 state 'established'
 set firewall ipv4 forward filter rule 20 state 'related'
@@ -150,6 +162,77 @@ Here's what happens for a desired connection:
 > 6. Subsequent packets skip the traditional path and use the **Fast Path**
 >    for offloading.
 
+
+## Flowtable Configuration on Logical and Sub-Interfaces
+
+Configure the flowtable with the interface name you used in VyOS
+configuration. When VLANs, bonds, or bridges are involved, that is the
+logical interface (`bond0`, `br0`, `eth0.10`) — not the underlying physical
+port.
+
+For example:
+- If `bond0` is configured, VyOS sees `bond0` — not `eth0` or `eth1`
+- If `br0` is configured, VyOS sees `br0` — not its member interfaces
+- The flowtable must reference the same interface name VyOS observes
+
+Two forms are accepted, but registering the parent is recommended:
+
+- Registering `bond1` offloads the parent interface **and all its VLAN
+  sub-interfaces** (`bond1.10`, `bond1.20`, etc.) — the kernel
+  automatically discovers them by parsing L2 headers (Linux 5.13+).
+- Registering `bond1.10` directly offloads **only VLAN 10** traffic.
+  But the sub-interface **must exist at commit time**; if it is not
+  yet present when the ruleset is loaded, the configuration might fail.
+
+```none
+# Offload bond1 and all sub-interfaces (bond1.10, bond1.20, ...)
+set firewall flowtable FT01 interface 'bond1'
+
+# Offload VLAN 10 only: register the sub-interface directly
+set firewall flowtable FT01 interface 'bond1.10'
+```
+
+### Example: Mixed parent and sub-interface offload
+
+Consider a setup where:
+- Traffic ingresses on `bond1.10` (VLAN 10)
+- Traffic egresses on `bond2.20` (VLAN 20)
+
+```none
+set firewall flowtable FT01 interface 'bond1'
+set firewall flowtable FT01 interface 'bond2.20'
+set firewall ipv4 forward filter default-action 'drop'
+set firewall ipv4 forward filter rule 10 action 'offload'
+set firewall ipv4 forward filter rule 10 offload-target 'FT01'
+set firewall ipv4 forward filter rule 10 state 'established'
+set firewall ipv4 forward filter rule 20 action 'accept'
+set firewall ipv4 forward filter rule 20 state 'established'
+set firewall ipv4 forward filter rule 20 state 'related'
+set firewall ipv4 forward filter rule 200 action 'accept'
+set firewall ipv4 forward filter rule 200 inbound-interface name 'bond*'
+```
+
+In this configuration:
+- `bond1` covers ingress from `bond1.10` and any other `bond1` sub-interfaces.
+- `bond2.20` offloads VLAN 20 only — other `bond2` sub-interfaces remain on
+  the standard forwarding path. This illustrates how to selectively offload
+  a single VLAN while leaving others on the slow path.
+- Rule 200 uses a wildcard to accept any traffic arriving
+  on any bond interface or sub-interface before the flow reaches established
+  state and is eligible for offload
+- Once a flow is established, rule 10 adds it to the flowtable and subsequent
+  packets bypass the forward hook entirely via the fast path
+
+:::{note}
+The interface directions in this example are from the perspective of
+client-to-server traffic. In practice each interface handles traffic in
+both directions, and the flowtable manages offload symmetrically once the
+flow is established.
+To confirm the ingress and egress interfaces, enable `log` on a rule in the
+forward hook and check the firewall logs — see the
+{doc}`Firewall </configuration/firewall/index>` section for configuration.
+:::
+
 ### Checks
 
 Check the conntrack table to verify that the system accepted and properly
@@ -169,8 +252,47 @@ Rule     Action    Protocol      Packets    Bytes  Conditions
 110      accept    tcp                 2      120  ip daddr 192.0.2.100 tcp dport 1122 iifname "eth0"  accept
 default  drop      all                 7      420
 
-vyos@FlowTables:~$ sudo conntrack -L | grep tcp
-conntrack v1.4.6 (conntrack-tools): 5 flow entries have been shown.
-tcp      6 src=198.51.100.100 dst=192.0.2.100 sport=41676 dport=1122 src=192.0.2.100 dst=198.51.100.100 sport=1122 dport=41676 [OFFLOAD] mark=0 use=2
-vyos@FlowTables:~$
+vyos@FlowTables:~$ show conntrack table ipv4
+Original src        Original dst    Reply src        Reply dst           Protocol    State    Timeout    Mark    Zone
+------------------  --------------  ---------------  ------------------  ----------  -------  ---------  ------  ------
+198.51.100.100:41676  192.0.2.100:1122  192.0.2.100:1122  198.51.100.100:41676  tcp                  n/a        0
 ```
+
+#### Interface identification
+
+To verify that VyOS identifies traffic by its logical sub-interface
+and not the underlying physical device, inspect the firewall log:
+
+```none
+vyos@FlowTables:~$ show log firewall
+Jun 18 22:22:00 kernel: [ipv4-FWD-filter-200-A] IN=bond1.10 OUT=bond2.20 \
+  MAC=00:53:00:00:00:02:00:53:00:00:00:01:08:00 SRC=192.168.10.2 \
+  DST=192.168.20.2 LEN=84 PROTO=ICMP TYPE=8 CODE=0 ID=3572 SEQ=1
+```
+
+The `IN` and `OUT` fields show `bond1.10` and `bond2.20` — the logical
+sub-interfaces — not the underlying physical or bond device.
+
+#### Flowtable offload
+
+Run the following command to verify that the connections are offloaded to
+the flowtable fast path:
+
+```none
+vyos@FlowTables:~$ show conntrack table ipv4
+Original src        Original dst       Reply src          Reply dst           Protocol    State    Timeout    Mark    Zone
+------------------  -----------------  -----------------  ------------------  ----------  -------  ---------  ------  ------
+192.168.10.2:45140  192.168.20.2:5201  192.168.20.2:5201  192.168.10.2:45140  tcp                  n/a        0
+192.168.10.2:45124  192.168.20.2:5201  192.168.20.2:5201  192.168.10.2:45124  tcp                  n/a        0
+
+
+vyos@FlowTables:~$ show conntrack table ipv4
+Original src        Original dst       Reply src          Reply dst           Protocol    State      Timeout    Mark    Zone
+------------------  -----------------  -----------------  ------------------  ----------  ---------  ---------  ------  ------
+192.168.10.2:45124  192.168.20.2:5201  192.168.20.2:5201  192.168.10.2:45124  tcp         TIME_WAIT  105        0
+```
+
+Entries with `Timeout` shown as `n/a` and a blank `State` confirm that
+the flows are offloaded to the flowtable fast path — subsequent packets
+bypass the firewall entirely. Once the TCP session closes, the entry
+transitions to `TIME_WAIT` and the timeout counter resumes.
