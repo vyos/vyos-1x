@@ -1,5 +1,9 @@
 ATTR{[dmi/id]sys_vendor}!="Microsoft Corporation", GOTO="end_hyperv_nic"
 
-ACTION=="add", SUBSYSTEM=="net", DRIVERS=="hv_pci", NAME="vf_%k"
+# Primary rename path for Azure VF.
+# Use helper-based naming so the VFs that reuse eth0,eth1,.. names do not
+# collide with already assigned vf_ethN names. Also, prevent renaming of
+# the interfaces already renamed to vf_ethN
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="hv_pci", KERNEL=="eth*", PROGRAM="vyos_vf_name %k", NAME="%c"
 
 LABEL="end_hyperv_nic"
