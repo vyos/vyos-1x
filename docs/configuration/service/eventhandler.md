@@ -1,129 +1,186 @@
+---
+myst:
+  html_meta:
+    description: |
+      The event handler watches the system log and runs a user-supplied
+      script when a preconfigured event occurs. Configure a pattern,
+      optionally a syslog identifier, and a script path per event.
+    keywords: event-handler, syslog, log monitoring, script, automation
+---
+
 (event-handler)=
 
-# Event Handler
+# Event handler
 
-## Event Handler Technology Overview
+The event handler watches the system log and runs a user-supplied
+script when a preconfigured event occurs. For each event, you configure
+a pattern to look for in the log, optionally restrict matching to a
+specific syslog identifier, and a script to run when a match occurs.
 
-Event handler allows you to execute scripts when a string that matches
-a regex or a regex with a service name appears in journald logs. You
-can pass variables, arguments, and a full matching string to the script.
+Upon a match, the event handler launches the script. The script can
+read the matched log entry from an environment variable named
+`message` (for example, to extract an IP address or include the log
+line in a notification). You can also pass your own environment
+variables or a fixed argument string to the script.
 
-## How to configure Event Handler
+## Configuration
 
-> [1. Create an event handler](#create-an-event-handler)
->
-> [2. Add regex to the script](#add-regex-to-the-script)
->
-> [3. Add a full path to the script](#add-a-full-path-to-the-script)
->
-> [4. Add optional parameters](#add-optional-parameters)
+Each event must be configured with a name, a pattern, and a script
+path. All other settings are optional.
 
-## Event Handler Configuration Steps
+### Mandatory settings
 
-### 1. Create an event handler
+```{cfgcmd} set service event-handler event \<name\> filter pattern \<regex\>
 
-```{cfgcmd} set service event-handler event \<event-handler name\>
+**Configure a regular expression to match against log entries for the
+specified event.**
 
-This is an optional command because the event handler will be
-automatically created after any of the next commands.
+The regular expression must match the entire log entry, not just a
+part of it. For example, to match any log entry that contains `eth0`,
+wrap it as `.*eth0.*`. Matching is case-sensitive.
 ```
 
+Example:
 
-### 2. Add regex to the script
-
-```{cfgcmd} set service event-handler event \<event-handler name\> filter pattern \<regex\>
-
-This is a mandatory command. Sets regular expression to match
-against log string message.
-
-:::{note}
-The regular expression matches if and only if the entire
-string matches the pattern.
-:::
+```none
+set service event-handler event LINK-DOWN filter pattern '.*eth0.*,RUNNING,.*->.*'
 ```
 
+```{cfgcmd} set service event-handler event \<name\> script path \<path\>
 
-### 3. Add a full path to the script
-
-```{cfgcmd} set service event-handler event \<event-handler name\> script path \<path to script\>
-
-This is a mandatory command. Sets the full path to the script.
-The script file must be executable.
+**Configure the path to the script run for the specified event.**
 ```
 
-
-### 4. Add optional parameters
-
-```{cfgcmd} set service event-handler event \<event-handler name\> filter syslog-identifier \<syslogid name\>
-
-This is an optional command. Filters log messages by
-syslog-identifier.
+```{note}
+Event-handler scripts must be executable (see
+{ref}`command-scripting`). Storing them under `/config/scripts/`
+ensures they are preserved across image upgrades.
 ```
 
-```{cfgcmd} set service event-handler event \<event-handler name\> script environment \<env name\> value \<env value\>
-
-This is an optional command. Adds environment and its value to
-the script. Use separate commands for each environment.
-
-One implicit environment exists.
-
-* ``message``: Full message that has triggered the script.
+```{warning}
+Event-handler scripts run with root privileges. Review them carefully
+before use.
 ```
 
-```{cfgcmd} set service event-handler event \<event-handler name\> script arguments \<arguments\>
+Example:
 
-This is an optional command. Adds arguments to the script.
-Arguments must be separated by spaces.
-
-:::{note}
-We don't recommend using arguments. Using environment variables is preferable.
-:::
+```none
+set service event-handler event LINK-DOWN script path /config/scripts/link-down.py
 ```
 
+### Optional settings
+
+```{cfgcmd} set service event-handler event \<name\> filter syslog-identifier \<identifier\>
+
+**For the specified event, match the regular expression only against
+log entries produced by the specified process.**
+```
+
+Example:
+
+```none
+set service event-handler event LINK-DOWN filter syslog-identifier kernel
+```
+
+```{cfgcmd} set service event-handler event \<name\> script environment \<env-var\> value \<value\>
+
+**Add an environment variable, with the specified name and value, to
+the script's execution environment.**
+
+Repeat the command for each variable.
+```
+
+```{note}
+The variable name `message` is reserved for the matched log entry and
+cannot be reused.
+```
+
+Example:
+
+```none
+set service event-handler event LINK-DOWN script environment interface_name value eth0
+```
+
+```{cfgcmd} set service event-handler event \<name\> script arguments \<arguments\>
+
+**Append an argument string to the script invocation.**
+
+The string is appended verbatim after the script path. To pass
+multiple arguments, separate them with spaces within a single string.
+```
+
+```{note}
+Prefer environment variables for passing data to the script.
+```
+
+Example:
+
+```none
+set service event-handler event LINK-DOWN script arguments '--notify admin@example.com'
+```
 
 ## Example
 
-Event handler that monitors the state of interface eth0.
+The following example configures an event handler that reacts to
+link-state messages emitted by `netplugd` for `eth0` and runs a Python
+script. When triggered, the script writes a line containing the
+original log entry and the configured `interface_name` value to
+`/tmp/link-state.log`.
+
+### Configuration
 
 ```none
-set service event-handler event INTERFACE_STATE_DOWN filter pattern '.*eth0.*,RUNNING,.*->.*'
-set service event-handler event INTERFACE_STATE_DOWN filter syslog-identifier 'netplugd'
-set service event-handler event INTERFACE_STATE_DOWN script environment interface_action value 'down'
-set service event-handler event INTERFACE_STATE_DOWN script environment interface_name value 'eth0'
-set service event-handler event INTERFACE_STATE_DOWN script path '/config/scripts/eventhandler.py'
+set service event-handler event LINK-DOWN filter pattern '.*eth0.*,RUNNING,.*->.*'
+set service event-handler event LINK-DOWN filter syslog-identifier 'netplugd'
+set service event-handler event LINK-DOWN script environment interface_name value 'eth0'
+set service event-handler event LINK-DOWN script path '/config/scripts/link-down.py'
 ```
 
-Event handler script
+### Event handler script
+
+Save the following as `/config/scripts/link-down.py`:
 
 ```none
 #!/usr/bin/env python3
 #
 # VyOS event-handler script example
+
+from datetime import datetime
 from os import environ
-import subprocess
+from pathlib import Path
 from sys import exit
 
-# Perform actions according to requirements
+LOG_FILE = Path('/tmp/link-state.log')
+
+
 def process_event() -> None:
-    # Get variables
-    message_text = environ.get('message')
-    interface_name = environ.get('interface_name')
-    interface_action = environ.get('interface_action')
-    # Print the message that triggered this script
-    print(f'Logged message: {message_text}')
-    # Prepare a command to run
-    command = f'sudo ip link set {interface_name} {interface_action}'.split()
-    # Execute a command
-    subprocess.run(command)
+    # 'message' is set by the event handler and holds the log entry
+    # that matched the configured pattern.
+    log_line = environ.get('message', '')
+    # User-defined environment variables are read the same way.
+    interface = environ.get('interface_name', '')
+
+    timestamp = datetime.now().isoformat()
+    with LOG_FILE.open('a') as f:
+        f.write(
+            f'{timestamp} link-state change on {interface}: {log_line}\n'
+        )
+
 
 if __name__ == '__main__':
     try:
-        # Run script actions and exit
         process_event()
         exit(0)
     except Exception as err:
-        # Exit properly in case if something in the script goes wrong
-        print(f'Error running script: {err}')
+        # Script stdout is discarded by the event handler, but stderr
+        # is captured and surfaces in the system journal.
+        from sys import stderr
+        print(f'Error running script: {err}', file=stderr)
         exit(1)
 ```
 
+After creating the script, make it executable:
+
+```none
+sudo chmod +x /config/scripts/link-down.py
+```
