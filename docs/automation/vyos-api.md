@@ -266,6 +266,27 @@ response:
 }
 ```
 
+Note that `showConfig` returns an error (HTTP 400) for a path that is valid
+in the schema but has no configuration under it:
+
+```none
+curl -k --location --request POST 'https://vyos/retrieve' \
+--form data='{"op": "showConfig", "path": ["firewall", "ipv4", "forward"]}' \
+--form key='MY-HTTPS-API-PLAINTEXT-KEY'
+
+response:
+{
+   "success": false,
+   "data": null,
+   "error": "Configuration under specified path is empty"
+}
+```
+
+Automation that compares a desired state against a fresh or partially
+configured system should either probe the path with `exists` first, or
+treat this specific error as "no configuration present" rather than as a
+failed request.
+
 
 ### /reset
 
@@ -381,6 +402,27 @@ response:
 }
 ```
 
+The endpoint can also export the running configuration as flat `set`
+commands, equivalent to the operational mode command
+`show configuration commands`. This is convenient for mirroring, diffing,
+or backing up a configuration:
+
+```none
+curl -k --location --request POST 'https://vyos/show' \
+--form data='{"op": "show", "path": ["configuration", "commands"]}' \
+--form key='MY-HTTPS-API-PLAINTEXT-KEY'
+
+response (shortened):
+{
+   "success": true,
+   "data": "set interfaces ethernet eth0 address 'dhcp'\n
+            set interfaces ethernet eth0 hw-id '50:00:00:01:00:00'\n
+            set system host-name 'vyos'\n
+            ...",
+   "error": null
+}
+```
+
 
 ### /generate
 
@@ -439,6 +481,25 @@ The API processes each request in a session and commits it. For components such
 as DHCP and PPPoE servers, IPsec, VXLAN, and other tunnels, VyOS requires the
 entire configuration block for a commit.
 
+Because every request is committed immediately, the fields of a single
+configuration node cannot be staged across separate requests: everything the
+commit validators require must arrive in the same request, passed as a list
+of operations (see below). Common examples:
+
+- `system task-scheduler task <name>`: `executable` together with
+  `interval` (or `crontab-spec`).
+- `nat destination rule <N>`: `translation` together with the other rule
+  fields.
+- `firewall ... rule <N>`: `action` in the request that creates the rule;
+  `protocol` together with `port` or `port-group`.
+
+Sending such fields in separate requests fails validation with errors such as
+`Protocol must be defined if specifying a port or port-group` or
+`must define either interval or crontab-spec`, because each request is
+validated as a complete commit on its own. Likewise, setting an attribute
+such as `description` on a rule that no request has created yet fails with
+`Configuration path ... is not valid`.
+
 The endpoint can process multiple commands if you pass them as a list to
 the `data` field.
 
@@ -454,6 +515,19 @@ response:
    "error": null
 }
 ```
+
+A list of operations is applied and committed as a single transaction: if
+any operation fails, nothing is committed. The error message may not
+identify which operation in the list failed, so if a large list fails
+validation, retry the operations in smaller lists (or one per request) to
+locate the offending one.
+
+:::{note}
+The `/configure` endpoint commits changes to the running configuration but
+does not save them to disk, and it does not accept `{"op": "save"}` (that
+returns HTTP 400). To persist changes across reboots, send
+`{"op": "save"}` to the `/config-file` endpoint.
+:::
 
 
 ### /config-file
@@ -538,6 +612,26 @@ response:
 }
 ```
 
+
+## Bulk configuration
+
+Large applies over the API (initial provisioning, firewall migrations with
+hundreds of operations) benefit from a few precautions:
+
+- Prefer several requests of moderate size over one very large list of
+  operations. A very large single commit can run longer than the HTTP
+  gateway allows and return a timeout even though the commit itself
+  eventually succeeds — after a timeout, reconcile the configuration
+  state (for example with `/retrieve`) before retrying, so an
+  already-applied change is not replayed.
+- Commits that reference `geoip` country codes or `remote-group` URLs are
+  significantly more expensive than plain set operations, because they
+  trigger database or remote-list processing. Apply those one per request.
+- The request body size is limited by
+  `service https request-body-size-limit` (1 MB by default); a very large
+  operation list or `config-file` string can exceed it.
+- Consider commit-confirm (below) as a safety net when reconfiguring a
+  remote system.
 
 ## Commit-confirm
 
