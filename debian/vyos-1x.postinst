@@ -278,8 +278,15 @@ if systemctl is-active --quiet vyos-netlinkd; then
 fi
 
 # DHCPv4 stuck-RENEW watchdog (restart dhclient when unicast RENEW is overdue)
+# Enable always; start may fail during image build (no running systemd) — log it.
 if [ -f /lib/systemd/system/vyos-dhclient-lease-watch.timer ]; then
-    systemctl daemon-reload || true
-    systemctl enable vyos-dhclient-lease-watch.timer || true
-    systemctl start vyos-dhclient-lease-watch.timer || true
+    systemctl daemon-reload || echo "WARNING: systemctl daemon-reload failed" >&2
+    if ! systemctl enable vyos-dhclient-lease-watch.timer; then
+        echo "WARNING: failed to enable vyos-dhclient-lease-watch.timer" >&2
+    fi
+    if ! systemctl start vyos-dhclient-lease-watch.timer 2>/dev/null; then
+        echo "NOTE: vyos-dhclient-lease-watch.timer not started (ok during image build)" >&2
+    elif ! systemctl is-active --quiet vyos-dhclient-lease-watch.timer 2>/dev/null; then
+        echo "WARNING: vyos-dhclient-lease-watch.timer enabled but not active" >&2
+    fi
 fi
