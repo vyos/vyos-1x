@@ -7,6 +7,10 @@
 ExecStart=
 ExecStart={{ vrf_command }}/sbin/dhclient -4 {{ dhclient_options }} {{ ifname }}
 ExecStop=
-ExecStop={{ vrf_command }}/sbin/dhclient -4 -r {{ dhclient_options }} {{ ifname }}
+# -x: stop without DHCPRELEASE. -r releases the lease to the server and
+# wipes local recovery state (INIT-REBOOT / HA lease seed). Use -x so a
+# restart or disable keeps the ISC -lf DB and does not RELEASE a lease the
+# peer HA node may still hold under a shared MAC.
+ExecStop={{ vrf_command }}/sbin/dhclient -4 -x {{ dhclient_options }} {{ ifname }}
 WorkingDirectory={{ isc_dhclient_dir }}
 PIDFile={{ isc_dhclient_dir }}/dhclient_%i.pid
