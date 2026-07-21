@@ -276,3 +276,10 @@ fi
 if systemctl is-active --quiet vyos-netlinkd; then
     systemctl restart vyos-netlinkd
 fi
+
+# DHCPv4 stuck-RENEW watchdog (restart dhclient when unicast RENEW is overdue)
+if [ -f /lib/systemd/system/vyos-dhclient-lease-watch.timer ]; then
+    systemctl daemon-reload || true
+    systemctl enable vyos-dhclient-lease-watch.timer || true
+    systemctl start vyos-dhclient-lease-watch.timer || true
+fi

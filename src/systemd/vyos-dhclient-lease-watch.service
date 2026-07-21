@@ -1,0 +1,10 @@
+[Unit]
+Description=VyOS DHCPv4 stuck-RENEW watchdog (oneshot)
+Documentation=man:dhclient(8)
+After=vyos-router.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/vyos-dhclient-lease-watch
+SyslogIdentifier=vyos-dhclient-lease-watch
+Nice=10
