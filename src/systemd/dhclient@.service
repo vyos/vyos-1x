@@ -8,7 +8,9 @@ ConditionPathExists=/run/dhclient/dhclient_%i.conf
 [Service]
 Type=exec
 ExecStart=/sbin/dhclient -4 -d $DHCLIENT_OPTS
-ExecStop=/sbin/dhclient -4 -r $DHCLIENT_OPTS
+# -x stops without DHCPRELEASE (preserves -lf for INIT-REBOOT / HA seed).
+# Explicit RELEASE remains available via "renew dhcp interface" workflows.
+ExecStop=/sbin/dhclient -4 -x $DHCLIENT_OPTS
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10
