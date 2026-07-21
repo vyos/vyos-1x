@@ -75,6 +75,8 @@ class ConfigManager:
         components = {}
         for file in include_list:
             path = Path(config_scripts_dir).joinpath(file)
+            if not path.exists():
+                continue
             file_stem = Path(file).stem
             name = file_stem.replace('-', '_')
 
