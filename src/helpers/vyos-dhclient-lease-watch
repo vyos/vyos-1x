@@ -11,7 +11,7 @@
 # valid locally, renew time long past, no successful lease rewrite).
 #
 # Production: ISP session loss while the modem link stayed up left dhclient in
-# unicast-RENEW for the remainder of a multi-hour lease (T9085 sibling).
+# unicast-RENEW for the remainder of a multi-hour lease (T9108 / T9085 sibling).
 # See also T9085 (RENEW success without reinstalling a missing default).
 
 import glob
@@ -20,7 +20,7 @@ import re
 import subprocess
 import syslog
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 DHCLIENT_DIR = '/run/dhclient'
 # Wait this long after the ISC "renew" time before declaring RENEW stuck.
@@ -29,7 +29,8 @@ GRACE_SECS = 900  # 15 minutes
 COOLDOWN_SECS = 1800  # 30 minutes
 STATE_DIR = '/run/vyos-dhclient-lease-watch'
 
-# ISC dhclient lease timestamps: "renew 2 2026/07/21 05:22:11;"
+# ISC dhclient default db-time-format: UTC civil time
+# "renew 2 2026/07/21 05:22:11;"
 _TS = re.compile(
     r'(renew|rebind|expire)\s+\d+\s+'
     r'(\d{4})/(\d{2})/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\s*;'
@@ -37,10 +38,11 @@ _TS = re.compile(
 
 
 def _parse_ts(year, month, day, hour, minute, second) -> float:
-    # Lease file times are written in local time by isc-dhclient.
+    # ISC default lease format is UTC (db-time-format default).
     return datetime(
         int(year), int(month), int(day),
         int(hour), int(minute), int(second),
+        tzinfo=timezone.utc,
     ).timestamp()
 
 
@@ -70,14 +72,22 @@ def _service_active(unit: str) -> bool:
     return r.stdout.strip() == 'active'
 
 
-def _restart(iface: str) -> None:
+def _restart(iface: str) -> bool:
+    """Restart dhclient@iface. Return True if systemctl succeeded."""
     unit = f'dhclient@{iface}.service'
     syslog.syslog(
         syslog.LOG_WARNING,
         f'{unit}: DHCPv4 RENEW overdue (likely stuck unicast RENEW); '
         f'restarting client to force rediscovery',
     )
-    subprocess.run(['systemctl', 'restart', unit], check=False)
+    r = subprocess.run(['systemctl', 'restart', unit], check=False)
+    if r.returncode != 0:
+        syslog.syslog(
+            syslog.LOG_ERR,
+            f'{unit}: restart failed (rc={r.returncode}); will retry next cycle',
+        )
+        return False
+    return True
 
 
 def main() -> int:
@@ -131,7 +141,9 @@ def main() -> int:
         except (OSError, ValueError):
             pass
 
-        _restart(iface)
+        if not _restart(iface):
+            # No cooldown on failure — next timer tick can retry.
+            continue
         try:
             with open(state_file, 'w', encoding='utf-8') as f:
                 f.write(str(now))
