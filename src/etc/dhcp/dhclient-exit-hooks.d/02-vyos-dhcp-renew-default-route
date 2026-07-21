@@ -1,0 +1,53 @@
+# T9085: reinstall missing IPv4 default on RENEW/REBIND
+#
+# Stock dhclient-script only installs option-3 defaults on BOUND/REBOOT (or
+# when the leased IP changes). The RENEW/REBIND same-IP path only runs
+# "ip addr change" and never rechecks the default. If the kernel default was
+# flushed while the lease remained valid (staged valid_lft expiry, manual
+# delete, remetric races), RENEW leaves the interface with a live address and
+# no default via $new_routers.
+#
+# Mirror the RFC3442 RENEW exit-hook pattern (02-vyos-dhcp-renew-rfc3442): only
+# act when the default is missing. Use the enter-hook "ip" wrapper so FRR
+# receives the route (tag/distance IF_METRIC). Honor no-default-route (enter
+# hook blanks new_routers) and skip when classless static routes are present
+# (stock ignores option 3 in that case).
+
+RUN="yes"
+
+if [ "$RUN" != "yes" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+case "$reason" in
+    RENEW|REBIND) ;;
+    *) return 0 2>/dev/null || exit 0 ;;
+esac
+
+# Stock: option 3 ignored when RFC3442 classless routes are present
+if [ -n "$new_rfc3442_classless_static_routes" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+if [ -z "$new_routers" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+if_metric="${IF_METRIC:-210}"
+
+for router in $new_routers; do
+    # Already present for this gateway + interface?
+    if ip -4 route show default via "${router}" dev "${interface}" 2>/dev/null | grep -q .; then
+        if_metric=$((if_metric + 1))
+        continue
+    fi
+
+    logmsg info \
+        "RENEW/REBIND: reinstalling missing default via ${router} dev ${interface} metric ${if_metric}"
+
+    # Uses enter-hook ip() wrapper when defined (FRR-aware); EEXIST-safe.
+    ip -4 route add default via "${router}" dev "${interface}" \
+        metric "${if_metric}" >/dev/null 2>&1
+
+    if_metric=$((if_metric + 1))
+done
