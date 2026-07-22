@@ -144,7 +144,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           path: build/vyos-1x
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          repository: ${{ github.repository }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
           ref: ${{ needs.set_config.outputs.vyos_build_ref }}
           persist-credentials: false
