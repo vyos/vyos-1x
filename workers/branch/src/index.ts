@@ -38,7 +38,16 @@ export function withDocsHeaders(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const resp = await env.ASSETS.fetch(request);
+    // With assets html_handling "none", the runtime serves explicit .html URLs directly
+    // but does NOT map a directory URL ("/foo/") to its index.html — the worker must map
+    // trailing-slash URLs to index.html itself to preserve ReadTheDocs URL parity.
+    let assetRequest = request;
+    if (url.pathname.endsWith("/")) {
+      const mapped = new URL(url);
+      mapped.pathname = url.pathname + "index.html";
+      assetRequest = new Request(mapped, request);
+    }
+    const resp = await env.ASSETS.fetch(assetRequest);
     return withDocsHeaders(resp, url.pathname, env);
   },
 } satisfies ExportedHandler<Env>;
