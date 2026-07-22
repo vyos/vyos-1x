@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+import io
 import urllib.error
 import urllib.request
+from email.message import Message
 
 from scripts.docs_gates import smoke
 from scripts.docs_gates.conftest import REDIRECT_LOCATION, REDIRECT_PATH
@@ -68,3 +72,93 @@ def test_opener_observes_redirect_directly_not_followed(redirect_http_server):
 def test_search_mount_present():
     assert smoke.search_mount_present('<div id="vyos-search" role="search"></div>') is True
     assert smoke.search_mount_present('<html><body>no search here</body></html>') is False
+
+
+# --- Hardening (this change): explicit UA + per-probe retry. Mock at the _OPENER boundary
+# (the exact object _probe_once() opens through, mirroring the redirect test above which drives
+# smoke._OPENER directly), and shrink RETRY_SLEEP_SECONDS to 0 so retries don't wall-clock. ---
+
+
+class _FakeResp:
+    """Stand-in for what _OPENER.open() yields: a context manager exposing .status /
+    .headers / .read()."""
+
+    def __init__(self, status: int, headers: dict[str, str], body: bytes = b""):
+        self.status = status
+        self.headers = headers
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> "_FakeResp":
+        return self
+
+    def __exit__(self, *exc: object) -> bool:
+        return False
+
+
+class _FakeOpener:
+    """Yields queued responses in order; an Exception item is raised (models a transport
+    error, or a non-2xx delivered as HTTPError). Records each opened Request for assertions."""
+
+    def __init__(self, responses: list[object]):
+        self._responses = list(responses)
+        self.calls: list[urllib.request.Request] = []
+
+    def open(self, req: urllib.request.Request, timeout: float | None = None) -> object:
+        self.calls.append(req)
+        item = self._responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def _http_error(code: int, headers: dict[str, str]) -> urllib.error.HTTPError:
+    hdrs = Message()
+    for k, v in headers.items():
+        hdrs[k] = v
+    return urllib.error.HTTPError("https://host.invalid/x", code, "msg", hdrs, io.BytesIO(b""))
+
+
+def test_probe_sends_explicit_user_agent(monkeypatch):
+    opener = _FakeOpener([_FakeResp(200, {"X-Docs-Build": "sha1"})])
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    probe = smoke.Probe("/en/1.5/index.html", 200, assert_docs_build=True, assert_apex_build=False)
+    ok, *_ = smoke._probe_once("host.example", probe, "sha1", "cf-id", "cf-secret")
+    assert ok is True
+    req = opener.calls[0]
+    assert req.get_header("User-agent") == smoke.USER_AGENT   # urllib capitalizes the key
+    assert req.get_header("Cf-access-client-id") == "cf-id"   # CF-Access headers still sent
+
+
+def test_retry_passes_when_second_attempt_ok(monkeypatch):
+    monkeypatch.setattr(smoke, "RETRY_SLEEP_SECONDS", 0)
+    opener = _FakeOpener([
+        _FakeResp(307, {"X-Docs-Build": "stale"}),    # attempt 1: previous-version blip
+        _FakeResp(200, {"X-Docs-Build": "goodsha"}),  # attempt 2: propagation settled
+    ])
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    probe = smoke.Probe("/en/1.5/cli.html", 200, assert_docs_build=True, assert_apex_build=False)
+    assert smoke._probe_with_retries("host", probe, "goodsha", "id", "sec") is True
+    assert len(opener.calls) == 2
+
+
+def test_retry_fails_after_exhausting_attempts(monkeypatch):
+    monkeypatch.setattr(smoke, "RETRY_SLEEP_SECONDS", 0)
+    opener = _FakeOpener([_FakeResp(307, {"X-Docs-Build": "stale"})
+                          for _ in range(smoke.MAX_ATTEMPTS)])
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    probe = smoke.Probe("/en/1.5/index.html", 200, assert_docs_build=True, assert_apex_build=False)
+    assert smoke._probe_with_retries("host", probe, "goodsha", "id", "sec") is False
+    assert len(opener.calls) == smoke.MAX_ATTEMPTS   # tried the full budget
+
+
+def test_expected_404_passes_first_attempt_without_retry(monkeypatch):
+    monkeypatch.setattr(smoke, "RETRY_SLEEP_SECONDS", 0)
+    opener = _FakeOpener([_http_error(404, {})])  # 404 delivered as HTTPError, like urllib
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    probe = smoke.Probe("/en/1.5/definitely-missing.html", 404,
+                        assert_docs_build=False, assert_apex_build=False)
+    assert smoke._probe_with_retries("host", probe, "sha", "id", "sec") is True
+    assert len(opener.calls) == 1   # a legitimately-expected 404 must NOT burn retries

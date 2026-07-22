@@ -16,10 +16,22 @@ import argparse
 import dataclasses
 import json
 import sys
+import time
 import urllib.request
 
 APEX_PATHS = ["/versions.json", "/healthz", "/robots.txt", "/sitemap.xml"]
 SEARCH_MOUNT_MARKER = 'id="vyos-search"'
+
+# Explicit UA so the gate never depends on a Cloudflare edge exemption for the default
+# Python-urllib UA. The Browser Integrity Check blocked that UA until a skip rule was added;
+# the gate must not silently rely on that rule surviving.
+USER_AGENT = "vyos-docs-smoke/1.0 (+https://github.com/vyos/vyos-documentation)"
+
+# Per-probe retry (module-level so tests can shrink them). A freshly-deployed worker version
+# can lose a propagation race: for a few minutes a single probe may be served by the PREVIOUS
+# version, returning the wrong status / a stale X-Docs-Build. Retry the probe, not the gate.
+MAX_ATTEMPTS = 3
+RETRY_SLEEP_SECONDS = 20
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -66,33 +78,58 @@ def search_mount_present(html: str) -> bool:
     return SEARCH_MOUNT_MARKER in html
 
 
+def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str,
+                access_secret: str) -> tuple[bool, int | None, str | None, str | None]:
+    """One probe attempt. Returns (ok, status, docs_build, error): a transport exception
+    yields (False, None, None, <msg>); status/docs_build are surfaced for retry logging."""
+    req = urllib.request.Request(f"https://{host}{probe.path}", method="GET")
+    req.add_header("CF-Access-Client-Id", access_id)
+    req.add_header("CF-Access-Client-Secret", access_secret)
+    req.add_header("User-Agent", USER_AGENT)
+    try:
+        with _OPENER.open(req, timeout=30) as resp:
+            status, headers, body = resp.status, resp.headers, resp.read()
+    except urllib.error.HTTPError as e:  # non-2xx still carries headers
+        status, headers, body = e.code, e.headers, e.read()
+    except Exception as e:  # noqa: BLE001 — any transport error fails the probe
+        return False, None, None, str(e)
+    ok = status == probe.expect_status
+    if probe.assert_docs_build and not docs_build_ok(headers.get("X-Docs-Build"), expect_sha):
+        ok = False
+    if probe.assert_apex_build and not headers.get("X-Apex-Build"):
+        ok = False
+    if probe.assert_search_mount and not search_mount_present(
+            body.decode("utf-8", errors="replace")):
+        ok = False
+    return ok, status, headers.get("X-Docs-Build"), None
+
+
+def _probe_with_retries(host: str, probe: Probe, expect_sha: str, access_id: str,
+                        access_secret: str) -> bool:
+    """Up to MAX_ATTEMPTS attempts, RETRY_SLEEP_SECONDS between. Passes if ANY attempt is ok;
+    intermediate failures log SMOKE-RETRY and only the final failed attempt emits SMOKE-FAIL,
+    so a single propagation blip served by the previous worker version cannot fail the gate."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        ok, status, docs_build, error = _probe_once(
+            host, probe, expect_sha, access_id, access_secret)
+        if ok:
+            return True
+        detail = f"status={status} docs-build={docs_build}"
+        if error is not None:
+            detail += f" error={error}"
+        if attempt < MAX_ATTEMPTS:
+            print(f"SMOKE-RETRY {probe.path}: attempt {attempt} {detail}", file=sys.stderr)
+            time.sleep(RETRY_SLEEP_SECONDS)
+        else:
+            print(f"SMOKE-FAIL {probe.path}: {detail}", file=sys.stderr)
+    return False
+
+
 def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: str,
         pdf: str | None, critical: list[str]) -> int:
     failures = 0
     for probe in probe_plan(slug, pdf, critical):
-        req = urllib.request.Request(f"https://{host}{probe.path}", method="GET")
-        req.add_header("CF-Access-Client-Id", access_id)
-        req.add_header("CF-Access-Client-Secret", access_secret)
-        try:
-            with _OPENER.open(req, timeout=30) as resp:
-                status, headers, body = resp.status, resp.headers, resp.read()
-        except urllib.error.HTTPError as e:  # non-2xx still carries headers
-            status, headers, body = e.code, e.headers, e.read()
-        except Exception as e:  # noqa: BLE001 — any transport error fails the probe
-            print(f"SMOKE-FAIL {probe.path}: {e}", file=sys.stderr)
-            failures += 1
-            continue
-        ok = status == probe.expect_status
-        if probe.assert_docs_build and not docs_build_ok(headers.get("X-Docs-Build"), expect_sha):
-            ok = False
-        if probe.assert_apex_build and not headers.get("X-Apex-Build"):
-            ok = False
-        if probe.assert_search_mount and not search_mount_present(
-                body.decode("utf-8", errors="replace")):
-            ok = False
-        if not ok:
-            print(f"SMOKE-FAIL {probe.path}: status={status} "
-                  f"docs-build={headers.get('X-Docs-Build')}", file=sys.stderr)
+        if not _probe_with_retries(host, probe, expect_sha, access_id, access_secret):
             failures += 1
     print(json.dumps({"failures": failures}))
     return 1 if failures else 0

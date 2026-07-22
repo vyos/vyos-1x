@@ -6,13 +6,12 @@ export interface Env {
 
 export type CacheClass = "page" | "asset";
 
-// Binary/media assets get the longer asset cache class, alongside .pdf and the Sphinx
-// /_static/ (theme) + /_images/ (figure) trees.
-const ASSET_EXT_RE = /\.(png|jpe?g|svg|gif|ico|woff2?|ttf|eot)$/i;
+// Binary/media asset extensions (case-insensitive, so ".PDF" also matches) get the longer
+// asset cache class, alongside the Sphinx /_static/ (theme) + /_images/ (figure) trees.
+const ASSET_EXT_RE = /\.(pdf|png|jpe?g|webp|svg|gif|ico|woff2?|ttf|otf|eot)$/i;
 
 export function classifyPath(path: string): CacheClass {
   if (
-    path.endsWith(".pdf") ||
     path.includes("/_static/") ||
     path.includes("/_images/") ||
     ASSET_EXT_RE.test(path)
