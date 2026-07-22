@@ -6,8 +6,18 @@ export interface Env {
 
 export type CacheClass = "page" | "asset";
 
+// Binary/media assets get the longer asset cache class, alongside .pdf and the Sphinx
+// /_static/ (theme) + /_images/ (figure) trees.
+const ASSET_EXT_RE = /\.(png|jpe?g|svg|gif|ico|woff2?|ttf|eot)$/i;
+
 export function classifyPath(path: string): CacheClass {
-  if (path.endsWith(".pdf") || path.includes("/_static/")) return "asset";
+  if (
+    path.endsWith(".pdf") ||
+    path.includes("/_static/") ||
+    path.includes("/_images/") ||
+    ASSET_EXT_RE.test(path)
+  )
+    return "asset";
   return "page"; // HTML, versions.json, sitemaps, robots/llms, pagefind index
 }
 
@@ -41,13 +51,34 @@ export default {
     // With assets html_handling "none", the runtime serves explicit .html URLs directly
     // but does NOT map a directory URL ("/foo/") to its index.html — the worker must map
     // trailing-slash URLs to index.html itself to preserve ReadTheDocs URL parity.
-    let assetRequest = request;
     if (url.pathname.endsWith("/")) {
       const mapped = new URL(url);
       mapped.pathname = url.pathname + "index.html";
-      assetRequest = new Request(mapped, request);
+      const resp = await env.ASSETS.fetch(new Request(mapped, request));
+      return withDocsHeaders(resp, url.pathname, env);
     }
-    const resp = await env.ASSETS.fetch(assetRequest);
+    // Bare extensionless path (no trailing slash, no "." in the last segment): it may be a
+    // real directory whose slashed form RTD 301-redirects to ("/foo" → "/foo/"), or a
+    // file-like path with no matching asset (e.g. "/cli", whose real asset is "cli.html")
+    // that RTD 404s. A dot heuristic can't separate them, so probe the assets binding for
+    // "<path>/index.html": 200 → 301 to the slashed form; anything else → fall through to
+    // the exact-path fetch (404 for "/cli", matching live RTD).
+    const lastSegment = url.pathname.slice(url.pathname.lastIndexOf("/") + 1);
+    if (lastSegment !== "" && !lastSegment.includes(".")) {
+      const probe = new URL(url);
+      probe.pathname = url.pathname + "/index.html";
+      const probeResp = await env.ASSETS.fetch(new Request(probe, { method: "GET" }));
+      probeResp.body?.cancel(); // existence check only — release the probe body stream
+      if (probeResp.status === 200) {
+        const location = url.pathname + "/" + url.search; // preserve query; no fragment
+        return withDocsHeaders(
+          new Response(null, { status: 301, headers: { Location: location } }),
+          url.pathname,
+          env,
+        );
+      }
+    }
+    const resp = await env.ASSETS.fetch(request);
     return withDocsHeaders(resp, url.pathname, env);
   },
 } satisfies ExportedHandler<Env>;
