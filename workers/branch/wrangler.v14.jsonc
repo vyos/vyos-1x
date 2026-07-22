@@ -8,7 +8,7 @@
   "assets": {
     "directory": "../../dist/assets",       // populated by CI (Task 3.2); html_handling per §3.2.3
     "binding": "ASSETS",
-    "html_handling": "auto-trailing-slash",
+    "html_handling": "none",                // "none" + worker index-mapping: RTD parity — explicit .html URLs must serve 200, never 307 (§3.2.3 amended 2026-07-22)
     "not_found_handling": "404-page",
     "run_worker_first": true
   },
