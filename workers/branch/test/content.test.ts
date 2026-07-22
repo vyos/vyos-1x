@@ -243,8 +243,11 @@ describe("asset cache-class classification (§3.3, extended)", () => {
       "/en/rolling/_static/fonts/roboto.woff2",
       "/en/rolling/logo.svg",
       "/en/rolling/photo.jpeg",
+      "/en/rolling/hero.webp",               // webp added to ASSET_EXT_RE (standalone path)
+      "/en/rolling/font.otf",                // otf added to ASSET_EXT_RE (standalone path)
       "/en/rolling/icon.ico",
       "/en/rolling/vyos-documentation.pdf",
+      "/en/rolling/vyos-documentation.PDF",  // .pdf folded into the case-insensitive regex
     ]) {
       expect(classifyPath(p)).toBe("asset");
     }

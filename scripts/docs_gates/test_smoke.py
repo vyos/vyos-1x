@@ -1,5 +1,10 @@
+from __future__ import annotations
+
+import io
 import urllib.error
 import urllib.request
+from email.message import Message
+from urllib.parse import urlsplit
 
 from scripts.docs_gates import smoke
 from scripts.docs_gates.conftest import REDIRECT_LOCATION, REDIRECT_PATH
@@ -68,3 +73,193 @@ def test_opener_observes_redirect_directly_not_followed(redirect_http_server):
 def test_search_mount_present():
     assert smoke.search_mount_present('<div id="vyos-search" role="search"></div>') is True
     assert smoke.search_mount_present('<html><body>no search here</body></html>') is False
+
+
+# --- Hardening: explicit UA + round-based retry with an overall deadline. Mock at the _OPENER
+# boundary (the object _probe_once() opens through, mirroring the redirect test above which
+# drives smoke._OPENER directly). run()-level round tests inject a small plan via probe_plan and
+# a path-keyed opener; sleeps are spied (or constants shrunk) so nothing wall-clocks. ---
+
+
+class _FakeResp:
+    """Stand-in for what _OPENER.open() yields: a context manager exposing .status /
+    .headers / .read()."""
+
+    def __init__(self, status: int, headers: dict[str, str], body: bytes = b""):
+        self.status = status
+        self.headers = headers
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> "_FakeResp":
+        return self
+
+    def __exit__(self, *exc: object) -> bool:
+        return False
+
+
+class _FakeOpener:
+    """Yields queued responses in order; an Exception item is raised (models a transport
+    error, or a non-2xx delivered as HTTPError). Records each opened Request for assertions."""
+
+    def __init__(self, responses: list[object]):
+        self._responses = list(responses)
+        self.calls: list[urllib.request.Request] = []
+
+    def open(self, req: urllib.request.Request, timeout: float | None = None) -> object:
+        self.calls.append(req)
+        item = self._responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def _http_error(code: int, headers: dict[str, str]) -> urllib.error.HTTPError:
+    hdrs = Message()
+    for k, v in headers.items():
+        hdrs[k] = v
+    return urllib.error.HTTPError("https://host.invalid/x", code, "msg", hdrs, io.BytesIO(b""))
+
+
+class _ReadBoom(io.BytesIO):
+    """A body whose .read() raises — models a transport error DURING HTTPError.read().
+    urllib's addbase binds the instance's read to fp.read, so overriding it on the fp is the
+    reliable way to make e.read() blow up."""
+
+    def read(self, *args: object) -> bytes:  # noqa: D401
+        raise OSError("reset during body read")
+
+
+def _http_error_read_boom(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError("https://host.invalid/x", code, "msg", Message(), _ReadBoom())
+
+
+class _PathOpener:
+    """Opener keyed by request path: each path maps to a queue consumed one item per probe of
+    that path (item = _FakeResp, or an Exception that is raised). Records probed paths in order,
+    so round scoping / retry counts are assertable across rounds that re-probe only failures."""
+
+    def __init__(self, by_path: dict[str, list[object]]):
+        self._by_path = {p: list(v) for p, v in by_path.items()}
+        self.calls: list[str] = []
+
+    def open(self, req: urllib.request.Request, timeout: float | None = None) -> object:
+        path = urlsplit(req.full_url).path
+        self.calls.append(path)
+        item = self._by_path[path].pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def _plan(paths: list[str]) -> list[smoke.Probe]:
+    """Minimal status-only plan (no build/search assertions) for run() round tests."""
+    return [smoke.Probe(p, 200, assert_docs_build=False, assert_apex_build=False) for p in paths]
+
+
+def test_probe_sends_explicit_user_agent(monkeypatch):
+    opener = _FakeOpener([_FakeResp(200, {"X-Docs-Build": "sha1"})])
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    probe = smoke.Probe("/en/1.5/index.html", 200, assert_docs_build=True, assert_apex_build=False)
+    ok, *_ = smoke._probe_once("host.example", probe, "sha1", "cf-id", "cf-secret")
+    assert ok is True
+    req = opener.calls[0]
+    assert req.get_header("User-agent") == smoke.USER_AGENT   # urllib capitalizes the key
+    assert req.get_header("Cf-access-client-id") == "cf-id"   # CF-Access headers still sent
+
+
+def test_transport_error_recovers_in_second_round(monkeypatch):
+    monkeypatch.setattr(smoke, "probe_plan",
+                        lambda slug, pdf, critical: _plan(["/en/rolling/index.html"]))
+    monkeypatch.setattr(smoke, "RETRY_SLEEP_SECONDS", 0)
+    opener = _PathOpener({
+        "/en/rolling/index.html": [OSError("dns hiccup"), _FakeResp(200, {})],
+    })
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 0
+    # round 1 transport error, round 2 success — the same path is re-probed
+    assert opener.calls == ["/en/rolling/index.html", "/en/rolling/index.html"]
+
+
+def test_httperror_read_crash_is_contained_as_failure(monkeypatch):
+    # agy-critical: a transport error DURING e.read() must not escape as a traceback.
+    monkeypatch.setattr(smoke, "_OPENER", _FakeOpener([_http_error_read_boom(502)]))
+    probe = smoke.Probe("/en/rolling/index.html", 200,
+                        assert_docs_build=False, assert_apex_build=False)
+    ok, status, docs_build, error = smoke._probe_once("host", probe, "sha", "id", "sec")
+    assert ok is False
+    assert status is None and docs_build is None
+    assert error is not None and "reset during body read" in error
+
+
+def test_sleeps_once_per_inter_round_gap_not_per_probe(monkeypatch):
+    monkeypatch.setattr(smoke, "probe_plan",
+                        lambda slug, pdf, critical: _plan(["/a", "/b", "/c"]))
+    sleeps: list[float] = []
+    monkeypatch.setattr(smoke.time, "sleep", lambda s: sleeps.append(s))
+    # /a and /b fail round 1 then pass round 2; /c passes round 1
+    opener = _PathOpener({
+        "/a": [_FakeResp(500, {}), _FakeResp(200, {})],
+        "/b": [_FakeResp(500, {}), _FakeResp(200, {})],
+        "/c": [_FakeResp(200, {})],
+    })
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 0
+    assert sleeps == [smoke.RETRY_SLEEP_SECONDS]  # ONE inter-round sleep despite 2 failing probes
+
+
+def test_second_round_reprobes_only_the_failed_path(monkeypatch):
+    monkeypatch.setattr(smoke, "probe_plan",
+                        lambda slug, pdf, critical: _plan(["/a", "/b", "/c"]))
+    monkeypatch.setattr(smoke.time, "sleep", lambda s: None)
+    opener = _PathOpener({
+        "/a": [_FakeResp(200, {})],                      # passes round 1
+        "/b": [_FakeResp(500, {}), _FakeResp(200, {})],  # fails r1, passes r2
+        "/c": [_FakeResp(200, {})],                      # passes round 1
+    })
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 0
+    assert opener.calls == ["/a", "/b", "/c", "/b"]  # only the failed path is re-probed
+
+
+def test_run_reports_failure_count_and_nonzero_exit(monkeypatch, capsys):
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: _plan(["/a", "/b"]))
+    monkeypatch.setattr(smoke, "MAX_ROUNDS", 1)  # single round, no retries
+    monkeypatch.setattr(smoke, "_OPENER", _PathOpener({
+        "/a": [_FakeResp(200, {})],
+        "/b": [_FakeResp(500, {})],
+    }))
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 1
+    assert '{"failures": 1}' in capsys.readouterr().out
+
+
+def test_run_reports_clean_and_zero_exit(monkeypatch, capsys):
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: _plan(["/a", "/b"]))
+    monkeypatch.setattr(smoke, "_OPENER", _PathOpener({
+        "/a": [_FakeResp(200, {})],
+        "/b": [_FakeResp(200, {})],
+    }))
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 0
+    assert '{"failures": 0}' in capsys.readouterr().out
+
+
+def test_deadline_counts_unresolved_as_failed(monkeypatch, capsys):
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: _plan(["/a", "/b"]))
+    monkeypatch.setattr(smoke, "DEADLINE_SECONDS", 0)  # trips before the first probe
+    opener = _PathOpener({"/a": [_FakeResp(200, {})], "/b": [_FakeResp(200, {})]})
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 1
+    captured = capsys.readouterr()
+    assert "SMOKE-DEADLINE" in captured.err
+    assert '{"failures": 2}' in captured.out
+    assert opener.calls == []  # deadline reached before any probe ran
+
+
+def test_probe_plan_dedups_index_html():
+    plan = smoke.probe_plan("rolling", None, ["index.html", "cli.html"])
+    index_probes = [p for p in plan if p.path == "/en/rolling/index.html"]
+    assert len(index_probes) == 1                       # not duplicated by the critical list
+    assert index_probes[0].assert_search_mount is True  # still the single search-mount probe
+    assert sum(1 for p in plan if p.path == "/en/rolling/cli.html") == 1  # cli.html preserved
