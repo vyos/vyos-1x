@@ -87,10 +87,12 @@ def search_mount_present(html: str) -> bool:
 
 def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str,
                 access_secret: str) -> tuple[bool, int | None, str | None, str | None]:
-    """One probe attempt. Returns (ok, status, docs_build, error). ANY exception in the open
-    OR body-read path — including a transport error DURING HTTPError.read() — is contained and
-    yields (False, None, None, <msg>): a retryable failure, never a traceback that crashes the
-    gate. status/docs_build are surfaced for retry logging."""
+    """One probe attempt. Returns (ok, status, docs_build, detail). `detail` names the failed
+    check(s) — "status" / "docs-build" / "apex-build" / "search-mount" joined by "+", or the
+    transport error text — and is None when ok. ANY exception in the open OR body-read path
+    (including a transport error DURING HTTPError.read()) is contained and yields
+    (False, None, None, <error text>): a retryable failure, never a traceback. The HTTPError
+    response stream is always closed — it owns a socket, so a bare e.read() would leak it."""
     req = urllib.request.Request(f"https://{host}{probe.path}", method="GET")
     req.add_header("CF-Access-Client-Id", access_id)
     req.add_header("CF-Access-Client-Secret", access_secret)
@@ -100,18 +102,22 @@ def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str,
             with _OPENER.open(req, timeout=30) as resp:
                 status, headers, body = resp.status, resp.headers, resp.read()
         except urllib.error.HTTPError as e:  # non-2xx still carries headers/body
-            status, headers, body = e.code, e.headers, e.read()
+            with e:  # HTTPError is file-like and owns the response socket — always close it
+                status, headers, body = e.code, e.headers, e.read()
     except Exception as e:  # noqa: BLE001 — open OR read failure → retryable probe result
         return False, None, None, str(e)
-    ok = status == probe.expect_status
+    reasons: list[str] = []
+    if status != probe.expect_status:
+        reasons.append("status")
     if probe.assert_docs_build and not docs_build_ok(headers.get("X-Docs-Build"), expect_sha):
-        ok = False
+        reasons.append("docs-build")
     if probe.assert_apex_build and not headers.get("X-Apex-Build"):
-        ok = False
+        reasons.append("apex-build")
     if probe.assert_search_mount and not search_mount_present(
             body.decode("utf-8", errors="replace")):
-        ok = False
-    return ok, status, headers.get("X-Docs-Build"), None
+        reasons.append("search-mount")
+    detail = "+".join(reasons) if reasons else None
+    return not reasons, status, headers.get("X-Docs-Build"), detail
 
 
 def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: str,
@@ -139,15 +145,13 @@ def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: st
                 deadline_hit = True
                 unprobed = pending[i:]       # not reached this round → still unresolved
                 break
-            ok, status, docs_build, error = _probe_once(
+            ok, status, docs_build, detail = _probe_once(
                 host, probe, expect_sha, access_id, access_secret)
             if ok:
                 continue
             still_failing.append(probe)
-            detail = f"status={status} docs-build={docs_build}"
-            if error is not None:
-                detail += f" error={error}"
-            detail_by_path[probe.path] = detail
+            detail_by_path[probe.path] = (
+                f"status={status} docs-build={docs_build} detail={detail}")
         pending = still_failing + unprobed
         if deadline_hit or not pending or round_num == MAX_ROUNDS:
             break

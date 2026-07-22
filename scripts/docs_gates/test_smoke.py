@@ -116,24 +116,30 @@ class _FakeOpener:
         return item
 
 
-def _http_error(code: int, headers: dict[str, str]) -> urllib.error.HTTPError:
-    hdrs = Message()
-    for k, v in headers.items():
-        hdrs[k] = v
-    return urllib.error.HTTPError("https://host.invalid/x", code, "msg", hdrs, io.BytesIO(b""))
+class _RecordingBody(io.BytesIO):
+    """HTTPError.fp stand-in: records close() (so tests can assert the response stream is
+    closed) and can optionally raise on read (a transport error DURING body read). urllib's
+    addbase binds read through to fp and closes fp on close(), so overriding them here is what
+    e.read() / closing e actually hit."""
 
-
-class _ReadBoom(io.BytesIO):
-    """A body whose .read() raises — models a transport error DURING HTTPError.read().
-    urllib's addbase binds the instance's read to fp.read, so overriding it on the fp is the
-    reliable way to make e.read() blow up."""
+    def __init__(self, data: bytes = b"", raise_on_read: bool = False):
+        super().__init__(data)
+        self.close_calls = 0
+        self._raise_on_read = raise_on_read
 
     def read(self, *args: object) -> bytes:  # noqa: D401
-        raise OSError("reset during body read")
+        if self._raise_on_read:
+            raise OSError("reset during body read")
+        return super().read(*args)
+
+    def close(self) -> None:
+        self.close_calls += 1
+        super().close()
 
 
 def _http_error_read_boom(code: int) -> urllib.error.HTTPError:
-    return urllib.error.HTTPError("https://host.invalid/x", code, "msg", Message(), _ReadBoom())
+    return urllib.error.HTTPError(
+        "https://host.invalid/x", code, "msg", Message(), _RecordingBody(raise_on_read=True))
 
 
 class _PathOpener:
@@ -188,10 +194,10 @@ def test_httperror_read_crash_is_contained_as_failure(monkeypatch):
     monkeypatch.setattr(smoke, "_OPENER", _FakeOpener([_http_error_read_boom(502)]))
     probe = smoke.Probe("/en/rolling/index.html", 200,
                         assert_docs_build=False, assert_apex_build=False)
-    ok, status, docs_build, error = smoke._probe_once("host", probe, "sha", "id", "sec")
+    ok, status, docs_build, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
     assert ok is False
     assert status is None and docs_build is None
-    assert error is not None and "reset during body read" in error
+    assert detail is not None and "reset during body read" in detail
 
 
 def test_sleeps_once_per_inter_round_gap_not_per_probe(monkeypatch):
@@ -263,3 +269,65 @@ def test_probe_plan_dedups_index_html():
     assert len(index_probes) == 1                       # not duplicated by the critical list
     assert index_probes[0].assert_search_mount is True  # still the single search-mount probe
     assert sum(1 for p in plan if p.path == "/en/rolling/cli.html") == 1  # cli.html preserved
+
+
+# --- CR round 2: close the HTTPError response stream (it owns a socket) + name the failed
+# assertion in retry/fail logs. ---
+
+def test_httperror_response_is_closed(monkeypatch):
+    # HTTPError owns the response socket; the expected-404 path must close it, not leak.
+    body = _RecordingBody(b"not found")
+    monkeypatch.setattr(smoke, "_OPENER", _FakeOpener([
+        urllib.error.HTTPError("https://host.invalid/x", 404, "msg", Message(), body)]))
+    probe = smoke.Probe("/en/rolling/missing.html", 404,
+                        assert_docs_build=False, assert_apex_build=False)
+    ok, *_ = smoke._probe_once("host", probe, "sha", "id", "sec")
+    assert ok is True                # 404 expected → passes
+    assert body.close_calls >= 1     # response stream closed (no socket leak / ResourceWarning)
+
+
+def test_httperror_response_is_closed_even_when_read_raises(monkeypatch):
+    body = _RecordingBody(raise_on_read=True)
+    monkeypatch.setattr(smoke, "_OPENER", _FakeOpener([
+        urllib.error.HTTPError("https://host.invalid/x", 502, "msg", Message(), body)]))
+    probe = smoke.Probe("/en/rolling/index.html", 200,
+                        assert_docs_build=False, assert_apex_build=False)
+    ok, status, docs_build, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
+    assert ok is False
+    assert detail is not None and "reset during body read" in detail
+    assert body.close_calls >= 1     # close still attempted despite the read raising
+
+
+def test_apex_build_failure_is_named_in_logs(monkeypatch, capsys):
+    # 200 but no X-Apex-Build: without a named detail the log read "status=200 docs-build=None".
+    probe = smoke.Probe("/versions.json", 200, assert_docs_build=False, assert_apex_build=True)
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: [probe])
+    monkeypatch.setattr(smoke, "MAX_ROUNDS", 1)
+    monkeypatch.setattr(smoke, "_OPENER", _PathOpener({"/versions.json": [_FakeResp(200, {})]}))
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 1
+    err = capsys.readouterr().err
+    assert "SMOKE-FAIL /versions.json:" in err
+    assert "detail=apex-build" in err   # names the failed check
+    assert "status=200" in err          # existing fields preserved
+
+
+def test_search_mount_failure_is_named_in_logs(monkeypatch, capsys):
+    # 200 + correct build, but the HTML lacks the #vyos-search mount div.
+    probe = smoke.Probe("/en/rolling/index.html", 200, assert_docs_build=True,
+                        assert_apex_build=False, assert_search_mount=True)
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: [probe])
+    monkeypatch.setattr(smoke, "MAX_ROUNDS", 1)
+    monkeypatch.setattr(smoke, "_OPENER", _PathOpener({
+        "/en/rolling/index.html": [_FakeResp(200, {"X-Docs-Build": "goodsha"},
+                                             b"<html>no search</html>")]}))
+    assert smoke.run("host", "rolling", "goodsha", "id", "sec", None, []) == 1
+    assert "detail=search-mount" in capsys.readouterr().err
+
+
+def test_probe_once_detail_joins_multiple_failed_checks(monkeypatch):
+    # wrong status AND missing X-Apex-Build → detail "status+apex-build"
+    monkeypatch.setattr(smoke, "_OPENER", _FakeOpener([_FakeResp(500, {})]))
+    probe = smoke.Probe("/versions.json", 200, assert_docs_build=False, assert_apex_build=True)
+    ok, status, docs_build, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
+    assert ok is False
+    assert detail == "status+apex-build"
