@@ -27,11 +27,15 @@ SEARCH_MOUNT_MARKER = 'id="vyos-search"'
 # the gate must not silently rely on that rule surviving.
 USER_AGENT = "vyos-docs-smoke/1.0 (+https://github.com/vyos/vyos-documentation)"
 
-# Per-probe retry (module-level so tests can shrink them). A freshly-deployed worker version
-# can lose a propagation race: for a few minutes a single probe may be served by the PREVIOUS
-# version, returning the wrong status / a stale X-Docs-Build. Retry the probe, not the gate.
-MAX_ATTEMPTS = 3
+# Round-based retry (module-level so tests can shrink them). A freshly-deployed worker version
+# can lose a propagation race: for a few minutes a probe may be served by the PREVIOUS version
+# (wrong status / stale X-Docs-Build). Rather than fail-fast, each round re-probes ONLY the
+# still-failing probes — this preserves the full per-probe failure enumeration (diagnostic
+# value) while adding at most (MAX_ROUNDS - 1) inter-round sleeps. DEADLINE_SECONDS caps total
+# wall-clock so a pile-up of slow / timing-out probes cannot run unbounded.
+MAX_ROUNDS = 3
 RETRY_SLEEP_SECONDS = 20
+DEADLINE_SECONDS = 480
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -57,6 +61,9 @@ class Probe:
 
 
 def probe_plan(slug: str, pdf: str | None, critical: list[str]) -> list[Probe]:
+    # `critical` may itself list "index.html" (it does in critical-pages.txt); drop it so the
+    # index page is probed exactly once — as plan[0], the sole search-mount probe below.
+    critical = [rel for rel in critical if rel != "index.html"]
     plan = [Probe(f"/en/{slug}/{rel}", 200, True, False) for rel in ["index.html", *critical]]
     plan.append(Probe(f"/en/{slug}/pagefind/pagefind.js", 200, True, False))
     if pdf:
@@ -80,18 +87,21 @@ def search_mount_present(html: str) -> bool:
 
 def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str,
                 access_secret: str) -> tuple[bool, int | None, str | None, str | None]:
-    """One probe attempt. Returns (ok, status, docs_build, error): a transport exception
-    yields (False, None, None, <msg>); status/docs_build are surfaced for retry logging."""
+    """One probe attempt. Returns (ok, status, docs_build, error). ANY exception in the open
+    OR body-read path — including a transport error DURING HTTPError.read() — is contained and
+    yields (False, None, None, <msg>): a retryable failure, never a traceback that crashes the
+    gate. status/docs_build are surfaced for retry logging."""
     req = urllib.request.Request(f"https://{host}{probe.path}", method="GET")
     req.add_header("CF-Access-Client-Id", access_id)
     req.add_header("CF-Access-Client-Secret", access_secret)
     req.add_header("User-Agent", USER_AGENT)
     try:
-        with _OPENER.open(req, timeout=30) as resp:
-            status, headers, body = resp.status, resp.headers, resp.read()
-    except urllib.error.HTTPError as e:  # non-2xx still carries headers
-        status, headers, body = e.code, e.headers, e.read()
-    except Exception as e:  # noqa: BLE001 — any transport error fails the probe
+        try:
+            with _OPENER.open(req, timeout=30) as resp:
+                status, headers, body = resp.status, resp.headers, resp.read()
+        except urllib.error.HTTPError as e:  # non-2xx still carries headers/body
+            status, headers, body = e.code, e.headers, e.read()
+    except Exception as e:  # noqa: BLE001 — open OR read failure → retryable probe result
         return False, None, None, str(e)
     ok = status == probe.expect_status
     if probe.assert_docs_build and not docs_build_ok(headers.get("X-Docs-Build"), expect_sha):
@@ -104,33 +114,58 @@ def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str,
     return ok, status, headers.get("X-Docs-Build"), None
 
 
-def _probe_with_retries(host: str, probe: Probe, expect_sha: str, access_id: str,
-                        access_secret: str) -> bool:
-    """Up to MAX_ATTEMPTS attempts, RETRY_SLEEP_SECONDS between. Passes if ANY attempt is ok;
-    intermediate failures log SMOKE-RETRY and only the final failed attempt emits SMOKE-FAIL,
-    so a single propagation blip served by the previous worker version cannot fail the gate."""
-    for attempt in range(1, MAX_ATTEMPTS + 1):
-        ok, status, docs_build, error = _probe_once(
-            host, probe, expect_sha, access_id, access_secret)
-        if ok:
-            return True
-        detail = f"status={status} docs-build={docs_build}"
-        if error is not None:
-            detail += f" error={error}"
-        if attempt < MAX_ATTEMPTS:
-            print(f"SMOKE-RETRY {probe.path}: attempt {attempt} {detail}", file=sys.stderr)
-            time.sleep(RETRY_SLEEP_SECONDS)
-        else:
-            print(f"SMOKE-FAIL {probe.path}: {detail}", file=sys.stderr)
-    return False
-
-
 def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: str,
         pdf: str | None, critical: list[str]) -> int:
-    failures = 0
-    for probe in probe_plan(slug, pdf, critical):
-        if not _probe_with_retries(host, probe, expect_sha, access_id, access_secret):
-            failures += 1
+    """Probe the whole plan, then re-probe ONLY the still-failing probes each round (up to
+    MAX_ROUNDS, one RETRY_SLEEP_SECONDS between rounds). A probe passing in ANY round passes;
+    a single propagation blip served by the previous worker version cannot fail the gate.
+    DEADLINE_SECONDS bounds total wall-clock — on breach, unresolved probes count as failed."""
+    plan = probe_plan(slug, pdf, critical)
+    start = time.monotonic()
+    pending = list(plan)                     # probes not yet passed
+    detail_by_path: dict[str, str] = {}      # last failure detail per path, for logging
+    deadline_hit = False
+
+    def _past_deadline() -> bool:
+        return time.monotonic() - start >= DEADLINE_SECONDS
+
+    for round_num in range(1, MAX_ROUNDS + 1):
+        if not pending:
+            break
+        still_failing: list[Probe] = []
+        unprobed: list[Probe] = []
+        for i, probe in enumerate(pending):
+            if _past_deadline():             # checked before each probe
+                deadline_hit = True
+                unprobed = pending[i:]       # not reached this round → still unresolved
+                break
+            ok, status, docs_build, error = _probe_once(
+                host, probe, expect_sha, access_id, access_secret)
+            if ok:
+                continue
+            still_failing.append(probe)
+            detail = f"status={status} docs-build={docs_build}"
+            if error is not None:
+                detail += f" error={error}"
+            detail_by_path[probe.path] = detail
+        pending = still_failing + unprobed
+        if deadline_hit or not pending or round_num == MAX_ROUNDS:
+            break
+        if _past_deadline():                 # checked before the inter-round sleep
+            deadline_hit = True
+            break
+        for probe in pending:
+            print(f"SMOKE-RETRY {probe.path}: round {round_num} "
+                  f"{detail_by_path[probe.path]}", file=sys.stderr)
+        time.sleep(RETRY_SLEEP_SECONDS)
+
+    if deadline_hit:
+        print("SMOKE-DEADLINE: overall deadline reached — remaining probes counted as failed",
+              file=sys.stderr)
+    for probe in pending:
+        print(f"SMOKE-FAIL {probe.path}: {detail_by_path.get(probe.path, 'unresolved')}",
+              file=sys.stderr)
+    failures = len(pending)
     print(json.dumps({"failures": failures}))
     return 1 if failures else 0
 
