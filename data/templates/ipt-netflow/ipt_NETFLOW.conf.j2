@@ -12,8 +12,17 @@ options ipt_NETFLOW sampler=random:{{ netflow.sampling_rate }}
 {%     for server in netflow.server %}
 {%         set d = netflow.server[server] %}
 {%         set s = (server | bracketize_ipv6) ~ ':' ~ d['port'] %}
-{%         set s = s ~ ('%' ~ d['source_interface'] if d['source_interface'] is vyos_defined else '') %}
+{#         The ipt_NETFLOW destination grammar is "ip:port[@address][%device]" and #}
+{#         the module parses "@" before "%", so the source-address is rendered #}
+{#         first. The socket is then bound to a device to select the egress path: #}
+{#         a per-server source-interface takes precedence, else the global VRF is #}
+{#         used so flows are exported within that VRF (T9122). #}
 {%         set s = s ~ ('@' ~ d['source_address'] if d['source_address'] is vyos_defined else '') %}
+{%         if d['source_interface'] is vyos_defined %}
+{%             set s = s ~ '%' ~ d['source_interface'] %}
+{%         elif vrf is vyos_defined %}
+{%             set s = s ~ '%' ~ vrf %}
+{%         endif %}
 {%         set _ = servers_list.append(s) %}
 {%     endfor %}
 options ipt_NETFLOW destination={{ servers_list | join(",") }}

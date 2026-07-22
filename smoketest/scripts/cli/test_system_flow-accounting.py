@@ -213,6 +213,71 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['interfaces', 'dummy', dummy_if])
 
+    def test_netflow_vrf(self):
+        # T9122: NetFlow export must be routed via the configured VRF. The
+        # export socket is bound to a device - a per-server source-interface
+        # takes precedence, otherwise the global VRF device is used - so that
+        # collectors reachable only inside the VRF actually receive flows.
+        vrf_name = 'vyos-test-mgmt'
+        table = '1010'
+        source_address = '192.0.2.1'
+        dummy_if = 'dum2096'
+
+        server_vrf = '198.51.100.1'
+        server_vrf_address = '198.51.100.2'
+        server_vrf_interface = '198.51.100.3'
+
+        # Create a VRF and a member interface that holds the source address
+        self.cli_set(['vrf', 'name', vrf_name, 'table', table])
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'vrf', vrf_name])
+        self.cli_set(
+            ['interfaces', 'dummy', dummy_if, 'address', source_address + '/32']
+        )
+
+        for interface in Section.interfaces('ethernet'):
+            self.cli_set(base_path + ['netflow', 'interface', interface])
+
+        self.cli_set(base_path + ['vrf', vrf_name])
+
+        # No per-server source - bind to the VRF device
+        self.cli_set(base_path + ['netflow', 'server', server_vrf])
+        # source-address inside the VRF - rendered as @address%vrf
+        self.cli_set(
+            base_path
+            + ['netflow', 'server', server_vrf_address]
+            + ['source-address', source_address]
+        )
+        # source-interface inside the VRF - takes precedence over the VRF device
+        self.cli_set(
+            base_path
+            + ['netflow', 'server', server_vrf_interface]
+            + ['source-interface', dummy_if]
+        )
+
+        self.cli_commit()
+
+        module_data = get_module_data(module_name)
+        destinations = set(module_data['parameters']['destination'].split(','))
+        self.assertEqual(
+            destinations,
+            {
+                f'{server_vrf}:2055%{vrf_name}',
+                f'{server_vrf_address}:2055@{source_address}%{vrf_name}',
+                f'{server_vrf_interface}:2055%{dummy_if}',
+            },
+        )
+
+        # A source-interface that is not a member of the VRF must be rejected
+        eth = Section.interfaces('ethernet')[0]
+        self.cli_set(
+            base_path + ['netflow', 'server', '198.51.100.9', 'source-interface', eth]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['netflow', 'server', '198.51.100.9'])
+
+        self.cli_delete(['interfaces', 'dummy', dummy_if])
+        self.cli_delete(['vrf', 'name', vrf_name])
 
     def test_iptables(self):
         netflow_server = '11.22.33.44'
