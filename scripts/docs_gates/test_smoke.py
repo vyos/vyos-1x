@@ -292,7 +292,7 @@ def test_httperror_response_is_closed_even_when_read_raises(monkeypatch):
         urllib.error.HTTPError("https://host.invalid/x", 502, "msg", Message(), body)]))
     probe = smoke.Probe("/en/rolling/index.html", 200,
                         assert_docs_build=False, assert_apex_build=False)
-    ok, status, docs_build, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
+    ok, _, _, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
     assert ok is False
     assert detail is not None and "reset during body read" in detail
     assert body.close_calls >= 1     # close still attempted despite the read raising
@@ -328,6 +328,6 @@ def test_probe_once_detail_joins_multiple_failed_checks(monkeypatch):
     # wrong status AND missing X-Apex-Build → detail "status+apex-build"
     monkeypatch.setattr(smoke, "_OPENER", _FakeOpener([_FakeResp(500, {})]))
     probe = smoke.Probe("/versions.json", 200, assert_docs_build=False, assert_apex_build=True)
-    ok, status, docs_build, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
+    ok, _, _, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
     assert ok is False
     assert detail == "status+apex-build"

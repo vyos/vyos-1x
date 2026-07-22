@@ -31,10 +31,12 @@ USER_AGENT = "vyos-docs-smoke/1.0 (+https://github.com/vyos/vyos-documentation)"
 # can lose a propagation race: for a few minutes a probe may be served by the PREVIOUS version
 # (wrong status / stale X-Docs-Build). Rather than fail-fast, each round re-probes ONLY the
 # still-failing probes — this preserves the full per-probe failure enumeration (diagnostic
-# value) while adding at most (MAX_ROUNDS - 1) inter-round sleeps. DEADLINE_SECONDS caps total
-# wall-clock so a pile-up of slow / timing-out probes cannot run unbounded.
-MAX_ROUNDS = 3
-RETRY_SLEEP_SECONDS = 20
+# value) while adding at most (MAX_ROUNDS - 1) inter-round sleeps. Envelope widened to 5 rounds
+# x 30s after an observed propagation wave outlasted 3 rounds x 20s (a path still stale at
+# round 3): 4 x 30s = 2 min now covers the observed 1-2+ min waves. The green path still costs
+# zero extra time (no retries), and DEADLINE_SECONDS=480 still bounds the worst case.
+MAX_ROUNDS = 5
+RETRY_SLEEP_SECONDS = 30
 DEADLINE_SECONDS = 480
 
 
