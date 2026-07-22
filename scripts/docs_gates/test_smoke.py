@@ -101,15 +101,18 @@ class _FakeResp:
 
 
 class _FakeOpener:
-    """Yields queued responses in order; an Exception item is raised (models a transport
-    error, or a non-2xx delivered as HTTPError). Records each opened Request for assertions."""
+    """Yields queued responses in order; an Exception item is raised (models a transport error,
+    or a non-2xx delivered as HTTPError). Records each opened Request + the timeout it was
+    called with, for assertions."""
 
     def __init__(self, responses: list[object]):
         self._responses = list(responses)
         self.calls: list[urllib.request.Request] = []
+        self.timeouts: list[float | None] = []
 
     def open(self, req: urllib.request.Request, timeout: float | None = None) -> object:
         self.calls.append(req)
+        self.timeouts.append(timeout)
         item = self._responses.pop(0)
         if isinstance(item, Exception):
             raise item
@@ -150,10 +153,12 @@ class _PathOpener:
     def __init__(self, by_path: dict[str, list[object]]):
         self._by_path = {p: list(v) for p, v in by_path.items()}
         self.calls: list[str] = []
+        self.timeouts: list[float | None] = []
 
     def open(self, req: urllib.request.Request, timeout: float | None = None) -> object:
         path = urlsplit(req.full_url).path
         self.calls.append(path)
+        self.timeouts.append(timeout)
         item = self._by_path[path].pop(0)
         if isinstance(item, Exception):
             raise item
@@ -331,3 +336,31 @@ def test_probe_once_detail_joins_multiple_failed_checks(monkeypatch):
     ok, _, _, detail = smoke._probe_once("host", probe, "sha", "id", "sec")
     assert ok is False
     assert detail == "status+apex-build"
+
+
+# --- Adversarial round: DEADLINE_SECONDS is a HARD bound — the per-probe socket timeout and the
+# inter-round sleep are both capped to the remaining budget so neither can overshoot it. ---
+
+def test_probe_timeout_capped_to_remaining_budget(monkeypatch):
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: _plan(["/a"]))
+    monkeypatch.setattr(smoke, "DEADLINE_SECONDS", 5)  # << PROBE_TIMEOUT_SECONDS (30)
+    opener = _PathOpener({"/a": [_FakeResp(200, {})]})
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    smoke.run("host", "rolling", "sha", "id", "sec", None, [])
+    assert opener.timeouts, "the probe recorded the timeout it was opened with"
+    t = opener.timeouts[0]
+    assert 1 <= t <= smoke.DEADLINE_SECONDS    # capped DOWN to the ~5s remaining budget
+    assert t < smoke.PROBE_TIMEOUT_SECONDS      # NOT the full 30s socket timeout
+
+
+def test_inter_round_sleep_capped_to_remaining_budget(monkeypatch):
+    monkeypatch.setattr(smoke, "probe_plan", lambda slug, pdf, critical: _plan(["/a"]))
+    monkeypatch.setattr(smoke, "DEADLINE_SECONDS", 10)  # << RETRY_SLEEP_SECONDS (30)
+    sleeps: list[float] = []
+    monkeypatch.setattr(smoke.time, "sleep", lambda s: sleeps.append(s))
+    opener = _PathOpener({"/a": [_FakeResp(500, {}), _FakeResp(200, {})]})  # fail r1, pass r2
+    monkeypatch.setattr(smoke, "_OPENER", opener)
+    assert smoke.run("host", "rolling", "sha", "id", "sec", None, []) == 0
+    assert len(sleeps) == 1
+    assert 0 < sleeps[0] <= smoke.DEADLINE_SECONDS  # capped to the ~10s remaining budget
+    assert sleeps[0] < smoke.RETRY_SLEEP_SECONDS     # NOT the full 30s sleep
