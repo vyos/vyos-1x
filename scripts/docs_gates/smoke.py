@@ -31,11 +31,17 @@ USER_AGENT = "vyos-docs-smoke/1.0 (+https://github.com/vyos/vyos-documentation)"
 # can lose a propagation race: for a few minutes a probe may be served by the PREVIOUS version
 # (wrong status / stale X-Docs-Build). Rather than fail-fast, each round re-probes ONLY the
 # still-failing probes — this preserves the full per-probe failure enumeration (diagnostic
-# value) while adding at most (MAX_ROUNDS - 1) inter-round sleeps. DEADLINE_SECONDS caps total
-# wall-clock so a pile-up of slow / timing-out probes cannot run unbounded.
-MAX_ROUNDS = 3
-RETRY_SLEEP_SECONDS = 20
+# value) while adding at most (MAX_ROUNDS - 1) inter-round sleeps. Envelope widened to 5 rounds
+# x 30s after an observed propagation wave outlasted 3 rounds x 20s (a path still stale at
+# round 3): 4 x 30s = 2 min now covers the observed 1-2+ min waves. The green path still costs
+# zero extra time (no retries), and DEADLINE_SECONDS=480 still bounds the worst case.
+MAX_ROUNDS = 5
+RETRY_SLEEP_SECONDS = 30
 DEADLINE_SECONDS = 480
+# Per-socket-op timeout (connect + read), capped down to the remaining deadline budget on each
+# probe so a probe that starts late cannot overshoot DEADLINE_SECONDS. Pages are small, so this
+# socket-op timeout also bounds body reads adequately — no separate body-read deadline is needed.
+PROBE_TIMEOUT_SECONDS = 30
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -85,33 +91,42 @@ def search_mount_present(html: str) -> bool:
     return SEARCH_MOUNT_MARKER in html
 
 
-def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str,
-                access_secret: str) -> tuple[bool, int | None, str | None, str | None]:
-    """One probe attempt. Returns (ok, status, docs_build, error). ANY exception in the open
-    OR body-read path — including a transport error DURING HTTPError.read() — is contained and
-    yields (False, None, None, <msg>): a retryable failure, never a traceback that crashes the
-    gate. status/docs_build are surfaced for retry logging."""
+def _probe_once(host: str, probe: Probe, expect_sha: str, access_id: str, access_secret: str,
+                timeout: float = PROBE_TIMEOUT_SECONDS,
+                ) -> tuple[bool, int | None, str | None, str | None]:
+    """One probe attempt. Returns (ok, status, docs_build, detail). `detail` names the failed
+    check(s) — "status" / "docs-build" / "apex-build" / "search-mount" joined by "+", or the
+    transport error text — and is None when ok. `timeout` is the per-socket-op deadline (connect
+    + read); run() caps it to the remaining budget so a late probe can't overshoot the overall
+    deadline. ANY exception in the open OR body-read path (including a transport error DURING
+    HTTPError.read()) is contained and yields (False, None, None, <error text>): a retryable
+    failure, never a traceback. The HTTPError response stream is always closed — it owns a
+    socket, so a bare e.read() would leak it."""
     req = urllib.request.Request(f"https://{host}{probe.path}", method="GET")
     req.add_header("CF-Access-Client-Id", access_id)
     req.add_header("CF-Access-Client-Secret", access_secret)
     req.add_header("User-Agent", USER_AGENT)
     try:
         try:
-            with _OPENER.open(req, timeout=30) as resp:
+            with _OPENER.open(req, timeout=timeout) as resp:
                 status, headers, body = resp.status, resp.headers, resp.read()
         except urllib.error.HTTPError as e:  # non-2xx still carries headers/body
-            status, headers, body = e.code, e.headers, e.read()
+            with e:  # HTTPError is file-like and owns the response socket — always close it
+                status, headers, body = e.code, e.headers, e.read()
     except Exception as e:  # noqa: BLE001 — open OR read failure → retryable probe result
         return False, None, None, str(e)
-    ok = status == probe.expect_status
+    reasons: list[str] = []
+    if status != probe.expect_status:
+        reasons.append("status")
     if probe.assert_docs_build and not docs_build_ok(headers.get("X-Docs-Build"), expect_sha):
-        ok = False
+        reasons.append("docs-build")
     if probe.assert_apex_build and not headers.get("X-Apex-Build"):
-        ok = False
+        reasons.append("apex-build")
     if probe.assert_search_mount and not search_mount_present(
             body.decode("utf-8", errors="replace")):
-        ok = False
-    return ok, status, headers.get("X-Docs-Build"), None
+        reasons.append("search-mount")
+    detail = "+".join(reasons) if reasons else None
+    return not reasons, status, headers.get("X-Docs-Build"), detail
 
 
 def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: str,
@@ -122,12 +137,13 @@ def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: st
     DEADLINE_SECONDS bounds total wall-clock — on breach, unresolved probes count as failed."""
     plan = probe_plan(slug, pdf, critical)
     start = time.monotonic()
+    deadline = start + DEADLINE_SECONDS      # absolute — a hard upper bound on total wall-clock
     pending = list(plan)                     # probes not yet passed
     detail_by_path: dict[str, str] = {}      # last failure detail per path, for logging
     deadline_hit = False
 
-    def _past_deadline() -> bool:
-        return time.monotonic() - start >= DEADLINE_SECONDS
+    def _remaining() -> float:
+        return deadline - time.monotonic()
 
     for round_num in range(1, MAX_ROUNDS + 1):
         if not pending:
@@ -135,29 +151,30 @@ def run(host: str, slug: str, expect_sha: str, access_id: str, access_secret: st
         still_failing: list[Probe] = []
         unprobed: list[Probe] = []
         for i, probe in enumerate(pending):
-            if _past_deadline():             # checked before each probe
+            remaining = _remaining()         # checked before each probe
+            if remaining < 1:                # < 1s budget: don't start a probe that could overshoot
                 deadline_hit = True
                 unprobed = pending[i:]       # not reached this round → still unresolved
                 break
-            ok, status, docs_build, error = _probe_once(
-                host, probe, expect_sha, access_id, access_secret)
+            ok, status, docs_build, detail = _probe_once(
+                host, probe, expect_sha, access_id, access_secret,
+                timeout=min(PROBE_TIMEOUT_SECONDS, max(1, remaining)))
             if ok:
                 continue
             still_failing.append(probe)
-            detail = f"status={status} docs-build={docs_build}"
-            if error is not None:
-                detail += f" error={error}"
-            detail_by_path[probe.path] = detail
+            detail_by_path[probe.path] = (
+                f"status={status} docs-build={docs_build} detail={detail}")
         pending = still_failing + unprobed
         if deadline_hit or not pending or round_num == MAX_ROUNDS:
             break
-        if _past_deadline():                 # checked before the inter-round sleep
+        remaining = _remaining()             # checked before the inter-round sleep
+        if remaining <= 0:                   # no budget left → deadline path (skip the sleep)
             deadline_hit = True
             break
         for probe in pending:
             print(f"SMOKE-RETRY {probe.path}: round {round_num} "
                   f"{detail_by_path[probe.path]}", file=sys.stderr)
-        time.sleep(RETRY_SLEEP_SECONDS)
+        time.sleep(min(RETRY_SLEEP_SECONDS, remaining))   # never sleep past the deadline
 
     if deadline_hit:
         print("SMOKE-DEADLINE: overall deadline reached — remaining probes counted as failed",
