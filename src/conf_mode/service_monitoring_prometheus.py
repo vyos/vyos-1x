@@ -49,14 +49,25 @@ vpp_exporter_systemd_service = 'vpp_exporter.service'
 vpp_exporter_enable_link = '/etc/systemd/system/vpp.service.wants/vpp_exporter.service'
 vpp_exporter_process_name = 'vpp_prometheus_export'
 
+vpp_system_stat_patterns = (
+    '^/sys/heartbeat$',
+    '^/sys/last_stats_clear$',
+    '^/sys/boottime$',
+    '^/sys/vector_rate$',
+    '^/sys/vector_rate_per_worker$',
+    '^/sys/loops_per_worker$',
+    '^/sys/num_worker_threads$',
+    '^/sys/last_update$',
+    '^/sys/input_rate$',
+)
 vpp_stat_group_patterns = {
-    'interfaces': '^/interfaces',
-    'err': '^/err',
-    'buffer-pools': '^/buffer-pools',
-    'system': '^/sys',
-    'workers': '^/workers',
-    'nodes': '^/nodes',
-    'memory': '^/mem',
+    'interfaces': ('^/interfaces',),
+    'err': ('^/err',),
+    'buffer-pools': ('^/buffer-pools',),
+    'system': vpp_system_stat_patterns,
+    'workers': ('^/workers',),
+    'nodes': ('^/nodes',),
+    'memory': ('^/mem',),
 }
 vpp_default_stat_groups = [
     'interfaces',
@@ -78,8 +89,9 @@ def build_vpp_stat_patterns(vpp_exporter):
     selected_groups = set(selected_groups)
     patterns = [
         pattern
-        for group_name, pattern in vpp_stat_group_patterns.items()
+        for group_name, group_patterns in vpp_stat_group_patterns.items()
         if group_name in selected_groups
+        for pattern in group_patterns
     ]
 
     for pattern in custom_patterns:

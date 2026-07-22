@@ -51,6 +51,17 @@ interface = 'eth1'
 vpp_exporter_service_file = '/etc/systemd/system/vpp_exporter.service'
 vpp_exporter_enable_link = '/etc/systemd/system/vpp.service.wants/vpp_exporter.service'
 vpp_exporter_vrf = 'vpp-exporter'
+vpp_system_stat_patterns = (
+    '^/sys/heartbeat$',
+    '^/sys/last_stats_clear$',
+    '^/sys/boottime$',
+    '^/sys/vector_rate$',
+    '^/sys/vector_rate_per_worker$',
+    '^/sys/loops_per_worker$',
+    '^/sys/num_worker_threads$',
+    '^/sys/last_update$',
+    '^/sys/input_rate$',
+)
 
 
 def get_vpp_config():
@@ -1826,7 +1837,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('^/interfaces', file_content)
         self.assertIn('^/err', file_content)
         self.assertIn('^/buffer-pools', file_content)
-        self.assertIn('^/sys', file_content)
+        for pattern in vpp_system_stat_patterns:
+            self.assertIn(pattern, file_content)
         self.assertIn('^/workers', file_content)
         self.assertIn('^/mem', file_content)
         self.assertNotIn('^/nodes', file_content)
@@ -1856,12 +1868,21 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         file_content = read_file(vpp_exporter_service_file)
         self.assertIn('^/interfaces', file_content)
-        self.assertIn('^/sys', file_content)
+        for pattern in vpp_system_stat_patterns:
+            self.assertIn(pattern, file_content)
         self.assertIn('^/nodes', file_content)
         self.assertIn('^/mem', file_content)
         self.assertIn('^/buffer-pools/.*/used$', file_content)
         self.assertNotIn('^/err', file_content)
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+        rc, output = rc_cmd(
+            'curl --silent --show-error --connect-timeout 2 --max-time 15 '
+            'http://127.0.0.1:9482/metrics'
+        )
+        self.assertEqual(rc, 0)
+        self.assertIn('nodes_calls{', output)
+        self.assertIn('sys_num_worker_threads', output)
 
     def test_26_3_vpp_exporter_vrf(self):
         self.cli_set(['vrf', 'name', vpp_exporter_vrf, 'table', '1001'])
