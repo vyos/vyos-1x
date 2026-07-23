@@ -813,14 +813,14 @@ def copy_ssh_known_hosts() -> bool:
 
 
 def copy_bash_history() -> bool:
-    """Ask user to copy bash history
+    """Ask user to copy Bash history
 
     Returns:
         bool: user's decision
     """
 
     history_files = get_bash_history_files()
-    msg = 'Would you like to copy bash history?'
+    msg = 'Would you like to copy Bash history?'
     return bool(history_files) and ask_yes_no(msg, default=False)
 
 
