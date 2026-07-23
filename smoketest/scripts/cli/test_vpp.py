@@ -34,6 +34,7 @@ from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
 from vyos.utils.network import interface_exists
 from vyos.system import image
+from vyos.ifconfig import Interface
 from vyos.vpp import VPPControl
 from vyos.vpp.utils import vpp_ip_addresses_by_index
 from vyos.vpp.utils import vpp_iface_name_transform
@@ -401,6 +402,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         loopback_path = interfaces_path + ['loopback']
         interface_loopback = 'vpplo11'
         address = '192.0.2.54'
+        mac = '00:50:00:00:00:11'
 
         self.cli_set(loopback_path + [interface_loopback])
         self.cli_set(loopback_path + [interface_loopback, 'address', f'{address}/25'])
@@ -417,6 +419,14 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show interface loop11')
         required_str = 'loop11'
         self.assertIn(required_str, out)
+
+        # check explicit MAC
+        self.cli_set(loopback_path + [interface_loopback, 'mac', mac])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show hardware-interfaces loop11')
+        self.assertIn(f'Ethernet address {mac}', out)
+        self.assertEqual(mac, Interface(interface_loopback).get_mac())
 
         # delete loopback interface
         self.cli_delete(loopback_path + [interface_loopback])
@@ -623,6 +633,25 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         self.assertRegex(normalized_out, r'10 1 \d+ off')
         self.assertRegex(out, r'\bloop23\s+\d+\s+\d+\s+\d+\s+\*\s+')
+
+        # A loopback is fully deleted and recreated in VPP on every apply,
+        # getting a new sw_if_index - reconfiguring it must reattach it to
+        # the bridge as BVI rather than leaving the bridge pointing at the
+        # stale, now-deleted interface
+        self.cli_set(
+            interfaces_path + ['loopback', f'vpplo{vni}', 'mac', '00:50:00:00:00:23']
+        )
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show bridge-domain 10 detail')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        self.assertRegex(normalized_out, r'10 1 \d+ off')
+        self.assertRegex(out, r'\bloop23\s+\d+\s+\d+\s+\d+\s+\*\s+')
+
+        # cannot remove loopback interface while it is used as BVI
+        self.cli_delete(interfaces_path + ['loopback', f'vpplo{vni}'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
     def test_07_vpp_ipip(self):
         ipip_path = interfaces_path + ['ipip']
