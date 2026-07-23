@@ -18,23 +18,16 @@
 import sys
 
 import vyos.opmode
+from vyos.utils.memory import get_memory_info
 
 
 def _get_raw_data():
-    from re import search as re_search
+    mem_info = get_memory_info()
 
-    def find_value(keyword, mem_data):
-        regex = keyword + ':\s+(\d+)'
-        res = re_search(regex, mem_data).group(1)
-        return int(res)
-
-    with open("/proc/meminfo", "r") as f:
-        mem_data = f.read()
-
-    total     = find_value('MemTotal', mem_data)
-    available = find_value('MemAvailable', mem_data)
-    buffers   = find_value('Buffers', mem_data)
-    cached    = find_value('Cached', mem_data)
+    total = mem_info['MemTotal']
+    available = mem_info['MemAvailable']
+    buffers = mem_info['Buffers']
+    cached = mem_info['Cached']
 
     used = total - available
 
