@@ -10,3 +10,6 @@ extend-exclude = [
 dum = "dum"      # dummy interface
 oif = "oif"      # outgoing interface
 iif = "iif"      # incoming interface
+
+# OpenSSL configuration file
+Widgits = "Widgits"      # organization name
