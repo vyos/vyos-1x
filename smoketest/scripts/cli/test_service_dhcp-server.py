@@ -420,7 +420,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         server_identifier = bootfile_server
         ipv6_only_preferred = '300'
         capwap_access_controller = '192.168.2.125'
-        interface_mtu = '1420'
+        # 9216: jumbo-fabric MTU above the former arbitrary 9000 cap
+        # (DHCP option 26 is a full u16)
+        interface_mtu = '9216'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
