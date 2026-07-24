@@ -37,6 +37,7 @@ from vyos.qos import RateLimiter
 from vyos.qos import RoundRobin
 from vyos.qos import TrafficShaper
 from vyos.qos import TrafficShaperHFSC
+from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import run
 from vyos import ConfigError
@@ -351,13 +352,23 @@ def generate(qos):
 
 def apply_interface(qos, ifname):
     """ Clear and re-apply QoS for a single interface only. """
-    run(f'tc qdisc del dev {ifname} parent ffff:')
+    interface_config = dict_search_args(qos, 'interface', ifname)
+    if not interface_config:
+        interface_config = {}
+
+    # Only tear down the ingress qdisc if this interface actually has an
+    # ingress QoS policy bound. Otherwise this would remove an unrelated
+    # ingress redirect/mirror configuration (see set_mirror_redirect())
+    # that call_dependents() just re-created, and it would never come
+    # back as only directions present in interface_config are re-applied
+    # below.
+    if 'ingress' in interface_config:
+        run(f'tc qdisc del dev {ifname} parent ffff:')
     run(f'tc qdisc del dev {ifname} root')
 
-    if not qos or 'interface' not in qos or ifname not in qos['interface']:
+    if not interface_config:
         return None
 
-    interface_config = qos['interface'][ifname]
     if not verify_interface_exists(qos, ifname, state_required=True, warning_only=True):
         # When shaper is bound to a dialup (e.g. PPPoE) interface it is
         # possible that it is yet not available when the QoS code runs.
