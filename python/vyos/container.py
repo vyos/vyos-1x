@@ -12,10 +12,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from hashlib import sha256
+
 from vyos.config import Config
 from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
+
+def get_container_host_ifname(name: str) -> str:
+    """
+    Deterministic host-side veth interface name for a container's network
+    attachment (verify() only allows one network per container). Kept within
+    IFNAMSIZ and - thanks to the leading "veth-" (a hyphen can never appear in
+    a VyOS "vethN" interface name) - guaranteed to never collide with the
+    "virtual-ethernet" naming scheme..
+    """
+    prefix = f'veth-{name}'
+    if len(prefix) <= 15:
+        return prefix
+    digest = sha256(name.encode()).hexdigest()[:4]
+    return f'veth-{name[:5]}-{digest}'
 
 def restart_network(config: Config) -> None:
     """
