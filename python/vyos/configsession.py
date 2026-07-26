@@ -268,6 +268,52 @@ class ConfigSession(object):
     def vyconf_backend(self) -> bool:
         return bool(self._vyconf_session)
 
+    def session_exists(self) -> bool:
+        """
+        Return True if the underlying cli-shell-api config session is still live.
+
+        Used by long-lived callers (HTTP API) that keep one ConfigSession for the
+        process lifetime and must detect mid-life session death.
+        """
+        try:
+            self.__run_command([CLI_SHELL_API, 'inSession'])
+            return True
+        except ConfigSessionError:
+            return False
+
+    def ensure_session(self) -> bool:
+        """
+        Ensure a live config session exists for this object.
+
+        If the session has died, best-effort teardown and re-setup using the same
+        session id / environment. Returns True if a live session is available
+        after the call, False if re-setup failed (caller may recreate the object).
+        """
+        if self.session_exists():
+            return True
+
+        try:
+            subprocess.check_output(
+                [CLI_SHELL_API, 'teardownSession'],
+                env=self.__session_env,
+                stderr=subprocess.STDOUT,
+            )
+        except Exception:
+            # Session may already be gone; continue to setup.
+            pass
+
+        try:
+            self.__run_command([CLI_SHELL_API, 'setupSession'])
+            if vyconf_backend() and boot_configuration_complete():
+                self._vyconf_session = VyconfSession(
+                    pid=self.__session_id, on_error=ConfigSessionError
+                )
+            else:
+                self._vyconf_session = None
+            return self.session_exists()
+        except ConfigSessionError:
+            return False
+
     def set(self, path, value=None):
         if not value:
             value = []
@@ -367,10 +413,17 @@ class ConfigSession(object):
         return out
 
     def discard(self):
-        if self._vyconf_session is None:
-            self.__run_command([DISCARD])
-        else:
-            out, _ = self._vyconf_session.discard()
+        try:
+            if self._vyconf_session is None:
+                self.__run_command([DISCARD])
+            else:
+                self._vyconf_session.discard()
+        except ConfigSessionError as e:
+            # Dead session: discard must not cascade a second error (HTTP API
+            # error paths always call discard; re-raising turns a 400 into 500).
+            if 'without config session' in str(e):
+                return
+            raise
 
     def show_config(self, path, format='raw'):
         if self._vyconf_session is None:
