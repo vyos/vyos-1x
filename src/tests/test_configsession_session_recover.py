@@ -48,6 +48,7 @@ def _make_session_stub() -> ConfigSession:
     obj._ConfigSession__session_id = 12345
     obj._ConfigSession__session_env = {'SESSION_PID': '12345'}
     obj._vyconf_session = None
+    obj._finalizer = None
     # Avoid __del__ teardown against a missing cli-shell-api on host checkouts.
     obj.shared = True
     return obj
@@ -94,6 +95,46 @@ class TestConfigSessionRecover(TestCase):
                 # setupSession invoked once
                 self.assertEqual(run.call_count, 1)
                 self.assertEqual(run.call_args[0][0][-1], 'setupSession')
+
+    def test_ensure_session_rebinds_vyconf_finalizer(self):
+        """Replacement VyconfSession must own the finalizer, not the stale one."""
+        s = _make_session_stub()
+        s.shared = False
+        old_vyconf = MagicMock(name='old_vyconf')
+        new_vyconf = MagicMock(name='new_vyconf')
+        s._vyconf_session = old_vyconf
+        old_finalizer = MagicMock(name='old_finalizer')
+        s._finalizer = old_finalizer
+        new_finalizer = MagicMock(name='new_finalizer')
+
+        exists = MagicMock(side_effect=[False, True])
+        with patch.object(s, 'session_exists', exists):
+            with patch('vyos.configsession.subprocess.check_output', return_value=b''):
+                with patch.object(s, '_ConfigSession__run_command', return_value=''):
+                    with patch('vyos.configsession.vyconf_backend', return_value=True):
+                        with patch(
+                            'vyos.configsession.boot_configuration_complete',
+                            return_value=True,
+                        ):
+                            with patch(
+                                'vyos.configsession.VyconfSession',
+                                return_value=new_vyconf,
+                            ):
+                                with patch(
+                                    'vyos.configsession.weakref.finalize',
+                                    return_value=new_finalizer,
+                                ) as fin:
+                                    self.assertTrue(s.ensure_session())
+
+        old_finalizer.detach.assert_called_once()
+        fin.assert_called_once()
+        args = fin.call_args[0]
+        self.assertIs(args[0], s)
+        # classmethod bound to ConfigSession (same as __init__ path)
+        self.assertEqual(args[1].__func__, ConfigSession.finalize_vyconf.__func__)
+        self.assertIs(args[2], new_vyconf)
+        self.assertIs(s._vyconf_session, new_vyconf)
+        self.assertIs(s._finalizer, new_finalizer)
 
     def test_ensure_session_false_when_setup_fails(self):
         s = _make_session_stub()

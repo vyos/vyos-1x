@@ -204,8 +204,21 @@ class ConfigSession(object):
             self._vyconf_session = None
 
         self.shared = shared
+        self._finalizer = None
+        self._rebind_vyconf_finalizer()
 
-        if not self.shared and self._vyconf_session:
+    def _rebind_vyconf_finalizer(self):
+        """
+        (Re)register weakref finalizer for the current VyconfSession.
+
+        Call whenever self._vyconf_session is replaced so finalize_vyconf tears
+        down the live session, not a stale object left from an earlier setup.
+        """
+        finalizer = getattr(self, '_finalizer', None)
+        if finalizer is not None:
+            finalizer.detach()
+            self._finalizer = None
+        if not getattr(self, 'shared', False) and self._vyconf_session is not None:
             self._finalizer = weakref.finalize(
                 self, self.finalize_vyconf, self._vyconf_session
             )
@@ -310,6 +323,9 @@ class ConfigSession(object):
                 )
             else:
                 self._vyconf_session = None
+            # Detach any finalizer bound to a previous VyconfSession and bind
+            # one for the replacement (or none if vyconf is off).
+            self._rebind_vyconf_finalizer()
             return self.session_exists()
         except ConfigSessionError:
             return False
