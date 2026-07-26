@@ -317,17 +317,23 @@ class ConfigSession(object):
 
         try:
             self.__run_command([CLI_SHELL_API, 'setupSession'])
+            # Build replacement first so a failed VyconfSession() does not leave
+            # a dead backend while session_exists() already returns True.
+            new_vyconf_session = None
             if vyconf_backend() and boot_configuration_complete():
-                self._vyconf_session = VyconfSession(
+                new_vyconf_session = VyconfSession(
                     pid=self.__session_id, on_error=ConfigSessionError
                 )
-            else:
-                self._vyconf_session = None
+            self._vyconf_session = new_vyconf_session
             # Detach any finalizer bound to a previous VyconfSession and bind
             # one for the replacement (or none if vyconf is off).
             self._rebind_vyconf_finalizer()
             return self.session_exists()
         except ConfigSessionError:
+            # setupSession may have succeeded while Vyconf construction failed —
+            # drop the stale backend so the next call cannot route through it.
+            self._vyconf_session = None
+            self._rebind_vyconf_finalizer()
             return False
 
     def set(self, path, value=None):

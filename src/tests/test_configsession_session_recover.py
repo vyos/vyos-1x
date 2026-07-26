@@ -147,6 +147,38 @@ class TestConfigSessionRecover(TestCase):
                 ):
                     self.assertFalse(s.ensure_session())
 
+    def test_ensure_session_clears_stale_vyconf_on_construct_fail(self):
+        """VyconfSession() failure must not leave the old backend attached."""
+        s = _make_session_stub()
+        s.shared = False
+        old_vyconf = MagicMock(name='old_vyconf')
+        s._vyconf_session = old_vyconf
+        old_finalizer = MagicMock(name='old_finalizer')
+        s._finalizer = old_finalizer
+
+        with patch.object(s, 'session_exists', return_value=False):
+            with patch('vyos.configsession.subprocess.check_output', return_value=b''):
+                with patch.object(s, '_ConfigSession__run_command', return_value=''):
+                    with patch('vyos.configsession.vyconf_backend', return_value=True):
+                        with patch(
+                            'vyos.configsession.boot_configuration_complete',
+                            return_value=True,
+                        ):
+                            with patch(
+                                'vyos.configsession.VyconfSession',
+                                side_effect=ConfigSessionError('vyconf construct failed'),
+                            ):
+                                with patch(
+                                    'vyos.configsession.weakref.finalize'
+                                ) as fin:
+                                    self.assertFalse(s.ensure_session())
+
+        self.assertIsNone(s._vyconf_session)
+        old_finalizer.detach.assert_called_once()
+        # No new finalizer when backend is cleared
+        fin.assert_not_called()
+        self.assertIsNone(s._finalizer)
+
     def test_discard_noop_when_session_lost(self):
         s = _make_session_stub()
         with patch.object(
