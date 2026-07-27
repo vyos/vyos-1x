@@ -11,7 +11,7 @@ on:
       - '**'
       - '!.github/**'
       - '!**/*.md'
-  pull_request_target:
+  pull_request:
     branches:
       - rolling
       - circinus
@@ -22,7 +22,6 @@ on:
       - '!**/*.md'
 
 permissions:
-  pull-requests: write
   contents: read
 
 env:
@@ -56,7 +55,7 @@ jobs:
       - name: Set branch-specific configuration
         id: config
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BRANCH="${{ github.event.pull_request.base.ref }}"
           else
             BRANCH="${{ github.ref_name }}"
@@ -91,7 +90,7 @@ jobs:
           BRANCH="${{ steps.config.outputs.branch }}"
           VYOS_BUILD_REPO="${{ steps.config.outputs.vyos_build_repo }}"
 
-          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             PR_HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
             # VYOS_BUILD_REPO is in owner/repo format from config
@@ -446,25 +445,31 @@ jobs:
     timeout-minutes: 5
     if: always()
     steps:
-      - name: Add PR comment
-        if: always() && github.event_name == 'pull_request_target'
-        uses: mshick/add-pr-comment@v2
+      - name: Prepare PR report
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          mkdir -p pr-report
+          echo "${{ github.event.pull_request.number }}" > pr-report/pr_number.txt
+
+          cat > pr-report/message.md << 'EOF'
+          CI integration ${{ (needs.test_smoketest_cli.outputs.exit_code == 'success' && needs.test_interfaces_cli.outputs.exit_code == 'success' && needs.test_config_load.outputs.exit_code == 'success' && needs.test_raid1_install.outputs.exit_code == 'success' && (needs.test_smoketest_cli_vpp.outputs.exit_code != 'fail') && (needs.test_config_load_vpp.outputs.exit_code != 'fail') && (needs.test_encrypted_config_tpm.outputs.exit_code != 'fail')) && '👍 passed!' || '❌ failed!' }}
+
+          ### Details
+
+          [CI logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          * CLI Smoketests ${{ needs.test_smoketest_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+          * CLI Smoketests (interfaces only) ${{ needs.test_interfaces_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+          * Config tests ${{ needs.test_config_load.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+          * RAID1 tests ${{ needs.test_raid1_install.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+          * CLI Smoketests VPP ${{ needs.test_smoketest_cli_vpp.outputs.exit_code == 'success' && '👍 passed' || needs.test_smoketest_cli_vpp.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
+          * Config tests VPP ${{ needs.test_config_load_vpp.outputs.exit_code == 'success' && '👍 passed' || needs.test_config_load_vpp.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
+          * TPM tests ${{ needs.test_encrypted_config_tpm.outputs.exit_code == 'success' && '👍 passed' || needs.test_encrypted_config_tpm.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
+          EOF
+
+      - uses: actions/upload-artifact@v7
+        if: always() && github.event_name == 'pull_request'
         with:
-          message: |
-            CI integration ${{ (needs.test_smoketest_cli.outputs.exit_code == 'success' && needs.test_interfaces_cli.outputs.exit_code == 'success' && needs.test_config_load.outputs.exit_code == 'success' && needs.test_raid1_install.outputs.exit_code == 'success' && (needs.test_smoketest_cli_vpp.outputs.exit_code != 'fail') && (needs.test_config_load_vpp.outputs.exit_code != 'fail') && (needs.test_encrypted_config_tpm.outputs.exit_code != 'fail')) && '👍 passed!' || '❌ failed!' }}
-
-            ### Details
-
-            [CI logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            * CLI Smoketests ${{ needs.test_smoketest_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
-            * CLI Smoketests (interfaces only) ${{ needs.test_interfaces_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
-            * Config tests ${{ needs.test_config_load.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
-            * RAID1 tests ${{ needs.test_raid1_install.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
-            * CLI Smoketests VPP ${{ needs.test_smoketest_cli_vpp.outputs.exit_code == 'success' && '👍 passed' || needs.test_smoketest_cli_vpp.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
-            * Config tests VPP ${{ needs.test_config_load_vpp.outputs.exit_code == 'success' && '👍 passed' || needs.test_config_load_vpp.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
-            * TPM tests ${{ needs.test_encrypted_config_tpm.outputs.exit_code == 'success' && '👍 passed' || needs.test_encrypted_config_tpm.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
-
-          message-id: "SMOKETEST_RESULTS"
-          allow-repeats: false
-          refresh-message-position: true
+          name: pr-report
+          path: pr-report
+          retention-days: 2
