@@ -1,0 +1,48 @@
+name: VyOS ISO Integration Test - PR Comment
+
+# This workflow is the trusted counterpart to package-smoketest.yml. It runs
+# with `pull-requests: write` and the base repository's GITHUB_TOKEN, so it
+# must NEVER check out or execute any code from the pull request / fork. It
+# only downloads the plain-text result artifact produced by the (untrusted,
+# `pull_request`-triggered) package-smoketest.yml run and posts it as a PR
+# comment. See https://gh.io/securely-using-pull_request_target for why this
+# split exists.
+
+on:
+  workflow_run:
+    workflows: ["VyOS ISO Integration Test"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Download PR report artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: pr-report
+          path: pr-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read PR number
+        id: pr
+        run: |
+          echo "number=$(cat pr-report/pr_number.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Add PR comment
+        uses: mshick/add-pr-comment@v2
+        with:
+          issue: ${{ steps.pr.outputs.number }}
+          message-path: pr-report/message.md
+          message-id: "SMOKETEST_RESULTS"
+          allow-repeats: false
+          refresh-message-position: true
