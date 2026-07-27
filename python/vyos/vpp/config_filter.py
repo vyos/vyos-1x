@@ -36,6 +36,7 @@ def iface_filter_eth(config: Config, iface: str) -> None:
         'hw-id',
         'ip',
         'ipv6',
+        'mac',
         'mtu',
         'redirect',
         'vif',
