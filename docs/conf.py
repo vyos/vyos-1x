@@ -123,6 +123,7 @@ gettext_uuid = False
 exclude_patterns = [
     u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x',
     '_rst_legacy',
+    'superpowers',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
