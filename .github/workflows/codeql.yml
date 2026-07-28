@@ -28,3 +28,4 @@ jobs:
     uses: vyos/.github/.github/workflows/codeql-analysis.yml@production
     with:
       languages: "['python', 'javascript-typescript']"
+      codeql-cfg-path: ./.github/codeql/codeql-config.yml

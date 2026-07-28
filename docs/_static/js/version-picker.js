@@ -6,8 +6,10 @@
 
   // Deliberately does not match /pr-<n>/ preview prefixes — previews are single-version,
   // so the picker has nothing to switch between and stays hidden there by design.
+  // The (?!\.\.?\/) guard rejects the dot-segments "." and ".." as slugs, which would
+  // otherwise escape the /<lang>/<slug>/ tree once the browser normalizes the URL.
   function parseLocation(pathname) {
-    var m = pathname.match(/^\/([a-z]{2}(?:_[A-Z]{2})?)\/([^/]+)\/(.*)$/);
+    var m = pathname.match(/^\/([a-z]{2}(?:_[A-Z]{2})?)\/(?!\.\.?\/)([A-Za-z0-9._-]+)\/(.*)$/);
     if (!m) return null;
     return { lang: m[1], slug: m[2], rest: m[3] };
   }
@@ -33,8 +35,38 @@
     return null;
   }
 
+  /* Normalize one path segment: each well-formed %HH run is decoded and re-encoded on its
+   * own — per run, not per segment, so one malformed escape cannot double-encode the valid
+   * ones beside it (location.pathname hands escapes back verbatim, and blind re-encoding
+   * would turn %2E into %252E and miss on the HEAD probe). Literal spans, including a bare
+   * '%', always go through encodeURIComponent, so taint neutralization holds unconditionally;
+   * a run decoding to invalid UTF-8 is kept verbatim, being already pure %HH text.
+   * Decoding cannot resurrect a dot-segment: the URL parser resolves '.' / '..' and their
+   * percent-encoded forms during navigation, so pathname never presents them. */
+  function encodeSegment(seg) {
+    var out = '';
+    var re = /(?:%[0-9A-Fa-f]{2})+/g;
+    var last = 0;
+    var m;
+    while ((m = re.exec(seg))) {
+      out += encodeURIComponent(seg.slice(last, m.index));
+      try { out += encodeURIComponent(decodeURIComponent(m[0])); } catch (e) { out += m[0]; }
+      last = m.index + m[0].length;
+    }
+    return out + encodeURIComponent(seg.slice(last));
+  }
+
+  /* Percent-encode a multi-segment path one segment at a time, so the '/' separators
+   * survive. Real docs paths are plain ASCII sphinx slugs (letters/digits/-/_/./html),
+   * where this is a no-op — it exists to keep DOM-derived text (location.pathname,
+   * select.value) from reaching a location.href sink unescaped. */
+  function encodePath(rest) {
+    return rest.split('/').map(function (seg) { return encodeSegment(seg); }).join('/');
+  }
+
   function targetUrlFor(loc, targetSlug) {
-    return '/' + loc.lang + '/' + targetSlug + '/' + loc.rest;
+    return '/' + encodeURIComponent(loc.lang) + '/' + encodeURIComponent(targetSlug) +
+      '/' + encodePath(loc.rest);
   }
 
   /* Full navigation URL for a version switch: same path on the target version
@@ -42,6 +74,13 @@
    * (?highlight=…, #section) survive the switch (§4 URL-stability contract). */
   function navUrlFor(loc, targetSlug, search, hash) {
     return targetUrlFor(loc, targetSlug) + (search || '') + (hash || '');
+  }
+
+  /* Mirror of targetUrlFor for the language switch: swaps the lang segment while
+   * keeping the current version slug and path. */
+  function langUrlFor(loc, langCode) {
+    return '/' + encodeURIComponent(langCode) + '/' + encodeURIComponent(loc.slug) +
+      '/' + encodePath(loc.rest);
   }
 
   /* ---- DOM layer (no execution at import time) ---- */
@@ -81,7 +120,8 @@
     sel.addEventListener('change', function () {
       var search = window.location.search, hash = window.location.hash;
       var target = navUrlFor(loc, sel.value, search, hash);
-      var fallback = '/' + loc.lang + '/' + sel.value + '/' + (search || '') + (hash || '');
+      var fallback = '/' + encodeURIComponent(loc.lang) + '/' + encodeURIComponent(sel.value) +
+        '/' + (search || '') + (hash || '');
       fetch(targetUrlFor(loc, sel.value), { method: 'HEAD' })
         .then(function (r) {
           window.location.href = (r.status === 404) ? fallback : target;
@@ -110,7 +150,7 @@
       sel.appendChild(o);
     });
     sel.addEventListener('change', function () {
-      window.location.href = '/' + sel.value + '/' + loc.slug + '/' + loc.rest +
+      window.location.href = langUrlFor(loc, sel.value) +
         window.location.search + window.location.hash;
     });
     anchor.appendChild(sel);
@@ -145,8 +185,8 @@
   }
 
   window.VyOSVersionPicker = {
-    parseLocation: parseLocation, bannerFor: bannerFor,
-    targetUrlFor: targetUrlFor, navUrlFor: navUrlFor, init: init,
+    parseLocation: parseLocation, bannerFor: bannerFor, encodePath: encodePath,
+    targetUrlFor: targetUrlFor, navUrlFor: navUrlFor, langUrlFor: langUrlFor, init: init,
   };
   if (typeof document !== 'undefined' && document.addEventListener)
     document.addEventListener('DOMContentLoaded', init);

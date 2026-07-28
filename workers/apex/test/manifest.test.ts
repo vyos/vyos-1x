@@ -122,7 +122,13 @@ it("root.html's hardcoded default-version references stay congruent with the man
   // Strip HTML comments first — the explanatory comment in root.html mentions the
   // literal placeholder text "/en/<default_version>/", which is documentation, not
   // a real markup reference, and must not be asserted against the manifest.
-  const withoutComments = rootHtml.replace(/<!--[\s\S]*?-->/g, "");
+  // Applied repeatedly to a fixpoint: a single pass can splice two partial comments
+  // into a new one (CodeQL js/incomplete-multi-character-sanitization).
+  let withoutComments = rootHtml;
+  for (let prev = ""; prev !== withoutComments; ) {
+    prev = withoutComments;
+    withoutComments = withoutComments.replace(/<!--[\s\S]*?-->/g, "");
+  }
   const refs = withoutComments.match(/\/en\/[^/"'\s]+\//g) ?? [];
   expect(refs.length).toBeGreaterThan(0);
   for (const ref of refs) expect(ref).toBe(expected);

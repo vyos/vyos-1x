@@ -1,0 +1,11 @@
+# CodeQL configuration for vyos-documentation.
+#
+# docs/_static/js/datatables.js is vendored stock DataTables 1.11.5 — unmodified
+# third-party code (MIT). CodeQL flags its internal HTML-strip/sort helpers
+# (js/incomplete-multi-character-sanitization, js/incomplete-sanitization), which
+# are display/sort normalization routines, not sanitization boundaries. The file is
+# excluded from analysis rather than hand-patched, so the vendored copy stays
+# byte-identical to upstream and remains trivially re-vendorable on the next bump.
+
+paths-ignore:
+  - docs/_static/js/datatables.js
