@@ -29,6 +29,7 @@ from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
     verify_vpp_remove_xconnect_interface,
     verify_vpp_tunnel_source_address,
+    verify_vpp_remove_interface,
 )
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 
@@ -71,6 +72,14 @@ def get_config(config=None) -> dict:
         no_tag_node_value_mangle=True,
     )
 
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     # ACL dependency
     if conf.exists(['vpp', 'acl']):
         set_dependents('vpp_acl', conf)
@@ -87,6 +96,7 @@ def verify(config):
 
     # config removed
     if 'deleted' in config:
+        verify_vpp_remove_interface(config['ifname'], config['vpp'])
         return None
 
     if not is_systemd_service_active('vpp.service'):
