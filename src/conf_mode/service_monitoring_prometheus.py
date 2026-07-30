@@ -60,6 +60,16 @@ vpp_system_stat_patterns = (
     '^/sys/last_update$',
     '^/sys/input_rate$',
 )
+vpp_nat44_stat_patterns = (
+    '^/nat44-.*/total-sessions$',
+    '^/nat44-ed/max-cfg-sessions$',
+    '^/nat44-ed/in2out/fastpath/.*$',
+    '^/nat44-ed/out2in/fastpath/.*$',
+    '^/nat44-ed/in2out/slowpath/.*$',
+    '^/nat44-ed/out2in/slowpath/.*$',
+    '^/nat44-ed/hairpinning$',
+)
+vpp_acl_stat_patterns = ('^/acl/.*/matches$',)
 vpp_stat_group_patterns = {
     'interfaces': ('^/interfaces',),
     'err': ('^/err',),
@@ -68,6 +78,8 @@ vpp_stat_group_patterns = {
     'workers': ('^/workers',),
     'nodes': ('^/nodes',),
     'memory': ('^/mem',),
+    'nat44': vpp_nat44_stat_patterns,
+    'acl': vpp_acl_stat_patterns,
 }
 vpp_default_stat_groups = [
     'interfaces',
@@ -81,24 +93,17 @@ vpp_default_stat_groups = [
 
 def build_vpp_stat_patterns(vpp_exporter):
     selected_groups = vpp_exporter.get('stat_group', [])
-    custom_patterns = vpp_exporter.get('stat_pattern', [])
 
-    if not selected_groups and not custom_patterns:
+    if not selected_groups:
         selected_groups = vpp_default_stat_groups
 
     selected_groups = set(selected_groups)
-    patterns = [
+    return [
         pattern
         for group_name, group_patterns in vpp_stat_group_patterns.items()
         if group_name in selected_groups
         for pattern in group_patterns
     ]
-
-    for pattern in custom_patterns:
-        if pattern not in patterns:
-            patterns.append(pattern)
-
-    return patterns
 
 
 def get_config(config=None):
@@ -158,22 +163,12 @@ def get_config(config=None):
         vpp_exporter['vpp_configured'] = conf.exists(['vpp'])
 
         configured_groups = conf.return_values(base + ['vpp-exporter', 'stat-group'])
-        configured_patterns = conf.return_values(
-            base + ['vpp-exporter', 'stat-pattern']
-        )
         effective_groups = conf.return_effective_values(
             base + ['vpp-exporter', 'stat-group']
         )
-        effective_patterns = conf.return_effective_values(
-            base + ['vpp-exporter', 'stat-pattern']
-        )
 
-        nodes_requested = 'nodes' in configured_groups or any(
-            pattern.startswith('^/nodes') for pattern in configured_patterns
-        )
-        nodes_requested_effective = 'nodes' in effective_groups or any(
-            pattern.startswith('^/nodes') for pattern in effective_patterns
-        )
+        nodes_requested = 'nodes' in configured_groups
+        nodes_requested_effective = 'nodes' in effective_groups
         vpp_exporter['nodes_selection_newly_enabled'] = (
             nodes_requested and not nodes_requested_effective
         )
@@ -249,12 +244,6 @@ def verify(monitoring):
         for group_name in vpp_exporter.get('stat_group', []):
             if group_name not in vpp_stat_group_patterns:
                 raise ConfigError(f'Invalid stat-group "{group_name}"')
-
-        for pattern in vpp_exporter.get('stat_pattern', []):
-            if not pattern.startswith('^/'):
-                raise ConfigError(
-                    f'Invalid stat-pattern "{pattern}". Pattern must start with "^/"'
-                )
 
         if vpp_exporter.get('nodes_selection_newly_enabled') and not vpp_exporter.get(
             'vpp_per_node_counters_enabled'

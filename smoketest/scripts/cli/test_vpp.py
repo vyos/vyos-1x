@@ -62,6 +62,16 @@ vpp_system_stat_patterns = (
     '^/sys/last_update$',
     '^/sys/input_rate$',
 )
+vpp_nat44_stat_patterns = (
+    '^/nat44-.*/total-sessions$',
+    '^/nat44-ed/max-cfg-sessions$',
+    '^/nat44-ed/in2out/fastpath/.*$',
+    '^/nat44-ed/out2in/fastpath/.*$',
+    '^/nat44-ed/in2out/slowpath/.*$',
+    '^/nat44-ed/out2in/slowpath/.*$',
+    '^/nat44-ed/hairpinning$',
+)
+vpp_acl_stat_patterns = ('^/acl/.*/matches$',)
 
 
 def get_vpp_config():
@@ -1842,6 +1852,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('^/workers', file_content)
         self.assertIn('^/mem', file_content)
         self.assertNotIn('^/nodes', file_content)
+        for pattern in vpp_nat44_stat_patterns:
+            self.assertNotIn(pattern, file_content)
+        for pattern in vpp_acl_stat_patterns:
+            self.assertNotIn(pattern, file_content)
         self.assertIn('PartOf=vpp.service', file_content)
         self.assertIn('BindsTo=vpp.service', file_content)
         self.assertIn('WantedBy=vpp.service', file_content)
@@ -1855,24 +1869,30 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(os.path.exists(vpp_exporter_service_file))
         self.assertFalse(os.path.lexists(vpp_exporter_enable_link))
 
-    def test_26_2_vpp_exporter_groups_and_custom_patterns(self):
+    def test_26_2_vpp_exporter_selected_groups(self):
         exporter_path = prometheus_base_path + ['vpp-exporter']
         self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
         self.cli_set(exporter_path)
         self.cli_set(exporter_path + ['stat-group', 'interfaces'])
+        self.cli_set(exporter_path + ['stat-group', 'buffer-pools'])
         self.cli_set(exporter_path + ['stat-group', 'system'])
         self.cli_set(exporter_path + ['stat-group', 'nodes'])
         self.cli_set(exporter_path + ['stat-group', 'memory'])
-        self.cli_set(exporter_path + ['stat-pattern', '^/buffer-pools/.*/used$'])
+        self.cli_set(exporter_path + ['stat-group', 'nat44'])
+        self.cli_set(exporter_path + ['stat-group', 'acl'])
         self.cli_commit()
 
         file_content = read_file(vpp_exporter_service_file)
         self.assertIn('^/interfaces', file_content)
+        self.assertIn('^/buffer-pools', file_content)
         for pattern in vpp_system_stat_patterns:
             self.assertIn(pattern, file_content)
         self.assertIn('^/nodes', file_content)
         self.assertIn('^/mem', file_content)
-        self.assertIn('^/buffer-pools/.*/used$', file_content)
+        for pattern in vpp_nat44_stat_patterns:
+            self.assertIn(pattern, file_content)
+        for pattern in vpp_acl_stat_patterns:
+            self.assertIn(pattern, file_content)
         self.assertNotIn('^/err', file_content)
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
