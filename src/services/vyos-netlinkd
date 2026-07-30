@@ -180,6 +180,16 @@ def main():
             'IPRoute.bind() has no groups= support; using default RTNL subscriptions',
         )
         ipr.bind()
+
+    # Establish a baseline so the first UP re-notification is not mistaken
+    # for a real interface transition.
+    for link in ipr.get_links():
+        attrs = dict(link.get('attrs', []))
+        ifname = attrs.get('IFLA_IFNAME')
+        operstate = attrs.get('IFLA_OPERSTATE')
+        if ifname and match_iface(ifname) and operstate in ['UP', 'DOWN']:
+            _iface_prev_operstate[ifname] = operstate
+
     fd = ipr.fileno()
 
     global running
