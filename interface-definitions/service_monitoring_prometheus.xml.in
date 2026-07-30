@@ -261,16 +261,18 @@
                         <format>memory</format>
                         <description>Memory counters</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>nat44</format>
+                        <description>NAT44 counters</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>acl</format>
+                        <description>ACL match counters</description>
+                      </valueHelp>
                       <constraint>
-                        <regex>(interfaces|err|buffer-pools|system|workers|nodes|memory)</regex>
+                        <regex>(interfaces|err|buffer-pools|system|workers|nodes|memory|nat44|acl)</regex>
                       </constraint>
-                      <constraintErrorMessage>Invalid stat-group. Allowed values: interfaces, err, buffer-pools, system, workers, nodes, memory</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="stat-pattern">
-                    <properties>
-                      <help>Regex pattern to export filtered VPP stats. Examples: ^/interfaces, ^/interfaces/.*/rx$</help>
+                      <constraintErrorMessage>Invalid stat-group. Allowed values: interfaces, err, buffer-pools, system, workers, nodes, memory, nat44, acl</constraintErrorMessage>
                       <multi/>
                     </properties>
                   </leafNode>
