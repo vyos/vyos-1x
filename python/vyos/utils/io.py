@@ -71,7 +71,8 @@ def ask_yes_no(question, default=False) -> bool:
             else:
                 stdout.write("Please respond with yes/y or no/n\n")
         except EOFError:
-            stdout.write("\nPlease respond with yes/y or no/n\n")
+            stdout.write("\n")
+            return default
         except KeyboardInterrupt:
             return False
 
