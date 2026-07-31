@@ -471,29 +471,31 @@ def is_ipv6_link_local(addr):
     return False
 
 
-def is_addr_assigned(ip_address: str, vrf=None, include_vrf=False) -> bool:
+def is_addr_assigned(ip_address: str, vrf=None, include_vrf=False, allow_nonlocal: bool = False) -> bool:
     """ Verify if the given IPv4/IPv6 address is assigned to any interface """
     from netifaces import interfaces # pylint: disable = no-name-in-module
     from vyos.utils.network import get_interface_config
     from vyos.utils.dict import dict_search
 
-    # Check if sysctl to allow nonlocal binds is set for given afi, skip check accordingly
-    if (
-        is_valid_ipv4_address_or_range(ip_address)
+    # Check if sysctl to allow nonlocal binds is set for given afi and caller allows nonlocal binds,
+    # skip check accordingly
+    if allow_nonlocal and ((
+        is_ipv4_address(ip_address)
         and sysctl_read(['net', 'ipv4', 'ip_nonlocal_bind']) == "1"
     ) or (
-        is_valid_ipv6_address_or_range(ip_address)
+        is_ipv6_address(ip_address)
         and sysctl_read(['net', 'ipv6', 'ip_nonlocal_bind']) == "1"
-    ):
+    )):
         return True
 
     for interface in interfaces():
         # Check if interface belongs to the requested VRF, if this is not the
         # case there is no need to proceed with this data set - continue loop
         # with next element
-        tmp = get_interface_config(interface)
-        if dict_search('master', tmp) != vrf and not include_vrf:
-            continue
+        if vrf is not None and not include_vrf and interface != vrf:
+            tmp = get_interface_config(interface)
+            if dict_search('master', tmp) != vrf:
+                continue
 
         if is_intf_addr_assigned(interface, ip_address):
             return True
@@ -510,6 +512,10 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
 
     from vyos.utils.process import rc_cmd
     from ipaddress import ip_interface
+
+    # Reject invalid addresses or address ranges
+    if not is_ipv4_address(addr) and not is_ipv6_address(addr):
+        return False
 
     netns_cmd = f'ip netns exec {netns}' if netns else ''
     rc, out = rc_cmd(f'{netns_cmd} ip --json address show dev {ifname}')
@@ -755,38 +761,73 @@ def get_nft_vrf_zone_mapping() -> dict:
         output.append({'interface' : vrf_name, 'vrf_tableid' : vrf_id})
     return output
 
-def is_valid_ipv4_address_or_range(addr: str) -> bool:
+def is_ipv4_address(addr: str) -> bool:
+    """
+    Validates if the provided address is a valid IPv4 address or CIDR.
+    :param addr: address to test
+    :return: bool: True if provided address is valid
+    """
+    from ipaddress import ip_interface
+    try:
+        return ip_interface(addr).version == 4
+    except Exception:
+        return False
+
+def is_ipv6_address(addr: str) -> bool:
+    """
+    Validates if the provided address is a valid IPv6 address or CIDR.
+    :param addr: address to test
+    :return: bool: True if provided address is valid
+    """
+    from ipaddress import ip_interface
+    try:
+        return ip_interface(addr).version == 6
+    except Exception:
+        return False
+
+def is_ipv4_range(addr: str) -> bool:
+    """
+    Validates if the provided address is a valid IPv4 range.
+    :param addr: address to test
+    :return: bool: True if provided address is valid
+    """
+    if '-' not in addr:
+        return False
+    try:
+        start, end = addr.split('-')
+        return is_ipv4_address(start) and is_ipv4_address(end)
+    except Exception:
+        return False
+
+def is_ipv6_range(addr: str) -> bool:
+    """
+    Validates if the provided address is a valid IPv6 range.
+    :param addr: address to test
+    :return: bool: True if provided address is valid
+    """
+    if '-' not in addr:
+        return False
+    try:
+        start, end = addr.split('-')
+        return is_ipv6_address(start) and is_ipv6_address(end)
+    except Exception:
+        return False
+
+def is_ipv4_address_or_range(addr: str) -> bool:
     """
     Validates if the provided address is a valid IPv4, CIDR or IPv4 range
     :param addr: address to test
     :return: bool: True if provided address is valid
     """
-    from ipaddress import ip_network
-    try:
-        if '-' in addr: # If we are checking a range, validate both address's individually
-            split = addr.split('-')
-            return is_valid_ipv4_address_or_range(split[0]) and is_valid_ipv4_address_or_range(split[1])
-        else:
-            return ip_network(addr).version == 4
-    except Exception:
-        return False
+    return is_ipv4_address(addr) or is_ipv4_range(addr)
 
-def is_valid_ipv6_address_or_range(addr: str) -> bool:
+def is_ipv6_address_or_range(addr: str) -> bool:
     """
-    Validates if the provided address is a valid IPv4, CIDR or IPv4 range
+    Validates if the provided address is a valid IPv6, CIDR or IPv6 range
     :param addr: address to test
     :return: bool: True if provided address is valid
     """
-    from ipaddress import ip_network
-    try:
-        if '-' in addr: # If we are checking a range, validate both address's individually
-            split = addr.split('-')
-            return is_valid_ipv6_address_or_range(split[0]) and is_valid_ipv6_address_or_range(split[1])
-        else:
-            return ip_network(addr).version == 6
-    except Exception:
-        return False
-
+    return is_ipv6_address(addr) or is_ipv6_range(addr)
 
 def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -> list:
     """
@@ -807,9 +848,10 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
         # Check if interface belongs to the requested VRF, if this is not the
         # case there is no need to proceed with this data set - continue loop
         # with next element
-        tmp = get_interface_config(interface)
-        if vrf is not None and dict_search('master', tmp) != vrf and not include_vrf:
-            continue
+        if vrf is not None and not include_vrf and interface != vrf:
+            tmp = get_interface_config(interface)
+            if dict_search('master', tmp) != vrf:
+                continue
 
         if is_intf_addr_assigned(interface, ip_address):
             ifaces.append(interface)

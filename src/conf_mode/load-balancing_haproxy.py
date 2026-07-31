@@ -81,7 +81,7 @@ def verify(lb):
                 if '%' in listen_address:
                     listen_address, *_ = listen_address.split('%', maxsplit=1)
 
-                if not is_addr_assigned(listen_address):
+                if not is_addr_assigned(listen_address, allow_nonlocal=True):
                     raise ConfigError(
                         f'listen-address "{listen_address}" not assigned on any interface!'
                     )
