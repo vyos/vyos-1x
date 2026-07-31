@@ -84,14 +84,7 @@ Registered subscribers can log into <https://support.vyos.io/> to access
 a variety of different downloads via the "Downloads" link. These
 downloads include LTS (Long-Term Support), the associated hot-fix releases,
 early public access releases, pre-built VM images, as well as device
-specific installation ISOs. See this [article] for more information on
-downloads.
-
-:::{note}
-The `.qcow2` image provided for Proxmox deployment can also be
-used to deploy VyOS on KVM environments. This image includes cloud-init
-support.
-:::
+specific installation ISOs. 
 
 :::{figure} /_static/images/vyosnew-downloads.webp
 :::
@@ -456,7 +449,6 @@ option, and type CTRL-X to boot.
 
 Installation can then continue as outlined above.
 
-[article]: https://customers.support.vyos.com/servicedesk/customer/portal/1/article/159055913
 [balenaetcher]: https://www.balena.io/etcher/
 [configuration]: https://wiki.syslinux.org/wiki/index.php?title=Config
 [default]: https://wiki.syslinux.org/wiki/index.php?title=PXELINUX#Configuration
