@@ -1,0 +1,25 @@
+{% if strict_delete is vyos_defined %}
+destroy rule {{ family }} raw vyos_rpfilter handle {{ strict_handle }}
+{% endif %}
+{% if loose_delete is vyos_defined %}
+destroy rule {{ family }} raw vyos_rpfilter handle {{ loose_handle }}
+{% endif %}
+
+destroy element {{ family }} raw rpfilter_strict_ifaces { "{{ iface }}" }
+destroy element {{ family }} raw rpfilter_loose_ifaces { "{{ iface }}" }
+destroy element {{ family }} raw rpfilter_strict { "{{ iface }}" }
+destroy element {{ family }} raw rpfilter_loose { "{{ iface }}" }
+
+{% if mode is vyos_defined('strict') %}
+add element {{ family }} raw rpfilter_strict_ifaces { "{{ iface }}" }
+add element {{ family }} raw rpfilter_strict { "{{ iface }}" : accept }
+{%     if strict_add is vyos_defined %}
+insert rule {{ family }} raw vyos_rpfilter iifname @rpfilter_strict_ifaces fib saddr . iif oif vmap @rpfilter_strict
+{%     endif %}
+{% elif mode is vyos_defined('loose') %}
+add element {{ family }} raw rpfilter_loose_ifaces { "{{ iface }}" }
+add element {{ family }} raw rpfilter_loose { "{{ iface }}" : accept }
+{%     if loose_add is vyos_defined %}
+insert rule {{ family }} raw vyos_rpfilter iifname @rpfilter_loose_ifaces fib saddr oif vmap @rpfilter_loose
+{%     endif %}
+{% endif %}
