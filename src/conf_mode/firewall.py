@@ -283,7 +283,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         if rule_conf['protocol'].isdigit():
             if not dict_search('inet_proto_map', firewall):
                 generate_inet_proto_keymap(firewall)
-            rule_conf['protocol'] = dict_search(rule_conf['protocol'], firewall['inet_proto_map'], "")
+            rule_conf['protocol'] = dict_search(rule_conf['protocol'], firewall['inet_proto_map'], rule_conf['protocol'])
 
         if rule_conf['protocol'] == 'icmp' and family == 'ipv6':
             raise ConfigError(f'{rule_num}Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
