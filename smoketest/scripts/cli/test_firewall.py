@@ -1687,5 +1687,34 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_protocol_normalization(self):
+        # Protocol cannot be ipv6-icmp on IPv4
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'protocol', '58'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_discard()
+
+        # Protocol must be TCP if flags are set
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'protocol', '6'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'tcp', 'flags', 'syn'])
+
+        # Protocol must be GRE if GRE specific fields are set
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'protocol', '47'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'gre', 'flags', 'key', 'unset'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['tcp flags & syn == syn'],
+            ['gre flags & 4 == 0'],
+        ]
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
