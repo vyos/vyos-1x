@@ -1126,12 +1126,11 @@ class BasicInterfaceTest:
                     self.assertEqual('1', tmp)
 
                 if cli_defined(self._base_path + ['ip'], 'source-validation'):
-                    base_options = f'iifname "{interface}"'
+                    base_options = f'iifname @rpfilter_loose_ifaces'
                     out = cmdl(['nft', 'list', 'chain', 'ip', 'raw', 'vyos_rpfilter'], sudo=True)
                     for line in out.splitlines():
-                        if line.startswith(base_options):
-                            self.assertIn('fib saddr oif 0', line)
-                            self.assertIn('drop', line)
+                        if base_options in line:
+                            self.assertIn('iifname @rpfilter_loose_ifaces fib saddr oif vmap @rpfilter_loose', line)
 
         def test_interface_ipv6_options(self):
             if not self._test_ipv6:
@@ -1191,12 +1190,11 @@ class BasicInterfaceTest:
                     self.assertEqual('0', tmp)
 
                 if cli_defined(self._base_path + ['ipv6'], 'source-validation'):
-                    base_options = f'iifname "{interface}"'
+                    base_options = f'iifname @rpfilter_strict_ifaces'
                     out = cmdl(['nft', 'list', 'chain', 'ip6', 'raw', 'vyos_rpfilter'], sudo=True)
                     for line in out.splitlines():
-                        if line.startswith(base_options):
-                            self.assertIn('fib saddr . iif oif 0', line)
-                            self.assertIn('drop', line)
+                        if base_options in line:
+                            self.assertIn('iifname @rpfilter_strict_ifaces fib saddr . iif oif vmap @rpfilter_strict', line)
 
                 if cli_defined(self._base_path + ['ipv6', 'address'], 'interface-identifier'):
                     tmp = cmdl(['ip', '-j', 'token', 'show', 'dev', interface])
