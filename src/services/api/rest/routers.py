@@ -24,6 +24,7 @@ import copy
 import logging
 import traceback
 from threading import Lock
+from typing import Optional
 from typing import Union
 from typing import Callable
 from typing import TYPE_CHECKING
@@ -32,6 +33,7 @@ from fastapi import Depends
 from fastapi import Query
 from fastapi import Request
 from fastapi import Response
+from fastapi import Header
 from fastapi import HTTPException
 from fastapi import APIRouter
 from fastapi import BackgroundTasks
@@ -96,9 +98,9 @@ def check_auth(key_list, key):
     return key_id
 
 
-def auth_required(data: ApiModel):
+def auth_required(data: ApiModel, x_api_key: Optional[str] = Header(None)):
     session = SessionState()
-    key = data.key
+    key = data.key or x_api_key
     api_keys = session.keys
     key_id = check_auth(api_keys, key)
     if not key_id:

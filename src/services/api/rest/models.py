@@ -23,6 +23,7 @@ from typing import List
 from typing import Union
 from typing import Dict
 from typing import Self
+from typing import Optional
 
 from pydantic import BaseModel
 from pydantic import StrictStr
@@ -52,7 +53,7 @@ def success(data):
 
 
 class ApiModel(BaseModel):
-    key: StrictStr
+    key: Optional[StrictStr] = None
 
 
 class BasePathModel(BaseModel):
