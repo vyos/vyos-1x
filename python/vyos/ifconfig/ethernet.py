@@ -58,6 +58,10 @@ class EthernetIf(Interface):
                 'validate': lambda v: assert_list(v, ['on', 'off']),
                 'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
             },
+            'rx': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'rx', v),
+            },
             'gso': {
                 'validate': lambda v: assert_list(v, ['on', 'off']),
                 'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
@@ -105,6 +109,7 @@ class EthernetIf(Interface):
             'offload.lro',
             'offload.rfs',
             'offload.rps',
+            'offload.rx',
             'offload.sg',
             'offload.tso',
             'redirect',
@@ -272,6 +277,22 @@ class EthernetIf(Interface):
                 print(
                     'Adapter does not support changing generic-receive-offload settings!'
                 )
+        return False
+
+    def set_rx(self, state):
+        """
+        Enable/Disable Receive Checksum Offload.
+        State can be either True or False.
+        """
+        if not isinstance(state, bool):
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_rx_checksumming()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('rx', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing rx-checksumming settings!')
         return False
 
     def set_gso(self, state):
@@ -576,6 +597,9 @@ class EthernetIf(Interface):
 
         # RFS - Receive Flow Steering
         self.set_rfs(dict_search('offload.rfs', config) is not None)
+
+        # RX (receive checksum offload)
+        self.set_rx(dict_search('offload.rx', config) is not None)
 
         # scatter-gather option
         self.set_sg(dict_search('offload.sg', config) is not None)

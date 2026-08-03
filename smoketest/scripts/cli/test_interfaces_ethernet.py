@@ -319,6 +319,31 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(' evpn mh uplink', frrconfig)
 
+    def test_ethtool_offload_rx(self):
+        for interface in self._interfaces:
+            ethtool = Ethtool(interface)
+            active, fixed = ethtool.get_rx_checksumming()
+            
+            # Skip if adapter does not support changing rx checksumming
+            if fixed:
+                continue
+
+            # Enable rx offload
+            self.cli_set(self._base_path + [interface, 'offload', 'rx'])
+            self.cli_commit()
+
+            ethtool = Ethtool(interface)
+            active, _ = ethtool.get_rx_checksumming()
+            self.assertTrue(active)
+
+            # Disable rx offload
+            self.cli_delete(self._base_path + [interface, 'offload', 'rx'])
+            self.cli_commit()
+
+            ethtool = Ethtool(interface)
+            active, _ = ethtool.get_rx_checksumming()
+            self.assertFalse(active)
+
     def test_switchdev(self):
         interface = self._interfaces[0]
         self.cli_set(self._base_path + [interface, 'switchdev'])
