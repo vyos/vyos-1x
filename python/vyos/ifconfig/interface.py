@@ -896,12 +896,23 @@ class Interface(Control):
                 rpf_dict['loose_handle'] = handle
 
     def _apply_rpf_nft_config(self, rpf_dict):
+        from subprocess import STDOUT
+
         rpf_template = '/run/nftables-source-validation.conf'
         render(rpf_template, 'firewall/nftables-source-validation.j2', rpf_dict)
-        tmp = run(['nft', '-c', '-f', rpf_template])
-        if tmp > 0:
-            raise ConfigError('Source validation configuration file errors encountered!')
-        run(['nft', '-f', rpf_template])
+
+        cmdl(
+            ['nft', '-c', '--file', rpf_template],
+            stderr=STDOUT,
+            raising=ConfigError,
+            message='Source validation nftables check failed',
+        )
+        cmdl(
+            ['nft', '-f', rpf_template],
+            stderr=STDOUT,
+            raising=ConfigError,
+            message='Failed to apply source validation nftables config',
+        )
 
     def set_ipv4_source_validation(self, mode):
         """
