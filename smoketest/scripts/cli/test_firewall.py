@@ -111,6 +111,31 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         # -t prevents 1000+ GeoIP elements being returned
         self.verify_nftables(nftables_search, 'ip vyos_filter', args='-t')
 
+    def test_fib_type(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'destination', 'fib-type', 'local'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '2', 'source', 'fib-type', '!local'])
+
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'destination', 'fib-type', 'local'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '2', 'source', 'fib-type', '!local'])
+
+        self.cli_commit()
+
+        nftables_search_v4 = [
+            ['fib daddr type local', 'accept'],
+            ['fib saddr type != local', 'drop']
+        ]
+        nftables_search_v6 = [
+            ['fib daddr type local', 'accept'],
+            ['fib saddr type != local', 'drop']
+        ]
+
+        self.verify_nftables(nftables_search_v4, 'ip vyos_filter')
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
+
     def test_groups(self):
         hostmap_path = ['system', 'static-host-mapping', 'host-name']
         example_org = ['192.0.2.8', '192.0.2.10', '192.0.2.11']
