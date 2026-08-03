@@ -103,6 +103,8 @@ def nft_action(vyos_action):
     return vyos_action
 
 def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
+    """Translate a single firewall rule's config dict into a list of
+    nftables match/verdict expression strings for the given hook/family."""
     output = []
 
     if ip_name == 'ip6':
