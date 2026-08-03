@@ -34,6 +34,7 @@ from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
 from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
 from vyos.vpp.config_verify import verify_vpp_tunnel_source_address
+from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 
 
@@ -81,6 +82,14 @@ def get_config(config=None) -> dict:
         with_defaults=True,
     )
 
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
         set_dependents('vpp_nat_nat44', conf)
@@ -103,6 +112,7 @@ def verify(config):
     verify_vpp_remove_bridge_interface(config)
 
     if 'deleted' in config:
+        verify_vpp_remove_interface(config['ifname'], config['vpp'])
         return None
 
     if not is_systemd_service_active('vpp.service'):
