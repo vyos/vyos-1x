@@ -129,6 +129,26 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for address in source_addresses:
             self.assertIn(f'bindacqaddress {address}', config)
 
+    def test_source_address_rejects_multiple_ipv4(self):
+        self.cli_set(base_path + ['source-address', '192.0.2.1'])
+        self.cli_set(base_path + ['source-address', '192.0.2.2'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # fix up and commit successfully so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-address', '192.0.2.2'])
+        self.cli_commit()
+
+    def test_source_address_rejects_multiple_ipv6(self):
+        self.cli_set(base_path + ['source-address', '2001:db8::1'])
+        self.cli_set(base_path + ['source-address', '2001:db8::2'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # fix up and commit successfully so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-address', '2001:db8::2'])
+        self.cli_commit()
+
     def test_interface(self):
         interfaces = ['eth0']
         for interface in interfaces:
