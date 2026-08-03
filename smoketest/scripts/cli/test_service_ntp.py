@@ -135,8 +135,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        # fix up and commit successfully so chronyd is left running for tearDown
-        self.cli_delete(base_path + ['source-address', '192.0.2.2'])
+        # remove the invalid subtree entirely (rather than leaving a
+        # non-local address configured) so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-address'])
         self.cli_commit()
 
     def test_source_address_rejects_multiple_ipv6(self):
@@ -145,8 +146,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        # fix up and commit successfully so chronyd is left running for tearDown
-        self.cli_delete(base_path + ['source-address', '2001:db8::2'])
+        # remove the invalid subtree entirely (rather than leaving a
+        # non-local address configured) so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-address'])
         self.cli_commit()
 
     def test_interface(self):
