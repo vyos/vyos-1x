@@ -72,6 +72,14 @@ binddevice {{ interface }}
 {%     endif %}
 {% endif %}
 
+{% if source_address is vyos_defined %}
+# Source address used for outgoing NTP client requests, independent of
+# whichever interface the kernel's routing table selects for a given server
+{%     for address in source_address %}
+bindacqaddress {{ address }}
+{%     endfor %}
+{% endif %}
+
 {% if timestamp.interface is vyos_defined %}
 # Enable hardware timestamping on the specified interfaces
 {%     for iface, iface_config in timestamp.interface.items() %}

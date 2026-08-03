@@ -113,6 +113,22 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for listen in listen_address:
             self.assertIn(f'bindaddress {listen}', config)
 
+    def test_source_address(self):
+        source_addresses = ['127.0.0.1', '::1']
+        for address in source_addresses:
+            self.cli_set(base_path + ['source-address', address])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        # Check generated client source-address configuration
+        config = read_file(NTP_CONF, sudo=True)
+        for address in source_addresses:
+            self.assertIn(f'bindacqaddress {address}', config)
+
     def test_interface(self):
         interfaces = ['eth0']
         for interface in interfaces:

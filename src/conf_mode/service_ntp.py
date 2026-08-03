@@ -94,6 +94,19 @@ def verify(ntp):
         if ipv6_addresses > 1:
             raise ConfigError(f'NTP Only admits one ipv6 value for listen-address parameter ')
 
+    if 'source_address' in ntp:
+        ipv4_addresses = 0
+        ipv6_addresses = 0
+        for address in ntp['source_address']:
+            if is_ipv4(address):
+                ipv4_addresses += 1
+            else:
+                ipv6_addresses += 1
+        if ipv4_addresses > 1:
+            raise ConfigError(f'NTP Only admits one ipv4 value for source-address parameter ')
+        if ipv6_addresses > 1:
+            raise ConfigError(f'NTP Only admits one ipv6 value for source-address parameter ')
+
     if 'server' in ntp:
         for host, server in ntp['server'].items():
             if 'ptp' in server:
