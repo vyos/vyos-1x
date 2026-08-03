@@ -517,10 +517,10 @@ response:
 ```
 
 A list of operations is applied and committed as a single transaction: if
-any operation fails, nothing is committed. The error message may not
-identify which operation in the list failed, so if a large list fails
-validation, retry the operations in smaller lists (or one per request) to
-locate the offending one.
+any operation fails, nothing is committed *for that component*; partial
+commits are possible for a list of operations comprising more than one
+component. The error message will indicate the component and the missing
+information or conflict.
 
 :::{note}
 The `/configure` endpoint commits changes to the running configuration but
