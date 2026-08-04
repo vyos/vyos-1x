@@ -101,9 +101,9 @@ def _get_raw_translation(direction, family, address=None):
 
 def _get_interface(rule):
     interface = 'any'
-    for expr in rule.get('rule').get('expr'):
+    for expr in rule.get('rule', {}).get('expr', []):
         match = expr.get('match')
-        if match and jmespath.search('left.meta.key', match) == 'iifname':
+        if match and jmespath.search('left.meta.key', match) in ('iifname', 'oifname'):
             interface = match.get('right')
             break
     if isinstance(interface, str) and interface.startswith('@'):
