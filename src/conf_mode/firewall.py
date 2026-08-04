@@ -233,17 +233,17 @@ def is_node_empty(rule_conf):
     return False, None
 
 def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
-    rule_num = f'Rule {rule_id}'
+    rule_num = f'[{family}-{hook}-{priority}-rule-{rule_id}]\n'
 
     if 'action' not in rule_conf:
-        raise ConfigError(f'{rule_num}: Action must be defined')
+        raise ConfigError(f'{rule_num}Action must be defined')
 
     if 'jump' in rule_conf['action'] and 'jump_target' not in rule_conf:
-        raise ConfigError(f'{rule_num}: Action set to jump, but no jump-target specified')
+        raise ConfigError(f'{rule_num}Action set to jump, but no jump-target specified')
 
     if 'jump_target' in rule_conf:
         if 'jump' not in rule_conf['action']:
-            raise ConfigError(f'{rule_num}: jump-target defined, but action jump needed and it is not defined')
+            raise ConfigError(f'{rule_num}jump-target defined, but action jump needed and it is not defined')
         target = rule_conf['jump_target']
         if hook != 'name': # This is a bit clumsy, but consolidates a chunk of code.
             verify_jump_target(firewall, hook, target, family, recursive=True)
@@ -252,24 +252,24 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
     if rule_conf['action'] == 'offload':
         if 'offload_target' not in rule_conf:
-            raise ConfigError(f'{rule_num}: Action set to offload, but no offload-target specified')
+            raise ConfigError(f'{rule_num}Action set to offload, but no offload-target specified')
 
         offload_target = rule_conf['offload_target']
 
         if not dict_search_args(firewall, 'flowtable', offload_target):
-            raise ConfigError(f'{rule_num}: Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
+            raise ConfigError(f'{rule_num}Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
     elif 'offload_target' in rule_conf:
-        Warning(f'{rule_num}: offload-target is specified but action is not set to "offload"')
+        Warning(f'{rule_num}offload-target is specified but action is not set to "offload"')
 
     if rule_conf['action'] != 'synproxy' and 'synproxy' in rule_conf:
-        raise ConfigError(f'{rule_num}: "synproxy" option allowed only for action synproxy')
+        raise ConfigError(f'{rule_num}"synproxy" option allowed only for action synproxy')
     if rule_conf['action'] == 'synproxy':
         if 'state' in rule_conf:
-            raise ConfigError(f'{rule_num}: For action "synproxy" state cannot be defined')
+            raise ConfigError(f'{rule_num}For action "synproxy" state cannot be defined')
         if not rule_conf.get('synproxy', {}).get('tcp'):
-            raise ConfigError(f'{rule_num}: synproxy TCP MSS is not defined')
+            raise ConfigError(f'{rule_num}synproxy TCP MSS is not defined')
         if rule_conf.get('protocol', {}) != 'tcp':
-            raise ConfigError(f'{rule_num}: For action "synproxy" the protocol must be set to TCP')
+            raise ConfigError(f'{rule_num}For action "synproxy" the protocol must be set to TCP')
 
     if 'state' in rule_conf:
         disable_conntrack = dict_search(f'{family}.{hook}.{priority}.disable_conntrack', firewall)
@@ -283,53 +283,53 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         # If conntrack is disabled in the input or output chain,
         # state cannot be matched in the input or output chain
         if hook in ['input', 'output'] and conntrack_disabled_list:
-            raise ConfigError(f'{rule_num}: state cannot be matched in {hook} when conntrack is disabled in input or output chains')
+            raise ConfigError(f'{rule_num}state cannot be matched in {hook} when conntrack is disabled in input or output chains')
         # If conntrack is disabled in the forward chain,
         # state cannot be matched in the forward chain
         if hook == 'forward' and disable_conntrack == {}:
-            raise ConfigError(f'{rule_num}: state cannot be matched in {hook} when conntrack is disabled in {hook} chain')
+            raise ConfigError(f'{rule_num}state cannot be matched in {hook} when conntrack is disabled in {hook} chain')
 
     if 'queue_options' in rule_conf:
         if 'queue' not in rule_conf['action']:
-            raise ConfigError(f'{rule_num}: queue-options defined, but action queue needed and it is not defined')
+            raise ConfigError(f'{rule_num}queue-options defined, but action queue needed and it is not defined')
         if 'fanout' in rule_conf['queue_options'] and ('queue' not in rule_conf or '-' not in rule_conf['queue']):
-            raise ConfigError(f'{rule_num}: queue-options fanout defined, then queue needs to be defined as a range')
+            raise ConfigError(f'{rule_num}queue-options fanout defined, then queue needs to be defined as a range')
 
     if 'queue' in rule_conf and 'queue' not in rule_conf['action']:
-        raise ConfigError(f'{rule_num}: queue defined, but action queue needed and it is not defined')
+        raise ConfigError(f'{rule_num}queue defined, but action queue needed and it is not defined')
 
     if 'fragment' in rule_conf:
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
-            raise ConfigError(f'{rule_num}: Cannot specify both "match-frag" and "match-non-frag"')
+            raise ConfigError(f'{rule_num}Cannot specify both "match-frag" and "match-non-frag"')
 
     node_empty, node_name = is_node_empty(rule_conf)
     if node_empty:
         tmp = ' '.join(node_name).replace('_', '-')
-        raise ConfigError(f'{rule_num}: Configuration node {tmp} may not be empty')
+        raise ConfigError(f'{rule_num}Configuration node {tmp} may not be empty')
 
     if 'limit' in rule_conf:
         if 'rate' in rule_conf['limit']:
             rate_int = re.sub(r'\D', '', rule_conf['limit']['rate'])
             if int(rate_int) < 1:
-                raise ConfigError(f'{rule_num}: Limit rate integer cannot be less than 1')
+                raise ConfigError(f'{rule_num}Limit rate integer cannot be less than 1')
 
     if 'ipsec' in rule_conf:
         if {'match_ipsec_in', 'match_none_in'} <= set(rule_conf['ipsec']):
-            raise ConfigError(f'{rule_num}: Cannot specify both "match-ipsec" and "match-none"')
+            raise ConfigError(f'{rule_num}Cannot specify both "match-ipsec" and "match-none"')
         if {'match_ipsec_out', 'match_none_out'} <= set(rule_conf['ipsec']):
-            raise ConfigError(f'{rule_num}: Cannot specify both "match-ipsec" and "match-none"')
+            raise ConfigError(f'{rule_num}Cannot specify both "match-ipsec" and "match-none"')
 
     if 'recent' in rule_conf:
         if not {'count', 'time'} <= set(rule_conf['recent']):
-            raise ConfigError(f'{rule_num}: Recent "count" and "time" values must be defined')
+            raise ConfigError(f'{rule_num}Recent "count" and "time" values must be defined')
 
     if 'gre' in rule_conf:
         if dict_search_args(rule_conf, 'protocol') != 'gre':
-            raise ConfigError(f'{rule_num}: Protocol must be gre when matching GRE flags and fields')
+            raise ConfigError(f'{rule_num}Protocol must be gre when matching GRE flags and fields')
 
         if dict_search_args(rule_conf, 'gre', 'key'):
             if dict_search_args(rule_conf, 'gre', 'version') == 'pptp':
-                raise ConfigError(f'{rule_num}: GRE tunnel keys are not present in PPTP')
+                raise ConfigError(f'{rule_num}GRE tunnel keys are not present in PPTP')
 
             if dict_search_args(rule_conf, 'gre', 'flags', 'checksum') is None:
                 # There is no builtin match in nftables for the GRE key, so we need to do a raw lookup.
@@ -339,51 +339,51 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                 # (confusing, requires doco to explain why it doesn't work sometimes)
                 # or, demand an explicit selection to be made for this specific match rule.
                 # This check enforces the latter. The user is free to create rules for both cases.
-                raise ConfigError(f'{rule_num}: Matching GRE tunnel key requires an explicit checksum flag match. For most cases, use "gre flags checksum unset"')
+                raise ConfigError(f'{rule_num}Matching GRE tunnel key requires an explicit checksum flag match. For most cases, use "gre flags checksum unset"')
 
             if dict_search_args(rule_conf, 'gre', 'flags', 'key', 'unset') is not None:
-                raise ConfigError(f'{rule_num}: Matching GRE tunnel key implies "flags key", cannot specify "flags key unset"')
+                raise ConfigError(f'{rule_num}Matching GRE tunnel key implies "flags key", cannot specify "flags key unset"')
 
         gre_inner_proto = dict_search_args(rule_conf, 'gre', 'inner_proto')
         if gre_inner_proto is not None:
             try:
                 gre_inner_value = int(gre_inner_proto, 0)
                 if gre_inner_value < 0 or gre_inner_value > 65535:
-                    raise ConfigError(f'{rule_num}: inner-proto outside valid ethertype range 0-65535')
+                    raise ConfigError(f'{rule_num}inner-proto outside valid ethertype range 0-65535')
             except ValueError:
                 pass # Symbolic constant, pre-validated before reaching here.
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
         if dict_search_args(rule_conf, 'protocol') != 'tcp':
-            raise ConfigError(f'{rule_num}: Protocol must be tcp when specifying tcp flags')
+            raise ConfigError(f'{rule_num}Protocol must be tcp when specifying tcp flags')
 
         not_flags = dict_search_args(rule_conf, 'tcp', 'flags', 'not')
         if not_flags:
             duplicates = [flag for flag in tcp_flags if flag in not_flags]
             if duplicates:
-                raise ConfigError(f'{rule_num}: Cannot match a tcp flag as set and not set')
+                raise ConfigError(f'{rule_num}Cannot match a tcp flag as set and not set')
 
     if 'protocol' in rule_conf:
         if rule_conf['protocol'] == 'icmp' and family == 'ipv6':
-            raise ConfigError(f'{rule_num}: Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
+            raise ConfigError(f'{rule_num}Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
         if rule_conf['protocol'] == 'ipv6-icmp' and family == 'ipv4':
-            raise ConfigError(f'{rule_num}: Cannot match IPv6 ICMP protocol on IPv4, use icmp')
+            raise ConfigError(f'{rule_num}Cannot match IPv6 ICMP protocol on IPv4, use icmp')
 
     for side in ['destination', 'source']:
         if side in rule_conf:
             side_conf = rule_conf[side]
 
             if len({'address', 'fqdn', 'geoip'} & set(side_conf)) > 1:
-                raise ConfigError(f'{rule_num}: Only one of address, fqdn or geoip can be specified')
+                raise ConfigError(f'{rule_num}Only one of address, fqdn or geoip can be specified')
 
             if 'geoip' in side_conf:
                 if len({'asn', 'country_code'} & set(side_conf['geoip'])) > 1:
-                    raise ConfigError(f'{rule_num}: Only one of asn or country-code can be specified')
+                    raise ConfigError(f'{rule_num}Only one of asn or country-code can be specified')
 
             if 'group' in side_conf:
                 if len({'address_group', 'network_group', 'domain_group', 'remote_group'} & set(side_conf['group'])) > 1:
-                    raise ConfigError(f'{rule_num}: Only one address-group, network-group, remote-group or domain-group can be specified')
+                    raise ConfigError(f'{rule_num}Only one address-group, network-group, remote-group or domain-group can be specified')
 
                 for group in valid_groups:
                     if group in side_conf['group']:
@@ -406,7 +406,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                         if group in ['address_group', 'network_group', 'domain_group', 'remote_group']:
                             types = [t for t in ['address', 'fqdn', 'geoip'] if t in side_conf]
                             if types:
-                                raise ConfigError(f'{rule_num}: {error_group} and {types[0]} cannot both be defined')
+                                raise ConfigError(f'{rule_num}{error_group} and {types[0]} cannot both be defined')
 
                         if group_name and group_name[0] == '!':
                             group_name = group_name[1:]
@@ -414,56 +414,56 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                         group_obj = dict_search_args(firewall, 'group', fw_group, group_name)
 
                         if group_obj is None:
-                            raise ConfigError(f'{rule_num}: Invalid {error_group} "{group_name}" on firewall rule')
+                            raise ConfigError(f'{rule_num}Invalid {error_group} "{group_name}" on firewall rule')
 
                         if not group_obj:
-                            Warning(f'{rule_num}: {error_group} "{group_name}" has no members!')
+                            Warning(f'{rule_num}{error_group} "{group_name}" has no members!')
 
             if 'port' in side_conf or dict_search_args(side_conf, 'group', 'port_group'):
                 if 'protocol' not in rule_conf:
-                    raise ConfigError(f'{rule_num}: Protocol must be defined if specifying a port or port-group')
+                    raise ConfigError(f'{rule_num}Protocol must be defined if specifying a port or port-group')
 
                 if rule_conf['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
-                    raise ConfigError(f'{rule_num}: Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
+                    raise ConfigError(f'{rule_num}Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
             if 'port' in side_conf and dict_search_args(side_conf, 'group', 'port_group'):
-                raise ConfigError(f'{rule_num}: {side} port-group and port cannot both be defined')
+                raise ConfigError(f'{rule_num}{side} port-group and port cannot both be defined')
 
     if 'add_address_to_group' in rule_conf:
         for type in ['destination_address', 'source_address']:
             if type in rule_conf['add_address_to_group']:
                 if 'address_group' not in rule_conf['add_address_to_group'][type]:
-                    raise ConfigError(f'{rule_num}: Dynamic address group must be defined.')
+                    raise ConfigError(f'{rule_num}Dynamic address group must be defined.')
                 else:
                     target = rule_conf['add_address_to_group'][type]['address_group']
                     fwall_group = 'ipv6_address_group' if family == 'ipv6' else 'address_group'
                     group_obj = dict_search_args(firewall, 'group', 'dynamic_group', fwall_group, target)
                     if group_obj is None:
-                            raise ConfigError(f'{rule_num}: Invalid dynamic address group on firewall rule')
+                            raise ConfigError(f'{rule_num}Invalid dynamic address group on firewall rule')
 
     if 'log_options' in rule_conf:
         if 'log' not in rule_conf:
-            raise ConfigError(f'{rule_num}: log-options defined, but log is not enable')
+            raise ConfigError(f'{rule_num}log-options defined, but log is not enable')
 
         if 'snapshot_length' in rule_conf['log_options'] and 'group' not in rule_conf['log_options']:
-            raise ConfigError(f'{rule_num}: log-options snapshot-length defined, but log group is not define')
+            raise ConfigError(f'{rule_num}log-options snapshot-length defined, but log group is not define')
 
         if 'queue_threshold' in rule_conf['log_options'] and 'group' not in rule_conf['log_options']:
-            raise ConfigError(f'{rule_num}: log-options queue-threshold defined, but log group is not define')
+            raise ConfigError(f'{rule_num}log-options queue-threshold defined, but log group is not define')
 
     for direction in ['inbound_interface','outbound_interface']:
         if direction in rule_conf:
             if 'name' in rule_conf[direction] and 'group' in rule_conf[direction]:
-                raise ConfigError(f'{rule_num}: Cannot specify both interface group and interface name for {direction}')
+                raise ConfigError(f'{rule_num}Cannot specify both interface group and interface name for {direction}')
             if 'group' in rule_conf[direction]:
                 group_name = rule_conf[direction]['group']
                 if group_name[0] == '!':
                     group_name = group_name[1:]
                 group_obj = dict_search_args(firewall, 'group', 'interface_group', group_name)
                 if group_obj is None:
-                    raise ConfigError(f'{rule_num}: Invalid interface group "{group_name}" on firewall rule')
+                    raise ConfigError(f'{rule_num}Invalid interface group "{group_name}" on firewall rule')
                 if not group_obj:
-                    Warning(f'{rule_num}: interface-group "{group_name}" has no members!')
+                    Warning(f'{rule_num}interface-group "{group_name}" has no members!')
 
 def verify_nested_group(group_name, group, groups, seen):
     if 'include' not in group:
