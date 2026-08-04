@@ -2,6 +2,7 @@
 #include <include/firewall/add-addr-to-group-ipv4.xml.i>
 #include <include/firewall/common-rule-inet.xml.i>
 #include <include/firewall/icmp.xml.i>
+#include <include/firewall/last-used.xml.i>
 #include <include/firewall/ttl.xml.i>
 <node name="destination">
   <properties>

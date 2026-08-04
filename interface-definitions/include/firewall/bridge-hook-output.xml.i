@@ -29,7 +29,6 @@
             #include <include/firewall/action-l2.xml.i>
             #include <include/firewall/connection-mark.xml.i>
             #include <include/firewall/connection-status.xml.i>
-            #include <include/firewall/last-used.xml.i>
             #include <include/firewall/state.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
             #include <include/firewall/set-packet-modifications-dscp.xml.i>

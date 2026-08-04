@@ -28,7 +28,6 @@
           <children>
             #include <include/firewall/common-rule-ipv4.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
-            #include <include/firewall/last-used.xml.i>
             #include <include/firewall/match-ipsec-in.xml.i>
           </children>
         </tagNode>

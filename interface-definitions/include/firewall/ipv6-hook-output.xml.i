@@ -27,7 +27,6 @@
           </properties>
           <children>
             #include <include/firewall/common-rule-ipv6.xml.i>
-            #include <include/firewall/last-used.xml.i>
             #include <include/firewall/match-ipsec-out.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
             #include <include/firewall/set-packet-modifications-dscp.xml.i>
