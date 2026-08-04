@@ -187,6 +187,16 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
+        # "fib match" set as a bare node with nothing underneath it: 'match' is
+        # present as a key, so it isn't caught by the simple presence check in
+        # verify_rule(), only by is_node_empty()
+        self.cli_delete(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib', 'lookup', 'destination-address'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib', 'match'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
     def test_fib_lookup_conflict(self):
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib', 'lookup', 'source-address'])
