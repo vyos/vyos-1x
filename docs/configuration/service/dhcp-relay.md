@@ -1,132 +1,238 @@
+---
+myst:
+  html_meta:
+    description: |
+      DHCP relay forwards DHCP requests from clients on one network to
+      a DHCP server on another network. VyOS provides independent
+      relay services for IPv4 and IPv6.
+    keywords: dhcp-relay, dhcpv6-relay, dhcp, dhcpv6, relay-agent
+---
+
 (dhcp-relay)=
 
-# DHCP Relay
+# DHCP relay
 
-If you want your router to forward DHCP requests to an external DHCP server
-you can configure the system to act as a DHCP relay agent. The DHCP relay
-agent works with IPv4 and IPv6 addresses.
+A DHCP relay agent enables a single DHCP server to serve clients on
+remote subnets, eliminating the need for a separate server on each
+subnet.
 
-All interfaces used for the DHCP relay must be configured. This includes the
-uplink to the DHCP server.
+The DHCP relay agent receives client requests on one interface,
+forwards them as unicasts to the designated server on another network,
+and delivers the server's replies back to the originating clients.
+
+VyOS provides two independent DHCP relay services:
+
+- `service dhcp-relay`: Relays messages between IPv4 clients and
+  servers.
+- `service dhcpv6-relay`: Relays messages between IPv6 clients and
+  servers.
+
+The two services are configured separately and share no settings. On a
+dual-stack network where clients of both address families need DHCP,
+configure both.
 
 ## IPv4 relay
 
 ### Configuration
 
-```{cfgcmd} set service dhcp-relay interface \<interface\>
-
-Interfaces that participate in the DHCP relay process. If this command is
-used, at least two entries of it are required: one for the interface that
-captures the dhcp-requests, and one for the interface to forward such
-requests. A warning message will be shown if this command is used, since
-new implementations should use ``listen-interface`` and
-``upstream-interface``.
-```
-
 ```{cfgcmd} set service dhcp-relay listen-interface \<interface\>
 
-Interface for DHCP Relay Agent to listen for requests.
+**Configure a listen interface on which the DHCPv4 relay receives
+client broadcast requests.**
+
+Repeat the command to configure multiple listen interfaces.
+```
+
+```{note}
+At least one `listen-interface` and one `upstream-interface` must be
+configured for a successful commit.
+```
+
+Example:
+
+```none
+set service dhcp-relay listen-interface eth1
 ```
 
 ```{cfgcmd} set service dhcp-relay upstream-interface \<interface\>
 
-Interface for DHCP Relay Agent to forward requests out.
+**Configure an upstream interface through which the DHCPv4 relay
+forwards client requests toward the DHCP server.**
+
+Repeat the command to configure multiple upstream interfaces.
 ```
 
-```{cfgcmd} set service dhcp-relay server \<server\>
-
-Configure IP address of the DHCP `<server>` which will handle the relayed
-packets.
+```{note}
+At least one `listen-interface` and one `upstream-interface` must be
+configured for a successful commit.
 ```
 
-```{cfgcmd} set service dhcp-relay relay-options relay-agents-packets discard
+Example:
 
-The router should discard DHCP packages already containing relay agent
-information to ensure that only requests from DHCP clients are forwarded.
+```none
+set service dhcp-relay upstream-interface eth2
+```
+
+```{cfgcmd} set service dhcp-relay server \<ipv4-address\>
+
+**Configure the IPv4 address of a DHCPv4 server to which the relay
+forwards client requests.**
+
+Repeat the command to forward client requests to multiple DHCPv4
+servers.
+```
+
+```{note}
+At least one DHCPv4 server must be configured for a successful commit.
+```
+
+Example:
+
+```none
+set service dhcp-relay server 203.0.113.4
+```
+
+```{cfgcmd} set service dhcp-relay interface \<interface\>
+
+**Configure an interface that participates in DHCPv4 relaying.**
+
+Interfaces configured under this legacy command operate
+bidirectionally, receiving DHCPv4 client broadcasts and forwarding
+requests to the server.
+```
+
+```{warning}
+This command is deprecated and remains available only to support
+existing configurations. New deployments should use
+`listen-interface` and `upstream-interface`, which cannot be combined
+with this command. A deprecation warning appears upon commit.
+```
+
+```{note}
+The loopback interface (`lo`) is not accepted as a valid value for
+this command.
+```
+
+Example:
+
+```none
+set service dhcp-relay interface eth1
+set service dhcp-relay interface eth2
 ```
 
 ```{cfgcmd} set service dhcp-relay disable
 
-Disable dhcp-relay service.
+**Administratively disable the DHCPv4 relay service without removing
+its configuration.**
 ```
 
+Example:
 
-#### Options
-
-```{cfgcmd} set service dhcp-relay relay-options hop-count \<count\>
-
-Set the maximum hop `<count>` before packets are discarded. Range 0...255,
-default 10.
+```none
+set service dhcp-relay disable
 ```
 
-```{cfgcmd} set service dhcp-relay relay-options max-size \<size\>
+### Relay options
 
-Set maximum `<size>` of DHCP packets including relay agent information. If a
-DHCP packet size surpasses this value it will be forwarded without appending
-relay agent information. Range 64...1400, default 576.
+```{cfgcmd} set service dhcp-relay relay-options hop-count \<1-255\>
+
+**Configure the DHCPv4 hop count at which relayed packets are
+discarded.**
+
+A DHCPv4 relay that receives a client message sets the hop count to
+0. Each subsequent DHCPv4 relay along the packet path increments it.
+Packets whose hop count has reached the specified value are silently
+dropped.
+
+The default is 10.
+```
+
+Example:
+
+```none
+set service dhcp-relay relay-options hop-count 4
+```
+
+```{cfgcmd} set service dhcp-relay relay-options max-size \<64-1400\>
+
+**Configure the maximum size, in bytes, that a DHCPv4 packet may
+reach with the Relay Agent Information option added.**
+
+If the packet with the appended option exceeds this size, the option
+is omitted, and the packet is forwarded without it.
+
+The default is 576.
+```
+
+Example:
+
+```none
+set service dhcp-relay relay-options max-size 1400
 ```
 
 ```{cfgcmd} set service dhcp-relay relay-options relay-agents-packets \<append | discard | forward | replace\>
 
-Four policies for reforwarding DHCP packets exist:
-* **append:** The relay agent is allowed to append its own relay information
-to a received DHCP packet, disregarding relay information already present
-in the packet.
-* **discard:** Received packets which already contain relay information will
-be discarded.
-* **forward:** All packets are forwarded, relay information already present
-will be ignored.
-* **replace:** Relay information already present in a packet is stripped and
-replaced with the router's own relay information set.
+**Configure the policy applied to incoming DHCPv4 packets that
+already carry a Relay Agent Information option:**
+
+- `append`: Adds the local Relay Agent Information option while
+  preserving the existing Relay Agent Information option.
+- `discard`: Drops packets carrying a Relay Agent Information option.
+- `forward`: Forwards packets with their existing Relay Agent
+  Information option unchanged.
+- `replace`: Strips the existing Relay Agent Information option and
+  inserts the local Relay Agent Information option.
+
+The default is `forward`.
 ```
 
-
-### Example
-
-- Listen for DHCP requests on interface `eth1`.
-- DHCP server is located at IPv4 address 10.0.1.4 on `eth2`.
-- Router receives DHCP client requests on `eth1` and relays them to the
-  server at 10.0.1.4 on `eth2`.
-
-:::{figure} /_static/images/service_dhcp-relay01.webp
-:alt: DHCP relay example
-:scale: 80 %
-DHCP relay example
-:::
-
-The generated configuration will look like:
+Example:
 
 ```none
-show service dhcp-relay
-    listen-interface eth1
-    upstream-interface eth2
-    server 10.0.1.4
-    relay-options {
-       relay-agents-packets discard
-    }
+set service dhcp-relay relay-options relay-agents-packets discard
 ```
-
-Also, for backwards compatibility this configuration, which uses generic
-interface definition, is still valid:
-
-```none
-show service dhcp-relay
-    interface eth1
-    interface eth2
-    server 10.0.1.4
-    relay-options {
-       relay-agents-packets discard
-    }
-```
-
 
 ### Operation
 
 ```{opcmd} restart dhcp relay-agent
 
-Restart DHCP relay service
+Restart the DHCPv4 relay service.
 ```
 
+### Example
+
+The following configuration forwards DHCP client requests received on
+`eth1` (the client-facing interface) via `eth2` (the server-facing
+interface) to a DHCP server at `203.0.113.4`. Packets that already
+contain Relay Agent Information are dropped, so that only requests
+originating directly from clients are forwarded.
+
+:::{figure} /_static/images/service_dhcp-relay01.webp
+:alt: DHCPv4 relay topology
+:scale: 80 %
+DHCPv4 relay topology
+:::
+
+```none
+set interfaces ethernet eth1 address '192.0.2.1/24'
+set interfaces ethernet eth2 address '198.51.100.1/24'
+set service dhcp-relay listen-interface 'eth1'
+set service dhcp-relay upstream-interface 'eth2'
+set service dhcp-relay server '203.0.113.4'
+set service dhcp-relay relay-options relay-agents-packets discard
+```
+
+The equivalent configuration using the deprecated `interface` syntax,
+retained only for backward compatibility, is:
+
+```none
+set interfaces ethernet eth1 address '192.0.2.1/24'
+set interfaces ethernet eth2 address '198.51.100.1/24'
+set service dhcp-relay interface 'eth1'
+set service dhcp-relay interface 'eth2'
+set service dhcp-relay server '203.0.113.4'
+set service dhcp-relay relay-options relay-agents-packets discard
+```
 
 ## IPv6 relay
 
@@ -136,63 +242,116 @@ Restart DHCP relay service
 
 ```{cfgcmd} set service dhcpv6-relay listen-interface \<interface\>
 
-Set eth1 to be the listening interface for the DHCPv6 relay.
+**Configure a listen interface on which the DHCPv6 relay receives
+client multicast requests.**
 
-Multiple interfaces may be specified.
+The interface must already have a global unicast IPv6 address
+assigned.
+
+Repeat the command to configure multiple listen interfaces.
 ```
 
-```{cfgcmd} set service dhcpv6-relay upstream-interface \<interface\> address \<server\>
+```{note}
+At least one `listen-interface` and one `upstream-interface` must be
+configured for a successful commit.
+```
 
-Specifies an upstream network `<interface>` from which replies from
-`<server>` and other relay agents will be accepted.
+Example:
+
+```none
+set service dhcpv6-relay listen-interface eth1
+```
+
+```{cfgcmd} set service dhcpv6-relay listen-interface \<interface\> address \<ipv6-address\>
+
+**Configure the IPv6 address the DHCPv6 relay uses to identify the
+client-facing network to the DHCPv6 server.**
+
+The address must be a non-link-local IPv6 address already assigned to
+the specified listen interface.
+
+If the address is not set, the DHCPv6 relay uses the first
+non-link-local IPv6 address found on that listen interface.
+```
+
+Example:
+
+```none
+set service dhcpv6-relay listen-interface eth1 address 2001:db8:1::1
+```
+
+```{cfgcmd} set service dhcpv6-relay upstream-interface \<interface\> address \<ipv6-address\>
+
+**Configure the IPv6 address of a DHCPv6 server (or another relay
+agent) to which the DHCPv6 relay forwards client messages via the
+specified upstream interface.**
+
+Repeat the command to forward client messages to multiple servers (or
+relay agents).
+```
+
+```{note}
+At least one server (or relay agent) address must be configured for
+each upstream interface for a successful commit.
+```
+
+Example:
+
+```none
+set service dhcpv6-relay upstream-interface eth2 address 2001:db8:2::4
 ```
 
 (dhcp-relay-ipv6-options)=
 
 ```{cfgcmd} set service dhcpv6-relay disable
 
-Disable dhcpv6-relay service.
+**Administratively disable the DHCPv6 relay service without removing
+its configuration.**
+```
+
+Example:
+
+```none
+set service dhcpv6-relay disable
 ```
 
 (dhcp-relay-v6-options)=
 
-#### Options
+### Relay options
 
-```{cfgcmd} set service dhcpv6-relay max-hop-count \<count\>
+```{cfgcmd} set service dhcpv6-relay max-hop-count \<1-255\>
 
-Set maximum hop count before packets are discarded, default: 10
+**Configure the DHCPv6 hop count at which relayed packets are
+discarded.**
+
+A DHCPv6 relay that receives a client message sets the hop count to
+0. Each subsequent DHCPv6 relay along the packet path increments it.
+Packets whose hop count has reached the specified value are silently
+dropped.
+
+The default is 10.
+```
+
+Example:
+
+```none
+set service dhcpv6-relay max-hop-count 4
 ```
 
 ```{cfgcmd} set service dhcpv6-relay use-interface-id-option
 
-If this is set the relay agent will insert the interface ID. This option is
-set automatically if more than one listening interfaces are in use.
+**Enable insertion of the Interface-ID option into every
+Relay-forward message.**
+
+The Interface-ID option is inserted automatically whenever more than
+one listen interface is configured on a relay, regardless of this
+setting.
 ```
 
-(dhcp-relay-ipv6-example)=
-
-### Example
-
-- DHCPv6 requests are received by the router on `listening interface` `eth1`
-- Requests are forwarded through `eth2` as the `upstream interface`
-- External DHCPv6 server is at 2001:db8::4
-
-:::{figure} /_static/images/service_dhcpv6-relay01.webp
-:alt: DHCPv6 relay example
-:scale: 80 %
-DHCPv6 relay example
-:::
-
-The generated configuration will look like:
+Example:
 
 ```none
-commit
-show service dhcpv6-relay
-    listen-interface eth1 {
-    }
-    upstream-interface eth2 {
-       address 2001:db8::4
-    }
+set service dhcpv6-relay use-interface-id-option
 ```
 
 (dhcp-relay-ipv6-op-cmd)=
@@ -201,5 +360,26 @@ show service dhcpv6-relay
 
 ```{opcmd} restart dhcpv6 relay-agent
 
-Restart DHCPv6 relay agent immediately.
+Restart the DHCPv6 relay service.
+```
+
+(dhcp-relay-ipv6-example)=
+
+### Example
+
+The following configuration forwards DHCPv6 client requests received
+on `eth1` (the client-facing interface) via `eth2` (the server-facing
+interface) to a DHCPv6 server at `2001:db8:2::4`.
+
+:::{figure} /_static/images/service_dhcpv6-relay01.webp
+:alt: DHCPv6 relay topology
+:scale: 80 %
+DHCPv6 relay topology
+:::
+
+```none
+set interfaces ethernet eth1 address '2001:db8:1::1/64'
+set interfaces ethernet eth2 address '2001:db8:2::1/64'
+set service dhcpv6-relay listen-interface 'eth1'
+set service dhcpv6-relay upstream-interface 'eth2' address '2001:db8:2::4'
 ```
