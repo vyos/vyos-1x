@@ -11,6 +11,7 @@ console-server
 dhcp-relay
 dhcp-server
 dns
+dynamic-dns
 eventhandler
 https
 ipoe-server
