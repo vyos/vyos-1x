@@ -331,6 +331,12 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
             raise ConfigError(f'{rule_num}Cannot specify both "match-frag" and "match-non-frag"')
 
+    if 'fib' in rule_conf:
+        if 'lookup' not in rule_conf['fib']:
+            raise ConfigError('fib lookup must be defined')
+        if not dict_search_args(rule_conf['fib'], 'match', 'route_type'):
+            raise ConfigError('fib match route-type must be defined')
+
     node_empty, node_name = is_node_empty(rule_conf)
     if node_empty:
         tmp = ' '.join(node_name).replace('_', '-')

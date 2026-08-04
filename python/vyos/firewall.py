@@ -167,6 +167,16 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         ether_type = ether_type_mapping.get(ether_type, ether_type)
         output.append(f'ether type {operator} {ether_type}')
 
+    if 'fib' in rule_conf:
+        lookup = rule_conf['fib']['lookup']
+        route_type = rule_conf['fib']['match']['route_type']
+        prefix = 's' if lookup == 'source-address' else 'd'
+        operator = ''
+        if route_type[0] == '!':
+            operator = '!= '
+            route_type = route_type[1:]
+        output.append(f'fib {prefix}addr type {operator}{route_type}')
+
     for side in ['destination', 'source']:
         if side in rule_conf:
             prefix = side[0]
@@ -196,14 +206,6 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                         output.append(f'ip {prefix}addr {operator}{suffix}')
                     else:
                         output.append(f'ip6 {prefix}addr {operator}{suffix}')
-
-            if 'fib' in side_conf and 'type' in side_conf['fib']:
-                fib_type = side_conf['fib']['type']
-                operator = ''
-                if fib_type[0] == '!':
-                    operator = '!= '
-                    fib_type = fib_type[1:]
-                output.append(f'fib {prefix}addr type {operator}{fib_type}')
 
             if 'fqdn' in side_conf:
                 fqdn = side_conf['fqdn']

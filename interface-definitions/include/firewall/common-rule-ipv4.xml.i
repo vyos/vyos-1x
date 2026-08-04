@@ -1,6 +1,7 @@
 <!-- include start from firewall/common-rule-ipv4.xml.i -->
 #include <include/firewall/add-addr-to-group-ipv4.xml.i>
 #include <include/firewall/common-rule-inet.xml.i>
+#include <include/firewall/fib.xml.i>
 #include <include/firewall/icmp.xml.i>
 #include <include/firewall/last-used.xml.i>
 #include <include/firewall/ttl.xml.i>
@@ -13,7 +14,6 @@
     #include <include/firewall/address-mask.xml.i>
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/fib.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv4.xml.i>
@@ -43,7 +43,6 @@
     #include <include/firewall/address-mask.xml.i>
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/fib.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv4.xml.i>

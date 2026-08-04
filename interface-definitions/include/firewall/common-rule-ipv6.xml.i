@@ -1,6 +1,7 @@
 <!-- include start from firewall/common-rule-ipv6.xml.i -->
 #include <include/firewall/add-addr-to-group-ipv6.xml.i>
 #include <include/firewall/common-rule-inet.xml.i>
+#include <include/firewall/fib.xml.i>
 #include <include/firewall/hop-limit.xml.i>
 #include <include/firewall/icmpv6.xml.i>
 #include <include/firewall/last-used.xml.i>
@@ -13,7 +14,6 @@
     #include <include/firewall/address-mask-ipv6.xml.i>
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/fib.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
@@ -38,7 +38,6 @@
     #include <include/firewall/address-mask-ipv6.xml.i>
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/fib.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
