@@ -334,7 +334,7 @@ Depends:
 # For "container"
   podman (>=5.8),
   netavark (>=1.14.0),
-  aardvark-dns,
+  aardvark-dns (>=1.14.0),
 # iptables is only used for containers now, not the the firewall CLI
   iptables,
 # End container
