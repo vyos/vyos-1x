@@ -121,6 +121,22 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'destination', 'fib-type', 'local'])
         self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '2', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '2', 'source', 'fib-type', '!local'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '3', 'destination', 'fib-type', 'prohibit'])
+
+        # prerouting raw runs before the kernel's FIB lookup decides
+        # local-delivery vs. forward, which is the main use case fib-type
+        # was added for - cover it explicitly rather than only the named
+        # filter rules above
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'action', 'notrack'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'destination', 'fib-type', 'local'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '2', 'source', 'fib-type', '!local'])
+
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'action', 'notrack'])
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'destination', 'fib-type', 'local'])
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '2', 'source', 'fib-type', '!local'])
 
         self.cli_commit()
 
@@ -130,11 +146,24 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
         nftables_search_v6 = [
             ['fib daddr type local', 'accept'],
-            ['fib saddr type != local', 'drop']
+            ['fib saddr type != local', 'drop'],
+            ['fib daddr type prohibit', 'drop']
         ]
 
         self.verify_nftables(nftables_search_v4, 'ip vyos_filter')
         self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
+
+        nftables_search_v4_raw = [
+            ['fib daddr type local', 'notrack'],
+            ['fib saddr type != local', 'drop']
+        ]
+        nftables_search_v6_raw = [
+            ['fib daddr type local', 'notrack'],
+            ['fib saddr type != local', 'drop']
+        ]
+
+        self.verify_nftables_chain(nftables_search_v4_raw, 'ip vyos_filter', 'VYOS_PREROUTING_raw')
+        self.verify_nftables_chain(nftables_search_v6_raw, 'ip6 vyos_filter', 'VYOS_IPV6_PREROUTING_raw')
 
     def test_groups(self):
         hostmap_path = ['system', 'static-host-mapping', 'host-name']

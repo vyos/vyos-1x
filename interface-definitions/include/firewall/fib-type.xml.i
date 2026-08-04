@@ -3,7 +3,7 @@
   <properties>
     <help>Match based on the result of a Forwarding Information Base (FIB) lookup</help>
     <completionHelp>
-      <list>local unicast broadcast multicast anycast blackhole unreachable prohibited</list>
+      <list>local unicast broadcast multicast anycast blackhole unreachable prohibit</list>
     </completionHelp>
     <valueHelp>
       <format>local</format>
@@ -34,11 +34,11 @@
       <description>Address is unreachable</description>
     </valueHelp>
     <valueHelp>
-      <format>prohibited</format>
+      <format>prohibit</format>
       <description>Address is administratively prohibited</description>
     </valueHelp>
     <constraint>
-      <regex>(!?(local|unicast|broadcast|multicast|anycast|blackhole|unreachable|prohibited))</regex>
+      <regex>(!?(local|unicast|broadcast|multicast|anycast|blackhole|unreachable|prohibit))</regex>
     </constraint>
   </properties>
 </leafNode>
