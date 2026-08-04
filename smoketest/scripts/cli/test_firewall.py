@@ -187,6 +187,15 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
+    def test_fib_lookup_conflict(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib', 'lookup', 'source-address'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib', 'lookup', 'destination-address'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'fib', 'match', 'route-type', 'local'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
     def test_groups(self):
         hostmap_path = ['system', 'static-host-mapping', 'host-name']
         example_org = ['192.0.2.8', '192.0.2.10', '192.0.2.11']

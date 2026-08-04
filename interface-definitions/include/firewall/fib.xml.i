@@ -6,7 +6,7 @@
   <children>
     <leafNode name="lookup">
       <properties>
-        <help>Address to use as the key for the FIB lookup</help>
+        <help>Key to use for the FIB lookup</help>
         <completionHelp>
           <list>source-address destination-address</list>
         </completionHelp>
@@ -21,6 +21,7 @@
         <constraint>
           <regex>(source-address|destination-address)</regex>
         </constraint>
+        <multi/>
       </properties>
     </leafNode>
     <node name="match">

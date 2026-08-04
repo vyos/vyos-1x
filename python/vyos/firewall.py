@@ -168,7 +168,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         output.append(f'ether type {operator} {ether_type}')
 
     if 'fib' in rule_conf:
-        lookup = rule_conf['fib']['lookup']
+        lookup = rule_conf['fib']['lookup'][0]
         route_type = rule_conf['fib']['match']['route_type']
         prefix = 's' if lookup == 'source-address' else 'd'
         operator = ''
