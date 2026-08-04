@@ -142,9 +142,13 @@ def _get_formatted_output_rules(data, direction, family):
             rule_number = comment.split('-')[-1]
             rule_number = rule_number.split(' ')[0]
         if 'expr' in rule['rule']:
-            interface = rule.get('rule').get('expr')[0].get('match').get('right') \
-                if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
-            if interface[0] == '@':
+            interface = 'any'
+            for expr in rule.get('rule').get('expr'):
+                match = expr.get('match')
+                if match and jmespath.search('left.meta.key', match) == 'iifname':
+                    interface = match.get('right')
+                    break
+            if isinstance(interface, str) and interface.startswith('@'):
                 interface = interface[3:]
         for index, match in enumerate(jmespath.search('rule.expr[*].match', rule)):
             if 'payload' in match['left']:
@@ -257,8 +261,14 @@ def _get_formatted_output_statistics(data, direction):
             rule_number = comment.split('-')[-1]
             rule_number = rule_number.split(' ')[0]
         if 'expr' in rule['rule']:
-            interface = rule.get('rule').get('expr')[0].get('match').get('right') \
-                if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
+            interface = 'any'
+            for expr in rule.get('rule').get('expr'):
+                match = expr.get('match')
+                if match and jmespath.search('left.meta.key', match) == 'iifname':
+                    interface = match.get('right')
+                    break
+            if isinstance(interface, str) and interface.startswith('@'):
+                interface = interface[3:]
             packets = jmespath.search('rule.expr[*].counter.packets | [0]', rule)
             _bytes = jmespath.search('rule.expr[*].counter.bytes | [0]', rule)
         data_entries.append([rule_number, packets, _bytes, interface])
