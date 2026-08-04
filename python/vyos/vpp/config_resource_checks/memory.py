@@ -106,6 +106,22 @@ def buffer_size(settings: dict) -> int:
     return buffers_memory
 
 
+def no_multi_seg_fits(max_mtu, data_size) -> bool:
+    """Whether 'no-multi-seg' can be enabled for the given MTU and buffer size.
+
+    With multi-segment buffers disabled a received frame must fit a single
+    buffer, so the largest interface MTU plus its L2 framing overhead must fit
+    within the buffer 'data-size' (T9146).
+    """
+    # Bytes a full L2 frame carries on top of the L3 MTU: Ethernet header (14),
+    # up to two QinQ VLAN tags (8) and the FCS (4). Matches VPP's DPDK frame
+    # overhead (RTE_ETHER_HDR_LEN + 2 * RTE_VLAN_HLEN + RTE_ETHER_CRC_LEN)
+    # https://github.com/FDio/vpp/blob/stable/2506/src/plugins/dpdk/device/init.c
+    # constants: https://github.com/DPDK/dpdk/blob/main/lib/net/rte_ether.h
+    l2_frame_overhead = 14 + 8 + 4
+    return int(data_size) >= int(max_mtu) + l2_frame_overhead
+
+
 def main_heap_page_size(settings: dict) -> int:
     heap_page_size = settings['resource_allocation']['memory']['main_heap_page_size']
     return human_memory_to_bytes(heap_page_size)

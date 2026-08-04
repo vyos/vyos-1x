@@ -1834,6 +1834,40 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
         self.assertNotRegex(out, r'flags:.*\bpromisc\b')
 
+    def test_26_vpp_no_multi_seg(self):
+        # 'no-multi-seg' is auto-computed (T9146): enabled while the largest
+        # VPP-interface MTU fits the buffer data-size, dropped otherwise (VPP
+        # falls back to multi-seg so Jumbo frames still work)
+        mtu = '2500'
+
+        self.cli_commit()
+
+        # Check no-multi-seg option
+        # Default 1500 MTU fits the default 2048 buffer -> enabled
+        config = read_file(VPP_CONF)
+        self.assertIn('no-multi-seg', config)
+
+        # Raising the MTU beyond the buffer drops it; the interface change
+        # triggers a VPP reconfigure on its own
+        self.cli_set(['interfaces', 'ethernet', interface, 'mtu', mtu])
+        self.cli_commit()
+
+        config = read_file(VPP_CONF)
+        self.assertNotIn('no-multi-seg', config)
+
+        # Sizing the buffer to fit the MTU brings it back
+        self.cli_set(
+            base_path
+            + ['settings', 'resource-allocation', 'buffers', 'data-size', '4096']
+        )
+        self.cli_commit()
+
+        config = read_file(VPP_CONF)
+        self.assertIn('no-multi-seg', config)
+
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
