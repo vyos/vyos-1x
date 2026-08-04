@@ -39,3 +39,6 @@ class SessionState:
         self.auth_type = None
         self.token_exp = None
         self.secret_len = None
+        self.rest_secret = None
+        self.rest_secret_len = None
+        self.rest_token_exp = None

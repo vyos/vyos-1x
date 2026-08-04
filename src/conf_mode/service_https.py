@@ -77,9 +77,13 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrieved.
     default_values = conf.get_config_defaults(**https.kwargs, recursive=True)
-    if 'api' not in https or 'graphql' not in https['api']:
+    if 'api' in https:
+        if 'graphql' not in https['api']:
+            del default_values['api']['graphql']
+        if 'rest' not in https['api']:
+            del default_values['api']['rest']
+    else:
         del default_values['api']
-
     # merge CLI and default dictionary
     https = config_dict_merge(default_values, https)
 

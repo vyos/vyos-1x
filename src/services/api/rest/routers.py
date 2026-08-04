@@ -27,11 +27,13 @@ from threading import Lock
 from typing import Union
 from typing import Callable
 from typing import TYPE_CHECKING
+from typing import Optional
 
 from fastapi import Depends
 from fastapi import Query
 from fastapi import Request
 from fastapi import Response
+from fastapi import Header
 from fastapi import HTTPException
 from fastapi import APIRouter
 from fastapi import BackgroundTasks
@@ -77,6 +79,8 @@ from .models import ImportPkiModel
 from .models import PingModel
 from .models import PoweroffModel
 from .models import TracerouteModel
+from .libs.token_auth import generate_token
+from .libs.token_auth import verify_token
 
 
 if TYPE_CHECKING:
@@ -97,9 +101,19 @@ def check_auth(key_list, key):
     return key_id
 
 
-def auth_required(data: ApiModel):
+def auth_required(data: ApiModel, x_api_key: Optional[str] = Header(None), authorization: Optional[str] = Header(None)):
     session = SessionState()
-    key = data.key
+
+    if authorization:
+        scheme, _, token = authorization.partition(' ')
+        if scheme.lower() == 'bearer' and token:
+            key_id = verify_token(token)
+            if key_id:
+                session.id = key_id
+                return
+            raise HTTPException(status_code=401, detail='Invalid or expired token')
+
+    key = data.key or x_api_key
     api_keys = session.keys
     key_id = check_auth(api_keys, key)
     if not key_id:
@@ -182,6 +196,14 @@ class MultipartRequest(Request):
                 LOG.debug('processing form data')
                 for k, v in form_data.multi_items():
                     forms[k] = v
+                if endpoint == '/token':
+                    if 'key' not in forms:
+                        self.form_err = (401, 'Valid API key is required')
+                        return self._body
+                    merge = {'key': forms['key']}
+                    new_body = json.dumps(merge).encode()
+                    self._body = new_body
+                    return self._body
 
                 if 'data' not in forms:
                     self.form_err = (422, 'Non-empty data field is required')
@@ -423,8 +445,8 @@ def _execute_configure_op(
                 section = c.section
 
             elif isinstance(c, BaseConfigSectionTreeModel):
-                mask_dict = c.mask
-                config_dict = c.config
+                mask = c.mask
+                config = c.config
 
             if isinstance(c, BaseConfigureModel):
                 if op == 'set':
@@ -450,10 +472,9 @@ def _execute_configure_op(
 
             elif isinstance(c, BaseConfigSectionTreeModel):
                 if op == 'set':
-                    session.set_section_tree(config_dict)
+                    session.set_section_tree(config)
                 elif op == 'load':
-                    config_tree = config.get_config_tree()
-                    session.load_section_tree(config_tree, mask_dict, config_dict)
+                    session.load_section_tree(mask, config)
                 else:
                     raise op_error
         # end for
@@ -690,7 +711,7 @@ async def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTask
                     case 'load':
                         session.migrate_and_load_config(path)
                     case 'merge':
-                        session.merge_config(path, destructive=data.destructive)
+                        session.merge_config(path)
 
                 config = Config(session_env=env)
                 d = get_config_diff(config)
@@ -1007,6 +1028,13 @@ def traceroute_op(data: TracerouteModel):
 
     return success(res)
 
+@router.post('/token')
+def token_op(data: ApiModel):
+    session = SessionState()
+    key_id = check_auth(session.keys, data.key)
+    if not key_id:
+        raise HTTPException(status_code=401, detail='Valid API key is required')
+    return success(generate_token(key_id))
 
 def rest_init(app: 'FastAPI'):
     if all(r in app.routes for r in router.routes):
