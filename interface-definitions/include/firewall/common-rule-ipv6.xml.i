@@ -13,7 +13,7 @@
     #include <include/firewall/address-mask-ipv6.xml.i>
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/fib-type.xml.i>
+    #include <include/firewall/fib.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
@@ -38,7 +38,7 @@
     #include <include/firewall/address-mask-ipv6.xml.i>
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/fib-type.xml.i>
+    #include <include/firewall/fib.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>

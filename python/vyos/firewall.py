@@ -197,8 +197,8 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     else:
                         output.append(f'ip6 {prefix}addr {operator}{suffix}')
 
-            if 'fib_type' in side_conf:
-                fib_type = side_conf['fib_type']
+            if 'fib' in side_conf and 'type' in side_conf['fib']:
+                fib_type = side_conf['fib']['type']
                 operator = ''
                 if fib_type[0] == '!':
                     operator = '!= '
