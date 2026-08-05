@@ -21,6 +21,8 @@ import sys
 import subprocess
 
 from pathlib import Path
+from tabulate import tabulate
+
 from vyos.defaults import directories
 from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
@@ -162,6 +164,43 @@ def show_network(raw: bool):
         return container_data
     else:
         return cmdl(command.split())
+
+def show_interface(raw: bool):
+    """ Show the deterministic host-side veth interface name (T7736) VyOS
+    assigns to each configured container's network attachment """
+    from vyos.configquery import ConfigTreeQuery
+    from vyos.container import get_container_host_ifname
+    from vyos.utils.dict import dict_search
+
+    conf = ConfigTreeQuery()
+    container = conf.get_config_dict(['container'], key_mangling=('-', '_'),
+                                      no_tag_node_value_mangle=True,
+                                      get_first_key=True,
+                                      with_recursive_defaults=True)
+
+    data = []
+    for name, container_config in container.get('name', {}).items():
+        if 'allow_host_networks' in container_config:
+            data.append({'name': name, 'network': None, 'interface': None})
+            continue
+        if 'network' not in container_config:
+            continue
+
+        network_name = list(container_config['network'])[0]
+        network_type = dict_search(f'network.{network_name}.type', container)
+        is_macvlan = dict_search('macvlan', network_type) is not None
+        interface = None if is_macvlan else get_container_host_ifname(name)
+        data.append({'name': name, 'network': network_name, 'interface': interface})
+
+    if raw:
+        return data
+
+    if not data:
+        return 'No containers configured!'
+
+    headers = ['Container', 'Network', 'Host Interface']
+    rows = [[d['name'], d['network'] or 'host', d['interface'] or 'n/a'] for d in data]
+    return tabulate(rows, headers)
 
 def restart(name: str):
     from vyos.utils.process import rc_cmd

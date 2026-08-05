@@ -29,6 +29,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
+from vyos.container import get_container_host_ifname
 from vyos.container import restart_network
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
@@ -122,6 +123,7 @@ def verify(container):
         net_dict = {}
         net_dict['mac'] = {}
         net_dict['address'] = {}
+        net_dict['host_ifname'] = {}
 
         for name, container_config in container['name'].items():
             # Container image is a mandatory option
@@ -157,6 +159,19 @@ def verify(container):
                 network_name = list(container_config['network'])[0]
                 if network_name not in container.get('network', {}):
                     raise ConfigError(f'Container network "{network_name}" does not exist!')
+
+                # T7736: two distinct (long) container names could truncate to
+                # the same host_interface_name - not applicable to macvlan networks,
+                # they attach without a paired host veth
+                network_type = dict_search(f'{network_name}.type', container['network'])
+                if dict_search('macvlan', network_type) is None:
+                    host_ifname = get_container_host_ifname(name)
+                    if host_ifname in net_dict['host_ifname']:
+                        raise ConfigError(
+                            f'Container "{name}" and "{net_dict["host_ifname"][host_ifname]}" '
+                            f'both generate the host interface name "{host_ifname}" - please '
+                            f'use less similar container names!')
+                    net_dict['host_ifname'][host_ifname] = name
 
                 if 'name_server' in container_config and 'no_name_server' not in container['network'][network_name]:
                     raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
@@ -361,7 +376,7 @@ def verify(container):
     return None
 
 
-def generate_run_arguments(name, container_config, host_ident):
+def generate_run_arguments(name, container_config, host_ident, network_config):
     image = container_config['image']
     cpu_quota = container_config['cpu_quota']
     memory = container_config['memory']
@@ -511,9 +526,19 @@ def generate_run_arguments(name, container_config, host_ident):
     else:
         ip_param = ''
         addr_info = ''
-        networks = ",".join(container_config['network'])
+        network_opts = []
         for network in container_config['network']:
             network_name = network
+            # T7736: give the host-side veth a name that can never collide
+            # with a VyOS "virtual-ethernet vethN" interface.
+            type_config = dict_search(f'{network}.type', network_config)
+            is_macvlan = dict_search('macvlan', type_config) is not None
+            net_opt = network
+            if not is_macvlan:
+                ifname = get_container_host_ifname(name)
+                net_opt += f':host_interface_name={ifname}'
+            network_opts.append(net_opt)
+
             if 'address' not in container_config['network'][network]:
                 continue
             for address in container_config['network'][network]['address']:
@@ -523,6 +548,8 @@ def generate_run_arguments(name, container_config, host_ident):
                     ip_param += f' --ip {address}'
 
             addr_info = ''.join(container_config['network'][network]['address'])
+
+        networks = ' '.join(f'--network {opt}' for opt in network_opts)
 
         get_mac = dict_search(f'network.{network_name}.mac', container_config)
         if get_mac == 'auto' or get_mac is None:
@@ -546,7 +573,7 @@ def generate_run_arguments(name, container_config, host_ident):
             delete_cli_node(mac_config_path)
             add_cli_node(mac_config_path, value=mac_add)
 
-        net = f'--net {networks} {ip_param} {mac_address}'
+        net = f'{networks} {ip_param} {mac_address}'
 
     return f'{container_base_cmd} {healthcheck} {net} {entrypoint} {image} {command} {command_arguments}'.strip()
 
@@ -626,12 +653,13 @@ def generate(container):
 
     if 'name' in container:
         host_ident = get_host_identity()
+        network_config = container.get('network', {})
         for name, container_config in container['name'].items():
             if 'disable' in container_config:
                 continue
 
             file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
-            run_args = generate_run_arguments(name, container_config, host_ident)
+            run_args = generate_run_arguments(name, container_config, host_ident, network_config)
             render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args, },
                    formatter=lambda _: _.replace("&quot;", '"').replace("&apos;", "'"))
 

@@ -264,6 +264,58 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         n = cmd_to_json(['container', 'inspect', 'test2'])
         self.assertEqual(n['NetworkSettings']['Networks']['bridge1']['MacAddress'], '02:00:00:00:00:02')
 
+    def test_long_name_host_interface_uniqueness(self):
+        # T7736: the deterministic host-side veth interface name derived
+        # from a container name is truncated to fit IFNAMSIZ. Two distinct
+        # but similarly-prefixed long names must not truncate to the same
+        # interface name - Podman would then refuse to attach the second
+        # container's network, and its systemd unit would fail to start.
+        net_name = 'longiftest'
+        prefix = '192.0.2.0/24'
+        name_1 = 'abcdefghij-1'
+        name_2 = 'abcdefghij-2'
+
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
+        self.cli_set(base_path + ['name', name_1, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name_1, 'network', net_name, 'address', str(ip_interface(prefix).ip + 2)])
+        self.cli_set(base_path + ['name', name_2, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name_2, 'network', net_name, 'address', str(ip_interface(prefix).ip + 3)])
+        self.cli_commit()
+
+        # Both containers run a "conmon" process at once, so checking by
+        # process name alone can't distinguish which container it belongs
+        # to - verify each container's own recorded PID is still alive
+        for name in (name_1, name_2):
+            pid = 0
+            with open(PROCESS_PIDFILE.format(name)) as f:
+                pid = int(f.read())
+            self.assertTrue(os.path.exists(f'/proc/{pid}'))
+
+    def test_colliding_host_interface_names(self):
+        # T7736: the host-side veth name is "veth-<name[:5]>-<hash[:4]>" for
+        # long container names - two distinct names can still (rarely) hash
+        # to the same result. These two are a confirmed real collision
+        # (both produce "veth-aaaa9-4ded") - verify() must reject the
+        # commit with a clear error instead of leaving it to Podman to fail
+        # obscurely when the second container's network attachment clashes
+        # with the first's interface name.
+        net_name = 'collidetest'
+        prefix = '192.0.2.0/24'
+        name_1 = 'aaaa9000005'
+        name_2 = 'aaaa9000336'
+
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
+        self.cli_set(base_path + ['name', name_1, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name_1, 'network', net_name, 'address', str(ip_interface(prefix).ip + 2)])
+        self.cli_set(base_path + ['name', name_2, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name_2, 'network', net_name, 'address', str(ip_interface(prefix).ip + 3)])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path + ['name', name_2])
+        self.cli_commit()
+
     def test_ipv4_network(self):
         prefix = '192.0.2.0/24'
         base_name = 'ipv4'
