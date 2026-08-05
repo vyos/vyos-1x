@@ -306,13 +306,11 @@ def _get_formatted_translation(dict_data, nat_direction, family, verbose):
                         reply_dport = meta['layer4']['dport']
                     proto = meta['layer4']['protoname']
             if direction == 'independent':
-                conn_id = meta['id']
                 timeout = meta.get('timeout', 'n/a')
                 orig_src = f'{orig_src}:{orig_sport}' if orig_sport else orig_src
                 orig_dst = f'{orig_dst}:{orig_dport}' if orig_dport else orig_dst
                 reply_src = f'{reply_src}:{reply_sport}' if reply_sport else reply_src
                 reply_dst = f'{reply_dst}:{reply_dport}' if reply_dport else reply_dst
-                state = meta['state'] if 'state' in meta else ''
                 mark = meta.get('mark', '')
                 zone = meta['zone'] if 'zone' in meta else ''
                 if nat_direction == 'source':
