@@ -165,6 +165,57 @@ def certbot_delete(certificate):
         cmdl(['certbot', 'delete', '--non-interactive', '--config-dir',
               vyos_certbot_dir, '--cert-name', certificate])
 
+def certbot_backup_path(name: str) -> str:
+    return f'{vyos_certbot_dir}/.vyos-backup/{name}'
+
+def certbot_backup(name: str) -> None:
+    """Move a certificate's live/archive/renewal-config files aside rather
+    than deleting them outright, so certbot_restore()/certbot_discard_backup()
+    can put them back (or drop them) once the caller knows whether the
+    replacement certbot_request() actually succeeded.
+
+    Confirmed live: generate() previously called certbot_delete() and then
+    certbot_request() unconditionally whenever a certificate's acme config
+    changed. Any request failure (rate limit, transient ACME/network
+    issue) left the certificate missing entirely, with no way back short
+    of a fresh, successful ACME issuance - this is what surfaces to users
+    as the ACME certificate "getting corrupted".
+    """
+    import shutil
+    backup = certbot_backup_path(name)
+    if os.path.exists(backup):
+        shutil.rmtree(backup)
+    os.makedirs(backup)
+    for sub in ('live', 'archive'):
+        src = f'{vyos_certbot_dir}/{sub}/{name}'
+        if os.path.exists(src):
+            shutil.move(src, f'{backup}/{sub}')
+    renewal_conf = f'{vyos_certbot_dir}/renewal/{name}.conf'
+    if os.path.exists(renewal_conf):
+        shutil.move(renewal_conf, f'{backup}/renewal.conf')
+
+def certbot_restore(name: str) -> None:
+    """Restore a backup made by certbot_backup(), if one exists."""
+    import shutil
+    backup = certbot_backup_path(name)
+    if not os.path.isdir(backup):
+        return
+    for sub in ('live', 'archive'):
+        src = f'{backup}/{sub}'
+        if os.path.exists(src):
+            dst = f'{vyos_certbot_dir}/{sub}/{name}'
+            if os.path.exists(dst):
+                shutil.rmtree(dst)
+            shutil.move(src, dst)
+    renewal_src = f'{backup}/renewal.conf'
+    if os.path.exists(renewal_src):
+        shutil.move(renewal_src, f'{vyos_certbot_dir}/renewal/{name}.conf')
+    shutil.rmtree(backup, ignore_errors=True)
+
+def certbot_discard_backup(name: str) -> None:
+    import shutil
+    shutil.rmtree(certbot_backup_path(name), ignore_errors=True)
+
 def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     # We do not call certbot when booting the system - there is no need to do so and
     # request new certificates during boot/image upgrade as the certbot configuration
@@ -685,11 +736,36 @@ def generate(pki):
                 # the certificate in place, so deleting/re-requesting it here
                 # would be redundant.
                 elif not is_certbot_renew and changed_certificates != None and name in changed_certificates:
-                    # Delete old ACME certificate first
+                    have_backup = False
+                    # Back up (rather than outright delete) the old ACME
+                    # certificate first, so it can be restored if the
+                    # replacement request below fails for any reason - a
+                    # rate limit, a transient ACME/network issue, or
+                    # anything else. Without this, a failed request here
+                    # left the certificate missing entirely until the next
+                    # successful issuance - this is what surfaced as the
+                    # ACME certificate "getting corrupted", confirmed live.
                     if name in certbot_list_on_disk:
+                        certbot_backup(name)
+                        have_backup = True
                         certbot_delete(name)
                     # Request new certificate via certbot
-                    certbot_request(name, cert_conf['acme'], dry_run=False)
+                    try:
+                        certbot_request(name, cert_conf['acme'], dry_run=False)
+                    except ConfigError:
+                        if have_backup:
+                            certbot_restore(name)
+                        raise
+                    if have_backup:
+                        # A request made while boot_configuration_complete()
+                        # is False silently no-ops (see certbot_request()) -
+                        # verify the certificate is actually back on disk
+                        # before discarding the backup, rather than trusting
+                        # the absence of an exception alone.
+                        if os.path.exists(f'{vyos_certbot_dir}/live/{name}/cert.pem'):
+                            certbot_discard_backup(name)
+                        else:
+                            certbot_restore(name)
 
     # Cleanup certbot configuration and certificates if no longer in use by CLI
     # Get foldernames under vyos_certbot_dir which each represent a certbot cert
