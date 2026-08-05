@@ -36,4 +36,5 @@ knowledge_base:
     # in titles (e.g. `T8849: ...` for Phorge tasks that have VD twins),
     # so the surface area that matters is VD.
     project_keys:
+      - NOS
       - VD
