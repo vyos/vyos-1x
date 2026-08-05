@@ -132,10 +132,15 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'bindacqaddress {address}', config)
 
     def test_source_address_rejects_multiple_ipv4(self):
-        # both addresses must be locally assigned, so it's the duplicate-per-
-        # family check being tested here, not the local-assignment check
+        # commit the dummy addresses on their own first, so they are
+        # actually live before NTP's verify() checks is_addr_assigned() --
+        # otherwise the outcome would depend on conf_mode script ordering
+        # within a single commit. That way it's the duplicate-per-family
+        # check being tested here, not the local-assignment check.
         self.cli_set(dummy_if_path + ['address', '192.0.2.1/32'])
         self.cli_set(dummy_if_path + ['address', '192.0.2.2/32'])
+        self.cli_commit()
+
         self.cli_set(base_path + ['source-address', '192.0.2.1'])
         self.cli_set(base_path + ['source-address', '192.0.2.2'])
         with self.assertRaises(ConfigSessionError):
@@ -148,10 +153,15 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_source_address_rejects_multiple_ipv6(self):
-        # both addresses must be locally assigned, so it's the duplicate-per-
-        # family check being tested here, not the local-assignment check
+        # commit the dummy addresses on their own first, so they are
+        # actually live before NTP's verify() checks is_addr_assigned() --
+        # otherwise the outcome would depend on conf_mode script ordering
+        # within a single commit. That way it's the duplicate-per-family
+        # check being tested here, not the local-assignment check.
         self.cli_set(dummy_if_path + ['address', '2001:db8::1/128'])
         self.cli_set(dummy_if_path + ['address', '2001:db8::2/128'])
+        self.cli_commit()
+
         self.cli_set(base_path + ['source-address', '2001:db8::1'])
         self.cli_set(base_path + ['source-address', '2001:db8::2'])
         with self.assertRaises(ConfigSessionError):
