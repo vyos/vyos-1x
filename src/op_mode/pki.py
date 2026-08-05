@@ -29,6 +29,9 @@ import vyos.opmode
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.config import config_dict_mangle_acme
+from vyos.pki import AUTOCHAIN_PREFIX
+from vyos.pki import AUTOCHAIN_UPDATE_MARKER
+from vyos.pki import rerun_pki_dependents
 from vyos.pki import encode_certificate
 from vyos.pki import encode_public_key
 from vyos.pki import encode_private_key
@@ -1452,7 +1455,61 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
     else:
         out = cmdl(['sg', 'vyattacfg', '-c', f'{vyos_conf_scripts_dir}/pki.py certbot_renew'], sudo=True)
 
-    print(out)
+    # conf_mode/pki.py runs standalone (no configuration session) and, if
+    # certbot renewed a certificate under a rotated or previously missing
+    # intermediate CA, cannot persist that CA into the CLI itself - it
+    # instead prints an AUTOCHAIN_UPDATE marker line with the already-
+    # computed value (see the add_cli_node() try/except in conf_mode/pki.py
+    # generate()). Strip that marker out of the output shown to the user
+    # (it's a raw base64 blob, not something they need to read) and hand the
+    # full output to _reconcile_acme_ca_chains(), which commits it through a
+    # real session so dependent services (haproxy, https, ...) regenerate
+    # with the correct chain - this is the unattended path (systemd timer or
+    # a bare "renew certbot"), not an interactive commit.
+    visible_lines = [line for line in out.splitlines()
+                     if not line.startswith(AUTOCHAIN_UPDATE_MARKER)]
+    print('\n'.join(visible_lines))
+
+    _reconcile_acme_ca_chains(out, vyos_conf_scripts_dir)
+
+
+def _reconcile_acme_ca_chains(renewal_output: str, vyos_conf_scripts_dir: str):
+    from vyos.configsession import ConfigSession
+    from vyos.configsession import ConfigSessionError
+
+    # conf_mode/pki.py already has access to the certbot directory (it runs
+    # elevated via "sg vyattacfg"/sudo above) and already knows which CA
+    # chains actually need updating - reuse that instead of re-deriving it
+    # here, where this unprivileged op-mode process may not even be able to
+    # read certbot's certificate directory.
+    updates = {}
+    for line in renewal_output.splitlines():
+        if not line.startswith(AUTOCHAIN_UPDATE_MARKER):
+            continue
+        name, value = line[len(AUTOCHAIN_UPDATE_MARKER):].split(':', 1)
+        updates[name] = value
+
+    if not updates:
+        return
+
+    session = ConfigSession(os.getpid(), app='pki-certbot-renew')
+    for name, value in updates.items():
+        session.set(['pki', 'ca', f'{AUTOCHAIN_PREFIX}{name}', 'certificate'], value=value)
+
+    try:
+        print(session.commit())
+    except ConfigSessionError as e:
+        Warning(f'Failed to commit renewed CA certificate chain: {e}')
+        return
+
+    # Belt and suspenders: the commit above sets the chain via
+    # ConfigSession.set() before commit() runs, which - like a plain
+    # interactive "set; commit" - should already let dependents observe
+    # it directly, unlike a mutation made mid-generate() via
+    # add_cli_node() (see Config.sync_local_set()'s docstring for that
+    # distinction). This has not been isolated from that mid-commit case
+    # in testing, so keep the explicit re-run for now rather than assume.
+    rerun_pki_dependents(vyos_conf_scripts_dir)
 
 
 if __name__ == '__main__':

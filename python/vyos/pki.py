@@ -470,6 +470,67 @@ def find_chain(cert, ca_certs):
 
     return chain
 
+# Shared between src/conf_mode/pki.py and src/op_mode/pki.py: the prefix
+# used for CA certificates auto-imported from an ACME chain, and the
+# marker conf_mode/pki.py prints so op_mode/pki.py's renew_certbot() can
+# pick up a chain it could not persist itself (no active config session).
+AUTOCHAIN_PREFIX = 'AUTOCHAIN_'
+AUTOCHAIN_UPDATE_MARKER = 'AUTOCHAIN_UPDATE:'
+
+def get_acme_chain_base64(vyos_certbot_dir: str, cert_name: str) -> str:
+    """Read and base64-encode a certbot-managed ACME certificate's
+    intermediate CA chain, in the same encoding used for the CLI value
+    of 'pki ca AUTOCHAIN_<cert_name> certificate'.
+    """
+    from vyos.utils.file import read_file
+    tmp = read_file(f'{vyos_certbot_dir}/live/{cert_name}/chain.pem')
+    tmp = load_certificate(tmp, wrap_tags=False)
+    return "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
+
+# Tag-node scripts (per-interface): pki.py's own sync_search invokes these
+# with a specific VYOS_TAGNODE_VALUE (the matching interface name) via
+# set_dependents(case, conf, ifname). rerun_pki_dependents() has no way to
+# know which specific instance(s) to target, and running them with no tag
+# value at all errors out immediately ("Interface not specified") - so it
+# skips them. An interface referencing a rotated CA chain still needs a
+# normal commit (or another change to that interface) to pick it up.
+PKI_TAG_NODE_DEPENDENTS = {
+    'interfaces_ethernet', 'interfaces_openvpn', 'interfaces_sstpc',
+}
+
+def rerun_pki_dependents(vyos_conf_scripts_dir: str):
+    """Re-run pki's dependent conf_mode scripts standalone (fresh Config
+    each, so there is no same-commit staleness possible).
+
+    Used by src/op_mode/pki.py after the unattended certbot renewal path
+    commits a changed CA chain through a fresh ConfigSession - that
+    session's own commit invokes pki.py and its dependents with no
+    connection to any Config instance the caller already holds, so there
+    is nothing for Config.sync_local_set() (see its docstring) to patch;
+    this is the fallback for exactly that case.
+
+    src/conf_mode/pki.py does not need this: it already holds the Config
+    instance for the current commit, so it calls add_cli_node() with
+    config=<that instance> and lets sync_local_set() keep it up to date
+    directly, without spawning anything.
+    """
+    from vyos.base import Warning
+    from vyos.configdep import read_dependency_dict
+    from vyos.utils.process import cmdl
+
+    dependency_dict = read_dependency_dict()
+    targets = set()
+    for target_list in dependency_dict.get('pki', {}).values():
+        targets.update(target_list)
+    targets -= PKI_TAG_NODE_DEPENDENTS
+
+    for target in sorted(targets):
+        try:
+            cmdl(['sg', 'vyattacfg', '-c', f'{vyos_conf_scripts_dir}/{target}.py'],
+                 sudo=True)
+        except OSError as e:
+            Warning(f'Failed to refresh "{target}" after CA chain update: {e}')
+
 def sort_ca_chain(ca_names, pki_node):
     def ca_cmp(ca_name1, ca_name2, pki_node):
         cert1 = load_certificate(pki_node[ca_name1]['certificate'])
