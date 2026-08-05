@@ -27,6 +27,8 @@ from vyos.xml_ref import default_value
 PROCESS_NAME = 'chronyd'
 NTP_CONF = '/run/chrony/chrony.conf'
 base_path = ['service', 'ntp']
+dummy_interface = 'dum9159'
+dummy_if_path = ['interfaces', 'dummy', dummy_interface]
 
 class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -130,6 +132,10 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'bindacqaddress {address}', config)
 
     def test_source_address_rejects_multiple_ipv4(self):
+        # both addresses must be locally assigned, so it's the duplicate-per-
+        # family check being tested here, not the local-assignment check
+        self.cli_set(dummy_if_path + ['address', '192.0.2.1/32'])
+        self.cli_set(dummy_if_path + ['address', '192.0.2.2/32'])
         self.cli_set(base_path + ['source-address', '192.0.2.1'])
         self.cli_set(base_path + ['source-address', '192.0.2.2'])
         with self.assertRaises(ConfigSessionError):
@@ -138,9 +144,14 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         # remove the invalid subtree entirely (rather than leaving a
         # non-local address configured) so chronyd is left running for tearDown
         self.cli_delete(base_path + ['source-address'])
+        self.cli_delete(dummy_if_path)
         self.cli_commit()
 
     def test_source_address_rejects_multiple_ipv6(self):
+        # both addresses must be locally assigned, so it's the duplicate-per-
+        # family check being tested here, not the local-assignment check
+        self.cli_set(dummy_if_path + ['address', '2001:db8::1/128'])
+        self.cli_set(dummy_if_path + ['address', '2001:db8::2/128'])
         self.cli_set(base_path + ['source-address', '2001:db8::1'])
         self.cli_set(base_path + ['source-address', '2001:db8::2'])
         with self.assertRaises(ConfigSessionError):
@@ -148,6 +159,16 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         # remove the invalid subtree entirely (rather than leaving a
         # non-local address configured) so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-address'])
+        self.cli_delete(dummy_if_path)
+        self.cli_commit()
+
+    def test_source_address_rejects_non_local(self):
+        # source-address must be assigned to a local interface
+        self.cli_set(base_path + ['source-address', '192.0.2.1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         self.cli_delete(base_path + ['source-address'])
         self.cli_commit()
 
@@ -259,9 +280,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
             if mode != 'smear':
                 self.assertIn(f'leapsecmode {mode}', config)
             else:
-                self.assertIn(f'leapsecmode slew', config)
-                self.assertIn(f'maxslewrate 1000', config)
-                self.assertIn(f'smoothtime 400 0.001024 leaponly', config)
+                self.assertIn('leapsecmode slew', config)
+                self.assertIn('maxslewrate 1000', config)
+                self.assertIn('smoothtime 400 0.001024 leaponly', config)
 
     def test_interleave_option(self):
         # "interleave" option differs from some others in that the
