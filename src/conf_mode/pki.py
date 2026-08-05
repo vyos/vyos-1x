@@ -261,8 +261,55 @@ def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
         raise
     return None
 
+def certbot_renewal_due(name: str) -> bool:
+    """Approximate check for whether this certbot-managed certificate is
+    within its renewal window, without invoking certbot itself - so the
+    caller can skip certbot renew (and its unconditional --pre-hook)
+    entirely when nothing needs renewing.
+
+    VyOS never overrides certbot's own --renew-before-expiry (30 days),
+    so that default is used directly here rather than parsing it back out
+    of the renewal config, which certbot itself only ever writes as a
+    commented-out placeholder in the absence of an override.
+
+    Fails open (returns True) if the local certificate can't be read, so
+    this can never itself block a renewal that should actually happen -
+    worst case, the same check just runs again next time.
+    """
+    from datetime import datetime
+    from datetime import timedelta
+    from vyos.utils.file import read_file
+
+    tmp = read_file(f'{vyos_certbot_dir}/live/{name}/cert.pem', defaultonfailure=None)
+    if tmp is None:
+        return True
+    try:
+        expiry = load_certificate(tmp, wrap_tags=False).not_valid_after
+    except Exception:
+        return True
+
+    renew_before_expiry_days = 30
+    return datetime.utcnow() >= expiry - timedelta(days=renew_before_expiry_days)
+
+def any_certbot_renewal_due(certificates: dict) -> bool:
+    """True if any ACME-managed certificate in this pki['certificate']
+    dict is within its renewal window - see certbot_renewal_due(). False
+    (not due) if there are no ACME-managed certificates at all. Shared by
+    get_config() (deciding whether to mark ACME certs as "changed" at
+    all) and certbot_renew() (deciding whether to actually invoke
+    certbot), so both agree on whether this certbot_renew pass is a real
+    one - see the comment above get_config()'s use of this for why that
+    matters.
+    """
+    acme_certs = [name for name, cert_conf in certificates.items() if 'acme' in cert_conf]
+    return any(certbot_renewal_due(name) for name in acme_certs)
+
 def certbot_renew(config: dict, force: bool=False) -> None:
     """ Renew all certificates managed via certbot """
+    if not force and not any_certbot_renewal_due(config.get('certificate', {})):
+        print('No certificates due for renewal - skipping certbot renew.')
+        return None
+
     tmp = ['certbot', 'renew', '--no-random-sleep-on-renew',
            '--config-dir', vyos_certbot_dir]
 
@@ -358,20 +405,28 @@ def get_config(config=None):
 
     # Certbot triggered an external renew of the certificates.
     # Mark all ACME based certificates as "changed" to trigger
-    # update of dependent services
+    # update of dependent services - but only if certbot_renew() below is
+    # actually going to invoke certbot: this used to run unconditionally
+    # on every timer-triggered pass, which made apply()'s call_dependents()
+    # regenerate and reload every dependent service (HAProxy, HTTPS, ...)
+    # twice a day even when nothing was due for renewal - confirmed live,
+    # a real, repeating outage matching the same all-clear "not yet due
+    # for renewal" as certbot_renew()'s own now-skipped invocation.
     if 'certificate' in pki and 'certbot_renew' in pki:
-        renew = []
-        for name, cert_config in pki['certificate'].items():
-            if 'acme' in cert_config:
-                renew.append(name)
-        if renew:
-            # Get the current list of changed certificates
-            tmp = pki.get('changed', {}).get('certificate', [])
-            # and extend it with the list of ACME based certificates
-            tmp += renew
-            # remove any duplicates if necessary
-            tmp = set(tmp)
-            dict_set_nested('changed.certificate', tmp, pki)
+        force = 'force' in pki['certbot_renew']
+        if force or any_certbot_renewal_due(pki['certificate']):
+            renew = []
+            for name, cert_config in pki['certificate'].items():
+                if 'acme' in cert_config:
+                    renew.append(name)
+            if renew:
+                # Get the current list of changed certificates
+                tmp = pki.get('changed', {}).get('certificate', [])
+                # and extend it with the list of ACME based certificates
+                tmp += renew
+                # remove any duplicates if necessary
+                tmp = set(tmp)
+                dict_set_nested('changed.certificate', tmp, pki)
 
     # A changed AUTOCHAIN_<cert> entry (e.g. certbot rotated the
     # intermediate CA, or it was reconciled out-of-band via a real commit -
