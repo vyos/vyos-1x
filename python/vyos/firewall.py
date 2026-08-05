@@ -178,12 +178,18 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
         lookup_output = ' . '.join(lookup_list)
 
-        route_type = rule_conf['fib']['match']['route_type']
-        operator = ''
-        if route_type[0] == '!':
-            operator = '!= '
-            route_type = route_type[1:]
-        output.append(f'fib {lookup_output} type {operator}{route_type}')
+        match_conf = rule_conf['fib']['match']
+        match_output = ''
+
+        if 'route_type' in match_conf:
+            route_type = match_conf['route_type']
+            operator = ''
+            if route_type[0] == '!':
+                operator = '!= '
+                route_type = route_type[1:]
+            match_output = f'type {operator}{route_type}'
+
+        output.append(f'fib {lookup_output} {match_output}')
 
     for side in ['destination', 'source']:
         if side in rule_conf:
