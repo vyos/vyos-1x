@@ -143,14 +143,20 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['source-address', '192.0.2.1'])
         self.cli_set(base_path + ['source-address', '192.0.2.2'])
-        with self.assertRaises(ConfigSessionError):
+        try:
+            with self.assertRaisesRegex(
+                    ConfigSessionError,
+                    'Only admits one ipv4 value for source-address'):
+                self.cli_commit()
+        finally:
+            # remove the invalid subtree entirely (rather than leaving a
+            # non-local address configured) so chronyd is left running for
+            # tearDown -- in a finally block so a failed assertion above
+            # doesn't leave the dummy interface/source-address behind for
+            # subsequent tests
+            self.cli_delete(base_path + ['source-address'])
+            self.cli_delete(dummy_if_path)
             self.cli_commit()
-
-        # remove the invalid subtree entirely (rather than leaving a
-        # non-local address configured) so chronyd is left running for tearDown
-        self.cli_delete(base_path + ['source-address'])
-        self.cli_delete(dummy_if_path)
-        self.cli_commit()
 
     def test_source_address_rejects_multiple_ipv6(self):
         # commit the dummy addresses on their own first, so they are
@@ -164,23 +170,27 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['source-address', '2001:db8::1'])
         self.cli_set(base_path + ['source-address', '2001:db8::2'])
-        with self.assertRaises(ConfigSessionError):
+        try:
+            with self.assertRaisesRegex(
+                    ConfigSessionError,
+                    'Only admits one ipv6 value for source-address'):
+                self.cli_commit()
+        finally:
+            # see the ipv4 test above for why this is in a finally block
+            self.cli_delete(base_path + ['source-address'])
+            self.cli_delete(dummy_if_path)
             self.cli_commit()
-
-        # remove the invalid subtree entirely (rather than leaving a
-        # non-local address configured) so chronyd is left running for tearDown
-        self.cli_delete(base_path + ['source-address'])
-        self.cli_delete(dummy_if_path)
-        self.cli_commit()
 
     def test_source_address_rejects_non_local(self):
         # source-address must be assigned to a local interface
         self.cli_set(base_path + ['source-address', '192.0.2.1'])
-        with self.assertRaises(ConfigSessionError):
+        try:
+            with self.assertRaisesRegex(ConfigSessionError,
+                                         'not assigned to any interface'):
+                self.cli_commit()
+        finally:
+            self.cli_delete(base_path + ['source-address'])
             self.cli_commit()
-
-        self.cli_delete(base_path + ['source-address'])
-        self.cli_commit()
 
     def test_source_interface(self):
         interface = 'eth0'
