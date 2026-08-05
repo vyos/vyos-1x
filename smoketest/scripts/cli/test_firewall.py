@@ -423,8 +423,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_ipv4_advanced(self):
         name = 'smoketest-adv'
-        name2 = 'smoketest-adv2'
-        interface = 'eth0'
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-log'])
@@ -510,7 +508,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_ipv4_mask(self):
         name = 'smoketest-mask'
-        interface = 'eth0'
 
         self.cli_set(['firewall', 'group', 'address-group', 'mask_group', 'address', '1.1.1.1'])
 
@@ -739,7 +736,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_ipv6_mask(self):
         name = 'v6-smoketest-mask'
-        interface = 'eth0'
 
         self.cli_set(['firewall', 'group', 'ipv6-address-group', 'mask_group', 'address', '::beef'])
 
