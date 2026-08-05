@@ -123,6 +123,41 @@ sync_translate = {
     'key': 'openssh',
 }
 
+certbot_log_file = '/var/log/letsencrypt/letsencrypt.log'
+
+def certbot_log_offset() -> int:
+    """Current size of certbot's own debug log, to be passed to
+    certbot_error_reason() after a failed invocation so it only looks at
+    what this specific invocation appended - certbot's log is shared
+    across all certificates and accumulates across every past run.
+    """
+    return os.path.getsize(certbot_log_file) if os.path.exists(certbot_log_file) else 0
+
+def certbot_error_reason(offset: int) -> str | None:
+    """Pull the actual ACME protocol error (e.g. rate limiting, failed
+    domain validation) out of certbot's own debug log.
+
+    certbot's non-interactive stdout/stderr reporting can itself crash
+    on an unrelated certbot/josepy bug while trying to report an ACME
+    error (AttributeError: can't set attribute, seen live), which masks
+    the real reason entirely from cmdl()'s captured output. The real
+    reason is still always written to the debug log first, so read it
+    directly instead of relying on certbot's own top-level reporting.
+    """
+    try:
+        with open(certbot_log_file) as f:
+            f.seek(offset)
+            log_tail = f.read()
+    except OSError:
+        return None
+
+    reason = None
+    prefix = 'acme.messages.Error:'
+    for line in log_tail.splitlines():
+        if line.startswith(prefix):
+            reason = line[len(prefix):].strip()
+    return reason
+
 def certbot_delete(certificate):
     if not boot_configuration_complete():
         return
@@ -165,7 +200,14 @@ def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     if dry_run:
         tmp += ['--dry-run']
 
-    cmdl(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
+    offset = certbot_log_offset()
+    try:
+        cmdl(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
+    except ConfigError as e:
+        reason = certbot_error_reason(offset)
+        if reason:
+            raise ConfigError(f'Certbot request failed for "{name}": {reason}') from e
+        raise
     return None
 
 def certbot_renew(config: dict, force: bool=False) -> None:
@@ -191,10 +233,12 @@ def certbot_renew(config: dict, force: bool=False) -> None:
     if force:
         tmp += ['--force-renewal']
 
+    offset = certbot_log_offset()
     try:
         print(cmdl(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
     except ConfigError as e:
-        print(e)
+        reason = certbot_error_reason(offset)
+        print(f'Certbot renew failed: {reason}' if reason else e)
         for service in stop_services:
             print(f'Restarting "{service}" with non-renewed certificate...')
             cmdl(['systemctl', 'restart', service])
