@@ -477,13 +477,20 @@ def find_chain(cert, ca_certs):
 AUTOCHAIN_PREFIX = 'AUTOCHAIN_'
 AUTOCHAIN_UPDATE_MARKER = 'AUTOCHAIN_UPDATE:'
 
-def get_acme_chain_base64(vyos_certbot_dir: str, cert_name: str) -> str:
+def get_acme_chain_base64(vyos_certbot_dir: str, cert_name: str) -> str | None:
     """Read and base64-encode a certbot-managed ACME certificate's
     intermediate CA chain, in the same encoding used for the CLI value
     of 'pki ca AUTOCHAIN_<cert_name> certificate'.
+
+    Returns None if chain.pem is not (yet) present - e.g. a prior
+    certbot_request() for this certificate failed (rate limited or
+    otherwise) and there is nothing to import yet.
     """
     from vyos.utils.file import read_file
-    tmp = read_file(f'{vyos_certbot_dir}/live/{cert_name}/chain.pem')
+    tmp = read_file(f'{vyos_certbot_dir}/live/{cert_name}/chain.pem',
+                     defaultonfailure=None)
+    if tmp is None:
+        return None
     tmp = load_certificate(tmp, wrap_tags=False)
     return "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
 

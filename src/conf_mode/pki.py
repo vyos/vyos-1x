@@ -659,8 +659,16 @@ def generate(pki):
             if 'acme' not in pki['certificate'][cert]:
                 continue
 
-            # Read in ACME certificate chain information
+            # Read in ACME certificate chain information. Missing (e.g. a
+            # prior certbot_request() above failed - rate limited or
+            # otherwise - so there is nothing on disk yet) is not fatal:
+            # skip this certificate's AUTOCHAIN import for now rather than
+            # crashing generate() - and every dependent config-mode script
+            # registered for this same commit - over it. It will be picked
+            # up on a later run once the certificate actually exists.
             cert_chain_base64 = get_acme_chain_base64(vyos_certbot_dir, cert)
+            if cert_chain_base64 is None:
+                continue
 
             if acme_chain_needs_update(pki, cert, cert_chain_base64):
                 # add_cli_node() requires an active configuration session
