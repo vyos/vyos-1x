@@ -150,8 +150,77 @@ class Config(object):
         self._level = []
         self._dict_cache = {}
         self.dependency_list = []
+        self._skip_next_reload = False
         (self._running_config,
          self._session_config) = self._config_source.get_configtree_tuple()
+
+    def _invalidate_cache(self):
+        self._dict_cache = {}
+        if hasattr(self, 'cached_diff_tree'):
+            delattr(self, 'cached_diff_tree')
+        if hasattr(self, 'cached_diff_dict'):
+            delattr(self, 'cached_diff_dict')
+
+    def sync_local_set(self, path: list, value: str = None):
+        """
+        Reflect a CLI node that was just persisted elsewhere (e.g. via
+        add_cli_node()) directly in this Config instance's own in-memory
+        session tree, so a get_config_dict() call immediately after - by
+        this script, or by a dependent invoked later in the same commit
+        via the same shared Config instance - observes it without needing
+        a backend re-read. This matters because a backend re-read
+        (reload()) does not reliably reflect a my_set write within the
+        same session on the legacy backend (cli-shell-api keeps its own
+        reference/index state that only my_set/my_delete update).
+
+        Only call this once the actual persistence (add_cli_node()/
+        my_set/aux_set) has already succeeded - it updates this Config's
+        local view to match, it does not perform persistence itself.
+        """
+        from vyos.utils.config import flag, set_tags, set_leaf
+        ct = self._session_config
+        for target in flag(path):
+            if not ct.exists(target):
+                ct.create_node(target)
+        set_tags(ct, path)
+        ct.set(path, value=value, replace=True)
+        set_leaf(ct, path)
+        self._invalidate_cache()
+        # The next reload() (before the next dependent in this commit, if
+        # any) would otherwise overwrite this local sync with a backend
+        # re-read that may still be lagging - skip that one re-read since
+        # this Config's tree is already known correct.
+        self._skip_next_reload = True
+
+    def sync_local_delete(self, path: list):
+        """Counterpart to sync_local_set() for a node deleted elsewhere."""
+        if self._session_config.exists(path):
+            self._session_config.delete(path)
+        self._invalidate_cache()
+        self._skip_next_reload = True
+
+    def reload(self):
+        """
+        Refresh the config trees held by this Config instance from the
+        underlying config source, and invalidate state cached from the
+        previous snapshot (get_config_dict cache, get_config_diff cache).
+
+        Used before invoking a dependent config-mode script so it observes
+        CLI mutations made by the triggering script's own generate(). If
+        the triggering script made such a mutation via sync_local_set()/
+        sync_local_delete() (see their docstrings), this reload is skipped
+        once, since a backend re-read could otherwise overwrite that
+        already-correct local state with a stale one - see
+        sync_local_set()'s docstring for why a plain backend re-read
+        cannot be relied on here on the legacy backend.
+        """
+        if self._skip_next_reload:
+            self._skip_next_reload = False
+            return
+        self._config_source.reload()
+        (self._running_config,
+         self._session_config) = self._config_source.get_configtree_tuple()
+        self._invalidate_cache()
 
     def get_config_tree(self, effective=False):
         if effective:

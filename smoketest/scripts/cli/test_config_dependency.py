@@ -17,11 +17,14 @@
 import unittest
 from time import sleep
 
+from vyos.utils.file import read_file
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import cmdl
 from vyos.configsession import ConfigSessionError
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+
+SSHD_CONF = '/run/sshd/sshd_config'
 
 class TestConfigDep(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -122,6 +125,55 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(conntrack_sync_base)
         self.cli_delete(['interfaces', 'ethernet', 'eth2', 'address'])
         self.cli_delete(['system', 'conntrack', 'table-size'])
+        self.cli_commit()
+
+    def test_configdep_system_login_ssh(self):
+        # T9102 (fix): system_login.py mutates its own CLI config in
+        # generate() (plaintext -> encrypted password, via
+        # add_cli_node()/delete_cli_node()) and then triggers its
+        # registered dependent (service_ssh, via
+        # set_dependents('ssh', ...)) through call_dependents() within
+        # the same commit, on the same shared Config object. Before the
+        # Config.reload() fix in configdep.run_config_mode_script(), any
+        # dependent invoked this way could observe a config snapshot
+        # cached before the triggering script's own mutation.
+        #
+        # service_ssh does not itself read the password field, so this
+        # is a two-part check: (1) the plaintext-to-encrypted mutation
+        # persisted correctly, and (2) the dependency chain as a whole -
+        # including the reload() call now made before every dependent
+        # invocation - still commits cleanly and produces correct
+        # output for the dependent, guarding against a regression where
+        # reload() itself raises or corrupts the dependent's config view.
+        user = 'configdep_login_ssh'
+        password = 'D3pendency-T3st!'
+        port = '2222'
+
+        login_base = ['system', 'login', 'user', user]
+        ssh_base = ['service', 'ssh']
+
+        self.cli_set(ssh_base + ['port', port])
+        self.cli_set(login_base + ['authentication', 'plaintext-password',
+                                   password])
+        self.cli_commit()
+
+        # generate() must have converted the plaintext password in place
+        with self.assertRaises(ConfigSessionError):
+            self._session.show_config(login_base + ['authentication',
+                                                    'plaintext-password'])
+
+        tmp = self._session.show_config(login_base + ['authentication',
+                                                      'encrypted-password'])
+        self.assertNotEqual(tmp.split()[-1], '')
+
+        # the ssh dependent must still have run cleanly and rendered its
+        # own config correctly in the same commit
+        sshd_config = read_file(SSHD_CONF)
+        self.assertIn(f'Port {port}', sshd_config)
+
+        # clean up
+        self.cli_delete(login_base)
+        self.cli_delete(ssh_base)
         self.cli_commit()
 
 if __name__ == '__main__':

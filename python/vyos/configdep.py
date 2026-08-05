@@ -102,6 +102,7 @@ def run_config_mode_script(target: str, config: 'Config'):
     mod = load_as_module(name, path)
 
     config.set_level([])
+    config.reload()
     dry_run = config.get_bool_attr('dry_run')
     try:
         c = mod.get_config(config)

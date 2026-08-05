@@ -48,6 +48,13 @@ class ConfigSource:
     def get_configtree_tuple(self):
         return self._running_config, self._session_config
 
+    def reload(self):
+        """
+        Refresh the running/session config trees held by this source.
+        No-op for sources that are not backed by a live session.
+        """
+        pass
+
     def session_changed(self):
         """
         Returns:
@@ -122,6 +129,9 @@ class ConfigSourceSession(ConfigSource):
         else:
             self.__session_env = None
 
+        self.__read_config_trees()
+
+    def __read_config_trees(self):
         # Running config can be obtained either from op or conf mode, it always succeeds
         # once the config system is initialized during boot;
         # before initialization, set to empty string
@@ -152,6 +162,14 @@ class ConfigSourceSession(ConfigSource):
             self._session_config = ConfigTree(session_config_text)
         else:
             self._session_config = None
+
+    def reload(self):
+        """
+        Re-read running/session config trees from the CLI backend, to pick
+        up CLI mutations (e.g. add_cli_node()) made after this source was
+        constructed.
+        """
+        self.__read_config_trees()
 
     def _make_command(self, op, path):
         args = path.split()
@@ -333,10 +351,17 @@ class ConfigSourceVyconfSession(ConfigSource):
             self.pid = int(pid) if pid else os.getppid()
 
         self._vyconf_session = VyconfSession(pid=self.pid)
+        self.__read_config_trees()
+
+        # N.B. level not yet implemented pending integration with legacy CLI
+        # cf. T7374
+        self._level = []
+
+    def __read_config_trees(self):
         try:
             out = self._vyconf_session.get_config()
         except VyconfSessionError as e:
-            raise ConfigSourceError(f'Init error in {type(self)}: {e}')
+            raise ConfigSourceError(f'Error fetching config in {type(self)}: {e}')
 
         session_dir = directories['vyconf_session_dir']
 
@@ -351,9 +376,13 @@ class ConfigSourceVyconfSession(ConfigSource):
         if os.path.isfile(self.session_cache_path):
             os.remove(self.session_cache_path)
 
-        # N.B. level not yet implemented pending integration with legacy CLI
-        # cf. T7374
-        self._level = []
+    def reload(self):
+        """
+        Re-fetch running/session config trees via the vyconf session, to
+        pick up CLI mutations (e.g. add_cli_node()) made after this source
+        was constructed.
+        """
+        self.__read_config_trees()
 
     def get_level(self):
         return self._level
