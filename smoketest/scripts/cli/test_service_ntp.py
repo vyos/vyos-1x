@@ -151,6 +151,62 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['source-address'])
         self.cli_commit()
 
+    def test_source_interface(self):
+        interface = 'eth0'
+        self.cli_set(base_path + ['source-interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        # Check generated client source-interface configuration
+        config = read_file(NTP_CONF, sudo=True)
+        self.assertIn(f'bindacqdevice {interface}', config)
+
+    def test_source_address_and_source_interface(self):
+        # bindacqaddress (IP) and bindacqdevice (interface) bind different
+        # socket properties and can be configured together
+        source_addresses = ['127.0.0.1', '::1']
+        interface = 'eth0'
+        for address in source_addresses:
+            self.cli_set(base_path + ['source-address', address])
+        self.cli_set(base_path + ['source-interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for address in source_addresses:
+            self.assertIn(f'bindacqaddress {address}', config)
+        self.assertIn(f'bindacqdevice {interface}', config)
+
+    def test_source_interface_vrf_mismatch(self):
+        vrf_name = 'vyos-mgmt'
+        interface = 'eth0'
+
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(base_path + ['vrf', vrf_name])
+        self.cli_set(base_path + ['source-interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        # eth0 does not belong to the VRF - commit must be rejected
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # fix the invalid combination so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-interface'])
+        self.cli_delete(base_path + ['vrf'])
+        self.cli_delete(['vrf', 'name', vrf_name])
+        self.cli_commit()
+
     def test_interface(self):
         interfaces = ['eth0']
         for interface in interfaces:

@@ -81,6 +81,20 @@ def verify(ntp):
                 raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{interface}" '\
                                   f'does not belong to this VRF!')
 
+    if 'source_interface' in ntp:
+        # If outgoing NTP client requests should be bound to a given
+        # interface (device), ensure it exists
+        source_interface = ntp['source_interface']
+        verify_interface_exists(ntp, source_interface)
+
+        # If we run in a VRF, our source interface must belong to this VRF, too
+        if 'vrf' in ntp:
+            tmp = get_interface_config(source_interface)
+            vrf_name = ntp['vrf']
+            if 'master' not in tmp or tmp['master'] != vrf_name:
+                raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{source_interface}" '\
+                                  f'does not belong to this VRF!')
+
     if 'listen_address' in ntp:
         ipv4_addresses = 0
         ipv6_addresses = 0
