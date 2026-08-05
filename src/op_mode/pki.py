@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import grp
 import ipaddress
 import os
 import re
@@ -1503,11 +1504,27 @@ def _reconcile_acme_ca_chains(renewal_output: str, vyos_conf_scripts_dir: str):
     for name, value in updates.items():
         session.set(['pki', 'ca', f'{AUTOCHAIN_PREFIX}{name}', 'certificate'], value=value)
 
+    # vyos-boot-config-loader.py sets this same group and umask before its
+    # own ConfigSession commit, "so that every vyattacfg group member has
+    # write access" to what gets written into the active config tree. This
+    # path builds its own ConfigSession the same way, invoked from the
+    # certbot timer with no such override, so without this it leaves
+    # directories that non-root vyattacfg-group admins can't later
+    # set/delete (confirmed live). Group ownership and directory mode do
+    # get fixed by this; the node.val leaf files themselves are still
+    # created mode 644 regardless (that appears to be hardcoded in my_set/
+    # cli-shell-api itself, outside what this process's own umask/gid can
+    # influence) - a full fix needs a periodic or post-commit
+    # chgrp+chmod pass over the active tree, which is out of scope here.
+    old_umask = os.umask(0o002)
+    os.setgid(grp.getgrnam('vyattacfg').gr_gid)
     try:
         print(session.commit())
     except ConfigSessionError as e:
         Warning(f'Failed to commit renewed CA certificate chain: {e}')
         return
+    finally:
+        os.umask(old_umask)
 
     # Belt and suspenders: the commit above sets the chain via
     # ConfigSession.set() before commit() runs, which - like a plain
