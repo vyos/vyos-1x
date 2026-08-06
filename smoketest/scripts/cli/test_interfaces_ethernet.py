@@ -229,6 +229,10 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                     msg = 'Driver does not fully support coalesce configuration'
                     with self.assertRaisesRegex(ConfigSessionError, msg):
                         self.cli_commit()
+                    # the failed commit leaves rx-usecs/tx-usecs staged in
+                    # the candidate config (commit() does not auto-rollback) -
+                    # discard it so it doesn't leak into the next interface
+                    self.cli_discard()
                     continue
 
                 # To find out the supported features
@@ -300,6 +304,10 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             if not ethtool.check_flow_control():
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
+                # the failed commit leaves disable-flow-control staged in
+                # the candidate config (commit() does not auto-rollback) -
+                # discard it so it doesn't leak into the next interface
+                self.cli_discard()
             else:
                 out, err = popen(f'sudo ethtool --json --show-pause {interface}')
                 out = loads(out)
