@@ -1,0 +1,17 @@
+[Unit]
+Description=VyOS deterministic hw-id based interface naming
+Documentation=man:vyos-net-name-resolve.py(8)
+
+# Started explicitly by vyos-router (like frr.service/vyos-netlinkd.service)
+# once /opt/vyatta/etc/config is mounted and config.boot exists - which, for
+# an encrypted config volume, only happens after vyos-router has unlocked
+# and mounted it. It cannot be ordered independently before vyos-router:
+# there is no config.boot to read before that point.
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/vyos/system/vyos-net-name-resolve.py
+TimeoutStartSec=90
+StandardOutput=journal+console

@@ -367,6 +367,26 @@ update_interface_config ()
     fi
 }
 
+# warn (but do not fail boot) about configured hw-id interfaces whose
+# hardware was not found by vyos-net-name-resolve.service
+warn_missing_interface_hardware ()
+{
+    local status_file="/run/vyos-net-name-resolve.json"
+    [ -f "${status_file}" ] || return 0
+
+    jq -r '.missing // {} | to_entries[] | "\(.value) \(.key)"' "${status_file}" \
+        2>/dev/null | while read -r intf hwid; do
+        [ -n "${intf}" ] || continue
+        log_failure_msg "hw-id ${hwid} configured as '${intf}' was not found during boot - check cabling, hardware and driver/firmware"
+    done
+
+    jq -r '.pending_unresolved // [] | .[]' "${status_file}" 2>/dev/null | \
+        while read -r intf; do
+        [ -n "${intf}" ] || continue
+        log_failure_msg "interface '${intf}' still has no hw-id configured after this boot's naming pass - bind it manually, e.g. 'set interfaces ethernet ${intf} hw-id <mac>', or remove the node if it is no longer needed"
+    done
+}
+
 cleanup_post_commit_hooks () {
     # Remove links from the post-commit hooks directory.
     # note that this approach only supports hooks that are "configured",
@@ -610,6 +630,12 @@ start ()
 
     disabled migrate || migrate_bootfile || overall_status=1
 
+    # config.boot is only guaranteed to exist/be current from this point on
+    # (tmpfs mount + encrypted config unlock + syntax migration have all
+    # already happened above) - hw-id based interface naming must be
+    # resolved against it before anything below applies interface config.
+    systemctl start vyos-net-name-resolve.service || overall_status=1
+
     restore_if_missing_preconfig_script
 
     run_preconfig_script
@@ -617,6 +643,7 @@ start ()
     run_postupgrade_script
 
     update_interface_config || overall_status=1
+    warn_missing_interface_hardware
 
     disabled system_activate || system_activate || overall_status=1
 
