@@ -15,15 +15,17 @@ Proxmox is an open-source platform for virtualization.
 
 2. Copy the `.qcow2` image to a temporary directory on the Proxmox server.
 
-3. The following commands assume that virtual machine (VM) ID `200` is unused
-   and that the imported disk will be stored in a storage pool named `local-lvm`.
+3. The following commands assume VM ID `200` is unused and that the imported
+   disk will be stored in a storage pool named `local-lvm`.
 
-   > ```none
-   > $ qm create 200 --name vyos --memory 4096 --net0 virtio,bridge=vmbr0
-   > $ qm importdisk 200 /var/lib/vz/images/vyos-<version>-proxmox-amd64.qcow2 local-lvm
-   > $ qm set 200 --virtio0 local-lvm:vm-200-disk-0
-   > $ qm set 200 --boot order=virtio0
-   > ```
+   ```none
+   $ qm create 200 --name vyos --memory 4096 --net0 virtio,bridge=vmbr0
+   $ qm importdisk 200 \
+       /var/lib/vz/images/vyos-<version>-proxmox-amd64.qcow2 \
+       local-lvm
+   $ qm set 200 --virtio0 local-lvm:vm-200-disk-0
+   $ qm set 200 --boot order=virtio0
+   ```
 
 4. When using a `qcow2` image on Proxmox, the system
    **does not include any preconfigured user accounts**.
@@ -37,12 +39,27 @@ Proxmox is an open-source platform for virtualization.
    $ qm set 200 --ide2 local-lvm:cloudinit
    ```
 
+   Configure the Cloud-Init user data before the first boot. For key-based
+   access, create the `vyos` user and import public SSH keys from a file on the
+   Proxmox host:
+
+   ```bash
+   qm set 200 --ciuser vyos
+   qm set 200 --sshkeys ~/.ssh/id_ed25519.pub
+   ```
+
+   The `--sshkeys` argument expects a file containing one or more OpenSSH
+   public keys.
+
    Alternatively, add a Cloud-Init drive using the Proxmox GUI:
 
    1. Open the VM and navigate to **Hardware**
    2. Click **Add** → **CloudInit Drive**
    3. Select a storage (for example, `local-lvm`)
    4. Click **Add**
+
+   If using the GUI, set the same user and SSH public key values in the VM's
+   **Cloud-Init** tab before starting it.
 
 5. Start the virtual machine using the Proxmox GUI or by running `qm start 200`.
 
