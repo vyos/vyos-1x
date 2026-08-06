@@ -1,76 +1,180 @@
-# mDNS Repeater
+---
+myst:
+  html_meta:
+    description: |
+      The mDNS repeater is a VyOS service that retransmits mDNS packets
+      between configured interfaces, so mDNS-based service discovery
+      works across multiple broadcast domains on the same router. It
+      re-originates each repeated packet from the sending interface's IP
+      address.
+    keywords: mdns, mdns repeater, multicast dns, dns-sd, vrrp
+---
 
-Starting with VyOS 1.2 a {abbr}`mDNS (Multicast DNS)` repeater functionality is
-provided. Additional information can be obtained from
-<https://en.wikipedia.org/wiki/Multicast_DNS>.
+(mdns-repeater)=
 
-Multicast DNS uses the reserved address `224.0.0.251`, which is
-"administratively scoped" and does not leave the subnet. mDNS repeater
-retransmits mDNS packets from one interface to other interfaces. This enables
-support for devices using mDNS discovery (like network printers, Apple Airplay,
-Chromecast, various IP based home-automation devices etc) across multiple VLANs.
+# mDNS repeater
 
-Since the mDNS protocol sends the {abbr}`AA(Authoritative Answer)` records in
-the packet itself, the repeater does not need to forge the source address.
-Instead, the source address is of the interface that repeats the packet.
+Devices that rely on {abbr}`mDNS (Multicast DNS)` discovery, such as
+network printers, Apple AirPlay receivers, Chromecast devices, and
+various IP-based home-automation devices, discover peers only within the
+same broadcast domain (typically a single VLAN). This restriction exists
+because mDNS uses the link-local multicast addresses `224.0.0.251`
+(IPv4) and `ff02::fb` (IPv6), and routers do not forward packets sent to
+these addresses.
 
-:::{note}
-You can not run this in a VRRP setup, if multiple mDNS repeaters
-are launched in a subnet you will experience the mDNS packet storm death!
-:::
+The mDNS repeater bridges that gap. It retransmits mDNS packets received
+on one configured interface to all other configured interfaces, so
+mDNS-based discovery works across multiple broadcast domains on the same
+VyOS router.
+
+mDNS conveys an advertised host's IP address in the A (IPv4) or AAAA
+(IPv6) resource records inside the packet, so a client reads the address
+from those records rather than from the packet's source IP address. The
+repeater therefore re-originates each packet from the sending
+interface's IP address.
+
+```{note}
+Never run more than one mDNS repeater between the same networks, for
+example on both routers of a VRRP pair, because the repeaters reflect
+each other's packets and cause an mDNS packet storm.
+
+In VRRP setups, configure `set service mdns repeater vrrp-disable` so a
+router repeats mDNS only while its VRRP interfaces are in the MASTER
+state.
+```
 
 ## Configuration
 
 ```{cfgcmd} set service mdns repeater interface \<interface\>
 
-To enable mDNS repeater you need to configure at least two interfaces so that
-all incoming mDNS packets from one interface configured here can be
-re-broadcasted to any other interface(s) configured under this section.
+**Configure an interface on which the mDNS repeater receives and
+retransmits mDNS packets.**
+
+Packets received on any configured interface are repeated to all other
+configured interfaces.
+
+Repeat the command to configure multiple interfaces.
+
+At least two interfaces must be configured for a successful commit.
+Every configured interface must have an IP address of each address
+family enabled by `ip-version`.
+```
+
+Example:
+
+```none
+set service mdns repeater interface eth0
+set service mdns repeater interface eth1
 ```
 
 ```{cfgcmd} set service mdns repeater disable
 
-mDNS repeater can be temporarily disabled without deleting the service using
+**Disable the mDNS repeater without removing its configuration.**
+```
+
+Example:
+
+```none
+set service mdns repeater disable
 ```
 
 ```{cfgcmd} set service mdns repeater ip-version \<ipv4 | ipv6 | both\>
 
-mDNS repeater can be enabled either on IPv4 socket or on IPv6 socket or both
-to re-broadcast. By default, mDNS repeater will listen on both IPv4 and IPv6.
+**Configure the IP address family (or families) on which the mDNS
+repeater listens and repeats mDNS packets.**
+
+The default is `both`.
+```
+
+Example:
+
+```none
+set service mdns repeater ip-version ipv4
 ```
 
 ```{cfgcmd} set service mdns repeater allow-service \<service\>
 
-mDNS repeater can be configured to re-broadcast only specific services. By
-default, all services are re-broadcasted.
+**Restrict repeating to mDNS packets that match the specified service.**
+
+The value matches either a {abbr}`DNS-SD (DNS-Based Service Discovery)`
+service type (e.g., `_airplay._tcp`) or the name of the machine
+providing the service.
+
+Repeat the command to allow multiple services.
+
+When unset, no service filter is applied, and all mDNS packets are
+repeated.
+```
+
+Example:
+
+```none
+set service mdns repeater allow-service _airplay._tcp
 ```
 
 ```{cfgcmd} set service mdns repeater browse-domain \<domain\>
 
-Allow listing additional custom domains to be browsed (in addition to the
-default ``local``) so that they can be reflected.
+**Repeat mDNS packets for an additional domain, in addition to the
+default local domain.**
+
+Repeat the command to add multiple domains.
 ```
 
-```{cfgcmd} set service mdns repeater cache-entries \<entries\>
+Example:
 
-Specify how many resource records are cached per interface. Bigger values
-allow mDNS work correctly in large LANs but also increase memory consumption.
-
-Defaults to: 4096
+```none
+set service mdns repeater browse-domain openthread.thread.home.arpa
 ```
 
+```{cfgcmd} set service mdns repeater cache-entries \<0-65535\>
+
+**Configure the maximum number of resource records cached per
+interface.**
+
+Larger values allow mDNS to work correctly in large LANs but increase
+memory consumption.
+
+Setting 0 disables caching. The default is 4096.
+```
+
+Example:
+
+```none
+set service mdns repeater cache-entries 8192
+```
+
+```{cfgcmd} set service mdns repeater vrrp-disable
+
+**Exclude interfaces whose VRRP instance is not in MASTER state from
+mDNS repeating.**
+
+This option takes effect only when VRRP (`high-availability vrrp`) is
+configured.
+
+If fewer than two interfaces remain after exclusion, the repeater stops,
+as it requires at least two interfaces to operate. VRRP state changes
+automatically reconfigure the repeater.
+```
+
+Example:
+
+```none
+set service mdns repeater vrrp-disable
+```
 
 ## Firewall recommendations
 
-Unlike typical routed traffic, mDNS packets relayed between interfaces do not
-traverse the FORWARD hook chain in the firewall. Instead, they are processed
-through the following hooks:
-> - **INPUT**: For packets received by the local system
-> - **OUTPUT**: For packets sent from the local system
+The repeater receives mDNS packets on the local system and re-originates
+them locally. It does not route repeated packets. mDNS repeater traffic
+therefore never traverses the firewall `forward` hook. Instead, it is
+processed by the following hooks:
 
-To control or allow mDNS packet forwarding via the relay, you must define
-appropriate rules in the INPUT and OUTPUT directions. Rules in the FORWARD
-direction will have no effect on mDNS relay traffic.
+- `input`: mDNS packets received by the router.
+- `output`: repeated mDNS packets sent by the router.
+
+To control mDNS repeater traffic, define rules for the `input` and
+`output` directions. Rules for the `forward` direction do not affect
+this traffic.
 
 ```none
 set firewall ipv4 input filter rule 10 action 'accept'
@@ -81,51 +185,45 @@ set firewall ipv4 output filter rule 10 action 'accept'
 set firewall ipv4 output filter rule 10 destination address '224.0.0.251'
 set firewall ipv4 output filter rule 10 destination port '5353'
 set firewall ipv4 output filter rule 10 protocol 'udp'
+set firewall ipv6 input filter rule 10 action 'accept'
+set firewall ipv6 input filter rule 10 destination address 'ff02::fb'
+set firewall ipv6 input filter rule 10 destination port '5353'
+set firewall ipv6 input filter rule 10 protocol 'udp'
+set firewall ipv6 output filter rule 10 action 'accept'
+set firewall ipv6 output filter rule 10 destination address 'ff02::fb'
+set firewall ipv6 output filter rule 10 destination port '5353'
+set firewall ipv6 output filter rule 10 protocol 'udp'
 ```
-
-
-## Example
-
-To listen on both `eth0` and `eth1` mDNS packets and also repeat packets
-received on `eth0` to `eth1` (and vice-versa) use the following commands:
-
-```none
-set service mdns repeater interface 'eth0'
-set service mdns repeater interface 'eth1'
-```
-
-To allow only specific services, for example `_airplay._tcp` or `_ipp._tcp`,
-(instead of all services) to be re-broadcasted, use the following command:
-
-```none
-set service mdns repeater allow-service '_airplay._tcp'
-set service mdns repeater allow-service '_ipp._tcp'
-```
-
-To allow listing additional custom domain, for example
-`openthread.thread.home.arpa`, so that it can reflected in addition to the
-default `local`, use the following command:
-
-```none
-set service mdns repeater browse-domain 'openthread.thread.home.arpa'
-```
-
 
 ## Operation
 
 ```{opcmd} restart mdns repeater
 
-Restart mDNS repeater service.
+**Restart the mDNS repeater service.**
+
+If the service is not configured or disabled, or a configuration commit
+is in progress, the command prints an error message and exits.
 ```
 
 ```{opcmd} show log mdns repeater
 
-Show logs for mDNS repeater service.
+**Show the log of the mDNS repeater service.**
 ```
 
 ```{opcmd} monitor log mdns repeater
 
-Follow the logs for mDNS repeater service.
+**Follow the log output of the mDNS repeater service in real time.**
 ```
 
-[multicast dns]: <https://en.wikipedia.org/wiki/Multicast_DNS>
+## Example
+
+The following example sets up an mDNS repeater between `eth0` and `eth1`
+and restricts repeating to two service types: `_airplay._tcp` (Apple
+AirPlay) and `_ipp._tcp` (network printing).
+
+```none
+set service mdns repeater interface 'eth0'
+set service mdns repeater interface 'eth1'
+set service mdns repeater allow-service '_airplay._tcp'
+set service mdns repeater allow-service '_ipp._tcp'
+```
