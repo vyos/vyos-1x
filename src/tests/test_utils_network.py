@@ -35,7 +35,7 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('::1'))
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('::1%lo'))
 
-    def test_is_ipv6_link_local(self):
+    def test_is_loopback_addr(self):
         self.assertTrue(vyos.utils.network.is_loopback_addr('127.0.0.1'))
         self.assertTrue(vyos.utils.network.is_loopback_addr('127.0.1.1'))
         self.assertTrue(vyos.utils.network.is_loopback_addr('127.1.1.1'))
