@@ -616,9 +616,9 @@ def nft_action(vyos_action):
     return vyos_action
 
 @register_filter('nft_rule')
-def nft_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name='ip'):
+def nft_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name='ip', flow_groups=None):
     from vyos.firewall import parse_rule
-    return parse_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name)
+    return parse_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name, flow_groups)
 
 @register_filter('nft_default_rule')
 def nft_default_rule(fw_conf, fw_name, family):
@@ -699,7 +699,20 @@ def nft_nested_group(out_list, includes, groups, key):
 
     for name in includes:
         add_includes(name)
+
     return out_list
+
+@register_filter('nft_flow_group_typeof')
+def nft_flow_group_typeof(parameters, family):
+    from vyos.firewall import flow_group_typeof
+    if isinstance(parameters, str):
+        parameters = [parameters]
+    return flow_group_typeof(parameters, family)
+
+@register_filter('nft_flow_group_elements')
+def nft_flow_group_elements(group_conf, family):
+    from vyos.firewall import flow_group_elements
+    return flow_group_elements(group_conf, family)
 
 @register_filter('nft_accept_invalid')
 def nft_accept_invalid(ether_type):

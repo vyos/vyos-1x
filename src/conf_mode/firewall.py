@@ -28,6 +28,12 @@ from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
 from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
+from vyos.firewall import flow_group_key_size
+from vyos.firewall import flow_group_parameters
+from vyos.firewall import flow_group_rule_conflicts
+from vyos.firewall import icmp_codes_for_type
+from vyos.firewall import icmp_type_to_name
+from vyos.firewall import NFT_CONCAT_MAX_KEY_SIZE
 from vyos.geoip import geoip_refresh, geoip_update
 from vyos.template import render
 from vyos.utils.convert import human_to_seconds
@@ -465,6 +471,30 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                 if not group_obj:
                     Warning(f'{rule_num}interface-group "{group_name}" has no members!')
 
+    if 'flow_group' in rule_conf:
+        group_name = rule_conf['flow_group']
+        if group_name[0] == '!':
+            group_name = group_name[1:]
+
+        # Flow-groups are IPv4/IPv6 only (not available on bridge rules)
+        if family not in ['ipv4', 'ipv6']:
+            raise ConfigError('flow-group is only valid for IPv4 and IPv6 firewall rules')
+
+        group_type = f'{family}_flow_group'
+        error_group = group_type.replace('_', '-')
+        group_obj = dict_search_args(firewall, 'group', group_type, group_name)
+
+        # Referenced flow-group must exist
+        if group_obj is None:
+            raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+
+        # Rule must not repeat criteria already covered by the flow-group parameters
+        for param, option in flow_group_rule_conflicts(rule_conf, flow_group_parameters(group_obj)):
+            raise ConfigError(
+                f'Cannot use {error_group} "{group_name}" with rule {option}:\n'
+                f'parameter "{param}" is already matched by the flow-group'
+            )
+
 def verify_nested_group(group_name, group, groups, seen):
     if 'include' not in group:
         return
@@ -480,6 +510,99 @@ def verify_nested_group(group_name, group, groups, seen):
 
         if 'include' in groups[g]:
             verify_nested_group(g, groups[g], groups, seen)
+
+def verify_flow_group(group_name, group_conf, family):
+    error_prefix = f'{family}-flow-group "{group_name}"'
+
+    parameters = flow_group_parameters(group_conf)
+    # nftables concatenation requires at least two fields
+    if len(parameters) < 2:
+        raise ConfigError(f'{error_prefix} requires at least two parameters for concatenation')
+    # More than five parameters corrupts values when rendered into the set
+    if len(parameters) > 5:
+        raise ConfigError(f'{error_prefix} supports a maximum of 5 parameters')
+
+    # icmp-code is meaningless without the corresponding icmp-type in the key
+    if 'icmp-code' in parameters and 'icmp-type' not in parameters:
+        raise ConfigError(f'{error_prefix} parameter icmp-code requires icmp-type')
+    if 'icmpv6-code' in parameters and 'icmpv6-type' not in parameters:
+        raise ConfigError(f'{error_prefix} parameter icmpv6-code requires icmpv6-type')
+
+    # nftables rejects concatenated keys larger than NFT_DATA_VALUE_MAXLEN (64 bytes)
+    total, sizes = flow_group_key_size(parameters, family)
+    if total > NFT_CONCAT_MAX_KEY_SIZE:
+        detail = '\n'.join(f'  {name:<28} {size} bytes' for name, size in sizes)
+        raise ConfigError(
+            f'Flow group key size is {total} bytes (maximum {NFT_CONCAT_MAX_KEY_SIZE} bytes).\n'
+            f'\n'
+            f'Parameter sizes:\n'
+            f'{detail}'
+        )
+
+    # Every flow-group needs at least one match element
+    if 'match' not in group_conf or not group_conf['match']:
+        raise ConfigError(f'{error_prefix} requires at least one match')
+
+    for match_name, match_conf in group_conf['match'].items():
+        match_keys = {k for k in match_conf if k not in ('description', 'disable')}
+        expected = {p.replace('-', '_') for p in parameters}
+
+        # Each match must supply a value for every configured parameter
+        missing = expected - match_keys
+        if missing:
+            missing_cli = ', '.join(sorted(k.replace('_', '-') for k in missing))
+            raise ConfigError(
+                f'{error_prefix} match "{match_name}" is missing parameter value(s): {missing_cli}'
+            )
+
+        # Match must not define fields outside the group's parameter list
+        extra = match_keys - expected
+        if extra:
+            extra_cli = ', '.join(sorted(k.replace('_', '-') for k in extra))
+            raise ConfigError(
+                f'{error_prefix} match "{match_name}" has value(s) for unconfigured parameter(s): {extra_cli}'
+            )
+
+        for param in parameters:
+            key = param.replace('-', '_')
+            value = match_conf[key]
+            # "all" / "tcp_udp" are not valid inet_proto set members
+            if param == 'protocol' and value in ['all', 'tcp_udp']:
+                raise ConfigError(
+                    f'{error_prefix} match "{match_name}" protocol cannot be "{value}"'
+                )
+
+        # ICMP type may be numeric or symbolic; resolve to a known name
+        type_key = 'icmp_type' if family == 'ipv4' else 'icmpv6_type'
+        code_key = 'icmp_code' if family == 'ipv4' else 'icmpv6_code'
+        type_cli = type_key.replace('_', '-')
+        code_cli = code_key.replace('_', '-')
+
+        if type_key in match_conf:
+            type_name = icmp_type_to_name(match_conf[type_key], family)
+            if type_name is None:
+                raise ConfigError(
+                    f'{error_prefix} match "{match_name}" has invalid {type_cli} '
+                    f'"{match_conf[type_key]}"'
+                )
+
+            # ICMP code validity depends on the selected type
+            if code_key in match_conf:
+                try:
+                    code = int(match_conf[code_key])
+                except (TypeError, ValueError):
+                    raise ConfigError(
+                        f'{error_prefix} match "{match_name}" {code_cli} must be numeric'
+                    )
+
+                valid_codes = icmp_codes_for_type(type_name, family)
+                if valid_codes is None or code not in valid_codes:
+                    valid_str = ', '.join(str(c) for c in sorted(valid_codes or []))
+                    raise ConfigError(
+                        f'{error_prefix} match "{match_name}" {code_cli} {code} '
+                        f'is not valid for {type_cli} {type_name} '
+                        f'(valid codes: {valid_str})'
+                    )
 
 def verify_hardware_offload(ifname):
     ethtool = Ethtool(ifname)
@@ -553,6 +676,11 @@ def verify(firewall):
                             f'remote-group {group_name} interval must be '
                             'between 60 seconds and 4 weeks'
                         )
+
+        for family, group_type in [('ipv4', 'ipv4_flow_group'), ('ipv6', 'ipv6_flow_group')]:
+            if group_type in firewall['group']:
+                for group_name, group_conf in firewall['group'][group_type].items():
+                    verify_flow_group(group_name, group_conf, family)
 
     offload_chains_v4 = set()
     offload_chains_v6 = set()
