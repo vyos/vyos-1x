@@ -44,6 +44,15 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertFalse(vyos.utils.network.is_loopback_addr('::2'))
         self.assertFalse(vyos.utils.network.is_loopback_addr('192.0.2.1'))
 
+    def test_are_same_ip(self):
+        self.assertTrue(vyos.utils.network._are_same_ip('192.0.2.1', '192.0.2.1'))
+        self.assertFalse(vyos.utils.network._are_same_ip('192.0.2.1', '192.0.2.2'))
+        self.assertTrue(vyos.utils.network._are_same_ip('::1', '::1'))
+        self.assertFalse(vyos.utils.network._are_same_ip('::1', '::2'))
+        # mixed address families must never compare equal, and must not raise
+        self.assertFalse(vyos.utils.network._are_same_ip('192.0.2.1', '::1'))
+        self.assertFalse(vyos.utils.network._are_same_ip('::1', '192.0.2.1'))
+
     def test_check_port_availability(self):
         self.assertTrue(vyos.utils.network.check_port_availability('::1', 8080))
         self.assertTrue(vyos.utils.network.check_port_availability('127.0.0.1', 8080))

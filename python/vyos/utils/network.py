@@ -25,8 +25,10 @@ def _are_same_ip(one, two):
     from vyos.template import is_ipv4
     # compare the binary representation of the IP
     f_one = AF_INET if is_ipv4(one) else AF_INET6
-    s_two = AF_INET if is_ipv4(two) else AF_INET6
-    return inet_pton(f_one, one) == inet_pton(f_one, two)
+    f_two = AF_INET if is_ipv4(two) else AF_INET6
+    if f_one != f_two:
+        return False
+    return inet_pton(f_one, one) == inet_pton(f_two, two)
 
 def get_protocol_by_name(protocol_name):
     """Get protocol number by protocol name
