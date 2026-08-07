@@ -77,26 +77,15 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         cont_name = 'c1'
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
-        self.cli_set(
-            ['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '10.0.2.2']
-        )
+        self.cli_set(['protocols', 'static', 'route', '0.0.0.0/0',
+                      'next-hop', '10.0.2.2', 'distance', '230'])
         self.cli_set(['system', 'name-server', '1.1.1.1'])
         self.cli_set(['system', 'name-server', '8.8.8.8'])
 
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
-        self.cli_set(
-            base_path
-            + [
-                'name',
-                cont_name,
-                'sysctl',
-                'parameter',
-                'kernel.msgmax',
-                'value',
-                '4096',
-            ]
-        )
+        self.cli_set(base_path + ['name', cont_name, 'sysctl', 'parameter',
+                                  'kernel.msgmax', 'value', '4096'])
         self.cli_set(base_path + ['name', cont_name, 'log-driver', 'journald'])
         # commit changes
         self.cli_commit()
