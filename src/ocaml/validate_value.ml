@@ -16,6 +16,10 @@ let rec validate_value buf value_constraint value =
     (try let _ = Pcre2.exec ~pat:(Printf.sprintf "^%s$" s) value in true
      with Not_found -> false)
   | Exec c ->
+    (match Native_validators.dispatch c value with
+     | Some (true, _) -> true
+     | Some (false, msg) -> Buffer.add_string buf msg; Buffer.add_string buf "\n"; false
+     | None ->
     (* XXX: Unix.open_process_in is "shelling out", which is a bad idea on multiple levels,
        especially when the input comes directly from the user...
        We should do something about it.
@@ -31,7 +35,7 @@ let rec validate_value buf value_constraint value =
       false
     | _ ->
       let () = Buffer.add_string buf out; Buffer.add_string buf "\n" in
-      false
+      false)
 
 let args = [
   ("--regex", Arg.String (fun s -> options := (RegexOpt s) :: !options), "Check the value against a regex");
