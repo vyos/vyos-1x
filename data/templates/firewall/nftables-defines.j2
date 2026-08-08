@@ -124,6 +124,9 @@
         typeof {{ group_conf.parameter | nft_flow_group_typeof('ipv4') }}
         flags interval
         counter
+{%                 if group_conf.description is vyos_defined %}
+        {{ group_conf.description | nft_flow_group_comment }}
+{%                 endif %}
 {%                 set fg_elements = group_conf | nft_flow_group_elements('ipv4') %}
 {%                 if fg_elements %}
         elements = { {{ fg_elements }} }
@@ -140,6 +143,9 @@
         typeof {{ group_conf.parameter | nft_flow_group_typeof('ipv6') }}
         flags interval
         counter
+{%                 if group_conf.description is vyos_defined %}
+        {{ group_conf.description | nft_flow_group_comment }}
+{%                 endif %}
 {%                 set fg_elements = group_conf | nft_flow_group_elements('ipv6') %}
 {%                 if fg_elements %}
         elements = { {{ fg_elements }} }

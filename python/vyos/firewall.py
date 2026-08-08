@@ -467,11 +467,26 @@ def flow_group_typeof(parameters, family):
     param_meta = FLOW_GROUP_PARAMS[family]
     return ' . '.join(param_meta[p]['expr'] for p in parameters)
 
+# nftables limits user comments to NFT_USERDATA_MAXLEN (128 bytes).
+# CLI descriptions allow up to 255 characters; truncate before emitting.
+NFT_COMMENT_MAX_LEN = 128
+
+def flow_group_nft_comment(text):
+    """Format a CLI description as an nftables ``comment "..."`` clause.
+
+    Descriptions are truncated to ``NFT_COMMENT_MAX_LEN`` to match the
+    nftables userdata limit, then quotes/backslashes are escaped.
+    """
+    truncated = str(text)[:NFT_COMMENT_MAX_LEN]
+    escaped = truncated.replace('\\', '\\\\').replace('"', '\\"')
+    return f'comment "{escaped}"'
+
 def flow_group_format_element(match_conf, parameters, family):
     """Format one match as an nftables concatenated set element.
 
     Values follow parameter order. ICMP types are rendered as symbolic names
-    when possible; interface names are quoted.
+    when possible; interface names are quoted. Match ``description`` becomes a
+    per-element comment when present.
     """
     param_meta = FLOW_GROUP_PARAMS[family]
     parts = []
@@ -486,7 +501,10 @@ def flow_group_format_element(match_conf, parameters, family):
         if param_meta[param].get('quote'):
             value = f'"{value}"'
         parts.append(str(value))
-    return ' . '.join(parts)
+    element = ' . '.join(parts)
+    if 'description' in match_conf:
+        element = f'{element} {flow_group_nft_comment(match_conf["description"])}'
+    return element
 
 def flow_group_elements(group_conf, family):
     """Build the comma-separated elements string for a flow-group set.

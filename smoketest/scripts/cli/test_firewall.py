@@ -198,8 +198,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_flow_groups(self):
         # IPv4 flow-group: source address + destination port concatenation
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'description', 'web flows'])
         self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'parameter', 'ipv4-source-address'])
         self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'parameter', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'office', 'description', 'office https'])
         self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'office', 'ipv4-source-address', '192.0.2.10'])
         self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'office', 'destination-port', '443'])
         self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'guest', 'ipv4-source-address', '198.51.100.10'])
@@ -219,10 +221,15 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        nftables_conf = read_file('/run/nftables.conf')
+        self.assertIn('comment "web flows"', nftables_conf)
+        self.assertIn('192.0.2.10 . 443 comment "office https"', nftables_conf)
+
         nftables_search_v4 = [
             ['set FG4_WEB'],
             ['typeof ip saddr . th dport'],
-            ['192.0.2.10 . 443'],
+            ['comment "web flows"'],
+            ['192.0.2.10 . 443', 'comment "office https"'],
             ['198.51.100.10 . 8443'],
             ['ip saddr . th dport @FG4_WEB', 'accept'],
         ]

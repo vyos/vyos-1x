@@ -714,6 +714,11 @@ def nft_flow_group_elements(group_conf, family):
     from vyos.firewall import flow_group_elements
     return flow_group_elements(group_conf, family)
 
+@register_filter('nft_flow_group_comment')
+def nft_flow_group_comment(text):
+    from vyos.firewall import flow_group_nft_comment
+    return flow_group_nft_comment(text)
+
 @register_filter('nft_accept_invalid')
 def nft_accept_invalid(ether_type):
     ether_type_mapping = {
