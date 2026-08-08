@@ -25,7 +25,11 @@ from vyos.config import config_dict_merge
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
+from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
+from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_interface_vrf
+from vyos.utils.network import interface_exists
 from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
@@ -117,6 +121,28 @@ def verify(flow_config):
             verify_interface_exists(
                 flow_config, data['source_interface'], warning_only=True
             )
+            # A VRF is not an interface. Cisco and Juniper both source a flow
+            # exporter from a routed interface and never from a VRF, and VRF
+            # export is already selected with "system flow-accounting vrf", so
+            # reject a source-interface that names a VRF device.
+            source_interface_config = get_interface_config(data['source_interface'])
+            if dict_search('linkinfo.info_kind', source_interface_config) == 'vrf':
+                raise ConfigError(
+                    f'Configured "netflow server {server} source-interface '
+                    f'{data["source_interface"]}" is a VRF, not an interface!'
+                )
+            # A source-interface used together with a VRF must be a member of
+            # that VRF, otherwise the exported flows would silently leave via a
+            # different routing table. Due to the VyOS priorities the interface
+            # is bound to the VRF before flow-accounting is configured, so the
+            # running state can be relied upon here.
+            if netflow_vrf and interface_exists(data['source_interface']):
+                if get_interface_vrf(data['source_interface']) != netflow_vrf:
+                    raise ConfigError(
+                        f'Configured "netflow server {server} source-interface '
+                        f'{data["source_interface"]}" is not a member of '
+                        f'VRF "{netflow_vrf}"!'
+                    )
 
     # Check if engine-id compatible with selected protocol version
     if 'engine_id' in flow_config['netflow']:
