@@ -20,11 +20,13 @@ import re
 import sys
 import tabulate
 import typing
+import urllib.parse
 
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
 import vyos.opmode
+import vyos.remote
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -937,15 +939,20 @@ def import_ca_certificate(
     name, path=None, key_path=None, no_prompt=False, passphrase=None
 ):
     if path:
-        if not os.path.exists(path):
-            print(f'File not found: {path}')
-            return
+        # path may be a local file path or a remote URL (http, https, ftp,
+        # sftp, scp, tftp, ...) - same convention as generate public-key's
+        # get_key(), which this mirrors.
+        url = urllib.parse.urlparse(path)
+        if url.scheme in ('', 'file'):
+            if not os.path.exists(path):
+                print(f'File not found: {path}')
+                return
+            with open(path) as f:
+                cert_data = f.read()
+        else:
+            cert_data = vyos.remote.get_remote_config(path)
 
-        cert = None
-
-        with open(path) as f:
-            cert_data = f.read()
-            cert = load_certificate(cert_data, wrap_tags=False)
+        cert = load_certificate(cert_data, wrap_tags=False)
 
         if not cert:
             print(f'Invalid certificate: {path}')

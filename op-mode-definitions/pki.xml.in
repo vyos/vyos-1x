@@ -369,7 +369,7 @@
             <children>
               <tagNode name="file">
                 <properties>
-                  <help>Path to CA certificate file</help>
+                  <help>Path or URL to CA certificate file</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ca --name "$4" --filename "$6"</command>
               </tagNode>
