@@ -56,7 +56,10 @@ def ask_input(question, default='', numeric_only=False, valid_responses=[],
 
 def ask_yes_no(question, default=False) -> bool:
     """Ask a yes/no question via input() and return their answer."""
-    from sys import stdout
+    from sys import stdin, stdout
+
+    if not stdin.isatty():
+        return default
     default_msg = "[Y/n]" if default else "[y/N]"
     while True:
         try:
