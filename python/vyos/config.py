@@ -359,9 +359,39 @@ class Config(object):
                                             get_first_key=True)
             if pki_dict:
                 if 'certificate' in pki_dict:
+                    from vyos.defaults import directories
+                    from vyos.pki import AUTOCHAIN_PREFIX
+                    from vyos.pki import acme_chain_ca_entry
+                    from vyos.pki import acme_chain_redundant
+                    vyos_certbot_dir = directories['certbot']
+                    # Snapshot of explicitly/manually configured CAs, taken
+                    # before any synthetic entries are added below
+                    real_ca_certs = dict(pki_dict.get('ca', {}))
+
                     for certificate in pki_dict['certificate']:
                         pki_dict['certificate'][certificate] = config_dict_mangle_acme(
                             certificate, pki_dict['certificate'][certificate])
+
+                        # If this is an ACME certificate, also make its
+                        # intermediate CA chain (read live from certbot's
+                        # own chain.pem, never persisted to the CLI)
+                        # available under pki.ca, the same way consumers
+                        # already look up any manually-configured CA, so
+                        # find_chain() can build the full chain for them -
+                        # unless an explicit, manually-configured CA
+                        # already completes the chain, making this
+                        # redundant.
+                        cert_conf = pki_dict['certificate'][certificate]
+                        if 'acme' in cert_conf and not acme_chain_redundant(
+                                cert_conf['certificate'], real_ca_certs):
+                            chain_entry = acme_chain_ca_entry(vyos_certbot_dir, certificate)
+                            if chain_entry:
+                                ca_dict = pki_dict.setdefault('ca', {})
+                                autochain_name = f'{AUTOCHAIN_PREFIX}{certificate}'
+                                # A real, manually-configured CLI CA object
+                                # with this name wins over the synthetic one
+                                if autochain_name not in ca_dict:
+                                    ca_dict[autochain_name] = chain_entry
 
                 conf_dict['pki'] = pki_dict
 

@@ -470,6 +470,55 @@ def find_chain(cert, ca_certs):
 
     return chain
 
+# ACME certificates are managed entirely by certbot under
+# {vyos_certbot_dir}/live/<cert_name>/ - the intermediate CA certbot
+# obtained alongside the leaf cert (chain.pem) is derived data, not
+# configuration, so it is never written to the CLI. AUTOCHAIN_<cert_name>
+# is only ever used as an in-memory dict key (see
+# Config.get_config_dict()'s with_pki handling and
+# src/op_mode/pki.py's get_config_ca_certificate()) so consumers that
+# build a full certificate chain via find_chain() - and "show pki ca" -
+# see the same data they would if it had been manually configured,
+# without it ever being a real, settable, or deletable CLI object.
+AUTOCHAIN_PREFIX = 'AUTOCHAIN_'
+
+def acme_chain_ca_entry(vyos_certbot_dir: str, cert_name: str) -> dict | None:
+    """Build a synthetic 'pki ca <name>'-shaped dict entry
+    (`{'certificate': <base64>}`) for an ACME certificate's intermediate
+    CA chain, read live from certbot's own chain.pem.
+
+    Returns None if chain.pem is not (yet) present - e.g. the certificate
+    has not been issued yet, or a prior request failed - so callers can
+    skip this certificate's chain gracefully instead of crashing.
+    """
+    from vyos.utils.file import read_file
+    tmp = read_file(f'{vyos_certbot_dir}/live/{cert_name}/chain.pem',
+                     defaultonfailure=None)
+    if tmp is None:
+        return None
+    tmp = load_certificate(tmp, wrap_tags=False)
+    if not tmp:
+        return None
+    chain_base64 = "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
+    return {'certificate': chain_base64}
+
+def acme_chain_redundant(leaf_cert_base64: str, ca_certs: dict) -> bool:
+    """Return True if one of the already-configured CAs in ca_certs (a
+    'pki ca'-shaped dict, e.g. Config's pki_dict['ca']) directly signs the
+    given leaf certificate - meaning an explicit, manually-configured CA
+    already completes the chain, so synthesizing/showing an
+    AUTOCHAIN_<cert_name> entry (see acme_chain_ca_entry()) is redundant.
+    """
+    leaf_cert = load_certificate(leaf_cert_base64)
+    if not leaf_cert:
+        return False
+    loaded_ca_certs = [
+        load_certificate(ca['certificate'])
+        for ca in ca_certs.values() if 'certificate' in ca
+    ]
+    loaded_ca_certs = [cert for cert in loaded_ca_certs if cert]
+    return find_parent(leaf_cert, loaded_ca_certs) is not None
+
 def sort_ca_chain(ca_names, pki_node):
     def ca_cmp(ca_name1, ca_name2, pki_node):
         cert1 = load_certificate(pki_node[ca_name1]['certificate'])

@@ -78,7 +78,12 @@ def _verify(target):
             name = kwargs.get('name')
             unconf_message = f'PKI {target} "{name}" does not exist!'
             if name:
-                if not conf.exists(['pki', target, name]):
+                exists = conf.exists(['pki', target, name])
+                if not exists and target == 'ca':
+                    from vyos.pki import AUTOCHAIN_PREFIX
+                    if name.startswith(AUTOCHAIN_PREFIX):
+                        exists = name in (get_config_ca_certificate() or {})
+                if not exists:
                     raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
             return func(*args, **kwargs)
 
@@ -121,19 +126,53 @@ def get_default_values():
 def get_config_ca_certificate(name=None):
     # Fetch ca certificates from config
     base = ['pki', 'ca']
-    if not conf.exists(base):
-        return False
 
     if name:
-        base = base + [name]
-        if not conf.exists(base + ['private', 'key']) or not conf.exists(
-            base + ['certificate']
+        # A specific, real CLI-configured CA is being requested (e.g. for
+        # sign/generate operations) - ACME-derived synthetic entries are
+        # never addressable this way, since they are not real CLI objects.
+        if not conf.exists(base + [name, 'private', 'key']) or not conf.exists(
+            base + [name, 'certificate']
         ):
             return False
+        return conf.get_config_dict(
+            base + [name], key_mangling=('-', '_'), get_first_key=True,
+            no_tag_node_value_mangle=True
+        )
 
-    return conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True
-    )
+    ca_certs = {}
+    if conf.exists(base):
+        ca_certs = conf.get_config_dict(
+            base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True
+        )
+
+    # Also surface each ACME certificate's intermediate CA chain, read
+    # live from certbot's own chain.pem - never a real, settable CLI
+    # object, but consumers (find_chain(), "show pki ca") should see it
+    # the same way they'd see a manually-configured CA.
+    from vyos.defaults import directories
+    from vyos.pki import AUTOCHAIN_PREFIX
+    from vyos.pki import acme_chain_ca_entry
+    from vyos.pki import acme_chain_redundant
+    vyos_certbot_dir = directories['certbot']
+    # Snapshot of explicitly/manually configured CAs, taken before any
+    # synthetic entries are added below
+    real_ca_certs = dict(ca_certs)
+
+    for cert_name, cert_conf in (get_config_certificate() or {}).items():
+        if 'acme' not in cert_conf:
+            continue
+        if acme_chain_redundant(cert_conf['certificate'], real_ca_certs):
+            continue
+        chain_entry = acme_chain_ca_entry(vyos_certbot_dir, cert_name)
+        if chain_entry:
+            autochain_name = f'{AUTOCHAIN_PREFIX}{cert_name}'
+            # A real, manually-configured CLI CA object with this name
+            # wins over the synthetic one
+            if autochain_name not in ca_certs:
+                ca_certs[autochain_name] = chain_entry
+
+    return ca_certs or False
 
 
 def get_config_certificate(name=None):
