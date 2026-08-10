@@ -984,10 +984,17 @@ def import_ca_certificate(
         # get_key(), which this mirrors.
         url = urllib.parse.urlparse(path)
         if url.scheme in ('', 'file'):
-            if not os.path.exists(path):
-                print(f'File not found: {path}')
+            if url.scheme == 'file':
+                if url.netloc:
+                    print(f'Unsupported file URL host: {url.netloc}')
+                    return
+                local_path = urllib.parse.unquote(url.path)
+            else:
+                local_path = path
+            if not os.path.exists(local_path):
+                print(f'File not found: {local_path}')
                 return
-            with open(path) as f:
+            with open(local_path) as f:
                 cert_data = f.read()
         else:
             cert_data = vyos.remote.get_remote_config(path)
