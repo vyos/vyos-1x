@@ -78,6 +78,12 @@ class VyOSUnitTestSHIM:
                 # restore previous configuration before the test
                 cls._session.migrate_and_load_config(save_config)
                 cls._session.commit()
+                # Remove the saved config snapshot once the test is done
+                # with it - a leftover file here is owned by whichever user
+                # ran this test, and blocks a different user from running
+                # it later ("Permission denied" on save_config)
+                if os.path.exists(save_config):
+                    os.remove(save_config)
 
         def setUp(self):
             pass
