@@ -24,10 +24,19 @@ from vyos.utils.convert import range_str_to_list
 from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
+from vyos.utils.file import read_json
 
 from vyos.vpp.config_resource_checks import memory as mem_checks
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
+from vyos.vpp.configdb import STORAGE_LOCATION
 from vyos.vpp.utils import human_memory_to_bytes, bytes_to_human_memory
+from vyos.vpp.utils import EthtoolGDrvinfo
+
+# DPDK drivers whose PMD cannot change the interface MAC address. Their PMD does
+# not implement the secondary unicast-MAC filter callback (mac_addr_add/remove),
+# so a MAC change makes VPP fail to bring the interface up (dpdk_add_del_mac_address
+# returns -95/ENOTSUP). Reject the change up front instead (T8468).
+VPP_MAC_CHANGE_UNSUPPORTED_DRIVERS = frozenset({'vmxnet3'})
 
 # VPP feature paths that reference interfaces
 _VPP_FEATURE_INTERFACE_REFS = [
@@ -119,6 +128,39 @@ def verify_vpp_remove_interface(iface: str, config: dict, match_vlans: bool = Fa
         raise ConfigError(
             f'Cannot remove interface "{iface}", '
             f'{"it or its VLAN " if match_vlans else "it "}is still configured as {feature} interface'
+        )
+
+
+def _vpp_iface_driver(iface: str) -> str | None:
+    """Resolve the physical NIC driver of a VPP interface.
+
+    Once the interface is bound to VPP its live kernel driver is the LCP tap,
+    so use the original driver captured at bind time from the persisted config.
+    Before it is bound (interface being added to VPP now) there is no persisted
+    entry yet, so fall back to the live kernel driver.
+    """
+    persist = read_json(f'{STORAGE_LOCATION}/vpp_conf.json', {})
+    driver = dict_search(f'eth_ifaces.{iface}.original_driver', persist)
+    if driver:
+        return driver
+    try:
+        return EthtoolGDrvinfo(iface).driver
+    except FileNotFoundError:
+        return None
+
+
+def verify_vpp_mac_change_supported(iface: str):
+    """Reject a custom MAC address on a VPP interface whose DPDK driver cannot
+    apply it. Applying it makes VPP fail to bring the interface up, leaving it
+    down - so reject it whether the MAC is being set or the interface is being
+    added to VPP with a MAC already configured.
+    """
+    driver = _vpp_iface_driver(iface)
+    if driver in VPP_MAC_CHANGE_UNSUPPORTED_DRIVERS:
+        raise ConfigError(
+            f'Interface "{iface}" has a custom MAC address configured, but its '
+            f'VPP dataplane driver ("{driver}") does not support changing the '
+            'MAC address. Remove the "mac" setting from this interface.'
         )
 
 

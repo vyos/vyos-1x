@@ -133,6 +133,22 @@
               </node>
             </children>
           </node>
+          <node name="interface">
+            <properties>
+              <help>Show host-side network interface used by each container</help>
+            </properties>
+            <!-- no admin check -->
+            <command>${vyos_op_scripts_dir}/container.py show_interface</command>
+            <children>
+              <node name="json">
+                <properties>
+                  <help>Show host-side network interface used by each container in JSON format</help>
+                </properties>
+                <!-- no admin check -->
+                <command>${vyos_op_scripts_dir}/container.py show_interface --raw</command>
+              </node>
+            </children>
+          </node>
           <tagNode name="log">
             <properties>
               <help>Show logs from a given container</help>

@@ -37,6 +37,7 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
+        self.cli_delete(vpn_path)
         self.cli_commit()
         # always forward to base class
         super().tearDown()
@@ -137,6 +138,82 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         ]
         self.verify_nftables(nftables_search_multicast, 'ip vyos_nhrp_multicast')
         self.verify_nftables(nftables_search_redirect, 'ip vyos_nhrp_redirect')
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_02_nhrp_multiple_tunnels(self):
+        # Multiple NHRP tunnels with 'redirect' enabled must each receive a
+        # uniquely named nftables meter. The meter name used to be hardcoded
+        # ('loglimit-0'), so a second redirect-enabled tunnel produced a
+        # duplicate set, 'nft' rejected the whole ruleset, and the commit failed
+        # with "Failed to apply NHRP tunnel firewall rules".
+        redirect_log_group = '1'
+        multicast_log_group = '2'
+        tunnels = {
+            'tun100': {
+                'address': '172.16.253.134/32',
+                'source': '192.0.2.134',
+                'key': '1',
+                'network_id': '1',
+                'meter': 'loglimit-0',
+            },
+            'tun101': {
+                'address': '172.16.254.134/32',
+                'source': '192.0.2.135',
+                'key': '2',
+                'network_id': '2',
+                'meter': 'loglimit-1',
+            },
+        }
+
+        for tunnel_if, tunnel_conf in tunnels.items():
+            # Tunnel interface (mGRE)
+            self.cli_set(tunnel_path + [tunnel_if, 'address', tunnel_conf['address']])
+            self.cli_set(tunnel_path + [tunnel_if, 'encapsulation', 'gre'])
+            self.cli_set(
+                tunnel_path + [tunnel_if, 'source-address', tunnel_conf['source']]
+            )
+            self.cli_set(tunnel_path + [tunnel_if, 'enable-multicast'])
+            self.cli_set(
+                tunnel_path + [tunnel_if, 'parameters', 'ip', 'key', tunnel_conf['key']]
+            )
+
+            # NHRP - 'redirect' and 'multicast' are the options that render
+            # nftables rules for the tunnel
+            self.cli_set(
+                nhrp_path
+                + ['tunnel', tunnel_if, 'network-id', tunnel_conf['network_id']]
+            )
+            self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'redirect'])
+            self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'multicast', 'dynamic'])
+
+        # Must not raise "Failed to apply NHRP tunnel firewall rules"
+        self.cli_commit()
+
+        # Each redirect-enabled tunnel gets its own meter (loglimit-0,
+        # loglimit-1, ...) and each multicast-enabled tunnel its own log rule.
+        nftables_search_redirect = [['chain VYOS_NHRP_REDIRECT_FORWARD']]
+        nftables_search_multicast = [['chain VYOS_NHRP_MULTICAST_OUTPUT']]
+        for tunnel_if, tunnel_conf in tunnels.items():
+            nftables_search_redirect.append(
+                [
+                    f'iifname "{tunnel_if}" oifname "{tunnel_if}"',
+                    f'meter {tunnel_conf["meter"]} size 65535',
+                    'counter',
+                    f'log group {redirect_log_group}',
+                ]
+            )
+            nftables_search_multicast.append(
+                [
+                    f'oifname "{tunnel_if}"',
+                    'ip daddr 224.0.0.0/24',
+                    'counter',
+                    f'log group {multicast_log_group}',
+                ]
+            )
+
+        self.verify_nftables(nftables_search_redirect, 'ip vyos_nhrp_redirect')
+        self.verify_nftables(nftables_search_multicast, 'ip vyos_nhrp_multicast')
 
         self.assertTrue(process_named_running(PROCESS_NAME))
 
