@@ -162,7 +162,10 @@ def get_config_ca_certificate(name=None):
     for cert_name, cert_conf in (get_config_certificate() or {}).items():
         if 'acme' not in cert_conf:
             continue
-        if acme_chain_redundant(cert_conf['certificate'], real_ca_certs):
+        leaf_cert = cert_conf.get('certificate')
+        if not leaf_cert:
+            continue
+        if acme_chain_redundant(leaf_cert, real_ca_certs):
             continue
         chain_entry = acme_chain_ca_entry(vyos_certbot_dir, cert_name)
         if chain_entry:

@@ -382,8 +382,9 @@ class Config(object):
                         # already completes the chain, making this
                         # redundant.
                         cert_conf = pki_dict['certificate'][certificate]
-                        if 'acme' in cert_conf and not acme_chain_redundant(
-                                cert_conf['certificate'], real_ca_certs):
+                        leaf_cert = cert_conf.get('certificate')
+                        if leaf_cert and 'acme' in cert_conf and not acme_chain_redundant(
+                                leaf_cert, real_ca_certs):
                             chain_entry = acme_chain_ca_entry(vyos_certbot_dir, certificate)
                             if chain_entry:
                                 ca_dict = pki_dict.setdefault('ca', {})
