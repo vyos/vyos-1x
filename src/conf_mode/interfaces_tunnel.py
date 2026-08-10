@@ -38,6 +38,16 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+
+def get_tunnel_endpoint(address):
+    """
+    The Kernel stores an unconfigured tunnel endpoint as the any address, thus
+    "0.0.0.0" and "::" must compare equal to an endpoint which is not set at all
+    """
+    if address in ['0.0.0.0', '::']:
+        return None
+    return address
+
 def get_config(config=None):
     """
     Retrieve CLI config as dictionary. Dictionary can never be empty, as at least
@@ -142,36 +152,57 @@ def verify(tunnel):
                 not in gre_encapsulations:
                 continue
 
-            our_address = dict_search('source_address', tunnel)
+            our_address = get_tunnel_endpoint(dict_search('source_address', tunnel))
             our_key = dict_search('parameters.ip.key', tunnel)
-            their_address = dict_search('source_address', o_tunnel_conf)
+            our_source_if = dict_search('source_interface', tunnel)
+            our_remote = get_tunnel_endpoint(dict_search('remote', tunnel))
+            their_address = get_tunnel_endpoint(
+                dict_search('source_address', o_tunnel_conf)
+            )
             their_key = dict_search('parameters.ip.key', o_tunnel_conf)
-            if our_key != None:
-                if their_address == our_address and their_key == our_key:
-                    raise ConfigError(f'Key "{our_key}" for source-address "{our_address}" ' \
-                                      f'is already used for tunnel "{o_tunnel}"!')
+            their_source_if = dict_search('source_interface', o_tunnel_conf)
+            their_remote = get_tunnel_endpoint(dict_search('remote', o_tunnel_conf))
+
+            # The Kernel identifies a tunnel by the tuple of local address, remote
+            # address, source-interface and - if configured - the GRE key, see
+            # ip_tunnel_find() in net/ipv4/ip_tunnel.c. A differing remote address
+            # alone already makes both tunnels unique, whether a key is used or not.
+            if our_remote != their_remote:
+                continue
+
+            if our_key is not None:
+                # Prevent the same key for 2 tunnels sharing both endpoints. T2920
+                if (
+                    their_address == our_address
+                    and their_source_if == our_source_if
+                    and their_key == our_key
+                ):
+                    tmp = our_address if our_address else our_source_if
+                    raise ConfigError(
+                        f'Key "{our_key}" for source "{tmp}" is already used '
+                        f'for tunnel "{o_tunnel}"!'
+                    )
             else:
-                our_source_if = dict_search('source_interface', tunnel)
-                their_source_if = dict_search('source_interface', o_tunnel_conf)
-                our_remote = dict_search('remote', tunnel)
-                their_remote = dict_search('remote', o_tunnel_conf)
                 # If no IP GRE key is defined we cannot have more then one GRE tunnel
                 # bound to any one interface/IP address and the same remote. This will
                 # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
-                if our_remote == their_remote:
-                    if our_address is not None and their_address == our_address: 
-                        # If set to the same values, this is always a fail 
-                        raise ConfigError(f'Missing required "ip key" parameter when '\
-                                           'running more then one GRE based tunnel on the '\
-                                           'same source-address')
+                if our_address is not None and their_address == our_address:
+                    # If set to the same values, this is always a fail
+                    raise ConfigError(
+                        'Missing required "ip key" parameter when '
+                        'running more then one GRE based tunnel on the '
+                        'same source-address'
+                    )
 
-                    if their_source_if == our_source_if and their_address == our_address:
-                        # Note that lack of None check on these is deliberate. 
-                        # source-if and source-ip matching while unset (all None) is a fail
-                        # source-ifs set and matching with unset source-ips is a fail
-                        raise ConfigError(f'Missing required "ip key" parameter when '\
-                                           'running more then one GRE based tunnel on the '\
-                                           'same source-interface')
+                if their_source_if == our_source_if and their_address == our_address:
+                    # Note that lack of None check on these is deliberate.
+                    # source-if and source-ip matching while unset (all None) is a fail
+                    # source-ifs set and matching with unset source-ips is a fail
+                    raise ConfigError(
+                        'Missing required "ip key" parameter when '
+                        'running more then one GRE based tunnel on the '
+                        'same source-interface'
+                    )
 
     # Keys are not allowed with ipip and sit tunnels
     if tunnel['encapsulation'] in ['ipip', 'sit']:
