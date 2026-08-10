@@ -467,7 +467,7 @@ def flow_group_typeof(parameters, family):
     param_meta = FLOW_GROUP_PARAMS[family]
     return ' . '.join(param_meta[p]['expr'] for p in parameters)
 
-# nftables limits user comments to NFT_USERDATA_MAXLEN (128 bytes).
+# nftables limits user comments to NFT_USERDATA_MAXLEN (128 characters).
 # CLI descriptions allow up to 255 characters; truncate before emitting.
 NFT_COMMENT_MAX_LEN = 128
 

@@ -486,12 +486,12 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
         # Referenced flow-group must exist
         if group_obj is None:
-            raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+            raise ConfigError(f'{rule_num}Invalid {error_group} "{group_name}" on firewall rule')
 
         # Rule must not repeat criteria already covered by the flow-group parameters
         for param, option in flow_group_rule_conflicts(rule_conf, flow_group_parameters(group_obj)):
             raise ConfigError(
-                f'Cannot use {error_group} "{group_name}" with rule {option}:\n'
+                f'{rule_num}Cannot use {error_group} "{group_name}" with rule {option}:\n'
                 f'parameter "{param}" is already matched by the flow-group'
             )
 
