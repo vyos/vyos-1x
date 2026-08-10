@@ -145,8 +145,8 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['source-address', '192.0.2.2'])
         try:
             with self.assertRaisesRegex(
-                    ConfigSessionError,
-                    'Only admits one ipv4 value for source-address'):
+                ConfigSessionError, 'Only admits one ipv4 value for source-address'
+            ):
                 self.cli_commit()
         finally:
             # remove the invalid subtree entirely (rather than leaving a
@@ -172,8 +172,8 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['source-address', '2001:db8::2'])
         try:
             with self.assertRaisesRegex(
-                    ConfigSessionError,
-                    'Only admits one ipv6 value for source-address'):
+                ConfigSessionError, 'Only admits one ipv6 value for source-address'
+            ):
                 self.cli_commit()
         finally:
             # see the ipv4 test above for why this is in a finally block
@@ -185,8 +185,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         # source-address must be assigned to a local interface
         self.cli_set(base_path + ['source-address', '192.0.2.1'])
         try:
-            with self.assertRaisesRegex(ConfigSessionError,
-                                         'not assigned to any interface'):
+            with self.assertRaisesRegex(
+                ConfigSessionError, 'not assigned to any interface'
+            ):
                 self.cli_commit()
         finally:
             self.cli_delete(base_path + ['source-address'])

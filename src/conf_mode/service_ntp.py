@@ -94,8 +94,10 @@ def verify(ntp):
             tmp = get_interface_config(source_interface)
             vrf_name = ntp['vrf']
             if 'master' not in tmp or tmp['master'] != vrf_name:
-                raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{source_interface}" '\
-                                  f'does not belong to this VRF!')
+                raise ConfigError(
+                    f'NTP runs in VRF "{vrf_name}" - "{source_interface}" '
+                    f'does not belong to this VRF!'
+                )
 
     if 'listen_address' in ntp:
         ipv4_addresses = 0
@@ -106,9 +108,13 @@ def verify(ntp):
             else:
                 ipv6_addresses += 1
         if ipv4_addresses > 1:
-            raise ConfigError('NTP Only admits one ipv4 value for listen-address parameter')
+            raise ConfigError(
+                'NTP Only admits one ipv4 value for listen-address parameter'
+            )
         if ipv6_addresses > 1:
-            raise ConfigError('NTP Only admits one ipv6 value for listen-address parameter')
+            raise ConfigError(
+                'NTP Only admits one ipv6 value for listen-address parameter'
+            )
 
     if 'source_address' in ntp:
         ipv4_addresses = 0
@@ -120,12 +126,17 @@ def verify(ntp):
             else:
                 ipv6_addresses += 1
             if not is_addr_assigned(address, vrf):
-                raise ConfigError(f'NTP source-address "{address}" not assigned '
-                                   'to any interface!')
+                raise ConfigError(
+                    f'NTP source-address "{address}" not assigned ' 'to any interface!'
+                )
         if ipv4_addresses > 1:
-            raise ConfigError('NTP Only admits one ipv4 value for source-address parameter')
+            raise ConfigError(
+                'NTP Only admits one ipv4 value for source-address parameter'
+            )
         if ipv6_addresses > 1:
-            raise ConfigError('NTP Only admits one ipv6 value for source-address parameter')
+            raise ConfigError(
+                'NTP Only admits one ipv6 value for source-address parameter'
+            )
 
     if 'server' in ntp:
         for host, server in ntp['server'].items():
