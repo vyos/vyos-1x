@@ -364,6 +364,7 @@
               <help>Import CA certificate into PKI</help>
               <completionHelp>
                 <list>&lt;name&gt;</list>
+                <path>pki ca</path>
               </completionHelp>
             </properties>
             <children>
@@ -386,6 +387,7 @@
               <help>Import certificate into PKI</help>
               <completionHelp>
                 <list>&lt;name&gt;</list>
+                <path>pki certificate</path>
               </completionHelp>
             </properties>
             <children>
