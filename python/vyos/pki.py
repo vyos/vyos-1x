@@ -482,25 +482,42 @@ def find_chain(cert, ca_certs):
 # without it ever being a real, settable, or deletable CLI object.
 AUTOCHAIN_PREFIX = 'AUTOCHAIN_'
 
-def acme_chain_ca_entry(vyos_certbot_dir: str, cert_name: str) -> dict | None:
-    """Build a synthetic 'pki ca <name>'-shaped dict entry
-    (`{'certificate': <base64>}`) for an ACME certificate's intermediate
-    CA chain, read live from certbot's own chain.pem.
+def acme_chain_ca_entry(vyos_certbot_dir: str, cert_name: str) -> dict:
+    """Build synthetic 'pki ca <name>'-shaped dict entries
+    (`{<name>: {'certificate': <base64>}, ...}`) for every certificate in
+    an ACME certificate's chain, read live from certbot's own chain.pem.
 
-    Returns None if chain.pem is not (yet) present - e.g. the certificate
-    has not been issued yet, or a prior request failed - so callers can
-    skip this certificate's chain gracefully instead of crashing.
+    certbot commonly writes more than just the immediate intermediate to
+    chain.pem (e.g. the intermediate's own issuing root too), and every
+    one of them is needed for find_chain() to walk the full chain - a
+    single 'pki ca' object only ever holds one certificate, so each one
+    gets its own synthetic entry here.
+
+    Returns an empty dict if chain.pem is not (yet) present - e.g. the
+    certificate has not been issued yet, or a prior request failed - so
+    callers can skip this certificate's chain gracefully instead of
+    crashing.
     """
+    import re
     from vyos.utils.file import read_file
     tmp = read_file(f'{vyos_certbot_dir}/live/{cert_name}/chain.pem',
                      defaultonfailure=None)
     if tmp is None:
-        return None
-    tmp = load_certificate(tmp, wrap_tags=False)
-    if not tmp:
-        return None
-    chain_base64 = "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
-    return {'certificate': chain_base64}
+        return {}
+
+    entries = {}
+    for block in re.findall(
+            r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----',
+            tmp, re.DOTALL):
+        cert = load_certificate(block, wrap_tags=False)
+        if not cert:
+            continue
+        index = len(entries) + 1
+        name = f'{AUTOCHAIN_PREFIX}{cert_name}' if index == 1 else \
+               f'{AUTOCHAIN_PREFIX}{cert_name}_{index}'
+        chain_base64 = "".join(encode_certificate(cert).strip().split("\n")[1:-1])
+        entries[name] = {'certificate': chain_base64}
+    return entries
 
 def acme_chain_redundant(leaf_cert_base64: str, ca_certs: dict) -> bool:
     """Return True if one of the already-configured CAs in ca_certs (a

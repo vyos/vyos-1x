@@ -151,7 +151,6 @@ def get_config_ca_certificate(name=None):
     # object, but consumers (find_chain(), "show pki ca") should see it
     # the same way they'd see a manually-configured CA.
     from vyos.defaults import directories
-    from vyos.pki import AUTOCHAIN_PREFIX
     from vyos.pki import acme_chain_ca_entry
     from vyos.pki import acme_chain_redundant
     vyos_certbot_dir = directories['certbot']
@@ -167,9 +166,8 @@ def get_config_ca_certificate(name=None):
             continue
         if acme_chain_redundant(leaf_cert, real_ca_certs):
             continue
-        chain_entry = acme_chain_ca_entry(vyos_certbot_dir, cert_name)
-        if chain_entry:
-            autochain_name = f'{AUTOCHAIN_PREFIX}{cert_name}'
+        for autochain_name, chain_entry in acme_chain_ca_entry(
+                vyos_certbot_dir, cert_name).items():
             # A real, manually-configured CLI CA object with this name
             # wins over the synthetic one
             if autochain_name not in ca_certs:

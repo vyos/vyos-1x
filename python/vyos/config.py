@@ -360,7 +360,6 @@ class Config(object):
             if pki_dict:
                 if 'certificate' in pki_dict:
                     from vyos.defaults import directories
-                    from vyos.pki import AUTOCHAIN_PREFIX
                     from vyos.pki import acme_chain_ca_entry
                     from vyos.pki import acme_chain_redundant
                     vyos_certbot_dir = directories['certbot']
@@ -385,10 +384,9 @@ class Config(object):
                         leaf_cert = cert_conf.get('certificate')
                         if leaf_cert and 'acme' in cert_conf and not acme_chain_redundant(
                                 leaf_cert, real_ca_certs):
-                            chain_entry = acme_chain_ca_entry(vyos_certbot_dir, certificate)
-                            if chain_entry:
-                                ca_dict = pki_dict.setdefault('ca', {})
-                                autochain_name = f'{AUTOCHAIN_PREFIX}{certificate}'
+                            ca_dict = pki_dict.setdefault('ca', {})
+                            for autochain_name, chain_entry in acme_chain_ca_entry(
+                                    vyos_certbot_dir, certificate).items():
                                 # A real, manually-configured CLI CA object
                                 # with this name wins over the synthetic one
                                 if autochain_name not in ca_dict:
