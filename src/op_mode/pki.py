@@ -109,6 +109,12 @@ def _encode_certificate_chain(cert, ca_certs):
     return ''.join(encode_certificate(c) for c in find_chain(cert, loaded_ca_certs))
 
 
+def _print_certificate_text(cert):
+    """Print a certificate in OpenSSL's human-readable "-text" format."""
+    print(cmdl(['openssl', 'x509', '-noout', '-text'],
+               input=encode_certificate(cert)))
+
+
 def get_default_values():
     # Fetch default x509 values
     base = ['pki', 'x509', 'default']
@@ -1270,6 +1276,7 @@ def show_certificate_authority(
     raw: bool,
     name: typing.Optional[str] = None,
     pem: typing.Optional[bool] = False,
+    text: typing.Optional[bool] = False,
     full_chain: typing.Optional[bool] = False,
 ):
     headers = [
@@ -1300,6 +1307,9 @@ def show_certificate_authority(
                     print(_encode_certificate_chain(cert, certs))
                 else:
                     print(encode_certificate(cert))
+                return
+            if name and text:
+                _print_certificate_text(cert)
                 return
 
             parent_ca_name = get_certificate_ca(cert, certs)
@@ -1335,6 +1345,7 @@ def show_certificate(
     name: typing.Optional[str] = None,
     private: typing.Optional[bool] = False,
     pem: typing.Optional[bool] = False,
+    text: typing.Optional[bool] = False,
     full_chain: typing.Optional[bool] = False,
     fingerprint: typing.Optional[ArgsFingerprint] = None,
 ):
@@ -1370,6 +1381,9 @@ def show_certificate(
                     print(_encode_certificate_chain(cert, ca_certs))
                 else:
                     print(encode_certificate(cert))
+                return
+            elif name and text and not (private or fingerprint):
+                _print_certificate_text(cert)
                 return
             elif name and fingerprint and not private:
                 print(get_certificate_fingerprint(cert, fingerprint))

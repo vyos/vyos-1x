@@ -521,6 +521,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="text">
+                <properties>
+                  <help>Show x509 CA certificate in human-readable text format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4" --text</command>
+              </leafNode>
             </children>
           </tagNode>
           <tagNode name="certificate">
@@ -550,6 +556,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="text">
+                <properties>
+                  <help>Show x509 certificate in human-readable text format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --text</command>
+              </leafNode>
               <tagNode name="fingerprint">
                 <properties>
                   <help>Show x509 certificate fingerprint</help>
