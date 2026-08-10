@@ -803,7 +803,7 @@ def generate(pki):
                     # Request new certificate via certbot
                     try:
                         certbot_request(name, cert_conf['acme'], dry_run=False)
-                    except ConfigError:
+                    except Exception:
                         if have_backup:
                             certbot_restore(name)
                         raise
