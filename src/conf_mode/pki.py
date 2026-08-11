@@ -19,7 +19,6 @@ import os
 from sys import argv
 from sys import exit
 
-from vyos.base import Message
 from vyos.config import Config
 from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents
@@ -31,6 +30,7 @@ from vyos.defaults import directories
 from vyos.defaults import internal_ports
 from vyos.defaults import systemd_services
 from vyos.pki import encode_certificate
+from vyos.pki import find_chain
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
 from vyos.pki import load_public_key
@@ -40,7 +40,6 @@ from vyos.pki import load_private_key
 from vyos.pki import load_crl
 from vyos.pki import load_dh_parameters
 from vyos.utils.boot import boot_configuration_complete
-from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
@@ -120,12 +119,120 @@ sync_translate = {
     'key': 'openssh',
 }
 
+def dispatch_dependents_for_reference(pki_system, search, key, item_name, conf, D):
+    """If item_name is referenced under key somewhere below search['path']
+    in the full system config, register that service (search['path'][1])
+    as a dependent to be regenerated/reloaded via call_dependents().
+    """
+    search_dict = dict_search_args(pki_system, *search['path'])
+    if not search_dict:
+        return
+    for found_name, found_path in dict_search_recursive(search_dict, key):
+        if isinstance(found_name, list) and item_name not in found_name:
+            continue
+        if isinstance(found_name, str) and found_name != item_name:
+            continue
+
+        # prefer orig_path over path when unmangling is needed
+        path = search.get('orig_path', search.get('path'))
+        if path[0] == 'interfaces':
+            ifname = found_path[0]
+            if not D.node_changed_presence(path + [ifname]):
+                set_dependents(path[1], conf, ifname)
+        else:
+            if not D.node_changed_presence(path):
+                set_dependents(path[1], conf)
+
+certbot_log_file = '/var/log/letsencrypt/letsencrypt.log'
+
+def certbot_log_offset() -> int:
+    """Current size of certbot's own debug log, to be passed to
+    certbot_error_reason() after a failed invocation so it only looks at
+    what this specific invocation appended - certbot's log is shared
+    across all certificates and accumulates across every past run.
+    """
+    return os.path.getsize(certbot_log_file) if os.path.exists(certbot_log_file) else 0
+
+def certbot_error_reason(offset: int) -> str | None:
+    """Pull the actual ACME protocol error (e.g. rate limiting, failed
+    domain validation) out of certbot's own debug log.
+
+    certbot's non-interactive stdout/stderr reporting can itself crash
+    on an unrelated certbot/josepy bug while trying to report an ACME
+    error (AttributeError: can't set attribute, seen live), which masks
+    the real reason entirely from cmdl()'s captured output. The real
+    reason is still always written to the debug log first, so read it
+    directly instead of relying on certbot's own top-level reporting.
+    """
+    try:
+        with open(certbot_log_file) as f:
+            f.seek(offset)
+            log_tail = f.read()
+    except OSError:
+        return None
+
+    reason = None
+    prefix = 'acme.messages.Error:'
+    for line in log_tail.splitlines():
+        if line.startswith(prefix):
+            reason = line[len(prefix):].strip()
+    return reason
+
 def certbot_delete(certificate):
     if not boot_configuration_complete():
         return
     if os.path.exists(f'{vyos_certbot_dir}/renewal/{certificate}.conf'):
         cmdl(['certbot', 'delete', '--non-interactive', '--config-dir',
               vyos_certbot_dir, '--cert-name', certificate])
+
+def certbot_backup_path(name: str) -> str:
+    return f'{vyos_certbot_dir}/.vyos-backup/{name}'
+
+def certbot_backup(name: str) -> None:
+    """Move a certificate's live/archive/renewal-config files aside rather
+    than deleting them outright, so certbot_restore()/certbot_discard_backup()
+    can put them back (or drop them) once the caller knows whether the
+    replacement certbot_request() actually succeeded.
+
+    Without this, certbot_delete() followed by a failed certbot_request()
+    (a rate limit, a transient ACME/network issue) leaves the certificate
+    missing entirely, with no way back short of a fresh, successful ACME
+    issuance.
+    """
+    import shutil
+    backup = certbot_backup_path(name)
+    if os.path.exists(backup):
+        shutil.rmtree(backup)
+    os.makedirs(backup)
+    for sub in ('live', 'archive'):
+        src = f'{vyos_certbot_dir}/{sub}/{name}'
+        if os.path.exists(src):
+            shutil.move(src, f'{backup}/{sub}')
+    renewal_conf = f'{vyos_certbot_dir}/renewal/{name}.conf'
+    if os.path.exists(renewal_conf):
+        shutil.move(renewal_conf, f'{backup}/renewal.conf')
+
+def certbot_restore(name: str) -> None:
+    """Restore a backup made by certbot_backup(), if one exists."""
+    import shutil
+    backup = certbot_backup_path(name)
+    if not os.path.isdir(backup):
+        return
+    for sub in ('live', 'archive'):
+        src = f'{backup}/{sub}'
+        if os.path.exists(src):
+            dst = f'{vyos_certbot_dir}/{sub}/{name}'
+            if os.path.exists(dst):
+                shutil.rmtree(dst)
+            shutil.move(src, dst)
+    renewal_src = f'{backup}/renewal.conf'
+    if os.path.exists(renewal_src):
+        shutil.move(renewal_src, f'{vyos_certbot_dir}/renewal/{name}.conf')
+    shutil.rmtree(backup, ignore_errors=True)
+
+def certbot_discard_backup(name: str) -> None:
+    import shutil
+    shutil.rmtree(certbot_backup_path(name), ignore_errors=True)
 
 def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     # We do not call certbot when booting the system - there is no need to do so and
@@ -162,11 +269,64 @@ def certbot_request(name: str, config: dict, dry_run: bool=True) -> None:
     if dry_run:
         tmp += ['--dry-run']
 
-    cmdl(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
+    offset = certbot_log_offset()
+    try:
+        cmdl(tmp, raising=ConfigError, message=f'Certbot request failed for "{name}"!')
+    except ConfigError as e:
+        reason = certbot_error_reason(offset)
+        if reason:
+            raise ConfigError(f'Certbot request failed for "{name}": {reason}') from e
+        raise
     return None
+
+def certbot_renewal_due(name: str) -> bool:
+    """Approximate check for whether this certbot-managed certificate is
+    within its renewal window, without invoking certbot itself - so the
+    caller can skip certbot renew (and its unconditional --pre-hook)
+    entirely when nothing needs renewing.
+
+    VyOS never overrides certbot's own --renew-before-expiry (30 days),
+    so that default is used directly here rather than parsing it back out
+    of the renewal config, which certbot itself only ever writes as a
+    commented-out placeholder in the absence of an override.
+
+    Fails open (returns True) if the local certificate can't be read, so
+    this can never itself block a renewal that should actually happen -
+    worst case, the same check just runs again next time.
+    """
+    from datetime import datetime
+    from datetime import timedelta
+
+    tmp = read_file(f'{vyos_certbot_dir}/live/{name}/cert.pem', defaultonfailure=None)
+    if tmp is None:
+        return True
+    try:
+        expiry = load_certificate(tmp, wrap_tags=False).not_valid_after
+    except Exception:
+        return True
+
+    renew_before_expiry_days = 30
+    return datetime.utcnow() >= expiry - timedelta(days=renew_before_expiry_days)
+
+def any_certbot_renewal_due(certificates: dict) -> bool:
+    """True if any ACME-managed certificate in this pki['certificate']
+    dict is within its renewal window - see certbot_renewal_due(). False
+    (not due) if there are no ACME-managed certificates at all. Shared by
+    get_config() (deciding whether to mark ACME certs as "changed" at
+    all) and certbot_renew() (deciding whether to actually invoke
+    certbot), so both agree on whether this certbot_renew pass is a real
+    one - see the comment above get_config()'s use of this for why that
+    matters.
+    """
+    acme_certs = [name for name, cert_conf in certificates.items() if 'acme' in cert_conf]
+    return any(certbot_renewal_due(name) for name in acme_certs)
 
 def certbot_renew(config: dict, force: bool=False) -> None:
     """ Renew all certificates managed via certbot """
+    if not force and not any_certbot_renewal_due(config.get('certificate', {})):
+        print('No certificates due for renewal - skipping certbot renew.')
+        return None
+
     tmp = ['certbot', 'renew', '--no-random-sleep-on-renew',
            '--config-dir', vyos_certbot_dir]
 
@@ -188,14 +348,35 @@ def certbot_renew(config: dict, force: bool=False) -> None:
     if force:
         tmp += ['--force-renewal']
 
+    offset = certbot_log_offset()
     try:
         print(cmdl(tmp, raising=ConfigError, message=f'Certbot renew failed!'))
     except ConfigError as e:
-        print(e)
+        reason = certbot_error_reason(offset)
+        print(f'Certbot renew failed: {reason}' if reason else e)
         for service in stop_services:
             print(f'Restarting "{service}" with non-renewed certificate...')
             cmdl(['systemctl', 'restart', service])
     return None
+
+def leaf_cert_base64(name: str, cert_conf: dict):
+    """Return a certificate's own base64-encoded content for chain
+    resolution purposes: the CLI-configured value for a regular
+    certificate, or - since ACME certificates never carry one on the CLI -
+    read live from certbot's own cert.pem. Returns None if neither is
+    available (e.g. an ACME certificate not yet issued).
+    """
+    if 'certificate' in cert_conf:
+        return cert_conf['certificate']
+    if 'acme' not in cert_conf:
+        return None
+    tmp = read_file(f'{vyos_certbot_dir}/live/{name}/cert.pem', defaultonfailure=None)
+    if tmp is None:
+        return None
+    tmp = load_certificate(tmp, wrap_tags=False)
+    if not tmp:
+        return None
+    return "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
 
 def get_config(config=None):
     if config:
@@ -242,20 +423,27 @@ def get_config(config=None):
 
     # Certbot triggered an external renew of the certificates.
     # Mark all ACME based certificates as "changed" to trigger
-    # update of dependent services
+    # update of dependent services - but only if certbot_renew() below is
+    # actually going to invoke certbot: this would otherwise run
+    # unconditionally on every timer-triggered pass, making apply()'s
+    # call_dependents() regenerate and reload every dependent service
+    # (HAProxy, HTTPS, ...) twice a day even when nothing was due for
+    # renewal.
     if 'certificate' in pki and 'certbot_renew' in pki:
-        renew = []
-        for name, cert_config in pki['certificate'].items():
-            if 'acme' in cert_config:
-                renew.append(name)
-        if renew:
-            # Get the current list of changed certificates
-            tmp = pki.get('changed', {}).get('certificate', [])
-            # and extend it with the list of ACME based certificates
-            tmp += renew
-            # remove any duplicates if necessary
-            tmp = set(tmp)
-            dict_set_nested('changed.certificate', tmp, pki)
+        force = 'force' in pki['certbot_renew']
+        if force or any_certbot_renewal_due(pki['certificate']):
+            renew = []
+            for name, cert_config in pki['certificate'].items():
+                if 'acme' in cert_config:
+                    renew.append(name)
+            if renew:
+                # Get the current list of changed certificates
+                tmp = pki.get('changed', {}).get('certificate', [])
+                # and extend it with the list of ACME based certificates
+                tmp += renew
+                # remove any duplicates if necessary
+                tmp = set(tmp)
+                dict_set_nested('changed.certificate', tmp, pki)
 
     # We need to get the entire system configuration to verify that we are not
     # deleting a certificate that is still referenced somewhere!
@@ -278,31 +466,57 @@ def get_config(config=None):
                     node_present = dict_search_args(pki, changed_key, item_name)
 
                 if node_present:
-                    search_dict = dict_search_args(pki['system'], *search['path'])
-                    if not search_dict:
-                        continue
-                    for found_name, found_path in dict_search_recursive(search_dict, key):
-                        if isinstance(found_name, list) and item_name not in found_name:
-                            continue
+                    dispatch_dependents_for_reference(pki['system'], search, key, item_name, conf, D)
 
-                        if isinstance(found_name, str) and found_name != item_name:
-                            continue
+    # find_chain() based consumers (HAProxy, HTTPS, stunnel, sstpc,
+    # openconnect, IPsec, eapol, ...) build their full certificate chain
+    # dynamically from the entire pki['ca'] pool, not from an explicit,
+    # per-service CA reference - so adding, changing, or removing a CA can
+    # change a certificate's resolved chain even though that CA is never
+    # referenced by name anywhere, which the named-reference matching
+    # above would miss. Only trigger a certificate's dependents when its
+    # actually-resolved chain differs before vs after, so an
+    # unrelated/unused CA edit does not needlessly reload every
+    # certificate-consuming service.
+    #
+    # This deliberately dispatches dependents directly instead of adding
+    # these certificates to changed.certificate: that list is also used
+    # by verify()/generate() to decide whether to re-request an ACME
+    # certificate from the CA, and a CA-only edit must never cause an
+    # unrelated, unnecessary ACME re-issuance of a certificate whose own
+    # content did not change.
+    if dict_search_args(pki, 'changed', 'ca') and 'certificate' in pki:
+        old_ca = conf.get_config_dict(['pki', 'ca'], effective=True,
+                                       key_mangling=('-', '_'),
+                                       no_tag_node_value_mangle=True,
+                                       get_first_key=True) or {}
+        new_ca = pki.get('ca', {})
 
-                        # prefer orig_path over path when unmangling is needed
-                        path = search.get('orig_path', search.get('path'))
-                        # Only enable this for debug purposes - otherwise we will always
-                        # print this message for ACME certificates during renew tests -
-                        # even if they are not due for renew!
-                        # path_str = ' '.join(path + found_path)
-                        # print(f'Updating configuration: "{path_str} {item_name}"')
+        def _ca_pool(ca_dict):
+            return [cert for cert in (
+                load_certificate(ca['certificate'])
+                for ca in ca_dict.values() if 'certificate' in ca
+            ) if cert]
 
-                        if path[0] == 'interfaces':
-                            ifname = found_path[0]
-                            if not D.node_changed_presence(path + [ifname]):
-                                set_dependents(path[1], conf, ifname)
-                        else:
-                            if not D.node_changed_presence(path):
-                                set_dependents(path[1], conf)
+        old_pool = _ca_pool(old_ca)
+        new_pool = _ca_pool(new_ca)
+
+        for name, cert_conf in pki['certificate'].items():
+            leaf_base64 = leaf_cert_base64(name, cert_conf)
+            if not leaf_base64:
+                continue
+            leaf = load_certificate(leaf_base64)
+            if not leaf:
+                continue
+            old_chain = [encode_certificate(c) for c in find_chain(leaf, old_pool)]
+            new_chain = [encode_certificate(c) for c in find_chain(leaf, new_pool)]
+            if old_chain == new_chain:
+                continue
+
+            for search in sync_search:
+                if 'certificate' not in search['keys']:
+                    continue
+                dispatch_dependents_for_reference(pki['system'], search, 'certificate', name, conf, D)
 
     # Check PKI certificates if they are auto-generated by ACME. If they are,
     # traverse the current configuration and determine the service where the
@@ -570,54 +784,53 @@ def generate(pki):
                 # system, generate it
                 if name not in certbot_list_on_disk:
                     certbot_request(name, cert_conf['acme'], dry_run=False)
-                    # Now that the certificate was properly generated we have
-                    # the PEM files on disk. We need to add the certificate to
-                    # certbot_list_on_disk to automatically import the CA chain
                     certbot_list_on_disk.append(name)
                 # We already had an ACME managed certificate on the system, but
                 # something changed in the configuration
                 elif changed_certificates != None and name in changed_certificates:
-                    # Delete old ACME certificate first
+                    have_backup = False
+                    # Back up (rather than outright delete) the old ACME
+                    # certificate first, so it can be restored if the
+                    # replacement request below fails for any reason - a
+                    # rate limit, a transient ACME/network issue, or
+                    # anything else. Without this, a failed request here
+                    # left the certificate missing entirely until the next
+                    # successful issuance.
                     if name in certbot_list_on_disk:
+                        certbot_backup(name)
+                        have_backup = True
                         certbot_delete(name)
                     # Request new certificate via certbot
-                    certbot_request(name, cert_conf['acme'], dry_run=False)
+                    try:
+                        certbot_request(name, cert_conf['acme'], dry_run=False)
+                    except Exception:
+                        if have_backup:
+                            certbot_restore(name)
+                        raise
+                    if have_backup:
+                        # A request made while boot_configuration_complete()
+                        # is False silently no-ops (see certbot_request()) -
+                        # verify the certificate is actually back on disk
+                        # before discarding the backup, rather than trusting
+                        # the absence of an exception alone.
+                        if os.path.exists(f'{vyos_certbot_dir}/live/{name}/cert.pem'):
+                            certbot_discard_backup(name)
+                        else:
+                            certbot_restore(name)
 
     # Cleanup certbot configuration and certificates if no longer in use by CLI
     # Get foldernames under vyos_certbot_dir which each represent a certbot cert
+    #
+    # Note: the intermediate CA certbot obtains alongside each of these
+    # certificates (chain.pem) is intentionally never imported into the
+    # CLI here - it is derived data, not configuration, and is instead
+    # read live from disk by whatever needs it (find_chain() consumers,
+    # "show pki ca") - see vyos.pki.acme_chain_ca_entry().
     if os.path.exists(f'{vyos_certbot_dir}/live'):
         for cert in certbot_list_on_disk:
             # ACME certificate is no longer in use by CLI remove it
             if cert not in certbot_list:
                 certbot_delete(cert)
-                continue
-            # ACME not enabled for individual certificate - bail out early
-            if 'acme' not in pki['certificate'][cert]:
-                continue
-
-            # Read in ACME certificate chain information
-            tmp = read_file(f'{vyos_certbot_dir}/live/{cert}/chain.pem')
-            tmp = load_certificate(tmp, wrap_tags=False)
-            cert_chain_base64 = "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
-
-            # Check if CA chain certificate is already present on CLI to avoid adding
-            # a duplicate. This only checks for manual added CA certificates and not
-            # auto added ones with the AUTOCHAIN_ prefix
-            autochain_prefix = 'AUTOCHAIN_'
-            ca_cert_present = False
-            if 'ca' in pki:
-                for ca_base64, cli_path in dict_search_recursive(pki['ca'], 'certificate'):
-                    # Ignore automatic added CA certificates
-                    if any(item.startswith(autochain_prefix) for item in cli_path):
-                        continue
-                    if cert_chain_base64 == ca_base64:
-                        ca_cert_present = True
-
-            if not ca_cert_present:
-                tmp = dict_search_args(pki, 'ca', f'{autochain_prefix}{cert}', 'certificate')
-                if not bool(tmp) or tmp != cert_chain_base64:
-                    Message(f'Add/replace automatically imported CA certificate for "{cert}" ...')
-                    add_cli_node(['pki', 'ca', f'{autochain_prefix}{cert}', 'certificate'], value=cert_chain_base64)
 
     return None
 

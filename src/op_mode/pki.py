@@ -20,11 +20,13 @@ import re
 import sys
 import tabulate
 import typing
+import urllib.parse
 
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
 import vyos.opmode
+import vyos.remote
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -76,7 +78,12 @@ def _verify(target):
             name = kwargs.get('name')
             unconf_message = f'PKI {target} "{name}" does not exist!'
             if name:
-                if not conf.exists(['pki', target, name]):
+                exists = conf.exists(['pki', target, name])
+                if not exists and target == 'ca':
+                    from vyos.pki import AUTOCHAIN_PREFIX
+                    if name.startswith(AUTOCHAIN_PREFIX):
+                        exists = name in (get_config_ca_certificate() or {})
+                if not exists:
                     raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
             return func(*args, **kwargs)
 
@@ -102,6 +109,12 @@ def _encode_certificate_chain(cert, ca_certs):
     return ''.join(encode_certificate(c) for c in find_chain(cert, loaded_ca_certs))
 
 
+def _print_certificate_text(cert):
+    """Print a certificate in OpenSSL's human-readable "-text" format."""
+    print(cmdl(['openssl', 'x509', '-noout', '-text'],
+               input=encode_certificate(cert)))
+
+
 def get_default_values():
     # Fetch default x509 values
     base = ['pki', 'x509', 'default']
@@ -119,19 +132,54 @@ def get_default_values():
 def get_config_ca_certificate(name=None):
     # Fetch ca certificates from config
     base = ['pki', 'ca']
-    if not conf.exists(base):
-        return False
 
     if name:
-        base = base + [name]
-        if not conf.exists(base + ['private', 'key']) or not conf.exists(
-            base + ['certificate']
+        # A specific, real CLI-configured CA is being requested (e.g. for
+        # sign/generate operations) - ACME-derived synthetic entries are
+        # never addressable this way, since they are not real CLI objects.
+        if not conf.exists(base + [name, 'private', 'key']) or not conf.exists(
+            base + [name, 'certificate']
         ):
             return False
+        return conf.get_config_dict(
+            base + [name], key_mangling=('-', '_'), get_first_key=True,
+            no_tag_node_value_mangle=True
+        )
 
-    return conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True
-    )
+    ca_certs = {}
+    if conf.exists(base):
+        ca_certs = conf.get_config_dict(
+            base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True
+        )
+
+    # Also surface each ACME certificate's intermediate CA chain, read
+    # live from certbot's own chain.pem - never a real, settable CLI
+    # object, but consumers (find_chain(), "show pki ca") should see it
+    # the same way they'd see a manually-configured CA.
+    from vyos.defaults import directories
+    from vyos.pki import acme_chain_ca_entry
+    from vyos.pki import acme_chain_redundant
+    vyos_certbot_dir = directories['certbot']
+    # Snapshot of explicitly/manually configured CAs, taken before any
+    # synthetic entries are added below
+    real_ca_certs = dict(ca_certs)
+
+    for cert_name, cert_conf in (get_config_certificate() or {}).items():
+        if 'acme' not in cert_conf:
+            continue
+        leaf_cert = cert_conf.get('certificate')
+        if not leaf_cert:
+            continue
+        if acme_chain_redundant(leaf_cert, real_ca_certs):
+            continue
+        for autochain_name, chain_entry in acme_chain_ca_entry(
+                vyos_certbot_dir, cert_name).items():
+            # A real, manually-configured CLI CA object with this name
+            # wins over the synthetic one
+            if autochain_name not in ca_certs:
+                ca_certs[autochain_name] = chain_entry
+
+    return ca_certs or False
 
 
 def get_config_certificate(name=None):
@@ -937,15 +985,27 @@ def import_ca_certificate(
     name, path=None, key_path=None, no_prompt=False, passphrase=None
 ):
     if path:
-        if not os.path.exists(path):
-            print(f'File not found: {path}')
-            return
+        # path may be a local file path or a remote URL (http, https, ftp,
+        # sftp, scp, tftp, ...) - same convention as generate public-key's
+        # get_key(), which this mirrors.
+        url = urllib.parse.urlparse(path)
+        if url.scheme in ('', 'file'):
+            if url.scheme == 'file':
+                if url.netloc:
+                    print(f'Unsupported file URL host: {url.netloc}')
+                    return
+                local_path = urllib.parse.unquote(url.path)
+            else:
+                local_path = path
+            if not os.path.exists(local_path):
+                print(f'File not found: {local_path}')
+                return
+            with open(local_path) as f:
+                cert_data = f.read()
+        else:
+            cert_data = vyos.remote.get_remote_config(path)
 
-        cert = None
-
-        with open(path) as f:
-            cert_data = f.read()
-            cert = load_certificate(cert_data, wrap_tags=False)
+        cert = load_certificate(cert_data, wrap_tags=False)
 
         if not cert:
             print(f'Invalid certificate: {path}')
@@ -1216,6 +1276,7 @@ def show_certificate_authority(
     raw: bool,
     name: typing.Optional[str] = None,
     pem: typing.Optional[bool] = False,
+    text: typing.Optional[bool] = False,
     full_chain: typing.Optional[bool] = False,
 ):
     headers = [
@@ -1246,6 +1307,9 @@ def show_certificate_authority(
                     print(_encode_certificate_chain(cert, certs))
                 else:
                     print(encode_certificate(cert))
+                return
+            if name and text:
+                _print_certificate_text(cert)
                 return
 
             parent_ca_name = get_certificate_ca(cert, certs)
@@ -1281,6 +1345,7 @@ def show_certificate(
     name: typing.Optional[str] = None,
     private: typing.Optional[bool] = False,
     pem: typing.Optional[bool] = False,
+    text: typing.Optional[bool] = False,
     full_chain: typing.Optional[bool] = False,
     fingerprint: typing.Optional[ArgsFingerprint] = None,
 ):
@@ -1316,6 +1381,9 @@ def show_certificate(
                     print(_encode_certificate_chain(cert, ca_certs))
                 else:
                     print(encode_certificate(cert))
+                return
+            elif name and text and not (private or fingerprint):
+                _print_certificate_text(cert)
                 return
             elif name and fingerprint and not private:
                 print(get_certificate_fingerprint(cert, fingerprint))

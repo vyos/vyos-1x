@@ -158,6 +158,7 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, ['load-balancing', 'haproxy'])
         cls.cli_delete(cls, ['service', 'https'])
 
     def tearDown(self):

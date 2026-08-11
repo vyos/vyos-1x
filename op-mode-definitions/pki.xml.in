@@ -364,12 +364,13 @@
               <help>Import CA certificate into PKI</help>
               <completionHelp>
                 <list>&lt;name&gt;</list>
+                <path>pki ca</path>
               </completionHelp>
             </properties>
             <children>
               <tagNode name="file">
                 <properties>
-                  <help>Path to CA certificate file</help>
+                  <help>Path or URL to CA certificate file</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ca --name "$4" --filename "$6"</command>
               </tagNode>
@@ -386,6 +387,7 @@
               <help>Import certificate into PKI</help>
               <completionHelp>
                 <list>&lt;name&gt;</list>
+                <path>pki certificate</path>
               </completionHelp>
             </properties>
             <children>
@@ -519,6 +521,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="text">
+                <properties>
+                  <help>Show x509 CA certificate in human-readable text format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4" --text</command>
+              </leafNode>
             </children>
           </tagNode>
           <tagNode name="certificate">
@@ -548,6 +556,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="text">
+                <properties>
+                  <help>Show x509 certificate in human-readable text format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --text</command>
+              </leafNode>
               <tagNode name="fingerprint">
                 <properties>
                   <help>Show x509 certificate fingerprint</help>
