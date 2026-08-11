@@ -101,7 +101,12 @@ def check_auth(key_list, key):
     return key_id
 
 
-def auth_required(data: ApiModel, x_api_key: Optional[str] = Header(None), authorization: Optional[str] = Header(None), x_client_verify: Optional[str] = Header(None)):
+def auth_required(
+    data: ApiModel,
+    x_api_key: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+    x_client_verify: Optional[str] = Header(None),
+):
     session = SessionState()
     # mTLS: client certificate verified by nginx against configured CA
     if x_client_verify == 'SUCCESS':
@@ -1031,6 +1036,7 @@ def traceroute_op(data: TracerouteModel):
         return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
+
 
 @router.post('/token')
 def token_op(data: ApiModel):

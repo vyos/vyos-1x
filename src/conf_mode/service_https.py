@@ -114,7 +114,9 @@ def verify(https):
                 'Do not use them in a production environment!')
     if dict_search('certificates.verify_client', https) is not None:
         if dict_search('certificates.ca_certificate', https) is None:
-            raise ConfigError('CA certificate must be configured for mTLS client verification')
+            raise ConfigError(
+                'CA certificate must be configured for mTLS client verification'
+            )
 
     # Check if server port is already in use by a different application
     listen_address = ['0.0.0.0']
@@ -216,7 +218,9 @@ def generate(https):
 
         https['certificates'].update(tmp_path)
     # Write mTLS CA chain if verify-client is configured
-    if dict_search('certificates.verify_client', https) and dict_search('certificates.ca_certificate', https):
+    if dict_search('certificates.verify_client', https) and dict_search(
+        'certificates.ca_certificate', https
+    ):
         ca_name = https['certificates']['ca_certificate']
         pki_ca = dict_search(f'pki.ca.{ca_name}', https)
         if pki_ca:
