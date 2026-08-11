@@ -619,6 +619,157 @@ _vyatta_set_comptype ()
   done
 }
 
+# comptype: imagefiles
+# Port of the legacy Vyatta vyatta-image-complete interpreter, which
+# completes <image>://<path>, running://<path>, disk-install://<path> and
+# remote scheme://... targets for `show file`, `copy file`,
+# `copy file ... to`, and `delete file`.
+# https://github.com/vyos-legacy/vyatta-op/blob/current/functions/interpreter/vyatta-image-complete
+declare -a _vyatta_image_noncomps=( \
+  "http(s)://<user>:<passwd>@<host>/<file>" \
+  "scp://<user>:<passwd>@<host>/<file>" \
+  "sftp://<user>:<passwd>@<host>/<file>" \
+  "ftp(s)://<user>:<passwd>@<host>/<file>" \
+  "tftp://<host>/<file>" )
+
+_vyatta_image_is_file ()
+{
+  local cur=$1
+  local topdir
+  if ! [[ ${cur:0:1} =~ "/" ]]; then
+    cur=${cur/:/}
+    topdir=${cur%%/*}
+    cur=${cur#$topdir/}
+  fi
+  if [[ $topdir == "running" ]]; then
+    cur="/${cur}"
+  elif [[ $topdir == "disk-install" ]]; then
+    cur="/lib/live/mount/persistence/${cur}"
+  elif [[ ${cur:0:1} =~ "/" ]]; then
+    cur=${cur}
+  else
+    cur="/lib/live/mount/persistence/boot/${topdir}/rw/${cur}"
+  fi
+  if [[ -f ${cur} ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+_vyatta_image_path_complete ()
+{
+  compopt -o nospace
+  local -a reply
+  local topdir isrunningimg isdiskinstall file
+  if _vyatta_image_is_file $cur ; then
+    _vyatta_op_completions=( "${cur} " )
+    _vyatta_op_noncompletions=( )
+    return 0
+  fi
+  if [[ ${cur:0:1} =~ "/" ]]; then
+    reply=( $(compgen -f ${cur}) )
+    for ((i=0; i < ${#reply[@]}; i++)); do
+      [[ -d ${reply[i]} ]] && reply[i]="${reply[i]}"/
+    done
+    _vyatta_op_completions=( "${reply[@]}" )
+    return
+  fi
+  if [[ ${cur} == "" ]]; then
+    reply=( $(compgen -d /lib/live/mount/persistence/boot/ | grep -v grub) )
+    for i in `seq 0 $[${#reply[@]}-1]`; do
+      file=${reply[$i]}
+      reply[$i]=${file/#\/lib\/live\/mount\/persistence\/boot\//}
+      reply[$i]="${reply[$i]}://"
+    done
+    reply+=( "running://" )
+    if [[ -d /lib/live/mount/persistence/opt/vyatta/etc/config || -d /lib/live/mount/persistence/config ]]; then
+      reply+=( "disk-install://" )
+    fi
+    _vyatta_op_noncompletions=( "${_vyatta_image_noncomps[@]}" )
+  else
+    _vyatta_op_noncompletions=( )
+    if ! [[ $cur =~ .*:\/\/ ]]; then
+      if [[ $cur =~ .*:\/ ]]; then
+        cur=${cur/:\//}
+      fi
+      if [[ $cur =~ .*: ]]; then
+        cur=${cur/:/}
+      fi
+      isrunningimg=$(compgen -W "running" -- ${cur})
+      isdiskinstall=$(compgen -W "disk-install" -- ${cur})
+      if [[ $isrunningimg == "running" ]]; then
+        cur="/"
+      elif [[ $isdiskinstall == "disk-install" ]]; then
+        cur="/lib/live/mount/persistence/"
+      else
+        cur="/lib/live/mount/persistence/boot/${cur}"
+      fi
+      reply=( $(compgen -f ${cur} | grep -v grub) )
+      for i in `seq 0 $[${#reply[@]}-1]`; do
+        file=${reply[$i]}
+        if [[ $isrunningimg == "running" ]]; then
+          reply[$i]="running://"
+        elif [[ $isdiskinstall == "disk-install" ]]; then
+          reply[$i]="disk-install://"
+        else
+          reply[$i]=${file/#\/lib\/live\/mount\/persistence\/boot\//}
+          if [[ -d /lib/live/mount/persistence/boot/${reply[$i]} ]]; then
+            reply[$i]="${reply[$i]/#\//}://"
+          fi
+        fi
+      done
+    else
+      cur=${cur/:/}
+      topdir=${cur%%/*}
+      cur=${cur#$topdir//}
+      if [[ $topdir == "running" ]]; then
+        cur="/${cur}"
+      elif [[ $topdir == "disk-install" ]]; then
+        cur="/lib/live/mount/persistence/${cur}"
+      else
+        cur="/lib/live/mount/persistence/boot/${topdir}/rw/${cur}"
+      fi
+      reply=( $(compgen -f ${cur}) )
+      # for loop from _filedirs() in /etc/bash_completion
+      for ((i=0; i < ${#reply[@]}; i++)); do
+        if [[ ${cur:0:1} != "'" ]]; then
+          [[ -d ${reply[i]} ]] && reply[i]="${reply[i]}"/
+          if [[ ${cur:0:1} == '"' ]]; then
+            reply[i]=${reply[i]//\\/\\\\}
+            reply[i]=${reply[i]//\"/\\\"}
+            reply[i]=${reply[i]//\$/\\\$}
+          else
+            reply[i]=$(printf %q ${reply[i]})
+          fi
+        fi
+      done
+      for i in `seq 0 $[${#reply[@]}-1]`; do
+        file=${reply[$i]}
+        if [[ $topdir == "running" ]]; then
+          reply[$i]=${file/#\//"$topdir://"}
+        elif [[ $topdir == "disk-install" ]]; then
+          reply[$i]=${file/#\/lib\/live\/mount\/persistence\//"$topdir://"}
+        else
+          reply[$i]=${file/#\/lib\/live\/mount\/persistence\/boot\/$topdir/"$topdir://"}
+          reply[$i]=${reply[$i]/\/rw\/}
+        fi
+      done
+    fi
+  fi
+  _vyatta_op_completions=( "${reply[@]}" )
+  return 0
+}
+
+_vyatta_image_file_complete ()
+{
+  if _vyatta_image_is_file ${COMP_WORDS[(( ${#COMP_WORDS[@]}-2 ))]}; then
+    _vyatta_op_completions=( "" " " )
+    return 0
+  fi
+  _vyatta_image_path_complete
+}
+
 _filedir_xspec_vyos()
 {
     local cur prev words cword
