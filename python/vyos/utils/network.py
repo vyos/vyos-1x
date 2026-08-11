@@ -121,9 +121,9 @@ def get_vrf_members(vrf: str) -> list:
     :return: list
     """
     interfaces = []
+    if not interface_exists(vrf):
+        return interfaces
     try:
-        if not interface_exists(vrf):
-            raise ValueError(f'VRF "{vrf}" does not exist!')
         output = cmdl(['ip', '--json', '--brief', 'link', 'show', 'vrf', vrf])
         answer = loads(output)
         for data in answer:
