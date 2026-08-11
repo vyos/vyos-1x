@@ -868,32 +868,36 @@ class Interface(Control):
     def _get_nft_set_elements(self, family, table, set_name):
         """Return elements of an nftables set, or [] if none are present."""
         tmp = json.loads(self._cmdl(['nft', '-j', 'list', 'set', family, table, set_name]))
-        return dict_search('set.elem', tmp['nftables'][1], [])
+        elems = dict_search('set.elem', tmp['nftables'][1], []) or []
+        # nft may return a bare value for a single element instead of a list
+        if not isinstance(elems, list):
+            elems = [elems]
+        return elems
 
-    def _get_nft_rule_handle(self, family, table, chain, match):
-        """Return handle of first rule matching match, or None if not found."""
-        results = self._cmdl(['nft', '-a', 'list', 'chain', family, table, chain]).split('\n')
-        for line in results:
-            if match in line:
-                handle_search = re.search(r'handle (\d+)', line)
-                if handle_search:
-                    return handle_search[1]
-        return None
+    def _get_nft_rule_handles(self, family, table, chain, set_name):
+        """Return handles of all rules referencing set_name."""
+        handles = []
+        tmp = json.loads(self._cmdl(['nft', '-j', 'list', 'chain', family, table, chain]))
+        for entry in tmp.get('nftables', []):
+            rule = entry.get('rule')
+            if not rule:
+                continue
+            if set_name in json.dumps(rule.get('expr', [])):
+                handles.append(str(rule['handle']))
+        return handles
 
     def _get_rpf_interface_rules(self, family):
         return self._get_nft_set_elements(family, 'raw', 'rpfilter_strict_ifaces'), self._get_nft_set_elements(family, 'raw', 'rpfilter_loose_ifaces')
 
     def _set_rpf_rule_deletes(self, family, rpf_dict, strict_needs_rule, loose_needs_rule):
         if strict_needs_rule:
-            handle = self._get_nft_rule_handle(family, 'raw', 'vyos_rpfilter', '@rpfilter_strict_ifaces')
-            if handle:
-                rpf_dict['strict_delete'] = True
-                rpf_dict['strict_handle'] = handle
+            handles = self._get_nft_rule_handles(family, 'raw', 'vyos_rpfilter', 'rpfilter_strict_ifaces')
+            if handles:
+                rpf_dict['strict_handles'] = handles
         if loose_needs_rule:
-            handle = self._get_nft_rule_handle(family, 'raw', 'vyos_rpfilter', '@rpfilter_loose_ifaces')
-            if handle:
-                rpf_dict['loose_delete'] = True
-                rpf_dict['loose_handle'] = handle
+            handles = self._get_nft_rule_handles(family, 'raw', 'vyos_rpfilter', 'rpfilter_loose_ifaces')
+            if handles:
+                rpf_dict['loose_handles'] = handles
 
     def _apply_rpf_nft_config(self, rpf_dict):
         from subprocess import STDOUT

@@ -1126,11 +1126,11 @@ class BasicInterfaceTest:
                     self.assertEqual('1', tmp)
 
                 if cli_defined(self._base_path + ['ip'], 'source-validation'):
-                    base_options = f'iifname @rpfilter_loose_ifaces'
-                    out = cmdl(['nft', 'list', 'chain', 'ip', 'raw', 'vyos_rpfilter'], sudo=True)
+                    base_options = f'iifname @rpfilter_loose_ifaces fib saddr oif'
+                    out = cmdl(['nft', '-s', 'list', 'chain', 'ip', 'raw', 'vyos_rpfilter'], sudo=True)
                     for line in out.splitlines():
                         if base_options in line:
-                            self.assertIn('iifname @rpfilter_loose_ifaces fib saddr oif vmap @rpfilter_loose', line)
+                            self.assertIn('iifname @rpfilter_loose_ifaces fib saddr oif != 0 counter accept', line)
 
         def test_interface_ipv6_options(self):
             if not self._test_ipv6:
