@@ -6,6 +6,7 @@
 #include <include/firewall/fragment.xml.i>
 #include <include/generic-disable-node.xml.i>
 #include <include/firewall/icmp.xml.i>
+#include <include/firewall/last-used.xml.i>
 #include <include/firewall/limit.xml.i>
 #include <include/firewall/log.xml.i>
 #include <include/firewall/log-options.xml.i>

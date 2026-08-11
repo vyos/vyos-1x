@@ -90,7 +90,11 @@ def get_nftables_details(family, hook, priority):
             rule['packets'] = counter_search[1]
             rule['bytes'] = counter_search[2]
 
-        rule['conditions'] = re.sub(r'(\b(counter packets \d+ bytes \d+|drop|reject|return|log)\b|comment "[\w\-]+")', '', line).strip()
+        last_used_search = re.search(r'last used (\S+)', line)
+        if last_used_search:
+            rule['last_used'] = last_used_search[1]
+
+        rule['conditions'] = re.sub(r'(\b(counter packets \d+ bytes \d+|last used \S+|drop|reject|return|log)\b|comment "[\w\-]+")', '', line).strip()
         out[rule_id] = rule
     return out
 
@@ -206,36 +210,43 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
             if 'disable' in rule_conf:
                 continue
 
-            row = [rule_id, textwrap.fill(rule_conf.get('description') or '', 50), rule_conf['action'], rule_conf['protocol'] if 'protocol' in rule_conf else 'all']
-            if rule_id in details:
-                rule_details = details[rule_id]
-                row.append(rule_details.get('packets', 0))
-                row.append(rule_details.get('bytes', 0))
-                row.append(rule_details['conditions'])
-            rows.append(row)
+            rule_details = details.get(rule_id, {})
+            rows.append([
+                rule_id,
+                *([textwrap.fill(rule_conf.get('description') or '', 50)] if args.detail else []),
+                rule_conf['action'],
+                rule_conf['protocol'] if 'protocol' in rule_conf else 'all',
+                rule_details.get('packets', 0),
+                rule_details.get('bytes', 0),
+                *([rule_details.get('last_used', 'N/A')] if args.detail else []),
+                rule_details.get('conditions', ''),
+            ])
 
     if hook in ['input', 'forward', 'output', 'prerouting']:
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'accept'
     else:
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'drop'
-    row = ['default', '', def_action, 'all']
-    rule_details = details['default-action']
-    row.append(rule_details.get('packets', 0))
-    row.append(rule_details.get('bytes', 0))
-
-    rows.append(row)
+    rule_details = details.get('default-action', {})
+    rows.append([
+        'default',
+        *([''] if args.detail else []),
+        def_action,
+        'all',
+        rule_details.get('packets', 0),
+        rule_details.get('bytes', 0),
+        *([rule_details.get('last_used', 'N/A')] if args.detail else []),
+        rule_details.get('conditions', ''),
+    ])
 
     if rows:
         if args.rule:
             rows.pop()
 
         if args.detail:
-            header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
+            header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Last Used', 'Conditions']
             output_firewall_vertical(rows, header)
         else:
             header = ['Rule', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
-            for i in rows:
-                rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
 
 def output_firewall_state_policy(family):

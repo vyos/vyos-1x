@@ -3,6 +3,7 @@
 #include <include/firewall/common-rule-inet.xml.i>
 #include <include/firewall/hop-limit.xml.i>
 #include <include/firewall/icmpv6.xml.i>
+#include <include/firewall/last-used.xml.i>
 <node name="destination">
   <properties>
     <help>Destination parameters</help>

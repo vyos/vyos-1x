@@ -7,6 +7,7 @@
 #include <include/firewall/hop-limit.xml.i>
 #include <include/firewall/icmp.xml.i>
 #include <include/firewall/icmpv6.xml.i>
+#include <include/firewall/last-used.xml.i>
 #include <include/firewall/limit.xml.i>
 #include <include/firewall/log.xml.i>
 #include <include/firewall/log-options.xml.i>
