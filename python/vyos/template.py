@@ -904,9 +904,9 @@ def kea_high_availability_json(config):
         'this-server-name': os.uname()[1],
         'mode': ha_mode,
         'heartbeat-delay': 10000,
-        'max-response-delay': 10000,
+        'max-response-delay': 60000,
         'max-ack-delay': 5000,
-        'max-unacked-clients': 0,
+        'max-unacked-clients': 10,
         'peers': [
         {
             'name': os.uname()[1],
