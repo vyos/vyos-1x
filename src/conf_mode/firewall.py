@@ -337,13 +337,13 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
     if 'fib' in rule_conf:
         if 'lookup' not in rule_conf['fib']:
-            raise ConfigError('fib lookup must be defined')
+            raise ConfigError(f'{rule_num}fib lookup must be defined')
         if {'source-address', 'destination-address'} <= set(rule_conf['fib']['lookup']):
             raise ConfigError(
-                'fib lookup cannot specify both "source-address" and "destination-address"'
+                f'{rule_num}fib lookup cannot specify both "source-address" and "destination-address"'
             )
         if 'match' not in rule_conf['fib']:
-            raise ConfigError('fib match must be defined')
+            raise ConfigError(f'{rule_num}fib match must be defined')
 
     node_empty, node_name = is_node_empty(rule_conf)
     if node_empty:
