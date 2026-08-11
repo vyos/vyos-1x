@@ -356,9 +356,16 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                         self.assertEqual(f'{dport:x}', filter['options']['match']['value'])
 
             tc_details = get_tc_filter_details(interface, 'ingress')
-            self.assertTrue('filter parent ffff: protocol all pref 20 u32 chain 0' in tc_details)
+            # the tc filter pref is a dense evaluation-order rank, not the CLI
+            # priority: class 1 (priority 15) is pref 1, class 2 (priority 20,
+            # the default) is pref 2 - ranked by priority, not equal to it (T9134)
+            self.assertTrue(
+                'filter parent ffff: protocol all pref 2 u32 chain 0' in tc_details
+            )
             self.assertTrue('rate 1Gbit burst 15Kb mtu 2Kb action drop overhead 0b linklayer ethernet' in tc_details)
-            self.assertTrue('filter parent ffff: protocol all pref 15 u32 chain 0' in tc_details)
+            self.assertTrue(
+                'filter parent ffff: protocol all pref 1 u32 chain 0' in tc_details
+            )
             self.assertTrue('rate 3Gbit burst 100Kb mtu 1600b action pipe/continue overhead 0b linklayer ethernet' in tc_details)
             self.assertTrue('rate 500Mbit burst 200Kb mtu 3000b action drop overhead 0b linklayer ethernet' in tc_details)
             self.assertTrue('filter parent ffff: protocol all pref 255 basic chain 0' in tc_details)
@@ -791,8 +798,9 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         tc_filters = cmdl(['tc', 'filter', 'show', 'dev', self._interfaces[0], 'ingress'])
-        # class 100
-        self.assertIn('filter parent ffff: protocol all pref 20 fw chain 0', tc_filters)
+        # class 100 has priority 20, but the tc filter pref is a dense
+        # evaluation-order rank (1 here), not the CLI priority value (T9134)
+        self.assertIn('filter parent ffff: protocol all pref 1 fw chain 0', tc_filters)
         self.assertIn('action order 1:  police 0x1 rate 20Gbit burst 3760Kb mtu 2Kb action drop overhead 0b', tc_filters)
         # default
         self.assertIn('filter parent ffff: protocol all pref 255 basic chain 0', tc_filters)
@@ -1268,8 +1276,11 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         iif = Interface(self._interfaces[0]).get_ifindex()
         tc_filters = cmdl(['tc', 'filter', 'show', 'dev', self._interfaces[0], 'ingress'])
 
-        # class 100
-        self.assertIn('filter parent ffff: protocol all pref 20 basic chain 0', tc_filters)
+        # class 100 has priority 20, but the tc filter pref is a dense
+        # evaluation-order rank (1 here), not the CLI priority value (T9134)
+        self.assertIn(
+            'filter parent ffff: protocol all pref 1 basic chain 0', tc_filters
+        )
         self.assertIn(f'meta(rt_iif eq {iif})', tc_filters)
         self.assertIn('action order 1:  police 0x1 rate 20Gbit burst 3760Kb mtu 2Kb action drop overhead 0b', tc_filters)
         # default
@@ -1341,6 +1352,167 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             else:
                 self.assertIn(f'filter parent 1: protocol {proto} pref',
                               get_tc_filter_details(interface))
+
+    def test_25_policy_shaper_mixed_ether_protocol(self):
+        # T9134: a tc filter priority is bound to a single protocol, so two
+        # classes matching on different protocols (here the default "all" and
+        # an explicit "arp") must not share a filter priority - otherwise tc
+        # rejects the second filter and the commit crashes.
+        interface = self._interfaces[0]
+        shaper_name = f'qos-shaper-{interface}'
+        shaper_path = base_path + ['policy', 'shaper', shaper_name]
+        cls10 = shaper_path + ['class', '10']
+        cls20 = shaper_path + ['class', '20']
+
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(shaper_path + ['bandwidth', '100mbit'])
+        self.cli_set(shaper_path + ['default', 'bandwidth', '50mbit'])
+        self.cli_set(cls10 + ['bandwidth', '50mbit'])
+        self.cli_set(
+            cls10 + ['match', 'RULE-1', 'ip', 'source', 'address', '10.10.0.0/24']
+        )
+        self.cli_set(cls20 + ['bandwidth', '10mbit'])
+        self.cli_set(cls20 + ['match', 'RULE-2', 'ether', 'protocol', 'arp'])
+
+        # commit changes
+        self.cli_commit()
+
+        filters = get_tc_filter_details(interface)
+        # the "all" protocol filter (class 10) and the "arp" protocol filter
+        # (class 20) must both be installed with distinct priorities
+        self.assertIn('filter parent 1: protocol all pref 1 u32', filters)
+        self.assertIn('filter parent 1: protocol arp pref 2 u32', filters)
+
+        # The class "priority" is not reused verbatim as the tc filter priority
+        # (it is not unique): both classes share priority "3" and match
+        # different protocols, yet each still gets a distinct tc filter priority
+        # and the commit succeeds. The class "priority" still drives the HTB
+        # class scheduling priority.
+        self.cli_set(cls10 + ['priority', '3'])
+        self.cli_set(cls20 + ['priority', '3'])
+        self.cli_commit()
+
+        filters = get_tc_filter_details(interface)
+        self.assertIn('filter parent 1: protocol all pref 1 u32', filters)
+        self.assertIn('filter parent 1: protocol arp pref 2 u32', filters)
+        # the class priority is applied to the HTB class scheduling prio
+        self.assertIn('prio 3', cmdl(['tc', 'class', 'show', 'dev', interface]))
+
+    def test_26_policy_shaper_match_order(self):
+        # T9134: giving every match a unique tc filter priority must not change
+        # match evaluation order - neither the default order nor the order set
+        # by the class "priority".
+        interface = self._interfaces[0]
+        shaper_name = f'qos-shaper-{interface}'
+        shaper_path = base_path + ['policy', 'shaper', shaper_name]
+        cls10 = shaper_path + ['class', '10']
+        cls20 = shaper_path + ['class', '20']
+
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(shaper_path + ['bandwidth', '100mbit'])
+        self.cli_set(shaper_path + ['default', 'bandwidth', '40mbit'])
+        self.cli_set(cls10 + ['bandwidth', '20mbit'])
+        self.cli_set(
+            cls10 + ['match', 'A', 'ip', 'destination', 'address', '10.99.9.0/24']
+        )
+        self.cli_set(
+            cls10 + ['match', 'B', 'ip', 'destination', 'address', '10.99.1.0/24']
+        )
+        self.cli_set(cls20 + ['bandwidth', '20mbit'])
+        self.cli_set(
+            cls20 + ['match', 'C', 'ip', 'destination', 'address', '10.99.1.5/32']
+        )
+        self.cli_commit()
+
+        # Default order follows the per-class match index: A (0a630900) and C
+        # (0a630105) are each the first match in their class, B (0a630100) is
+        # second - so evaluation order is A, C, B. The specific /32 (C) must
+        # precede the overlapping broad /24 (B), and A precedes C.
+        filters = get_tc_filter_details(interface)
+        self.assertLess(filters.index('0a630900'), filters.index('0a630105'))
+        self.assertLess(filters.index('0a630105'), filters.index('0a630100'))
+
+        # The class "priority" reorders evaluation: class 20 (C) gets the
+        # lowest priority number, so C now precedes A as well - which only
+        # happens if the priority is honoured (by default A came first).
+        self.cli_set(cls10 + ['priority', '5'])
+        self.cli_set(cls20 + ['priority', '1'])
+        self.cli_commit()
+
+        filters = get_tc_filter_details(interface)
+        self.assertLess(filters.index('0a630105'), filters.index('0a630900'))
+        self.assertLess(filters.index('0a630105'), filters.index('0a630100'))
+
+    def test_27_policy_limiter_mixed_protocol(self):
+        # T9134: limiter classes default to priority 20, so two classes
+        # matching different protocols (here "arp" and the implicit "all")
+        # would share a tc filter priority and tc would reject the second
+        # filter. Each match must instead get a unique tc filter priority.
+        interface = self._interfaces[0]
+        policy_name = 'smoke_test'
+        limiter_path = ['qos', 'policy', 'limiter', policy_name]
+        cls10 = limiter_path + ['class', '10']
+        cls20 = limiter_path + ['class', '20']
+
+        self.cli_set(['qos', 'interface', interface, 'ingress', policy_name])
+        self.cli_set(limiter_path + ['default', 'bandwidth', '500mbit'])
+        self.cli_set(cls10 + ['bandwidth', '100mbit'])
+        self.cli_set(cls10 + ['match', 'R1', 'ether', 'protocol', 'arp'])
+        self.cli_set(cls20 + ['bandwidth', '50mbit'])
+        self.cli_set(cls20 + ['match', 'R2', 'ip', 'source', 'address', '10.0.0.0/8'])
+
+        # used to crash: both classes default to priority 20 with different
+        # protocols
+        self.cli_commit()
+
+        filters = get_tc_filter_details(interface, 'ingress')
+        self.assertIn('filter parent ffff: protocol arp pref 1 u32', filters)
+        self.assertIn('filter parent ffff: protocol all pref 2 u32', filters)
+
+    def test_28_policy_shaper_match_order_declaration(self):
+        # T9134: without an explicit "priority" the filter order falls back to
+        # the per-class match index, i.e. declaration order - it is not aware of
+        # match specificity. Here the broad /24 is the FIRST match of class 10
+        # and the specific /32 is the SECOND match of class 20, so by default
+        # the broad match is evaluated first; an explicit "priority" is required
+        # to make the specific match win.
+        interface = self._interfaces[0]
+        shaper_name = f'qos-shaper-{interface}'
+        shaper_path = base_path + ['policy', 'shaper', shaper_name]
+        cls10 = shaper_path + ['class', '10']
+        cls20 = shaper_path + ['class', '20']
+
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(shaper_path + ['bandwidth', '100mbit'])
+        self.cli_set(shaper_path + ['default', 'bandwidth', '40mbit'])
+        self.cli_set(cls10 + ['bandwidth', '20mbit'])
+        # broad /24 (0a630100) is the first match of class 10
+        self.cli_set(
+            cls10 + ['match', 'BROAD', 'ip', 'destination', 'address', '10.99.1.0/24']
+        )
+        self.cli_set(cls20 + ['bandwidth', '20mbit'])
+        # specific /32 (0a630105) is the second match of class 20
+        self.cli_set(
+            cls20 + ['match', 'OTHER', 'ip', 'destination', 'address', '10.99.9.0/24']
+        )
+        self.cli_set(
+            cls20 + ['match', 'SPEC', 'ip', 'destination', 'address', '10.99.1.5/32']
+        )
+        self.cli_commit()
+
+        # default fallback is index-major: the broad /24 (index 1) precedes the
+        # specific /32 (index 2), regardless of specificity
+        filters = get_tc_filter_details(interface)
+        self.assertLess(filters.index('0a630100'), filters.index('0a630105'))
+
+        # an explicit priority on the specific match's class overrides the
+        # declaration-order fallback, so the specific /32 is evaluated first
+        self.cli_set(cls10 + ['priority', '5'])
+        self.cli_set(cls20 + ['priority', '1'])
+        self.cli_commit()
+
+        filters = get_tc_filter_details(interface)
+        self.assertLess(filters.index('0a630105'), filters.index('0a630100'))
 
 
     def test_25_shaper_set_dscp(self):

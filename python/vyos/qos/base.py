@@ -238,6 +238,46 @@ class QoSBase:
             pprint.pprint(config)
 
         if 'class' in config:
+            # T9134: every class match is installed as its own tc filter, and
+            # tc ties a filter priority ("prio"/"pref") to a single protocol -
+            # two filters with the same priority but different protocols (e.g.
+            # the default "all" and an explicit "arp") are rejected by the
+            # kernel and the commit fails. So every filter needs a priority
+            # that is unique across all classes.
+            #
+            # Rank the matches in evaluation order, then number them 1, 2, 3...:
+            #   - by class id for policies that key the filter on it
+            #     (round-robin, priority-queue), else
+            #   - by an explicit or default class "priority", else
+            #   - by the per-class match index (a shaper class with no priority)
+            # The last fallback orders matches by declaration position, not by
+            # match specificity, and it shares the number space with explicit
+            # priorities. This preserves the historical ordering, but it means
+            # overlapping matches whose relative order matters (e.g. a specific
+            # /32 vs a broad /24 in another class) must be given an explicit
+            # "priority" to be ordered deterministically.
+            #
+            # NOTE: this number is an internal evaluation-order rank, not the
+            # CLI "priority" value. The CLI "priority" still decides the order
+            # (and, on the shaper, the HTB class scheduling priority set in
+            # trafficshaper.py); it is not reused verbatim as the tc priority
+            # because it is not unique across classes.
+            filter_pref = {}
+            ranked = []
+            for cls, cls_config in config['class'].items():
+                for index, match in enumerate(cls_config.get('match', {}), start=1):
+                    if priority:
+                        key = int(cls)
+                    elif 'priority' in cls_config:
+                        key = int(cls_config['priority'])
+                    else:
+                        key = index
+                    ranked.append((key, (int(cls), match)))
+            # stable sort keeps declaration order among matches with equal keys
+            ranked.sort(key=lambda entry: entry[0])
+            for pref, (_, ident) in enumerate(ranked, start=1):
+                filter_pref[ident] = pref
+
             for cls, cls_config in config['class'].items():
                 self._build_base_qdisc(cls_config, int(cls))
 
@@ -251,12 +291,6 @@ class QoSBase:
                 # every match criteria has it's tc instance
                 filter_cmd_base = ['tc', 'filter', 'add', 'dev', self._interface,
                                     'parent', f'{self._parent:x}:']
-
-                if priority:
-                    filter_cmd_base += ['prio', str(cls)]
-                elif 'priority' in cls_config:
-                    prio = cls_config['priority']
-                    filter_cmd_base += ['prio', str(prio)]
 
                 if 'match' in cls_config:
                     has_filter = False
@@ -275,8 +309,7 @@ class QoSBase:
                         )
                         filter_cmd += ['protocol', filter_protocol]
 
-                        if self.qostype in ['shaper', 'shaper_hfsc'] and 'prio' not in filter_cmd:
-                            filter_cmd += ['prio', str(index)]
+                        filter_cmd += ['prio', str(filter_pref[(int(cls), match)])]
 
                         if 'mark' in match_config:
                             mark = match_config['mark']
