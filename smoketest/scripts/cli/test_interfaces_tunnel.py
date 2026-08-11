@@ -430,7 +430,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         ip_key = '20'
         tunnels = {
             'tun10': source_if,
-            'tun20': source_if_alt,
+            'tun20': source_if2,
         }
 
         for tunnel, interface in tunnels.items():
