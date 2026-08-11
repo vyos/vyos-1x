@@ -71,6 +71,57 @@ class TestVTIUpDownDBLogic(unittest.TestCase):
                 db.remove('vti0', 'conn-b', 'IKEv2')
                 self.assertFalse(db.wantsInterfaceUp('vti0'))
 
+    def test_concurrent_sas_same_connection(self):
+        """Connection entries are counted, not deduplicated.
+
+        A peer that re-establishes a tunnel before the local side has timed the
+        old IKE_SA out leaves two CHILD_SAs of the same connection installed at
+        once, and the hook fires up-client twice with identical arguments. The
+        teardown of the first must not bring down an interface the second is
+        still carrying.
+        """
+        from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
+
+        with patch('vyos.utils.vti_updown_db.Lock', MagicMock()):
+            with open_vti_updown_db_for_create_or_update() as db:
+                db.add('vti0', 'conn-a', 'IKEv2')
+                db.add('vti0', 'conn-a', 'IKEv2')
+                db.remove('vti0', 'conn-a', 'IKEv2')
+                # the second CHILD_SA is still installed
+                self.assertTrue(db.wantsInterfaceUp('vti0'))
+                db.remove('vti0', 'conn-a', 'IKEv2')
+                self.assertFalse(db.wantsInterfaceUp('vti0'))
+
+    def test_duplicate_entries_survive_a_reload(self):
+        """Occurrences are preserved across a file round-trip.
+
+        The two CHILD_SAs that produce them are rarely torn down in the same DB
+        session, so the count has to survive being written out and read back --
+        reading into a set would silently collapse it.
+        """
+        with open(self.tmpfile.name, 'w') as f:
+            f.write('vti0:conn-a:IKEv2 vti0:conn-a:IKEv2')
+
+        from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
+
+        with patch('vyos.utils.vti_updown_db.Lock', MagicMock()):
+            with open_vti_updown_db_for_create_or_update() as db:
+                db.remove('vti0', 'conn-a', 'IKEv2')
+                self.assertTrue(db.wantsInterfaceUp('vti0'))
+                db.remove('vti0', 'conn-a', 'IKEv2')
+                self.assertFalse(db.wantsInterfaceUp('vti0'))
+
+    def test_persistent_entries_are_not_counted(self):
+        """Persistent entries stay unique, so one remove() always clears them."""
+        from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
+
+        with patch('vyos.utils.vti_updown_db.Lock', MagicMock()):
+            with open_vti_updown_db_for_create_or_update() as db:
+                db.add('vti0')
+                db.add('vti0')
+                db.remove('vti0')
+                self.assertFalse(db.wantsInterfaceUp('vti0'))
+
     def test_remove_all_other_interfaces(self):
         """removeAllOtherInterfaces() drops entries for interfaces not in the keep list."""
         from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
