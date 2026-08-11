@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import importlib.util
+import os
 import re
 import sys
 import syslog
@@ -33,6 +34,7 @@ from vyos.configquery import op_mode_config_dict
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.commit import commit_in_progress2
+from vyos.utils.file import read_file
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
@@ -54,14 +56,30 @@ IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan|pppoe|sstpc|wwan)")
 _dynamic_qos_interfaces: set[str] = set()
 
 # Per-interface previous operstate, used to suppress DHCP restarts on
-# UP-to-UP re-notifications (e.g. post-migration gratuitous-ARP events).
+# UP-to-UP re-notifications (e.g. post-migration gratuitous-ARP events), and
+# to detect edges missed while netlink events were drained during a commit.
 _iface_prev_operstate: dict[str, str] = {}
+
+# True while the main loop is draining netlink events because a config
+# commit holds the lock. When it clears we reconcile DHCP clients against
+# live operstate so a transition that only happened inside the drain window
+# is not lost (T9086).
+_in_commit_skip = False
 
 def match_iface(ifname: str) -> bool:
     """ Helper function returning true if interface name is a match for further
     processing (e.g. restart of DHCP(v6) client)
     """
     return IFACE_RE.match(ifname) is not None
+
+def _read_operstate(ifname: str) -> Optional[str]:
+    """Read live kernel operstate from sysfs (uppercase), or None if unavailable.
+
+    Values match IFLA_OPERSTATE names used by RTM_NEWLINK (UP, DOWN, ...).
+    See Documentation/ABI/testing/sysfs-class-net.
+    """
+    fname = f'/sys/class/net/{ifname}/operstate'
+    return read_file(fname, defaultonfailure='').strip().upper() or None
 
 def _is_dynamic_qos_iface(ifname: str) -> bool:
     """ Helper function returning true if interface requires QoS re-apply
@@ -162,7 +180,45 @@ def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
 
     return None
 
+def _reconcile_dhcp_operstate() -> None:
+    """After a commit drain window, sync DHCP clients to live operstate (T9086).
+
+    Events discarded while commit_in_progress2() was true may have included a
+    real UP/DOWN edge. Compare each interface's live sysfs operstate against
+    the last one we acted on and run the normal DHCP handler only where they
+    disagree.
+
+    Interfaces never seen before are seeded into the tracker without acting -
+    conf_mode owns DHCP bring-up across commits for those.
+    """
+    try:
+        ifnames = os.listdir('/sys/class/net')
+    except OSError as e:
+        syslog.syslog(syslog.LOG_ERR, f'Failed to list interfaces for reconcile: {e}')
+        return
+
+    for ifname in ifnames:
+        if not match_iface(ifname):
+            continue
+
+        operstate = _read_operstate(ifname)
+        if operstate not in ['UP', 'DOWN']:
+            continue
+
+        prev = _iface_prev_operstate.get(ifname)
+        if prev is None:
+            _iface_prev_operstate[ifname] = operstate
+            continue
+        if prev == operstate:
+            continue
+
+        syslog.syslog(syslog.LOG_DEBUG,
+                      f'Reconcile {ifname}: prev={prev} current={operstate}')
+        _handle_dhcp_events(operstate, ifname)
+
 def main():
+    global _in_commit_skip
+
     syslog.openlog(ident="vyos-netlinkd",
                    logoption=syslog.LOG_PID,
                    facility=syslog.LOG_DAEMON)
@@ -200,19 +256,36 @@ def main():
             continue
 
         try:
-            # Wait for up to 1 second for a netlink message
+            # Wait for up to 1 second for a netlink message. The timeout also
+            # lets us notice a commit ending even with no further netlink
+            # traffic, so we can reconcile (T9086).
             rlist, _, _ = select.select([fd], [], [], 1.0)
-            if not rlist:
-                # timeout - retry
+
+            if commit_in_progress2():
+                # Drain the socket instead of leaving messages queued, so a
+                # stale event (e.g. a DOWN from a disable that was already
+                # re-enabled) can't be processed as fresh once the commit
+                # ends (T9086).
+                if not _in_commit_skip:
+                    syslog.syslog(syslog.LOG_DEBUG,
+                                  'Config commit in progress, draining netlink events without acting')
+                    _in_commit_skip = True
+                if rlist:
+                    try:
+                        ipr.get()
+                    except NetlinkError as e:
+                        syslog.syslog(syslog.LOG_ERR,
+                                      f'Netlink error while draining during commit: {e}')
                 continue
 
-            # Check if a config commit is in progress before processing any
-            # messages. This avoids blocking per-message and reduces unnecessary
-            # calls to commit_in_progress2()
-            if commit_in_progress2():
-                syslog.syslog(syslog.LOG_DEBUG,
-                              'Config commit in progress, skipping netlink events')
-                sleep(1)
+            if _in_commit_skip:
+                _in_commit_skip = False
+                syslog.syslog(syslog.LOG_INFO,
+                              'Config commit finished, reconciling DHCP client state with operstate')
+                _reconcile_dhcp_operstate()
+
+            if not rlist:
+                # timeout - retry
                 continue
 
             # Receive and process any messages
