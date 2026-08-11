@@ -55,7 +55,11 @@ def ask_input(question, default='', numeric_only=False, valid_responses=[],
     return response
 
 def ask_yes_no(question, default=False) -> bool:
-    """Ask a yes/no question via input() and return their answer."""
+    """Ask a yes/no question via input() and return their answer.
+
+    If stdin is not a TTY (e.g. non-interactive scripts), returns
+    default without prompting.
+    """
     from sys import stdin, stdout
 
     if not stdin.isatty():
