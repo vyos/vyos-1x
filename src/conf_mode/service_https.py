@@ -112,6 +112,9 @@ def verify(https):
     else:
         Warning('No certificate specified, using build-in self-signed certificates. '\
                 'Do not use them in a production environment!')
+    if dict_search('certificates.verify_client', https) is not None:
+        if dict_search('certificates.ca_certificate', https) is None:
+            raise ConfigError('CA certificate must be configured for mTLS client verification')
 
     # Check if server port is already in use by a different application
     listen_address = ['0.0.0.0']
@@ -212,6 +215,20 @@ def generate(https):
                 tmp_path.update({'dh_file' : dh_path})
 
         https['certificates'].update(tmp_path)
+    # Write mTLS CA chain if verify-client is configured
+    if dict_search('certificates.verify_client', https) and dict_search('certificates.ca_certificate', https):
+        ca_name = https['certificates']['ca_certificate']
+        pki_ca = dict_search(f'pki.ca.{ca_name}', https)
+        if pki_ca:
+            # Build full chain: intermediate + root CAs for client cert verification
+            loaded_ca_certs = {
+                load_certificate(cert_data['certificate'])
+                for cert_data in dict_search('pki.ca', https, default={}).values()
+            }
+            mtls_ca_path = os.path.join(cert_dir, f'{ca_name}_mtls_ca.pem')
+            ca_chain = '\n'.join(encode_certificate(c) for c in loaded_ca_certs)
+            write_file(mtls_ca_path, ca_chain, user=user, group=group, mode=0o644)
+            https['certificates']['mtls_ca_path'] = mtls_ca_path
 
     render(config_file, 'https/nginx.default.j2', https)
     render(systemd_override, 'https/override.conf.j2', https)

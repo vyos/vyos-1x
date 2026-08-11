@@ -199,6 +199,25 @@
               #include <include/pki/ca-certificate.xml.i>
               #include <include/pki/certificate.xml.i>
               #include <include/pki/dh-params.xml.i>
+              <leafNode name="verify-client">
+                <properties>
+                  <help>Require client certificate verification (mTLS)</help>
+                  <completionHelp>
+                    <list>optional required</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>optional</format>
+                    <description>Request but do not require client certificate</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>required</format>
+                    <description>Require valid client certificate</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(optional|required)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <leafNode name="tls-version">

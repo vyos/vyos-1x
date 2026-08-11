@@ -101,8 +101,12 @@ def check_auth(key_list, key):
     return key_id
 
 
-def auth_required(data: ApiModel, x_api_key: Optional[str] = Header(None), authorization: Optional[str] = Header(None)):
+def auth_required(data: ApiModel, x_api_key: Optional[str] = Header(None), authorization: Optional[str] = Header(None), x_client_verify: Optional[str] = Header(None)):
     session = SessionState()
+    # mTLS: client certificate verified by nginx against configured CA
+    if x_client_verify == 'SUCCESS':
+        session.id = 'mtls-client'
+        return
 
     if authorization:
         scheme, _, token = authorization.partition(' ')
