@@ -7,12 +7,15 @@ open Commitd_client
 
 module VT = Vytree
 module CT = Config_tree
-module CD = Config_diff
 module RT = Reference_tree
 module TA = Tree_alg
-module CM = Commit
-module VC = Vycall_client
 module CDict = Config_dict
+module D = Diff
+module DT = Diff_tree
+module DC = Diff_compare
+module DS = Diff_show
+module UN = Union
+module M = Mask
 
 module I = Internal.Make(Config_tree)
 module IR = Internal.Make(Reference_tree)
@@ -416,57 +419,68 @@ let copy_node c_ptr old_path new_path =
     | Vytree.Insert_error s -> error_message := s; 1
 
 let diff_tree path c_ptr_l c_ptr_r =
-    (* alert exn CD.diff_tree:
-        [Config_diff.Incommensurable] caught
-        [Config_diff.Empty_comparison] caught
+    (* alert exn DT.diff_tree:
+        [Diff.Incommensurable] caught
+        [Diff.Empty_comparison] caught
      *)
     let path = split_on_whitespace path in
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        let ct_ret = (CD.diff_tree[@alert "-exn"]) path ct_l ct_r in
+        let ct_ret = (DT.diff_tree[@alert "-exn"]) path ct_l ct_r in
         Ctypes.Root.create ct_ret
     with
-        | CD.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
-        | CD.Empty_comparison -> error_message := "Empty comparison"; Ctypes.null
+        | D.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
+        | D.Empty_comparison -> error_message := "Empty comparison"; Ctypes.null
 
 let diff_compare cmds path c_ptr_l c_ptr_r =
-    (* alert exn CD.show_diff:
-        [Config_diff.Incommensurable] caught
-        [Config_diff.Empty_comparison] caught
+    (* alert exn DC.diff_compare:
+        [Diff.Incommensurable] caught
+        [Diff.Empty_comparison] caught
      *)
     let path = split_on_whitespace path in
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        (CD.diff_compare[@alert "-exn"]) ~cmds:cmds path ct_l ct_r
+        (DC.diff_compare[@alert "-exn"]) ~cmds:cmds path ct_l ct_r
     with
-        | CD.Incommensurable -> error_message := "Incommensurable"; "#1@"
-        | CD.Empty_comparison -> error_message := "Empty comparison"; "#1@"
+        | D.Incommensurable -> error_message := "Incommensurable"; "#1@"
+        | D.Empty_comparison -> error_message := "Empty comparison"; "#1@"
+
+let diff_show r_ptr c_ptr_l c_ptr_r path =
+    let path = split_on_whitespace path in
+    let rt = Root.get r_ptr in
+    let ct_l = Root.get c_ptr_l in
+    let ct_r = Root.get c_ptr_r in
+    try
+        (DS.diff_show[@alert "-exn"]) rt path ct_l ct_r
+    with
+        | D.Incommensurable -> error_message := "Incommensurable"; "#1@"
+        | D.Empty_comparison -> error_message := "Empty comparison"; "#1@"
 
 let tree_union c_ptr_l c_ptr_r =
-    (* alert exn CD.tree_union:
+    (* alert exn UN.tree_union:
         [Tree_alg.Incompatible_union] caught
         [Tree_alg.Nonexistent_child] caught
      *)
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        let ct_ret = (CD.tree_union[@alert "-exn"]) ct_l ct_r in
+        let ct_ret = (UN.tree_union[@alert "-exn"]) ct_l ct_r in
         Ctypes.Root.create ct_ret
     with
         | TA.Nonexistent_child -> error_message := "Nonexistent child"; Ctypes.null
         | TA.Incompatible_union -> error_message := "Trees must have equivalent root"; Ctypes.null
 
 let tree_merge destructive c_ptr_l c_ptr_r =
-    (* alert exn CD.tree_merge:
+    (* alert exn UN.tree_merge:
         [Tree_alg.Incompatible_union] caught
         [Tree_alg.Nonexistent_child] caught
      *)
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        let ct_ret = (CD.tree_merge[@alert "-exn"]) ~destructive:destructive ct_l ct_r in
+        let ct_ret = (UN.tree_merge[@alert "-exn"]) ~destructive:destructive ct_l ct_r in
         Ctypes.Root.create ct_ret
     with
         | TA.Nonexistent_child -> error_message := "Nonexistent child"; Ctypes.null
@@ -488,19 +502,33 @@ let reference_tree_to_json internal_cache from_dir to_file =
             let s = Printf.sprintf "Write_error \'%s\'" msg in
             error_message := s; 1
 
-let mask_tree c_ptr_l c_ptr_r exclusive =
-    (* alert exn CD.mask_tree:
-        [Config_diff.Incommensurable] caught
-        [Config_diff.Empty_comparison] caught
+let mask_inclusive c_ptr_l c_ptr_r =
+    (* alert exn M.mask_inclusive:
+        [Diff.Incommensurable] caught
+        [Diff.Empty_comparison] caught
      *)
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        let ct_ret = (CD.mask_tree[@alert "-exn"]) ~exclusive:exclusive ct_l ct_r in
+        let ct_ret = (M.mask_inclusive[@alert "-exn"]) ct_l ct_r in
         Ctypes.Root.create ct_ret
     with
-        | CD.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
-        | CD.Empty_comparison -> error_message := "Empty comparison"; Ctypes.null
+        | D.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
+        | D.Empty_comparison -> error_message := "Empty comparison"; Ctypes.null
+
+let mask_exclusive c_ptr_l c_ptr_r =
+    (* alert exn M.mask_exclusive:
+        [Diff.Incommensurable] caught
+        [Diff.Empty_comparison] caught
+     *)
+    let ct_l = Root.get c_ptr_l in
+    let ct_r = Root.get c_ptr_r in
+    try
+        let ct_ret = (M.mask_exclusive[@alert "-exn"]) ct_l ct_r in
+        Ctypes.Root.create ct_ret
+    with
+        | D.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
+        | D.Empty_comparison -> error_message := "Empty comparison"; Ctypes.null
 
 let subtree_from_partial r_ptr c_ptr i_ptr path =
     let rt = Root.get r_ptr in
@@ -509,10 +537,10 @@ let subtree_from_partial r_ptr c_ptr i_ptr path =
     let path = split_on_whitespace path in
     try
         error_message := "";
-        let ct_ret = (CD.subtree_from_partial[@alert "-exn"]) rt ct input path in
+        let ct_ret = (Derived.subtree_from_partial[@alert "-exn"]) rt ct input path in
         Ctypes.Root.create ct_ret
     with
-        CD.Malformed_path s ->
+        Derived.Malformed_path s ->
             error_message := s; Ctypes.null
 
 let validate_tree_filter c_ptr rt_cache_path validator_dir =
@@ -578,10 +606,12 @@ struct
   let () = I.internal "return_values" ((ptr void) @-> string @-> returning string) return_values
   let () = I.internal "diff_tree" (string @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) diff_tree
   let () = I.internal "diff_compare" (bool @-> string @-> (ptr void) @-> (ptr void) @-> returning string) diff_compare
+  let () = I.internal "diff_show" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning string) diff_show
   let () = I.internal "tree_union" ((ptr void) @-> (ptr void) @-> returning (ptr void)) tree_union
   let () = I.internal "tree_merge" (bool @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) tree_merge
   let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> returning int) reference_tree_to_json
-  let () = I.internal "mask_tree" ((ptr void) @-> (ptr void) @-> bool @-> returning (ptr void)) mask_tree
+  let () = I.internal "mask_inclusive" ((ptr void) @-> (ptr void) @-> returning (ptr void)) mask_inclusive
+  let () = I.internal "mask_exclusive" ((ptr void) @-> (ptr void) @-> returning (ptr void)) mask_exclusive
   let () = I.internal "subtree_from_partial" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning (ptr void)) subtree_from_partial
   let () = I.internal "validate_tree_filter" ((ptr void) @-> string @-> string @-> returning (ptr void)) validate_tree_filter
   let () = I.internal "config_dict" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> bool @-> bool @-> returning string) config_dict
