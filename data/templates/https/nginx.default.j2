@@ -51,7 +51,7 @@ server {
 {% if certificates.mtls_ca_path is vyos_defined %}
     # mTLS - client certificate verification
     ssl_client_certificate {{ certificates.mtls_ca_path }};
-    ssl_verify_client optional;
+    ssl_verify_client {{ certificates.verify_client }};
     ssl_verify_depth 2;
 {% endif %}
     # proxy settings for HTTP API, if enabled; 503, if not
