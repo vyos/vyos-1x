@@ -20,6 +20,7 @@ import json
 from html import escape
 from enum import Enum
 from typing import List
+from typing import Optional
 from typing import Union
 from typing import Dict
 from typing import Self
@@ -52,7 +53,7 @@ def success(data):
 
 
 class ApiModel(BaseModel):
-    key: StrictStr
+    key: Optional[StrictStr] = None
 
 
 class BasePathModel(BaseModel):

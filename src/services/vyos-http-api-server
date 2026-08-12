@@ -184,9 +184,13 @@ def initialization(session: SessionState, app: FastAPI = app):
     rest_config = server_config.get('rest', {})
     session.debug = bool('debug' in rest_config)
     session.strict = bool('strict' in rest_config)
-    if isinstance(rest_config, dict) and 'authentication' in rest_config:
-        session.rest_token_exp = rest_config['authentication']['expiration']
-        session.rest_secret_len = rest_config['authentication']['secret_length']
+    if isinstance(rest_config, dict):
+        auth = rest_config.get('authentication', {})
+        if isinstance(auth, dict):
+            if 'expiration' in auth:
+                session.rest_token_exp = int(auth['expiration'])
+            if 'secret_length' in auth:
+                session.rest_secret_len = int(auth['secret_length'])
 
     graphql_config = server_config.get('graphql', {})
     session.origins = graphql_config.get('cors', {}).get('allow_origin', [])

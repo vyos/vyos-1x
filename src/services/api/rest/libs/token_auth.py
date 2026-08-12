@@ -14,25 +14,30 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import threading
 from secrets import token_hex
 
 import jwt
 
 from ...session import SessionState
 
+_secret_lock = threading.Lock()
+
 
 def init_secret():
     state = SessionState()
     if state.rest_secret is not None:
         return
-    length = state.rest_secret_len or 32
-    state.rest_secret = token_hex(length)
+    length = int(state.rest_secret_len or 32)
+    with _secret_lock:
+        if state.rest_secret is None:
+            state.rest_secret = token_hex(length)
 
 
 def generate_token(key_id: str) -> dict:
     state = SessionState()
     init_secret()
-    exp_interval = state.rest_token_exp or 3600
+    exp_interval = int(state.rest_token_exp or 3600)
     expiration = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
         seconds=exp_interval
     )
