@@ -630,14 +630,14 @@ def mask_inclusive(left, right, libpath=LIBPATH):
 
     try:
         __lib = cdll.LoadLibrary(libpath)
-        __mask_tree = __lib.mask_tree
-        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
-        __mask_tree.restype = c_void_p
+        __mask_inclusive = __lib.mask_inclusive
+        __mask_inclusive.argtypes = [c_void_p, c_void_p]
+        __mask_inclusive.restype = c_void_p
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
 
-        res = __mask_tree(left.get_tree(), right.get_tree(), False)
+        res = __mask_inclusive(left.get_tree(), right.get_tree())
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
@@ -656,14 +656,14 @@ def mask_exclusive(left, right, libpath=LIBPATH):
 
     try:
         __lib = cdll.LoadLibrary(libpath)
-        __mask_tree = __lib.mask_tree
-        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
-        __mask_tree.restype = c_void_p
+        __mask_exclusive = __lib.mask_exclusive
+        __mask_exclusive.argtypes = [c_void_p, c_void_p]
+        __mask_exclusive.restype = c_void_p
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
 
-        res = __mask_tree(left.get_tree(), right.get_tree(), True)
+        res = __mask_exclusive(left.get_tree(), right.get_tree())
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
