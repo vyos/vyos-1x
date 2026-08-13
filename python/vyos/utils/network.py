@@ -25,8 +25,10 @@ def _are_same_ip(one, two):
     from vyos.template import is_ipv4
     # compare the binary representation of the IP
     f_one = AF_INET if is_ipv4(one) else AF_INET6
-    s_two = AF_INET if is_ipv4(two) else AF_INET6
-    return inet_pton(f_one, one) == inet_pton(f_one, two)
+    f_two = AF_INET if is_ipv4(two) else AF_INET6
+    if f_one != f_two:
+        return False
+    return inet_pton(f_one, one) == inet_pton(f_two, two)
 
 def get_protocol_by_name(protocol_name):
     """Get protocol number by protocol name
@@ -119,9 +121,9 @@ def get_vrf_members(vrf: str) -> list:
     :return: list
     """
     interfaces = []
+    if not interface_exists(vrf):
+        return interfaces
     try:
-        if not interface_exists(vrf):
-            raise ValueError(f'VRF "{vrf}" does not exist!')
         output = cmdl(['ip', '--json', '--brief', 'link', 'show', 'vrf', vrf])
         answer = loads(output)
         for data in answer:
@@ -129,7 +131,7 @@ def get_vrf_members(vrf: str) -> list:
                 # Skip PIM interfaces which appears in VRF
                 if 'pim' not in data.get('ifname'):
                     interfaces.append(data.get('ifname'))
-    except:
+    except Exception:
         pass
     return interfaces
 
@@ -217,7 +219,8 @@ def get_interface_namespace(interface: str):
     """
     # Bail out early if netns does not exist
     tmp = cmdl(['ip', '--json', 'netns', 'ls'])
-    if not tmp: return None
+    if not tmp:
+        return None
 
     for ns in loads(tmp):
         netns = f'{ns["name"]}'
@@ -337,7 +340,7 @@ def mac2eui64(mac, prefix=None):
             net = ip_network(prefix, strict=False)
             euil = int('0x{0}'.format(eui64), 16)
             return str(net[euil])
-        except:  # pylint: disable=bare-except
+        except Exception:
             return
 
 
@@ -379,7 +382,7 @@ def check_port_availability(address: str = None, port: int = 0,
     protocol = socket.SOCK_STREAM if protocol == 'tcp' else socket.SOCK_DGRAM
     try:
         addr_info = socket.getaddrinfo(address, port, socket.AF_UNSPEC, protocol)
-    except socket.gaierror as e:
+    except socket.gaierror:
         print(f'Invalid address: {address}')
         return False
 
@@ -498,7 +501,6 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
         json_out = loads(out)
         addresses = jmespath.search("[].addr_info[].{family: family, address: local, prefixlen: prefixlen}", json_out)
         for address_info in addresses:
-            family = address_info['family']
             address = address_info['address']
             prefixlen = address_info['prefixlen']
             # Remove the interface name if present in the given address
@@ -686,7 +688,7 @@ def ipv6_prefix_length(low, high):
     try:
         lo = bytearray(socket.inet_pton(socket.AF_INET6, low))
         hi = bytearray(socket.inet_pton(socket.AF_INET6, high))
-    except:
+    except Exception:
         return None
 
     xor = bytearray(a ^ b for a, b in zip(lo, hi))
@@ -750,7 +752,7 @@ def is_valid_ipv4_address_or_range(addr: str) -> bool:
             return is_valid_ipv4_address_or_range(split[0]) and is_valid_ipv4_address_or_range(split[1])
         else:
             return ip_network(addr).version == 4
-    except:
+    except Exception:
         return False
 
 def is_valid_ipv6_address_or_range(addr: str) -> bool:
@@ -766,7 +768,7 @@ def is_valid_ipv6_address_or_range(addr: str) -> bool:
             return is_valid_ipv6_address_or_range(split[0]) and is_valid_ipv6_address_or_range(split[1])
         else:
             return ip_network(addr).version == 6
-    except:
+    except Exception:
         return False
 
 
