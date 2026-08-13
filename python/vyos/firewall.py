@@ -103,8 +103,6 @@ def nft_action(vyos_action):
     return vyos_action
 
 def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
-    """Translate a single firewall rule's config dict into a list of
-    nftables match/verdict expression strings for the given hook/family."""
     output = []
 
     if ip_name == 'ip6':
@@ -245,7 +243,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 geoip_prefix = 'CC' if country_code else 'ASN'
                 operator = ''
                 hook_name = ''
-                if dict_search_args(side_conf, 'geoip', 'inverse_match') is not None:
+                if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
                     operator = '!='
                 if hook == 'FWD':
                     hook_name = 'forward'
@@ -256,7 +254,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if hook == 'PRE':
                     hook_name = 'prerouting'
                 if hook == 'NAM':
-                    hook_name = 'name'
+                    hook_name = f'name'
                 # for policy
                 if hook == 'route' or hook == 'route6':
                     hook_name = hook
@@ -435,7 +433,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
 
     if 'packet_type' in rule_conf:
-        output.append('pkttype ' + rule_conf['packet_type'])
+        output.append(f'pkttype ' + rule_conf['packet_type'])
 
     if 'dscp' in rule_conf:
         dscp_str = ','.join(rule_conf['dscp'])
