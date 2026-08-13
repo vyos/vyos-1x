@@ -492,6 +492,17 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     from vyos.utils.process import rc_cmd
     from ipaddress import ip_interface
 
+    # Remove the interface name if present in the given address
+    if '%' in addr:
+        addr = addr.split('%')[0]
+
+    # is_intf_addr_assigned() only checks a single address; a hyphenated
+    # range (a valid address_group/address_range member elsewhere) is
+    # never assigned to an interface as such and ip_interface() would
+    # raise ValueError on it instead of returning False
+    if '-' in addr:
+        return False
+
     netns_cmd = f'ip netns exec {netns}' if netns else ''
     rc, out = rc_cmd(f'{netns_cmd} ip --json address show dev {ifname}')
     if rc == 0:
@@ -501,9 +512,6 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
             family = address_info['family']
             address = address_info['address']
             prefixlen = address_info['prefixlen']
-            # Remove the interface name if present in the given address
-            if '%' in addr:
-                addr = addr.split('%')[0]
             interface = ip_interface(f"{address}/{prefixlen}")
             if ip_interface(addr) == interface or address == addr:
                 return True

@@ -24,6 +24,13 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertTrue(vyos.utils.network.is_addr_assigned('::1'))
         self.assertFalse(vyos.utils.network.is_addr_assigned('127.251.255.123'))
 
+    def test_is_addr_assigned_hyphenated_range(self):
+        # A hyphenated address range can never be assigned to an interface
+        # as such; is_intf_addr_assigned() must return False for it
+        # instead of raising ValueError from ip_interface()
+        self.assertFalse(vyos.utils.network.is_addr_assigned('127.0.0.1-127.0.0.2'))
+        self.assertFalse(vyos.utils.network.is_addr_assigned('::1-::2'))
+
     def test_is_ipv6_link_local(self):
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('169.254.0.1'))
         self.assertTrue(vyos.utils.network.is_ipv6_link_local('fe80::'))
