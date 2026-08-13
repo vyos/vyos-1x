@@ -45,6 +45,19 @@
     </constraint>
   </properties>
 </leafNode>
+<leafNode name="ipv6-peer-interface-id-secret">
+  <properties>
+    <help>Secret key for generating calling-sid based IPv6 peer interface identifier (IID)</help>
+    <valueHelp>
+      <format>txt</format>
+      <description>Secret key string used with ipv6-peer-interface-id calling-sid</description>
+    </valueHelp>
+    <constraint>
+        <regex>[!-~]{16,128}</regex>
+    </constraint>
+      <constraintErrorMessage>Secret must be 16 to 128 printable non-whitespace ASCII characters</constraintErrorMessage>
+  </properties>
+</leafNode>
 <leafNode name="ipv6-accept-peer-interface-id">
   <properties>
     <help>Accept peer interface identifier</help>
