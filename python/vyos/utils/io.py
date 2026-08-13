@@ -57,13 +57,23 @@ def ask_input(question, default='', numeric_only=False, valid_responses=[],
 def ask_yes_no(question, default=False) -> bool:
     """Ask a yes/no question via input() and return their answer.
 
-    If stdin is not a TTY (e.g. non-interactive scripts), returns
-    default without prompting.
+    Raises EOFError immediately if stdin is not a TTY (e.g. non-interactive
+    scripts), instead of ever calling input(). A silent default here has
+    caused real incidents (T9185): a caller that forgets to guard an
+    interactive-only prompt gets no error and no visible hang, just a
+    process quietly pegging a core. Callers that are meant to run
+    non-interactively must check for that explicitly (see the no_prompt
+    parameter used across config_mgmt.py/backend.py) rather than rely on
+    this function to fall back to a default.
     """
     from sys import stdin, stdout
 
     if not stdin.isatty():
-        return default
+        raise EOFError(
+            f'Cannot prompt "{question}" ([Y/n] default={default}): '
+            'stdin is not a TTY. Pass an explicit non-interactive option '
+            '(e.g. no_prompt/-y) instead of relying on ask_yes_no().'
+        )
     default_msg = "[Y/n]" if default else "[y/N]"
     while True:
         try:
