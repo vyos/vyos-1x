@@ -183,6 +183,63 @@ class TestUnmatchedCandidates(unittest.TestCase):
         self.assertEqual(candidates, [])
 
 
+class TestMatchPendingNodes(unittest.TestCase):
+    """A pending node's hw-id is unknown by construction - there's no MAC
+    to check a candidate against - so matching must only ever happen in
+    the unambiguous exactly-one-pending/exactly-one-candidate case per
+    type. Confirmed in the field: a naive deterministic fill (sorting
+    pending nodes and candidates together like numeric gaps) silently
+    bound a configured node's address to a different physical NIC than
+    its own, because an already-provisioned box's existing names have no
+    relationship to PCIe/MAC sort order. Guessing in any other
+    cardinality risks the same mistake; leaving the node unresolved and
+    reported is safer.
+    """
+
+    def setUp(self):
+        patcher = mock.patch.object(resolver, 'is_wireless_interface',
+                                     return_value=False)
+        self.is_wireless = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_unambiguous_single_pending_single_candidate_matches(self):
+        pending = {'ethernet': {'eth1'}, 'wireless': set()}
+        candidates = [('m1', 'eth9')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'m1': 'eth1'})
+
+    def test_two_pending_one_candidate_no_match(self):
+        # can't tell which of the two pending nodes this one candidate
+        # belongs to - neither is matched.
+        pending = {'ethernet': {'eth1', 'eth4'}, 'wireless': set()}
+        candidates = [('m1', 'eth9')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+    def test_one_pending_two_candidates_no_match(self):
+        # the field-reported shape: an unrelated second candidate (e.g.
+        # freed by a different interface's config being fully deleted in
+        # the same boot) is enough to make this genuinely ambiguous, even
+        # though it isn't itself pending anything.
+        pending = {'ethernet': {'eth1'}, 'wireless': set()}
+        candidates = [('m1', 'eth9'), ('m2', 'eth8')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+    def test_ethernet_and_wireless_matched_independently(self):
+        self.is_wireless.side_effect = lambda name: name == 'radio0'
+        pending = {'ethernet': {'eth1'}, 'wireless': {'wlan2'}}
+        candidates = [('m1', 'ifaceB'), ('m2', 'radio0')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'m1': 'eth1', 'm2': 'wlan2'})
+
+    def test_no_pending_returns_empty(self):
+        pending = {'ethernet': set(), 'wireless': set()}
+        candidates = [('m1', 'eth9')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+
 class TestComputeRenamePlan(unittest.TestCase):
     """The authoritative rename plan is what fixes the multi-vendor NIC
     boot race: it is driven purely by MAC address, independent of
@@ -558,13 +615,13 @@ class TestComputeBootstrapPlan(unittest.TestCase):
         self.assertEqual(plan.get('ifaceB'), 'eth0')
 
 
-class TestComputeBootstrapPlanPendingSlots(unittest.TestCase):
-    """A pending node's name (see get_pending_hwid_nodes()) carries no
-    special reservation in compute_bootstrap_plan() at all - it is just
-    another name with nothing configured for it, exactly like a numeric
-    gap. main() is what attributes a candidate landing on such a name
-    back to a "reclaim" afterward, by cross-checking it against
-    get_pending_hwid_nodes() - not this function's job (see main()).
+class TestComputeBootstrapPlanGapFill(unittest.TestCase):
+    """compute_bootstrap_plan() fills ordinary numeric gaps (no config
+    trace at all) deterministically by PCIe distance then MAC. A pending
+    node (hw-id deleted, node kept - see get_pending_hwid_nodes()) is a
+    separate concern here: passing `pending` reserves its name so an
+    unrelated candidate can never squat on it and inherit its settings -
+    only match_pending_nodes() may fill it, and only when unambiguous.
     """
 
     def setUp(self):
@@ -579,9 +636,8 @@ class TestComputeBootstrapPlanPendingSlots(unittest.TestCase):
         self.addCleanup(distance_patcher.stop)
 
     def test_open_name_filled_like_an_ordinary_gap(self):
-        # 'eth1' has nothing configured for it - whether that is because
-        # its whole node was deleted or just its hw-id makes no
-        # difference here, it is simply the lowest open name.
+        # 'eth1' has nothing configured for it and no pending reservation
+        # - it is simply the lowest open name.
         configured = {'m0': 'eth0'}
         current = {'eth0': 'm0', 'eth9': 'new-mac'}
         plan = resolver.compute_bootstrap_plan(configured, current, {})
@@ -598,15 +654,10 @@ class TestComputeBootstrapPlanPendingSlots(unittest.TestCase):
         self.assertEqual(plan.get('eth8'), 'eth1')
         self.assertEqual(plan.get('eth9'), 'eth4')
 
-    def test_closed_subset_recovers_original_slot_assignment(self):
-        # the vyos-build check-qemu-install --ifnametest shape, at the
-        # function level: two NICs' original slots opened up in the same
-        # boot (one via full node deletion, one via hw-id-only deletion).
-        # PCIe distance and MAC are static per-NIC properties, so the two
-        # freed candidates' relative sort order is identical to their
-        # original first-boot assignment order - re-running the same
-        # ascending sort over just the two open names recovers each one's
-        # own original slot, with no pending-specific logic involved.
+    def test_two_plain_gaps_fill_in_ascending_order(self):
+        # two fully-deleted interfaces (no hw-id, no pending node either)
+        # - both ordinary gaps, filled by the same ascending PCIe/MAC
+        # sort as any other unconfigured hardware.
         configured = {
             '00:00:5e:00:53:00': 'eth0', '00:00:5e:00:53:01': 'eth1',
             '00:00:5e:00:53:03': 'eth3', '00:00:5e:00:53:05': 'eth5',
@@ -623,15 +674,14 @@ class TestComputeBootstrapPlanPendingSlots(unittest.TestCase):
         # real boot reproduction (via the resolver's own status file,
         # captured mid-failure): the cosmetic fast-path this boot had
         # every configured mac sitting on some OTHER configured mac's
-        # target name (a full rotation), including the two open names
-        # (eth1 - pending, eth6 - fully deleted) both currently squatted
-        # by macs that are about to move elsewhere via a rightful-owner
-        # move. existing_plan's SOURCE names looked "taken" at the exact
-        # moment this function ran, but safe_bulk_rename()'s two-phase
-        # staging vacates every source before any target is claimed - so
-        # they must not count as taken, or the two real candidates get
-        # needlessly pushed to fresh eth8/eth9-style slots instead of
-        # their own open names.
+        # target name (a full rotation), including the two plain gaps
+        # (eth1, eth6) both currently squatted by macs that are about to
+        # move elsewhere via a rightful-owner move. existing_plan's
+        # SOURCE names looked "taken" at the exact moment this function
+        # ran, but safe_bulk_rename()'s two-phase staging vacates every
+        # source before any target is claimed - so they must not count
+        # as taken, or the two real candidates get needlessly pushed to
+        # fresh eth8/eth9-style slots instead of their own open names.
         configured = {
             '00:00:5e:00:53:00': 'eth0', '00:00:5e:00:53:02': 'eth2',
             '00:00:5e:00:53:03': 'eth3', '00:00:5e:00:53:04': 'eth4',
@@ -644,13 +694,37 @@ class TestComputeBootstrapPlanPendingSlots(unittest.TestCase):
             'eth0': '00:00:5e:00:53:06',  # unconfigured - squats on eth0
             'eth5': '00:00:5e:00:53:01',  # unconfigured - squats on eth5
         }
-        existing_plan = resolver.compute_rename_plan(configured, current,
-                                                      {'ethernet': {'eth1'},
-                                                       'wireless': set()})
+        existing_plan = resolver.compute_rename_plan(configured, current)
         plan = resolver.compute_bootstrap_plan(configured, current,
                                                 existing_plan)
         self.assertEqual(plan.get('eth5'), 'eth1')
         self.assertEqual(plan.get('eth0'), 'eth6')
+
+    def test_pending_name_reserved_against_unrelated_bootstrap_candidate(self):
+        # 'eth1' is pending (no hw-id) - two unrelated new NICs discovered
+        # this boot must not land on it just because sequential numbering
+        # would otherwise reach it as the second assignment.
+        configured = {}
+        pending = {'ethernet': {'eth1'}, 'wireless': set()}
+        current = {'eth9': 'aa', 'eth8': 'bb'}
+        plan = resolver.compute_bootstrap_plan(configured, current, {},
+                                                pending=pending)
+        self.assertEqual(plan.get('eth9'), 'eth0')
+        self.assertEqual(plan.get('eth8'), 'eth2')
+        self.assertNotEqual(plan.get('eth9'), 'eth1')
+        self.assertNotEqual(plan.get('eth8'), 'eth1')
+
+    def test_reclaimed_candidate_excluded_from_ordinary_bootstrap(self):
+        # main() already matched this candidate to a pending node via
+        # match_pending_nodes() - it must not also be assigned a fresh
+        # bootstrap name here, even if its current name differs from the
+        # reclaimed target (main() handles the actual rename itself).
+        configured = {}
+        current = {'eth9': 'm1', 'eth8': 'm2'}
+        plan = resolver.compute_bootstrap_plan(configured, current, {},
+                                                reclaimed_macs={'m1'})
+        self.assertNotIn('eth9', plan)
+        self.assertIn('eth8', plan)
 
 
 class TestSafeBulkRename(unittest.TestCase):
@@ -1035,26 +1109,24 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
         self.assertNotIn('eth11', state)
         self.assertNotIn('eth12', state)
 
-    def test_stray_leftover_interface_still_fills_both_open_names(self):
+    def test_stray_leftover_interface_makes_reclaim_ambiguous(self):
         # field report: deleting only eth7's hw-id and rebooting produced
         # "could not be safely auto-matched" instead of a clean reclaim,
         # because a stray interface left over from an earlier, unrelated
         # boot (e.g. a scratch vyethN name stuck after a failed rename)
-        # was also present, making this a 1 pending/2 candidate case. Both
-        # names now reliably get a real hw-id either way - the lower-
-        # sorted candidate takes the lower-numbered open name (the
-        # ordinary gap at eth3), the higher-sorted one takes the pending
-        # node - nothing is left unresolved, and there is no way to know
-        # (or need to know) which candidate was "really" eth7's own past
-        # hardware once its hw-id is gone.
+        # was also present, making this a 1 pending/2 candidate case.
+        # There is no way to tell which candidate was "really" eth7's own
+        # past hardware once its hw-id is gone, so eth7 stays unresolved;
+        # both candidates still get a real, settings-free hw-id via
+        # ordinary bootstrap naming instead of being lost.
         configured = {
             'm0': 'eth0', 'm1': 'eth1', 'm2': 'eth2', 'm4': 'eth4',
             'm5': 'eth5', 'm6': 'eth6',
         }
         pending = {'ethernet': {'eth7'}, 'wireless': set()}
         state = {name: mac for mac, name in configured.items()}
-        state.update({'eth9': 'aa:bb:cc:dd:ee:07',      # lower-sorted candidate
-                      'vyeth13': 'ff:ff:ff:ff:ff:99'})  # higher-sorted candidate
+        state.update({'eth9': 'aa:bb:cc:dd:ee:07',      # eth7's own hardware
+                      'vyeth13': 'ff:ff:ff:ff:ff:99'})  # unrelated leftover
 
         def fake_discover(*_a, **_kw):
             return dict(state)
@@ -1081,25 +1153,25 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch('time.sleep'):
             resolver.main()
 
-        # the lower-sorted candidate fills the ordinary gap (eth3), the
-        # higher-sorted one fills the pending node (eth7) - both real,
-        # both deterministic, nothing left unresolved
+        # 'eth7' stays pending rather than being guessed at; both
+        # candidates still land on real, settings-free names (the lone
+        # ordinary gap, then the next fresh slot after that)
+        self.assertNotIn('eth7', state)
         self.assertEqual(state.get('eth3'), 'aa:bb:cc:dd:ee:07')
-        self.assertEqual(state.get('eth7'), 'ff:ff:ff:ff:ff:99')
+        self.assertEqual(state.get('eth8'), 'ff:ff:ff:ff:ff:99')
 
         hints = set(os.listdir(self.udev_dir))
-        self.assertEqual(hints, {'eth3', 'eth7'})
+        self.assertEqual(hints, {'eth3', 'eth8'})
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], [])
-        self.assertEqual(status['reclaimed'], {'ff:ff:ff:ff:ff:99': 'eth7'})
+        self.assertEqual(status['pending_unresolved'], ['eth7'])
+        self.assertEqual(status['reclaimed'], {})
 
-    def test_second_pending_node_fills_lowest_numbered_first_when_hardware_is_short(self):
+    def test_second_pending_node_makes_reclaim_ambiguous(self):
         # two pending nodes (eth1 and eth7), but only one candidate showed
-        # up this boot - a hardware shortage, not ambiguity. The lower-
-        # numbered node fills; the higher-numbered one stays genuinely
-        # unresolved and reported, since there simply isn't enough
-        # hardware to satisfy both.
+        # up this boot - which one it belongs to can't be told, so
+        # neither is matched; the candidate still gets a real,
+        # settings-free name via ordinary bootstrap naming.
         configured = {'m0': 'eth0'}
         pending = {'ethernet': {'eth1', 'eth7'}, 'wireless': set()}
         state = {'eth0': 'm0', 'eth9': 'aa:bb:cc:dd:ee:07'}
@@ -1129,30 +1201,28 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch('time.sleep'):
             resolver.main()
 
-        self.assertEqual(state.get('eth1'), 'aa:bb:cc:dd:ee:07')
+        self.assertNotIn('eth1', state)
         self.assertNotIn('eth7', state)
+        self.assertEqual(state.get('eth2'), 'aa:bb:cc:dd:ee:07')
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], ['eth7'])
-        self.assertEqual(status['reclaimed'], {'aa:bb:cc:dd:ee:07': 'eth1'})
+        self.assertEqual(status['pending_unresolved'], ['eth1', 'eth7'])
+        self.assertEqual(status['reclaimed'], {})
 
-    def test_two_candidates_for_one_pending_node_fill_deterministically(self):
+    def test_ambiguous_candidates_never_get_a_permanent_wrong_binding(self):
         # field report: deleting eth2's hw-id (leaving its node in place)
         # produced "0 unconfigured candidates" on a later boot, because an
-        # EARLIER boot with 2 candidates present had left the pending node
-        # unresolved and its rightful hardware un-hinted, orphaning it.
-        # Per the deterministic-fill policy, one pending node with two
-        # candidates now reliably resolves: with only 'eth0' configured,
-        # 'eth1' is also a genuinely open name here, so the lower-sorted
-        # candidate fills it first and the higher-sorted one fills the
-        # pending node ('eth2') - nothing is left unresolved or un-hinted
-        # either way.
+        # EARLIER ambiguous boot had already permanently bound the wrong
+        # candidate elsewhere. One pending node with two candidates this
+        # boot must not be guessed at either way - it stays pending, and
+        # both candidates still get a real, settings-free hw-id via
+        # ordinary bootstrap naming (the one open gap, then a fresh slot).
         configured = {'m0': 'eth0'}
         pending = {'ethernet': {'eth2'}, 'wireless': set()}
         state = {
             'eth0': 'm0',
-            'racyA': 'aa:bb:cc:dd:ee:02',  # lower-sorted candidate
-            'racyB': 'ff:ff:ff:ff:ff:99',  # higher-sorted candidate
+            'racyA': 'aa:bb:cc:dd:ee:02',  # eth2's own hardware
+            'racyB': 'ff:ff:ff:ff:ff:99',  # unrelated leftover candidate
         }
 
         def fake_discover(*_a, **_kw):
@@ -1180,24 +1250,32 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch('time.sleep'):
             resolver.main()
 
-        # the lower-sorted candidate (racyA) fills the lower open name
-        # (eth1); the higher-sorted one (racyB) reclaims the pending node
+        # 'eth2' stays pending; both candidates land on real, settings-
+        # free names instead (the one open gap, then a fresh slot)
+        self.assertNotIn('eth2', state)
         self.assertEqual(state.get('eth1'), 'aa:bb:cc:dd:ee:02')
-        self.assertEqual(state.get('eth2'), 'ff:ff:ff:ff:ff:99')
+        self.assertEqual(state.get('eth3'), 'ff:ff:ff:ff:ff:99')
 
         hints = set(os.listdir(self.udev_dir))
-        self.assertEqual(hints, {'eth1', 'eth2'})
+        self.assertEqual(hints, {'eth1', 'eth3'})
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], [])
-        self.assertEqual(status['reclaimed'], {'ff:ff:ff:ff:ff:99': 'eth2'})
+        self.assertEqual(status['pending_unresolved'], ['eth2'])
+        self.assertEqual(status['reclaimed'], {})
 
-    def test_two_pending_nodes_two_candidates_both_fill_deterministically(self):
+    def test_simultaneous_ambiguity_holds_back_every_candidate(self):
         # two NICs' hw-id were deleted before the same reboot (eth0 and
         # eth2, nodes left in place), and both came back racily named.
-        # Sorted pending names (eth0 < eth2) pair with sorted candidates
-        # (by MAC here, since pcie_distance ties) - both fill in one boot,
-        # with no unresolved node left behind.
+        # Each candidate's MAC happens to obviously "belong" to one
+        # specific pending node (racyA's mac ends in :00, matching what
+        # eth0 used to be; racyB's mac ends in :02, matching eth2) - but
+        # there is no way to actually verify that pairing, so with 2
+        # pending nodes and 2 candidates present at once, neither may be
+        # auto-matched: guessing the "obvious" pairing risks silently
+        # binding a configured node's settings to the wrong physical NIC
+        # if the guess is ever wrong. Both stay pending and reported;
+        # both candidates still get a real, settings-free hw-id via
+        # ordinary bootstrap naming.
         configured = {
             'm1': 'eth1', 'm3': 'eth3', 'm4': 'eth4',
             'm5': 'eth5', 'm6': 'eth6', 'm7': 'eth7',
@@ -1205,8 +1283,8 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
         pending = {'ethernet': {'eth0', 'eth2'}, 'wireless': set()}
         state = {name: mac for mac, name in configured.items()}
         state.update({
-            'racyA': 'aa:bb:cc:dd:ee:00',
-            'racyB': 'aa:bb:cc:dd:ee:02',
+            'racyA': 'aa:bb:cc:dd:ee:00',  # looks like eth0's old hardware
+            'racyB': 'aa:bb:cc:dd:ee:02',  # looks like eth2's old hardware
         })
 
         def fake_discover(*_a, **_kw):
@@ -1234,18 +1312,20 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch('time.sleep'):
             resolver.main()
 
-        self.assertEqual(state.get('eth0'), 'aa:bb:cc:dd:ee:00')
-        self.assertEqual(state.get('eth2'), 'aa:bb:cc:dd:ee:02')
+        # neither pending node is guessed at - both candidates land on
+        # fresh, settings-free bootstrap names instead (no ordinary gaps
+        # exist here, so both go beyond the highest configured index)
+        self.assertNotIn('eth0', state)
+        self.assertNotIn('eth2', state)
+        self.assertEqual(state.get('eth8'), 'aa:bb:cc:dd:ee:00')
+        self.assertEqual(state.get('eth9'), 'aa:bb:cc:dd:ee:02')
 
         hints = set(os.listdir(self.udev_dir))
-        self.assertEqual(hints, {'eth0', 'eth2'})
+        self.assertEqual(hints, {'eth8', 'eth9'})
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], [])
-        self.assertEqual(status['reclaimed'], {
-            'aa:bb:cc:dd:ee:00': 'eth0',
-            'aa:bb:cc:dd:ee:02': 'eth2',
-        })
+        self.assertEqual(status['pending_unresolved'], ['eth0', 'eth2'])
+        self.assertEqual(status['reclaimed'], {})
 
     def test_squatting_pending_candidate_still_reclaims_correctly(self):
         # field report: deleting eth7's hw-id (node left in place) produced
@@ -1310,15 +1390,14 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
         self.assertEqual(status['reclaimed'], {'aa:bb:cc:dd:ee:07': 'eth7'})
         self.assertEqual(status['pending_unresolved'], [])
 
-    def test_squatting_candidate_and_extra_candidate_fill_ascending(self):
+    def test_squatting_candidate_and_extra_candidate_makes_reclaim_ambiguous(self):
         # same squatter-eviction shape as the test above, but with a
-        # second, unrelated candidate also present this boot, and exactly
-        # two open names (one ordinary gap, one pending node) for the two
-        # candidates - a closed system. The lower-sorted candidate (the
-        # squatter, evicted off of a configured slot) takes the lower-
-        # numbered open name (the gap); the higher-sorted one takes the
-        # higher-numbered one (the pending node) - both get a real,
-        # deterministic hw-id, one of them attributed as a reclaim.
+        # second, unrelated candidate also present this boot - genuinely
+        # ambiguous, exactly like a non-squatting extra candidate would
+        # be. The pending node stays unresolved; the squatter still gets
+        # evicted off of the configured slot it's sitting on (so the
+        # rightful owner isn't blocked) and, like the stray, lands on a
+        # real, settings-free bootstrap name instead of the pending one.
         configured = {
             'm0': 'eth0', 'm1': 'eth1', 'm2': 'eth2',
             'm3': 'eth3', 'm4': 'eth4', 'm5': 'eth5',
@@ -1356,29 +1435,35 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch('time.sleep'):
             resolver.main()
 
-        # m3 still lands on its own configured slot; the squatter takes
-        # the lower-numbered open gap, the stray takes the pending node
+        # m3 still lands on its own configured slot; 'eth7' stays pending
+        # rather than being guessed at; the squatter and the stray both
+        # land on real, settings-free names instead
         self.assertEqual(state.get('eth3'), 'm3')
+        self.assertNotIn('eth7', state)
         self.assertEqual(state.get('eth6'), 'aa:bb:cc:dd:ee:07')
-        self.assertEqual(state.get('eth7'), 'ff:ff:ff:ff:ff:99')
+        self.assertEqual(state.get('eth8'), 'ff:ff:ff:ff:ff:99')
 
         hints = set(os.listdir(self.udev_dir))
-        self.assertEqual(hints, {'eth6', 'eth7'})
+        self.assertEqual(hints, {'eth6', 'eth8'})
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], [])
-        self.assertEqual(status['reclaimed'], {'ff:ff:ff:ff:ff:99': 'eth7'})
+        self.assertEqual(status['pending_unresolved'], ['eth7'])
+        self.assertEqual(status['reclaimed'], {})
 
-    def test_gap_backfill_and_pending_reclaim_coexist_in_the_same_boot(self):
+    def test_gap_backfill_and_pending_node_coexisting_stays_ambiguous(self):
         # the exact vyos-build check-qemu-install --ifnametest shape: one
         # interface's whole config node is fully deleted (a free numeric
         # gap) while a DIFFERENT interface's hw-id alone is deleted (a
         # pending node) in the very same reboot
-        # (del_idx, hwid_idx = random.sample(range(8), 2)). Both must
-        # resolve independently in one boot: the pending node (eth2)
-        # reliably gets a real hw-id, and the fully-deleted gap (eth5)
-        # backfills with whatever hardware is left - no manual step
-        # needed for either.
+        # (del_idx, hwid_idx = random.sample(range(8), 2)). This is
+        # genuinely ambiguous for the pending node (eth2): its own
+        # hardware and the gap's freed hardware are two indistinguishable
+        # candidates of the same type, and guessing risks silently
+        # binding eth2's settings to the wrong physical NIC - confirmed
+        # in the field. eth2 stays pending; both candidates still get a
+        # real, settings-free hw-id via ordinary bootstrap naming (the
+        # actual gap, then a fresh slot) - nothing is lost, just not
+        # auto-attributed to the right name.
         configured = {
             'm0': 'eth0', 'm1': 'eth1', 'm3': 'eth3', 'm4': 'eth4',
             'm6': 'eth6', 'm8': 'eth8', 'm9': 'eth9',
@@ -1415,12 +1500,13 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch('time.sleep'):
             resolver.main()
 
-        self.assertEqual(state.get('eth2'), 'aa:bb:cc:dd:ee:02')
-        self.assertEqual(state.get('eth5'), 'ff:ff:ff:ff:ff:05')
+        self.assertNotIn('eth2', state)
+        self.assertEqual(state.get('eth5'), 'aa:bb:cc:dd:ee:02')
+        self.assertEqual(state.get('eth7'), 'ff:ff:ff:ff:ff:05')
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], [])
-        self.assertEqual(status['reclaimed'], {'aa:bb:cc:dd:ee:02': 'eth2'})
+        self.assertEqual(status['pending_unresolved'], ['eth2'])
+        self.assertEqual(status['reclaimed'], {})
 
 
 class TestWriteStatus(unittest.TestCase):
