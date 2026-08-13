@@ -30,6 +30,9 @@ class TestVyOSUtilsNetwork(TestCase):
         # instead of raising ValueError from ip_interface()
         self.assertFalse(vyos.utils.network.is_addr_assigned('127.0.0.1-127.0.0.2'))
         self.assertFalse(vyos.utils.network.is_addr_assigned('::1-::2'))
+        # A zone suffix on each range endpoint must not truncate the
+        # string down to just the first endpoint before the "-" check
+        self.assertFalse(vyos.utils.network.is_addr_assigned('::1%lo-::2%lo'))
 
     def test_is_ipv6_link_local(self):
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('169.254.0.1'))

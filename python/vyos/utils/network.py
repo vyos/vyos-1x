@@ -492,9 +492,13 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     from vyos.utils.process import rc_cmd
     from ipaddress import ip_interface
 
-    # Remove the interface name if present in the given address
+    # Remove the interface name if present in the given address. Use
+    # rsplit() so only the trailing zone suffix is dropped: split() would
+    # truncate a hyphenated range with a zone suffix on both endpoints
+    # (e.g. "::1%lo-::2%lo") down to just its first endpoint, silently
+    # discarding the "-" the check below relies on.
     if '%' in addr:
-        addr = addr.split('%')[0]
+        addr = addr.rsplit('%', 1)[0]
 
     # is_intf_addr_assigned() only checks a single address; a hyphenated
     # range (a valid address_group/address_range member elsewhere) is
