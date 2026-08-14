@@ -80,4 +80,4 @@ Output lands in `docs/_build/html/`.
 See [AGENTS.md](AGENTS.md) for the full contributor guide — MyST source
 conventions, the VyOS command directives (`cfgcmd` / `opcmd` /
 `cmdincludemd`), IP-address rules, the linter and its suppression markers,
-and the Copilot/CodeRabbit bot review workflow.
+and the CodeRabbit bot review workflow.

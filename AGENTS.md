@@ -292,6 +292,13 @@ serves and crawlers skip the redirect hop.
   changed files under `docs/` only. Repo-root meta files
   (README.md, AGENTS.md, `.github/copilot-instructions.md`) are out
   of scope.
+- **AI Validation** (`.github/workflows/ai-validation.yml`) —
+  cross-checks the changed `docs/**/*.md` against the VyOS CLI
+  definitions in the `vyos-1x` source tree for the corresponding
+  branch, and posts findings as inline review comments plus a summary
+  comment on the PR. Only runs when a PR touches Markdown under
+  `docs/`. Skips — with a notice — when the required repository
+  secrets aren't configured, and on Mergify-authored backport PRs.
 - **Sphinx build** — runs on Read the Docs for every PR; preview URL
   appears as a check.
 - **CLA check** — contributors must sign the VyOS CLA before merge.
@@ -299,22 +306,22 @@ serves and crawlers skip the redirect hop.
 
 ### Bot review workflow
 
-Two bots run at separate stages — do not mix them:
+CodeRabbit is the automated reviewer on this repo. It runs on its own —
+in the normal case there is nothing to invoke by hand. Iterate in draft
+while the work is in flux, then flip to ready when you want review.
 
-| Bot | When to trigger | How |
-|-----|-----------------|-----|
-| **Copilot** | Draft PRs only | Comment `@copilot review` |
-| **CodeRabbit** | Ready-for-review PRs only | Comment `@coderabbitai review` |
+- **Drafts are skipped.** CodeRabbit ignores draft PRs entirely.
+- **Review fires automatically** when a PR is flipped to ready
+  (`gh pr ready <num>`), and again on every subsequent push.
+- **The walkthrough comment is edited in place.** CodeRabbit usually
+  updates its existing comment rather than posting a new one — for
+  example to "no actionable comments". No new comment does not mean no
+  new review; re-read the existing one.
+- **Rate limits silently drop a review.** If CodeRabbit is rate-limited
+  when an event fires, that review is skipped with no error. Comment
+  `@coderabbitai review` once the limit window resets. This is the only
+  case where triggering it by hand is appropriate.
 
-Auto-reviews are disabled on this repo — both bots are triggered
-manually via the comments shown above.
-
-Workflow:
-1. Open PR as draft (`gh pr create --draft`).
-2. Iterate; when complete, comment `@copilot review`.
-3. Address Copilot threads, re-request after each fix round until
-   Copilot is silent.
-4. Flip to ready (`gh pr ready <num>`), then comment `@coderabbitai review`.
-5. Address CodeRabbit threads the same way.
-
-Never trigger `@copilot review` on a ready-for-review PR.
+Copilot is not part of this workflow — do not invoke `@copilot review`.
+If Copilot threads do appear because someone invoked it manually,
+address them like any other reviewer feedback.
