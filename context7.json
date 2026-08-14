@@ -26,7 +26,7 @@
     "Documentation sources are MyST Markdown (.md). Cite and link to the .md form.",
     "VyOS has two CLI modes: configuration mode (entered via `configure`; for `set`/`delete`/`commit`/`save` and config-state `show`) and operational mode (default after login; for `show`, `monitor`, plus image-mgmt like `add system image`). Do not mix.",
     "Configuration commands are wrapped in `cfgcmd` fenced blocks; operational commands in `opcmd` fenced blocks. Treat these as authoritative command syntax.",
-    "Branch-to-version mapping (cite version-appropriate docs): `rolling` = rolling / next major, 1.6+ (default); `circinus` = 1.5.x (current LTS); `sagitta` = 1.4.x (previous LTS); `equuleus` = 1.3.x (legacy); `crux` = 1.2.x (legacy).",
+    "Branch-to-version mapping (cite version-appropriate docs): `rolling` = rolling / next major (default); `scutum` = 1.6.x; `circinus` = 1.5.x (current LTS); `sagitta` = 1.4.x (previous LTS); `equuleus` = 1.3.x (legacy); `crux` = 1.2.x (legacy).",
     "Do not invent CLI commands. If a command isn't in the docs, say so rather than guess — VyOS syntax is strict and unknown commands fail validation at commit time.",
     "Use reserved documentation IP space in examples: 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 (RFC 5737), 2001:db8::/32 (RFC 3849). Never use real or RFC1918 addresses.",
     "`commit` activates pending `set`/`delete` changes and runs validation (errors = no change applied); `save` persists across reboot. Verify with `show <node>` (config mode) or `show configuration commands` (op mode). Always include `commit` and `save`.",
@@ -36,6 +36,7 @@
     "Routing protocols (BGP, OSPF, IS-IS, RIP) are FRR-backed, but not every FRR knob is exposed through the VyOS CLI. Confirm a command exists in the VyOS docs before suggesting it — synthesizing from FRR documentation produces invalid VyOS commands."
   ],
   "previousVersions": [
+    { "branch": "scutum" },
     { "branch": "circinus" },
     { "branch": "sagitta" }
   ]
