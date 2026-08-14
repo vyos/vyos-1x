@@ -92,6 +92,31 @@ Multiple networks/client IP addresses can be configured.
 ```
 
 
+```{cfgcmd} set service ntp source-address \<address\>
+
+Source IP address used for outgoing NTP client requests to the configured
+servers, instead of relying on the kernel's default source-address selection
+for whichever route is chosen at query time. Useful on routers with more
+than one usable egress path to a given server, where the interface that
+ends up being selected may not always carry a globally reachable address.
+Only one IPv4 and one IPv6 address can be configured, using separate
+commands for each.
+```
+
+
+```{cfgcmd} set service ntp source-interface \<interface\>
+
+Network device used for outgoing NTP client requests, binding the socket to
+this interface (Linux `SO_BINDTODEVICE`) rather than to a source address.
+Useful when a source address alone cannot unambiguously select the egress
+path, for example when address ranges overlap between routing instances.
+Since `vrf` binds the NTP client to a single VRF, `source-interface` only
+selects the egress device within that VRF, not across multiple VRFs at
+once. Can be combined with `source-address`; only one interface can be
+configured. If `vrf` is also set, the interface must belong to that VRF.
+```
+
+
 ```{cfgcmd} set service ntp vrf \<name\>
 
 Specify name of the {abbr}`VRF (Virtual Routing and Forwarding)` instance.
