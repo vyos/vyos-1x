@@ -80,6 +80,7 @@ from .models import PingModel
 from .models import PoweroffModel
 from .models import TracerouteModel
 from .libs.token_auth import generate_token
+from .libs.token_auth import verify_oidc_token
 from .libs.token_auth import verify_token
 
 
@@ -119,6 +120,11 @@ def auth_required(
             key_id = verify_token(token)
             if key_id:
                 session.id = key_id
+                return
+            # Try OIDC token validation
+            oidc_sub = verify_oidc_token(token)
+            if oidc_sub:
+                session.id = f'oidc:{oidc_sub}'
                 return
             raise HTTPException(status_code=401, detail='Invalid or expired token')
 

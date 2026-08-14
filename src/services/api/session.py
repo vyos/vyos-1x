@@ -42,3 +42,5 @@ class SessionState:
         self.rest_secret = None
         self.rest_secret_len = None
         self.rest_token_exp = None
+        self.oidc_issuer = None
+        self.oidc_jwks_uri = None

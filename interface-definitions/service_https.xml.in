@@ -81,6 +81,31 @@
                         </properties>
                         <defaultValue>32</defaultValue>
                       </leafNode>
+                      <node name="oidc">
+                        <properties>
+                          <help>OpenID Connect authentication</help>
+                        </properties>
+                        <children>
+                          <leafNode name="issuer">
+                            <properties>
+                              <help>OIDC issuer URL (must match iss claim in token)</help>
+                              <valueHelp>
+                                <format>url</format>
+                                <description>OIDC issuer URL e.g. https://keycloak.example.com/realms/vyos</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="jwks-url">
+                            <properties>
+                              <help>JWKS endpoint URL (if different from issuer discovery)</help>
+                              <valueHelp>
+                                <format>url</format>
+                                <description>JWKS endpoint URL e.g. https://keycloak.example.com/realms/vyos/protocol/openid-connect/certs</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
                     </children>
                   </node>
                 </children>

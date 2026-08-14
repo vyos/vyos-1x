@@ -24,6 +24,37 @@ from ...session import SessionState
 _secret_lock = threading.Lock()
 
 
+def verify_oidc_token(token: str):
+    """Validate an OIDC Bearer token against the configured OIDC issuer JWKS.
+
+    Returns the subject identifier on success, None on failure.
+    Requires set service https api rest authentication oidc issuer <url>.
+    """
+    state = SessionState()
+    if not state.oidc_issuer:
+        return None
+    try:
+        from jwt import PyJWKClient
+
+        jwks_uri = (
+            state.oidc_jwks_uri or f"{state.oidc_issuer}/protocol/openid-connect/certs"
+        )
+        jwks_client = PyJWKClient(jwks_uri, cache_keys=True)
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"],
+            options={"verify_aud": False},
+            issuer=state.oidc_issuer,
+            leeway=30,
+        )
+        return payload.get("sub") or payload.get("client_id") or "oidc-client"
+    except Exception as e:
+        print(f"OIDC token validation failed: {e}", flush=True)
+        return None
+
+
 def init_secret():
     state = SessionState()
     if state.rest_secret is not None:

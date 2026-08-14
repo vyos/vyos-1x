@@ -191,6 +191,15 @@ def initialization(session: SessionState, app: FastAPI = app):
                 session.rest_token_exp = int(auth['expiration'])
             if 'secret_length' in auth:
                 session.rest_secret_len = int(auth['secret_length'])
+            oidc = auth.get('oidc', {})
+            if isinstance(oidc, dict):
+                if 'issuer' in oidc:
+                    session.oidc_issuer = oidc['issuer']
+                if 'jwks_url' in oidc:
+                    session.oidc_jwks_uri = oidc['jwks_url']
+                elif 'issuer' in oidc:
+                    # Derive JWKS URI from issuer if not explicitly set
+                    session.oidc_jwks_uri = None  # will be resolved in token_auth
 
     graphql_config = server_config.get('graphql', {})
     session.origins = graphql_config.get('cors', {}).get('allow_origin', [])
