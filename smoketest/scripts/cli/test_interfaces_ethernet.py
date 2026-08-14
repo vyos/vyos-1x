@@ -229,6 +229,10 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                     msg = 'Driver does not fully support coalesce configuration'
                     with self.assertRaisesRegex(ConfigSessionError, msg):
                         self.cli_commit()
+                    # the failed commit leaves rx-usecs/tx-usecs staged in
+                    # the candidate config (commit() does not auto-rollback) -
+                    # discard it so it doesn't leak into the next interface
+                    self.cli_discard()
                     continue
 
                 # To find out the supported features
@@ -287,17 +291,25 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_ethtool_flow_control(self):
         for interface in self._interfaces:
+            ethtool = Ethtool(interface)
             # Disable flow-control
             self.cli_set(self._base_path + [interface, 'disable-flow-control'])
-            # Check current flow-control state on ethernet interface
-            out, err = popen(f'sudo ethtool --json --show-pause {interface}')
-            # Flow-control not supported - test if it bails out with a proper
-            # this is a dynamic path where err = 1 on VMware, but err = 0 on
-            # a physical box.
-            if bool(err):
+
+            # Ask the same capability check the CLI commit itself uses,
+            # rather than a raw ethtool --show-pause probe: some drivers
+            # (virtio_net, vmxnet3, xen_netfront, ...) support querying
+            # pause parameters but not changing them, so a bare --show-pause
+            # exit code is not a reliable predictor of whether the commit
+            # will succeed.
+            if not ethtool.check_flow_control():
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
+                # the failed commit leaves disable-flow-control staged in
+                # the candidate config (commit() does not auto-rollback) -
+                # discard it so it doesn't leak into the next interface
+                self.cli_discard()
             else:
+                out, err = popen(f'sudo ethtool --json --show-pause {interface}')
                 out = loads(out)
                 # Flow control is on
                 self.assertTrue(out[0]['autonegotiate'])

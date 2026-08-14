@@ -217,6 +217,8 @@ class Ethtool:
 
     def check_flow_control(self):
         """ Check if the NIC supports flow-control """
+        if self.get_driver_name() in _drivers_without_speed_duplex_flow:
+            return False
         return bool(self._flow_control)
 
     def get_flow_control(self):
