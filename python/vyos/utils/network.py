@@ -772,6 +772,42 @@ def is_valid_ipv6_address_or_range(addr: str) -> bool:
         return False
 
 
+def is_valid_ipv4_network(net: str) -> bool:
+    """
+    Validates if the provided value is a valid, canonical IPv4 network
+    (no host bits set), requiring an explicit prefix length (unlike
+    is_valid_ipv4_address_or_range, which also accepts a bare address)
+    :param net: value to test
+    :return: bool: True if provided value is a valid IPv4 network
+    """
+    from ipaddress import ip_network
+
+    if '/' not in net:
+        return False
+    try:
+        return ip_network(net, strict=True).version == 4
+    except ValueError:
+        return False
+
+
+def is_valid_ipv6_network(net: str) -> bool:
+    """
+    Validates if the provided value is a valid, canonical IPv6 network
+    (no host bits set), requiring an explicit prefix length (unlike
+    is_valid_ipv6_address_or_range, which also accepts a bare address)
+    :param net: value to test
+    :return: bool: True if provided value is a valid IPv6 network
+    """
+    from ipaddress import ip_network
+
+    if '/' not in net:
+        return False
+    try:
+        return ip_network(net, strict=True).version == 6
+    except ValueError:
+        return False
+
+
 def get_interfaces_by_ip(ip_address: str) -> list:
     """
     Return a list of all interface names assigned the given IP address.

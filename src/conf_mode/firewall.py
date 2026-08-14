@@ -25,6 +25,7 @@ from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configdiff import Diff, get_config_diff
 from vyos.configdep import set_dependents, call_dependents
+from vyos.config_path_resolver import apply_group_paths
 from vyos.configverify import verify_interface_exists
 from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
@@ -141,6 +142,8 @@ def get_config(config=None):
     if firewall['group_resync']:
         # Update nat and policy-route as firewall groups were updated
         set_dependents('group_resync', conf)
+
+    apply_group_paths(dict_search_args(firewall, 'group'), conf)
 
     firewall['geoip_sets'] = geoip_sets(firewall)
     firewall['geoip_updated'] = geoip_updated(conf)

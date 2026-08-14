@@ -18,15 +18,25 @@ import argparse
 import ipaddress
 import json
 import re
+import sys
 from signal import signal, SIGPIPE, SIG_DFL
 import tabulate
 import textwrap
 
+from vyos.base import ConfigError
 from vyos.config import Config
+from vyos.config_path_resolver import refresh_apply_path_groups
+from vyos.config_path_resolver import DictConfig
+from vyos.configquery import op_mode_config_dict
+from vyos.template import render
+from vyos.utils.locking import Lock
 from vyos.utils.process import cmdl
+from vyos.utils.process import run
 from vyos.utils.dict import dict_search_args
 
 signal(SIGPIPE, SIG_DFL)
+
+apply_path_nft_conf = '/run/nftables-apply-path-update.conf'
 
 
 def get_config_node(conf, node=None, family=None, hook=None, priority=None):
@@ -792,6 +802,57 @@ def show_statistics():
                 for prior, prior_conf in firewall[family][hook].items():
                     output_firewall_name_statistics(family, hook,prior, prior_conf)
 
+def update_apply_path_groups():
+    # Held for the whole read-resolve-render-apply sequence, not just the
+    # render+apply part: otherwise a slower invocation's stale config
+    # snapshot (read before the lock existed) could overwrite a faster,
+    # newer invocation's result once it finally gets the lock.
+    lock = Lock('firewall-apply-path-update')
+    lock.acquire()
+    try:
+        # op_mode_config_dict() instead of Config(): the whole-config fetch
+        # it needs anyway (apply-path targets can point anywhere in the
+        # tree) is no heavier than a plain Config() session, and this way we
+        # don't pay for a session object we never use for anything beyond
+        # list_nodes()/return_values()
+        groups = op_mode_config_dict(
+            ['firewall', 'group'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+        )
+        conf = DictConfig(op_mode_config_dict())
+        sets = refresh_apply_path_groups(groups, conf)
+
+        if not sets['v4'] and not sets['v6']:
+            print('No firewall group uses apply-path')
+            return
+
+        render(
+            apply_path_nft_conf,
+            'firewall/nftables-apply-path-update.j2',
+            {'sets': sets},
+            group='vyattacfg',
+            permission=0o664,
+        )
+
+        if run(f'nft --check --file {apply_path_nft_conf}') != 0:
+            print(
+                'Error: apply-path derived firewall group update failed nft syntax check'
+            )
+            sys.exit(1)
+
+        if run(f'nft --file {apply_path_nft_conf}') != 0:
+            print('Error: failed to update apply-path derived firewall groups')
+            sys.exit(1)
+    except ConfigError as e:
+        print(e)
+        sys.exit(1)
+    finally:
+        lock.release()
+
+    print('Updated apply-path derived firewall groups')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--action', help='Action', required=False)
@@ -820,3 +881,5 @@ if __name__ == '__main__':
         show_statistics()
     elif args.action == 'show_summary':
         show_summary()
+    elif args.action == 'update_apply_path_groups':
+        update_apply_path_groups()
