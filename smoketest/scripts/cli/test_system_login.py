@@ -367,13 +367,16 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
         # Define RADIUS traffic source address
         self.cli_set(['interfaces', 'dummy', dummy_if, 'address', f'{radius_source}/{radius_source_mask}'])
-        self.cli_set(base_path + ['radius', 'source-address', radius_source])
-        self.cli_set(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
 
-        # check validate() - Only one IPv4 source-address supported
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_delete(base_path + ['radius', 'source-address', inc_ip(radius_source, 1)])
+        # IPv4 and IPv6 source addresses live on separate scalar nodes, so
+        # setting one a second time replaces the previous value instead of
+        # appending to it
+        source_node = 'source-address'
+        if is_ipv6(radius_source):
+            source_node = 'source-address6'
+
+        self.cli_set(base_path + ['radius', source_node, inc_ip(radius_source, 1)])
+        self.cli_set(base_path + ['radius', source_node, radius_source])
 
         self.cli_commit()
 
@@ -386,6 +389,10 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
                 radius_server = rf'\[{radius_server}\]'
             tmp = re.findall(rf'\n?{radius_server}:{default_port}\s+{radius_key}\s+{default_timeout}\s+{radius_source}', pam_radius_auth_conf)
             self.assertTrue(tmp)
+
+        # The source-address set first was replaced, not appended to - it must
+        # not have made it into the generated configuration
+        self.assertNotIn(inc_ip(radius_source, 1), pam_radius_auth_conf)
 
         # required, static options
         self.assertIn('priv-lvl 15', pam_radius_auth_conf)
