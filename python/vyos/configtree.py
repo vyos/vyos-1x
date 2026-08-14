@@ -579,6 +579,32 @@ def diff_compare(left, right, path=None, commands=False, libpath=LIBPATH):
     return res
 
 
+def diff_show(rt, left, right, path=None, libpath=LIBPATH):
+    if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+        raise TypeError('Arguments must be instances of ConfigTree')
+    path = path or []
+
+    check_path(path)
+    path_str = ' '.join(map(str, path)).encode()
+
+    __lib = cdll.LoadLibrary(libpath)
+    __diff_show = __lib.diff_show
+    __diff_show.argtypes = [c_void_p, c_void_p, c_void_p, c_char_p]
+    __diff_show.restype = c_char_p
+    __get_error = __lib.get_error
+    __get_error.argtypes = []
+    __get_error.restype = c_char_p
+
+    res = __diff_show(rt.get_tree(), left.get_tree(), right.get_tree(), path_str)
+    res = res.decode()
+    if res == '#1@':
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+    res = unescape_backslash(res)
+    return res
+
+
 def union(left, right, libpath=LIBPATH):
     if left is None:
         left = ConfigTree(config_string='\n')
@@ -630,14 +656,14 @@ def mask_inclusive(left, right, libpath=LIBPATH):
 
     try:
         __lib = cdll.LoadLibrary(libpath)
-        __mask_tree = __lib.mask_tree
-        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
-        __mask_tree.restype = c_void_p
+        __mask_inclusive = __lib.mask_inclusive
+        __mask_inclusive.argtypes = [c_void_p, c_void_p]
+        __mask_inclusive.restype = c_void_p
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
 
-        res = __mask_tree(left.get_tree(), right.get_tree(), False)
+        res = __mask_inclusive(left.get_tree(), right.get_tree())
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
@@ -656,14 +682,14 @@ def mask_exclusive(left, right, libpath=LIBPATH):
 
     try:
         __lib = cdll.LoadLibrary(libpath)
-        __mask_tree = __lib.mask_tree
-        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
-        __mask_tree.restype = c_void_p
+        __mask_exclusive = __lib.mask_exclusive
+        __mask_exclusive.argtypes = [c_void_p, c_void_p]
+        __mask_exclusive.restype = c_void_p
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
 
-        res = __mask_tree(left.get_tree(), right.get_tree(), True)
+        res = __mask_exclusive(left.get_tree(), right.get_tree())
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
