@@ -56,7 +56,9 @@ You can configure multiple remote subnets for an **upstream** IGMP proxy
 interface.
 
 Upstream interfaces frequently require this configuration because multicast
-sources typically reside on external subnets.
+sources typically reside on external subnets. ISPs frequently send IPTV
+streams from remote private subnets. The set of source subnets can change
+without notice.
 ```
 
 Example:
@@ -144,6 +146,58 @@ set protocols igmp-proxy disable
 
 Restart the IGMP proxy process.
 ```
+
+```{opcmd} show ip multicast interface
+
+Display per-interface multicast packet and byte counters.
+
+~~~none
+vyos@vyos:~$ show ip multicast interface
+Interface      PktsIn    PktsOut  BytesIn    BytesOut    Local
+-----------  --------  ---------  ---------  ----------  --------------
+eth0         11528936          0  14.54 GB   0 B         10.222.175.251
+eth1                0   11528936  0 B        14.54 GB    192.168.0.1
+~~~
+
+On a healthy proxy, the upstream and downstream counters increase
+together. If the proxy replicates traffic to multiple downstream
+interfaces, the output counters can exceed the input counters. If the
+upstream counters increase but the downstream counters do not, the
+router receives the streams but does not forward them. A missing
+``forward`` firewall rule or the absence of downstream membership
+causes this condition.
+```
+
+```{opcmd} show log igmp-proxy
+
+Display the log messages of the IGMP proxy process. Common messages:
+
+- ``No interfaces found for source 0.0.0.0``: This message is harmless.
+  General membership queries use an unspecified source address.
+- ``Too many origins for route 239.192.0.2; replacing 10.237.1.165
+  with 10.237.1.168``: This message is harmless. The multicast source
+  uses more origin servers than the IGMP proxy tracks for one route.
+  The IGMP proxy replaces the oldest entry and does not interrupt the
+  stream.
+```
+
+## Firewall considerations
+
+The IGMP proxy joins the requested multicast groups. The router
+therefore receives the IGMP signaling and the multicast streams
+locally. Multicast traffic traverses the ``input`` hook, not only the
+``forward`` hook. A firewall with a default-drop ``input`` chain must
+accept this traffic:
+
+- IGMP (protocol ``igmp``) on the upstream interface and on each
+  downstream interface, in the ``input`` hook. Downstream clients
+  address membership reports to multicast groups, not to the router.
+  The proxy must receive these reports to learn which streams to join.
+- Traffic to multicast destinations (``224.0.0.0/4``) that arrives on
+  the upstream interface, in the ``input`` hook.
+- Traffic to multicast destinations (``224.0.0.0/4``) from the
+  upstream interface to the downstream networks, in the ``forward``
+  hook.
 
 ## Example
 
