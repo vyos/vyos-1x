@@ -177,7 +177,10 @@ def verify(tunnel):
                     and their_source_if == our_source_if
                     and their_key == our_key
                 ):
-                    tmp = our_address if our_address else our_source_if
+                    # Report the source as configured and not as normalised,
+                    # else an "any" source-address would render as "None".
+                    # One of both is always present, see verify_tunnel()
+                    tmp = dict_search('source_address', tunnel) or our_source_if
                     raise ConfigError(
                         f'Key "{our_key}" for source "{tmp}" is already used '
                         f'for tunnel "{o_tunnel}"!'
