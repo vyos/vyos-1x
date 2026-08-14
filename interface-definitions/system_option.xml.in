@@ -420,7 +420,7 @@
              <children>
                <leafNode name="memory">
                  <properties>
-                   <help>Amount of memory to reserve for the crash kernel</help>
+                   <help>Amount of memory to reserve for the kernel crash dump</help>
                    <valueHelp>
                      <format>auto</format>
                      <description>Automatically determine memory reservation</description>
