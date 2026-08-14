@@ -27,6 +27,8 @@ from vyos.xml_ref import default_value
 PROCESS_NAME = 'chronyd'
 NTP_CONF = '/run/chrony/chrony.conf'
 base_path = ['service', 'ntp']
+dummy_interface = 'dum9159'
+dummy_if_path = ['interfaces', 'dummy', dummy_interface]
 
 class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -113,6 +115,140 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for listen in listen_address:
             self.assertIn(f'bindaddress {listen}', config)
 
+    def test_source_address(self):
+        source_addresses = ['127.0.0.1', '::1']
+        for address in source_addresses:
+            self.cli_set(base_path + ['source-address', address])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        # Check generated client source-address configuration
+        config = read_file(NTP_CONF, sudo=True)
+        for address in source_addresses:
+            self.assertIn(f'bindacqaddress {address}', config)
+
+    def test_source_address_rejects_multiple_ipv4(self):
+        # commit the dummy addresses on their own first, so they are
+        # actually live before NTP's verify() checks is_addr_assigned() --
+        # otherwise the outcome would depend on conf_mode script ordering
+        # within a single commit. That way it's the duplicate-per-family
+        # check being tested here, not the local-assignment check.
+        self.cli_set(dummy_if_path + ['address', '192.0.2.1/32'])
+        self.cli_set(dummy_if_path + ['address', '192.0.2.2/32'])
+        self.cli_commit()
+
+        self.cli_set(base_path + ['source-address', '192.0.2.1'])
+        self.cli_set(base_path + ['source-address', '192.0.2.2'])
+        try:
+            with self.assertRaisesRegex(
+                ConfigSessionError, 'Only admits one ipv4 value for source-address'
+            ):
+                self.cli_commit()
+        finally:
+            # remove the invalid subtree entirely (rather than leaving a
+            # non-local address configured) so chronyd is left running for
+            # tearDown -- in a finally block so a failed assertion above
+            # doesn't leave the dummy interface/source-address behind for
+            # subsequent tests
+            self.cli_delete(base_path + ['source-address'])
+            self.cli_delete(dummy_if_path)
+            self.cli_commit()
+
+    def test_source_address_rejects_multiple_ipv6(self):
+        # commit the dummy addresses on their own first, so they are
+        # actually live before NTP's verify() checks is_addr_assigned() --
+        # otherwise the outcome would depend on conf_mode script ordering
+        # within a single commit. That way it's the duplicate-per-family
+        # check being tested here, not the local-assignment check.
+        self.cli_set(dummy_if_path + ['address', '2001:db8::1/128'])
+        self.cli_set(dummy_if_path + ['address', '2001:db8::2/128'])
+        self.cli_commit()
+
+        self.cli_set(base_path + ['source-address', '2001:db8::1'])
+        self.cli_set(base_path + ['source-address', '2001:db8::2'])
+        try:
+            with self.assertRaisesRegex(
+                ConfigSessionError, 'Only admits one ipv6 value for source-address'
+            ):
+                self.cli_commit()
+        finally:
+            # see the ipv4 test above for why this is in a finally block
+            self.cli_delete(base_path + ['source-address'])
+            self.cli_delete(dummy_if_path)
+            self.cli_commit()
+
+    def test_source_address_rejects_non_local(self):
+        # source-address must be assigned to a local interface
+        self.cli_set(base_path + ['source-address', '192.0.2.1'])
+        try:
+            with self.assertRaisesRegex(
+                ConfigSessionError, 'not assigned to any interface'
+            ):
+                self.cli_commit()
+        finally:
+            self.cli_delete(base_path + ['source-address'])
+            self.cli_commit()
+
+    def test_source_interface(self):
+        interface = 'eth0'
+        self.cli_set(base_path + ['source-interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        # Check generated client source-interface configuration
+        config = read_file(NTP_CONF, sudo=True)
+        self.assertIn(f'bindacqdevice {interface}', config)
+
+    def test_source_address_and_source_interface(self):
+        # bindacqaddress (IP) and bindacqdevice (interface) bind different
+        # socket properties and can be configured together
+        source_addresses = ['127.0.0.1', '::1']
+        interface = 'eth0'
+        for address in source_addresses:
+            self.cli_set(base_path + ['source-address', address])
+        self.cli_set(base_path + ['source-interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for address in source_addresses:
+            self.assertIn(f'bindacqaddress {address}', config)
+        self.assertIn(f'bindacqdevice {interface}', config)
+
+    def test_source_interface_vrf_mismatch(self):
+        vrf_name = 'vyos-mgmt'
+        interface = 'eth0'
+
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(base_path + ['vrf', vrf_name])
+        self.cli_set(base_path + ['source-interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        # eth0 does not belong to the VRF - commit must be rejected
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # fix the invalid combination so chronyd is left running for tearDown
+        self.cli_delete(base_path + ['source-interface'])
+        self.cli_delete(base_path + ['vrf'])
+        self.cli_delete(['vrf', 'name', vrf_name])
+        self.cli_commit()
+
     def test_interface(self):
         interfaces = ['eth0']
         for interface in interfaces:
@@ -165,9 +301,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
             if mode != 'smear':
                 self.assertIn(f'leapsecmode {mode}', config)
             else:
-                self.assertIn(f'leapsecmode slew', config)
-                self.assertIn(f'maxslewrate 1000', config)
-                self.assertIn(f'smoothtime 400 0.001024 leaponly', config)
+                self.assertIn('leapsecmode slew', config)
+                self.assertIn('maxslewrate 1000', config)
+                self.assertIn('smoothtime 400 0.001024 leaponly', config)
 
     def test_interleave_option(self):
         # "interleave" option differs from some others in that the
