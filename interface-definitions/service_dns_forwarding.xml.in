@@ -889,16 +889,16 @@
                       <multi/>
                     </properties>
                   </leafNode>
-                  <leafNode name="security-poll-suffix">
+                  <leafNode name="security-status-poll-domain">
                     <properties>
-                      <help>Domain suffix for the periodic PowerDNS security status poll (default: disabled)</help>
+                      <help>Domain name for the periodic PowerDNS security status poll, which checks the running version for known vulnerabilities (default: disabled)</help>
                       <valueHelp>
                         <format>secpoll.powerdns.com</format>
                         <description>Use PowerDNS' own security status poll domain</description>
                       </valueHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Custom domain suffix to poll instead</description>
+                        <description>Custom domain to poll instead</description>
                       </valueHelp>
                       <constraint>
                         <validator name="fqdn"/>

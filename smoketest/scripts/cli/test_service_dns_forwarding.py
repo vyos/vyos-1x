@@ -354,19 +354,19 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('edns-subnet-allow-list')
         self.assertEqual(tmp, ','.join(options))
 
-    def test_security_poll_suffix(self):
+    def test_security_status_poll_domain(self):
         # commit changes - the periodic security status poll must be
-        # disabled (empty suffix) by default, see T9175
+        # disabled (empty) by default, see T9175
         self.cli_commit()
         tmp = get_config_value('security-poll-suffix')
         self.assertEqual(tmp, '')
 
-        # explicitly configuring a suffix must enable and use it
-        suffix = 'secpoll.powerdns.com'
-        self.cli_set(base_path + ['options', 'security-poll-suffix', suffix])
+        # explicitly configuring a domain must enable and use it
+        domain = 'secpoll.powerdns.com'
+        self.cli_set(base_path + ['options', 'security-status-poll-domain', domain])
         self.cli_commit()
         tmp = get_config_value('security-poll-suffix')
-        self.assertEqual(tmp, suffix)
+        self.assertEqual(tmp, domain)
 
     def test_multiple_ns_records(self):
         test_zone = 'example.com'

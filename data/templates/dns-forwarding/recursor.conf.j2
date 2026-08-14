@@ -88,5 +88,5 @@ edns-subnet-allow-list={{ options.edns_subnet_allow_list | join(',') }}
 # security-poll-suffix: unset (the VyOS default) disables the periodic
 # security status poll, since VyOS ships a patched/backported package that
 # is never updated in place and the poll result is thus meaningless (T9175)
-security-poll-suffix={{ options.security_poll_suffix if options.security_poll_suffix is vyos_defined else '' }}
+security-poll-suffix={{ options.security_status_poll_domain if options.security_status_poll_domain is vyos_defined else '' }}
 
