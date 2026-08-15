@@ -758,6 +758,54 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="recursion-exclude-address">
+                <properties>
+                  <help>Authoritative server addresses to exclude from recursive queries, use '!' to define an exception</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address to exclude from recursive queries</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 prefix to exclude from recursive queries</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to exclude from recursive queries</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix to exclude from recursive queries</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv4</format>
+                    <description>IPv4 address exception to the recursive query exclusion list</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv4net</format>
+                    <description>IPv4 prefix exception to the recursive query exclusion list</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv6</format>
+                    <description>IPv6 address exception to the recursive query exclusion list</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv6net</format>
+                    <description>IPv6 prefix exception to the recursive query exclusion list</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-address"/>
+                    <validator name="ipv6-prefix"/>
+                    <validator name="ipv4-address-exclude"/>
+                    <validator name="ipv4-prefix-exclude"/>
+                    <validator name="ipv6-address-exclude"/>
+                    <validator name="ipv6-prefix-exclude"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
               <leafNode name="exclude-throttle-address">
                 <properties>
                   <help>IP address or subnet</help>
