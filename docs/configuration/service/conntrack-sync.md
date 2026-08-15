@@ -57,7 +57,8 @@ set service conntrack-sync failover-mechanism vrrp sync-group syncgrp
 **Configure the interface used to exchange conntrack state with the
 peer.**
 
-The interface must have an IPv4 address assigned.
+The interface must have an address in the same address family as the
+configured peer or multicast group.
 
 Repeat the command to configure multiple interfaces. In this case,
 interfaces must use the same transport mode (either all multicast or
@@ -72,8 +73,8 @@ set service conntrack-sync interface eth1
 
 ```{cfgcmd} set service conntrack-sync interface \<name\> peer \<address\>
 
-**Configure the peer's IPv4 address for unicast sync on the specified
-interface.**
+**Configure the peer's IPv4 or IPv6 address for unicast sync on the
+specified interface.**
 
 Setting `peer` switches this interface from multicast (the default) to
 unicast mode.
@@ -107,14 +108,14 @@ set service conntrack-sync interface eth1 port 3781
 
 ```{cfgcmd} set service conntrack-sync listen-address \<address\>
 
-**Configure the local IPv4 address the router listens on for unicast
-sync traffic.**
+**Configure the local IPv4 or IPv6 address the router listens on for
+unicast sync traffic.**
 
 The command applies only when conntrack sync operates in unicast mode.
 
-The listen address must be assigned to the sync interface. Using an
-address from another interface may cause conntrack sync to fail
-silently.
+The listen address must be assigned to the sync interface and use the same
+address family as the configured peers. Using an address from another
+interface may cause conntrack sync to fail silently.
 
 Repeat the command to configure multiple listen addresses.
 ```
@@ -125,10 +126,10 @@ Example:
 set service conntrack-sync listen-address 192.0.2.1
 ```
 
-```{cfgcmd} set service conntrack-sync mcast-group \<ipv4-multicast-address\>
+```{cfgcmd} set service conntrack-sync mcast-group \<multicast-address\>
 
-**Configure the IPv4 multicast group both routers in the HA pair join
-to exchange sync traffic.**
+**Configure the IPv4 or IPv6 multicast group both routers in the HA
+pair join to exchange sync traffic.**
 
 The command applies only when conntrack sync operates in multicast
 mode. All routers must be configured with the same group.
