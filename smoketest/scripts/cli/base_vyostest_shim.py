@@ -48,10 +48,15 @@ class VyOSUnitTestSHIM:
         # certain failure condition.
         debug = False
         mgmt_daemon_pid = 0
+        smoketest_hint_file = '/tmp/vyos.smoketests.hint'
 
         @staticmethod
         def debug_on():
             return os.path.exists('/tmp/vyos.smoketest.debug')
+
+        @classmethod
+        def running_in_smoketest_harness(cls):
+            return os.path.exists(cls.smoketest_hint_file)
 
         @classmethod
         def setUpClass(cls):
