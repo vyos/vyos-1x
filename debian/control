@@ -15,7 +15,6 @@ Build-Depends:
   libffi-dev,
 # For QA/Lint
   pylint,
-  python3-vici (>= 5.7.2),
   python3-fastapi,
   python3-pyudev,
   python3-systemd,
