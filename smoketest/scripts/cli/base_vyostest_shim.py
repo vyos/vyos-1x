@@ -25,11 +25,10 @@ from typing import Type
 from vyos import ConfigError
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.defaults import commit_lock
 from vyos.frrender import mgmt_daemon
+from vyos.utils.commit import commit_in_progress2
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
-from vyos.utils.process import run
 
 save_config = '/tmp/vyos-smoketest-save'
 
@@ -92,29 +91,37 @@ class VyOSUnitTestSHIM:
             # check process health and continuity
             self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
 
+        @staticmethod
+        def _wait_for_commit_lock():
+            # A concurrent commit (e.g. a previous commit asynchronous cleanup
+            # still finishing) keeps the commit lock held for a moment after
+            # control already returned to the caller.
+            while commit_in_progress2():
+                sleep(0.250)
+
         def cli_set(self, path, value=None):
             if self.debug:
                 str = f'set {" ".join(path)} {value}' if value else f'set {" ".join(path)}'
                 print(str)
+            self._wait_for_commit_lock()
             self._session.set(path, value)
 
         def cli_delete(self, config):
             if self.debug:
                 print('del ' + ' '.join(config))
+            self._wait_for_commit_lock()
             self._session.delete(config)
 
         def cli_discard(self):
             if self.debug:
                 print('DISCARD')
+            self._wait_for_commit_lock()
             self._session.discard()
 
         def cli_commit(self):
             if self.debug:
                 print('commit')
-            # During a commit there is a process opening commit_lock, and run()
-            # returns 0
-            while run(f'sudo lsof -nP {commit_lock}') == 0:
-                sleep(0.250)
+            self._wait_for_commit_lock()
             # Return the output of commit
             # Necessary for testing Warning cases
             return self._session.commit()
