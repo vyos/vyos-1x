@@ -112,7 +112,7 @@ check_migration_scripts_executable:
 	@echo "Checking if migration scripts have executable bit set..."
 	find src/migration-scripts -type f -not -executable -print -exec false {} + || sh -c 'echo "Found files that are not executable! Add permissions." && exit 1'
 
-.PHONE: pylint
+.PHONY: pylint
 pylint: interface_definitions
 	@echo Running "pylint ..."
 	@set -e; \
