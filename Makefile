@@ -116,8 +116,8 @@ check_migration_scripts_executable:
 pylint: interface_definitions
 	@echo Running "pylint ..."
 	@set -e; \
-	PYTHONPATH="python/:smoketest/scripts/cli/" pylint --errors-only $(shell git ls-files python/**/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos* smoketest/scripts); \
-	PYTHONPATH=python/ pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
+	PYTHONPATH="python/:smoketest/scripts/cli/" pylint --jobs 0 --errors-only $(shell git ls-files python/**/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos* smoketest/scripts); \
+	PYTHONPATH=python/ pylint --jobs 0 --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
 
 .PHONY: j2lint
 j2lint:
