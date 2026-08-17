@@ -39,6 +39,7 @@ set interfaces vpp loopback vpplo12 description 'Loop12'
 set interfaces vpp vxlan vppvxlan10 remote '192.0.2.2'
 set interfaces vpp vxlan vppvxlan10 source-address '192.0.2.1'
 set interfaces vpp vxlan vppvxlan10 vni '10'
+set vpp settings allow-unsupported-nics
 set vpp settings interface eth1
 set vpp settings interface eth2
 set vpp settings interface eth3

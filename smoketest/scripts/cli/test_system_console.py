@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -60,7 +59,7 @@ class TestSystemConsole(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
     def test_fbcon_and_serial_con_switch(self):
-        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under VyOS CI/CD QEMU environment!')
 
         grub_vars = get_grub_vars()

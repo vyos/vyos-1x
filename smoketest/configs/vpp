@@ -111,6 +111,7 @@ vpp {
         }
     }
     settings {
+        allow-unsupported-nics
         interface eth1 {
             driver "dpdk"
         }

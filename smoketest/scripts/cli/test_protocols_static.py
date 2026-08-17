@@ -596,7 +596,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         # When running via vyos-build under the QEMU environment a local DHCP
         # server is available. This test verifies that the default route is set.
         # When not running under the VyOS QEMU environment, this test is skipped.
-        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under VyOS CI/CD QEMU environment!')
 
         interface = 'eth0'
@@ -635,7 +635,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         # When running via vyos-build under the QEMU environment a local DHCP
         # server is available. This test verifies that the default route is set.
         # When not running under the VyOS QEMU environment, this test is skipped.
-        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under VyOS CI/CD QEMU environment!')
 
         interface = 'eth0'
@@ -683,7 +683,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         # When running via vyos-build under the QEMU environment a local DHCP
         # server is available. This test verifies that static routes with
         # dhcp-interface are configured correctly.
-        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under VyOS CI/CD QEMU environment!')
 
         dhcp_interface = 'eth0'
