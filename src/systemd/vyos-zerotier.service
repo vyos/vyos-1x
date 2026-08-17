@@ -1,0 +1,10 @@
+[Unit]
+Description=ZeroTier One
+After=vyos-router.service network.target
+
+[Service]
+Type=simple
+RuntimeDirectory=vyos-zerotier
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-zerotier --home /run/vyos-zerotier
+Restart=on-failure

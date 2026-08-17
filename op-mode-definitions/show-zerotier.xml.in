@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="zerotier">
+        <properties>
+          <help>Show ZeroTier service information</help>
+        </properties>
+        <children>
+          <node name="status">
+            <properties>
+              <help>Show ZeroTier node status</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/zerotier.py status</command>
+            <children>
+              <leafNode name="json">
+                <properties>
+                  <help>Show ZeroTier node status in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/zerotier.py status --json</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="networks">
+            <properties>
+              <help>Show ZeroTier networks</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/zerotier.py networks</command>
+            <children>
+              <leafNode name="json">
+                <properties>
+                  <help>Show ZeroTier networks in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/zerotier.py networks --json</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="peers">
+            <properties>
+              <help>Show ZeroTier peers</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/zerotier.py peers</command>
+            <children>
+              <leafNode name="json">
+                <properties>
+                  <help>Show ZeroTier peers in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/zerotier.py peers --json</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="moons">
+            <properties>
+              <help>Show ZeroTier moons</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/zerotier.py moons</command>
+            <children>
+              <leafNode name="json">
+                <properties>
+                  <help>Show ZeroTier moons in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/zerotier.py moons --json</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

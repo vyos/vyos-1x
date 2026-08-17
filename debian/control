@@ -180,6 +180,9 @@ Depends:
   wireguard-tools,
   qrencode,
 # End "interfaces wireguard"
+# For "interfaces zerotier", "service zerotier"
+  zerotier-one,
+# End "interfaces zerotier", "service zerotier"
 # For "interfaces pppoe"
   pppoe,
 # End "interfaces pppoe"

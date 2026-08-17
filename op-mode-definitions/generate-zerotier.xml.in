@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="zerotier">
+        <properties>
+          <help>Generate ZeroTier material</help>
+        </properties>
+        <children>
+          <node name="identity">
+            <properties>
+              <help>Generate ZeroTier identity</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/zerotier.py generate-identity</command>
+            <children>
+              <leafNode name="install">
+                <properties>
+                  <help>Install generated identity into the candidate configuration</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/zerotier.py generate-identity --install</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
