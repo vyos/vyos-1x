@@ -266,6 +266,14 @@ def verify(config_dict):
         if not dict_search('segment_routing.srv6.interface', isis):
             raise ConfigError('Missing interface used for installing SRv6 SIDs')
 
+    # Check mpls-te exclusivity with distribute link-state
+    if dict_search('distribute.link_state', isis) is not None and dict_search(
+        'traffic_engineering', isis
+    ):
+        raise ConfigError(
+            'traffic-engineering is mutually exclusive with distribute link-state'
+        )
+
     return None
 
 def generate(config_dict):
