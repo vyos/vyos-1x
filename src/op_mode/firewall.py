@@ -19,6 +19,7 @@ import ipaddress
 import json
 import re
 import sys
+import time
 from signal import signal, SIGPIPE, SIG_DFL
 import tabulate
 import textwrap
@@ -29,6 +30,7 @@ from vyos.config_path_resolver import refresh_apply_path_groups
 from vyos.config_path_resolver import DictConfig
 from vyos.configquery import op_mode_config_dict
 from vyos.template import render
+from vyos.utils.commit import commit_in_progress
 from vyos.utils.locking import Lock
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
@@ -803,6 +805,19 @@ def show_statistics():
                     output_firewall_name_statistics(family, hook,prior, prior_conf)
 
 def update_apply_path_groups():
+    # A concurrent firewall commit renders the same nftables sets this
+    # refresh writes to directly; wait it out first, the same way
+    # vyos-domain-resolver coordinates its own out-of-commit nftables pushes
+    # (FQDN/remote-group sets) with commit.
+    wait_start = time.time()
+    while commit_in_progress():
+        if time.time() - wait_start > 60:
+            print(
+                'Error: commit still in progress after 60s, aborting apply-path refresh'
+            )
+            sys.exit(1)
+        time.sleep(1)
+
     # Held for the whole read-resolve-render-apply sequence, not just the
     # render+apply part: otherwise a slower invocation's stale config
     # snapshot (read before the lock existed) could overwrite a faster,
