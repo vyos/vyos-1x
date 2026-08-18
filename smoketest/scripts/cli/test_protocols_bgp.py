@@ -2045,5 +2045,41 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
         self.assertIn(f' address-family link-state', frrconfig)
 
+    def test_bgp_105_reject_bgp_referencing_incomplete_prefix_list(self):
+        # T8482: a peer-group referencing a prefix-list that itself fails
+        # verify() (missing "action") must not let the BGP commit succeed,
+        # and FRR must never receive the otherwise valid BGP configuration
+        # while the referenced policy object remains incomplete.
+        broken_prefix_list = 'pfx-foo-broken'
+        peer_group = 'foo'
+        peer = '192.0.2.100'
+
+        self.cli_set(['policy', 'prefix-list', broken_prefix_list, 'rule', '10', 'prefix', '10.0.0.0/24'])
+
+        self.cli_set(base_path + ['neighbor', peer, 'peer-group', peer_group])
+        self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', '200'])
+        self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast',
+                                   'prefix-list', 'export', broken_prefix_list])
+
+        # Commit must fail - the referenced prefix-list is incomplete
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # FRR must not see any BGP configuration - nor the still-invalid
+        # prefix-list itself - while the commit is broken
+        frrconfig = self.getFRRconfig()
+        self.assertNotIn('router bgp', frrconfig)
+        self.assertNotIn(f'ip prefix-list {broken_prefix_list}', frrconfig)
+
+        # Completing the prefix-list allows the very same BGP config to commit
+        self.cli_set(['policy', 'prefix-list', broken_prefix_list, 'rule', '10', 'action', 'permit'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {peer_group} prefix-list {broken_prefix_list} out', frrconfig)
+
+        self.cli_delete(['policy', 'prefix-list', broken_prefix_list])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
