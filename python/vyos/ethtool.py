@@ -159,6 +159,9 @@ class Ethtool:
             fixed = bool(self._features[feature]['fixed'])
         return active, fixed
 
+    def get_rx_checksumming(self):
+        return self._get_generic('rx-checksumming')
+
     def get_generic_receive_offload(self):
         return self._get_generic('generic-receive-offload')
 
