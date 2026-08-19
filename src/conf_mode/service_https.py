@@ -117,6 +117,9 @@ def verify(https):
             raise ConfigError(
                 'CA certificate must be configured for mTLS client verification'
             )
+    if dict_search('api.rest.authentication.oidc.jwks_url', https) is not None:
+        if dict_search('api.rest.authentication.oidc.issuer', https) is None:
+            raise ConfigError('OIDC issuer must be configured when jwks-url is set')
 
     # Check if server port is already in use by a different application
     listen_address = ['0.0.0.0']

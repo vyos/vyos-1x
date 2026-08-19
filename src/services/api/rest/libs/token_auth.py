@@ -36,19 +36,30 @@ def verify_oidc_token(token: str):
     try:
         from jwt import PyJWKClient
 
-        jwks_uri = (
-            state.oidc_jwks_uri or f"{state.oidc_issuer}/protocol/openid-connect/certs"
-        )
+        # Use explicit jwks-url if set, otherwise use OIDC discovery
+        if state.oidc_jwks_uri:
+            jwks_uri = state.oidc_jwks_uri
+        else:
+            import urllib.request as _req
+            import json as _json
+
+            disc_url = f"{state.oidc_issuer}/.well-known/openid-configuration"
+            with _req.urlopen(disc_url) as r:
+                jwks_uri = _json.loads(r.read())["jwks_uri"]
         jwks_client = PyJWKClient(jwks_uri, cache_keys=True)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(
-            token,
-            signing_key.key,
+        decode_options = {"require": ["exp"]}
+        decode_kwargs: dict = dict(
             algorithms=["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"],
-            options={"verify_aud": False},
+            options=decode_options,
             issuer=state.oidc_issuer,
             leeway=30,
         )
+        if state.oidc_audience:
+            decode_kwargs["audience"] = state.oidc_audience
+        else:
+            decode_options["verify_aud"] = False
+        payload = jwt.decode(token, signing_key.key, **decode_kwargs)
         return payload.get("sub") or payload.get("client_id") or "oidc-client"
     except Exception as e:
         print(f"OIDC token validation failed: {e}", flush=True)

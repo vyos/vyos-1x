@@ -104,6 +104,15 @@
                               </valueHelp>
                             </properties>
                           </leafNode>
+                          <leafNode name="audience">
+                            <properties>
+                              <help>Expected audience claim in OIDC tokens</help>
+                              <valueHelp>
+                                <format>txt</format>
+                                <description>Audience value e.g. vyos-api or account</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
                         </children>
                       </node>
                     </children>

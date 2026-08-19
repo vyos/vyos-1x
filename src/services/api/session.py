@@ -44,3 +44,4 @@ class SessionState:
         self.rest_token_exp = None
         self.oidc_issuer = None
         self.oidc_jwks_uri = None
+        self.oidc_audience = None

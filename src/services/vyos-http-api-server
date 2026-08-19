@@ -197,6 +197,8 @@ def initialization(session: SessionState, app: FastAPI = app):
                     session.oidc_issuer = oidc['issuer']
                 if 'jwks_url' in oidc:
                     session.oidc_jwks_uri = oidc['jwks_url']
+                if 'audience' in oidc:
+                    session.oidc_audience = oidc['audience']
                 elif 'issuer' in oidc:
                     # Derive JWKS URI from issuer if not explicitly set
                     session.oidc_jwks_uri = None  # will be resolved in token_auth
