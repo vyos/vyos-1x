@@ -7,11 +7,20 @@
 # delete, remetric races), RENEW leaves the interface with a live address and
 # no default via $new_routers.
 #
-# Mirror the RFC3442 RENEW exit-hook pattern (02-vyos-dhcp-renew-rfc3442): only
-# act when the default is missing. Use the enter-hook "ip" wrapper so FRR
-# receives the route (tag/distance IF_METRIC). Honor no-default-route (enter
-# hook blanks new_routers) and skip when classless static routes are present
-# (stock ignores option 3 in that case).
+# Presence check MUST use /usr/sbin/ip, not the enter-hook ip() wrapper.
+# That wrapper sends any `ip … route` that is not `del` through vtysh as an
+# add, so `ip -4 route show` both misses the kernel table and writes a
+# staticd duplicate. delroute() already reads via /usr/sbin/ip; match that,
+# and append ${VRF_OPTION} so VRF leases see the same table the add uses.
+#
+# If option 3 changes across a same-IP RENEW, drop defaults via gateways
+# that disappeared from $new_routers. Otherwise FRR keeps the old nexthop
+# and the kernel shows ECMP over old+new. Compare $old_routers vs
+# $new_routers (same pattern as 98-vyos-static-routes-dhclient-hook).
+#
+# Adds still use the enter-hook ip() wrapper so FRR gets tag/distance
+# IF_METRIC. Honor no-default-route (enter hook blanks new_routers) and
+# skip when classless static routes are present (stock ignores option 3).
 
 RUN="yes"
 
@@ -35,9 +44,29 @@ fi
 
 if_metric="${IF_METRIC:-210}"
 
+# Drop defaults via gateways the server no longer announces.
+if [ -n "$old_routers" ] && [ "$old_routers" != "$new_routers" ]; then
+    for router in $old_routers; do
+        skip=
+        for keep in $new_routers; do
+            if [ "$router" = "$keep" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ -n "$skip" ]; then
+            continue
+        fi
+        logmsg info \
+            "RENEW/REBIND: removing stale default via ${router} dev ${interface}"
+        # Wrapper: FRR-aware del (staticd + kernel).
+        ip -4 route del default via "${router}" dev "${interface}" >/dev/null 2>&1
+    done
+fi
+
 for router in $new_routers; do
-    # Already present for this gateway + interface?
-    if ip -4 route show default via "${router}" dev "${interface}" 2>/dev/null | grep -q .; then
+    # Read-only check: real ip(8), not the enter-hook wrapper.
+    if /usr/sbin/ip -4 route show default via "${router}" dev "${interface}" ${VRF_OPTION} 2>/dev/null | grep -q .; then
         if_metric=$((if_metric + 1))
         continue
     fi
