@@ -142,14 +142,26 @@ def main() -> int:
         except (OSError, ValueError):
             pass
 
-        if not _restart(iface):
-            # No cooldown on failure — next timer tick can retry.
-            continue
+        # Record cooldown before restart. If the write fails, skip the
+        # restart: a successful restart with no marker would fire again
+        # on the next 5-minute tick and defeat COOLDOWN_SECS.
         try:
             with open(state_file, 'w', encoding='utf-8') as f:
                 f.write(str(now))
-        except OSError:
-            pass
+        except OSError as e:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                f'{state_file}: {e}; skipping restart (cannot honor cooldown)',
+            )
+            continue
+
+        if not _restart(iface):
+            # Release the slot so the next tick can retry.
+            try:
+                os.unlink(state_file)
+            except OSError:
+                pass
+            continue
 
     return 0
 
