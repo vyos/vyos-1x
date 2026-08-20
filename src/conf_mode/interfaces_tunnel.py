@@ -186,6 +186,13 @@ def verify(tunnel):
                         f'for tunnel "{o_tunnel}"!'
                     )
             else:
+                # A keyless tunnel never collides with a keyed one, as the Kernel
+                # only matches a tunnel carrying no key against another tunnel
+                # carrying no key, see ip_tunnel_key_match() in
+                # include/net/ip_tunnels.h
+                if their_key is not None:
+                    continue
+
                 # If no IP GRE key is defined we cannot have more than one GRE tunnel
                 # bound to any one interface/IP address and the same remote. This will
                 # result in a OS  PermissionError: add tunnel "gre0" failed: File exists

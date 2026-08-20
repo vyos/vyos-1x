@@ -468,6 +468,36 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '31'])
         self.cli_commit()
 
+    def test_multiple_gre_tunnel_keyless_and_keyed(self):
+        # A keyless tunnel is distinct from a keyed one even when both share
+        # the same local and remote address - the Kernel only matches a tunnel
+        # carrying no key against another tunnel carrying no key
+        ip_key = '40'
+
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+        self.cli_set(self._base_path + ['tun20', 'remote', '0.0.0.0'])
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', ip_key])
+
+        self.cli_commit()
+
+        # Re-verifying the keyless tunnel must keep succeeding - if it does not,
+        # the next commit touching it fails and it is lost on the next boot
+        self.cli_set(self._base_path + ['tun10', 'description', 'foo'])
+        self.cli_commit()
+
+        conf = get_interface_config('tun10')
+        self.assertEqual('gre', conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertNotIn('ikey', conf['linkinfo']['info_data'])
+
+        conf = get_interface_config('tun20')
+        self.assertEqual('gre', conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
+
     def test_tunnel_invalid_source_interface(self):
         encapsulation = 'gre'
         remote = '192.0.2.1'
