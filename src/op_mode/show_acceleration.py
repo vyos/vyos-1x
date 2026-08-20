@@ -26,7 +26,15 @@ from vyos.utils.process import popen
 def detect_qat_dev():
     output, err = popen('lspci -nn', decode='utf-8')
     if not err:
-        data = re.findall('(8086:19e2)|(8086:37c[8-9])|(8086:0435)|(8086:6f54)', output)
+        # PCI id | Chipset
+        # 19e2 -> C3xx
+        # 37c8 -> C62x
+        # 37c9 -> C62xvf
+        # 0435 -> DH895
+        # 6f54 -> D15xx
+        # 18ee -> QAT_200XX
+        data = re.findall(
+            '(8086:19e2)|(8086:37c[8-9])|(8086:0435)|(8086:6f54)|(8086:18ee)', output)
         # QAT devices found
         if data:
             return
@@ -93,7 +101,7 @@ args = parser.parse_args()
 if args.hw:
     detect_qat_dev()
     # Show available Intel QAT devices
-    call('lspci -nn | egrep -e \'8086:37c[8-9]|8086:19e2|8086:0435|8086:6f54\'')
+    call('lspci -nn | egrep -e \'8086:37c[8-9]|8086:19e2|8086:0435|8086:6f54|8086:18ee\'')
 elif args.flow and args.dev:
     check_qat_if_conf()
     call('cat '+get_qat_proc_path(args.dev)+"fw_counters")
