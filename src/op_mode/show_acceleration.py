@@ -80,7 +80,7 @@ def check_qat_if_conf():
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
 group.add_argument("--hw", action="store_true", help="Show Intel QAT HW")
-group.add_argument("--dev_list", action="store_true", help="Return Intel QAT devices")
+group.add_argument("--dev-list", action="store_true", help="Return Intel QAT devices")
 group.add_argument("--flow", action="store_true", help="Show Intel QAT flows")
 group.add_argument("--interrupts", action="store_true", help="Show Intel QAT interrupts")
 group.add_argument("--status", action="store_true", help="Show Intel QAT status")
