@@ -251,13 +251,17 @@ run_preconfig_script ()
 # restore if missing post-config script
 restore_if_missing_postconfig_script ()
 {
-    if [ ! -x ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script ]; then
-        mkdir -p ${vyatta_sysconfdir}/config/scripts
-        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts
-        chmod 775 ${vyatta_sysconfdir}/config/scripts
-        cp ${vyos_rootfs_dir}/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
-        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
-        chmod 750 ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
+    local dst=${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
+    local src=${vyos_rootfs_dir}/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+    mkdir -p ${vyatta_sysconfdir}/config/scripts
+    chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts
+    chmod 775 ${vyatta_sysconfdir}/config/scripts
+    # Missing, or old comments-only stock (no real commands) — copy the
+    # image runner. Operator scripts with commands are left alone.
+    if [ ! -f "$dst" ] || ! grep -qvE '^[[:space:]]*(#|$)' "$dst"; then
+        cp "$src" "$dst"
+        chgrp ${GROUP} "$dst"
+        chmod 750 "$dst"
     fi
 }
 

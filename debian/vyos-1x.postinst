@@ -194,14 +194,14 @@ EOF
 fi
 
 # create /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+# Refresh comments-only stock (old empty template) on upgrade so restore
+# and first-boot copies pick up the post-config.d runner. Leave any file
+# that has real commands (operator customizations) untouched.
 POSTCONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
-if [ ! -x $POSTCONFIG_SCRIPT ]; then
-    mkdir -p $(dirname $POSTCONFIG_SCRIPT)
-    touch $POSTCONFIG_SCRIPT
-    chmod 755 $POSTCONFIG_SCRIPT
+mkdir -p $(dirname $POSTCONFIG_SCRIPT)
+if [ ! -f $POSTCONFIG_SCRIPT ] || ! grep -qvE '^[[:space:]]*(#|$)' $POSTCONFIG_SCRIPT; then
     # Quoted heredoc: the runner references $DIR / $script / $?.
-    # Existing custom /config scripts are not replaced (test -x above).
-    cat <<'EOF' >>$POSTCONFIG_SCRIPT
+    cat <<'EOF' >$POSTCONFIG_SCRIPT
 #!/bin/sh
 # This script is executed at boot time after VyOS configuration is fully applied.
 # Any modifications required to work around unfixed bugs
@@ -217,6 +217,7 @@ for script in "$DIR"/*; do
     "$script" || logger -t vyos-postconfig "post-config.d/$(basename "$script") failed (exit $?)"
 done
 EOF
+    chmod 755 $POSTCONFIG_SCRIPT
 fi
 
 # symlink destination is deleted during ISO assembly - this generates some noise
