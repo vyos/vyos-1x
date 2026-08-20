@@ -101,7 +101,8 @@ def main() -> int:
         if not base.startswith('dhclient_') or not base.endswith('.conf'):
             continue
         iface = base[len('dhclient_') : -len('.conf')]
-        if not iface or iface.endswith('v6'):
+        # v4 dhclient only — IPv6 uses dhcp6c@<iface>, not a *v6 filename.
+        if not iface:
             continue
 
         unit = f'dhclient@{iface}.service'
