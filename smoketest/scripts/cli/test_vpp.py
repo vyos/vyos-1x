@@ -477,6 +477,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             "Interface BondEthernet23 is not in the expected state 'up'.",
         )
 
+        # promiscuous mode must be enabled on a member interface
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+
         self.cli_set(bond_path + [interface_bond, 'description', description])
         for vlan in vlans:
             self.cli_set(
@@ -526,6 +530,29 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_bond}.{vlan}'))
 
+        # a member with its own VLAN (vif) must keep promiscuous mode
+        # enabled after being detached from the bond
+        member_vlan = '789'
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', member_vlan])
+        self.cli_commit()
+
+        self.cli_delete(bond_path + [interface_bond, 'member', 'interface', interface])
+        self.cli_commit()
+
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+
+        # remove the member's VLAN too: promiscuous mode must now be disabled
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', member_vlan])
+        self.cli_commit()
+
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertNotRegex(out, r'flags:.*\bpromisc\b')
+
+        # re-add the member for the remaining bond-deletion checks below
+        self.cli_set(bond_path + [interface_bond, 'member', 'interface', interface])
+        self.cli_commit()
+
         # delete bonding interface
         self.cli_delete(bond_path)
         self.cli_commit()
@@ -533,6 +560,11 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # check deleting bonding interface
         _, out = rc_cmd('sudo vppctl show interface')
         self.assertNotIn('BondEthernet23', out)
+
+        # promiscuous mode must be disabled once the member is
+        # detached from the bond (bond deletion detaches all members)
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertNotRegex(out, r'flags:.*\bpromisc\b')
 
     def test_06_vpp_bridge(self):
         bridge_path = interfaces_path + ['bridge']
