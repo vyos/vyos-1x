@@ -4,6 +4,24 @@
 ACTION!="add", 				GOTO="vyos_net_end"
 SUBSYSTEM!="net",			GOTO="vyos_net_end"
 
+# Fallback path for Azure VF interfaces: if a VF still appears as plain ethN,
+# rename it to vf_ethX before persistent synthetic interface naming runs to
+# prevent it from incorrectly being considered as a synthetic interface.
+ATTR{[dmi/id]sys_vendor}=="Microsoft Corporation", DRIVERS=="mlx*_core", KERNEL=="eth*", PROGRAM="vyos_vf_name %k", NAME="%c", GOTO="vyos_net_end"
+ATTR{[dmi/id]sys_vendor}=="Microsoft Corporation", DRIVERS=="mana", KERNEL=="eth*", PROGRAM="vyos_vf_name %k", NAME="%c", GOTO="vyos_net_end"
+
+# VF interfaces are not handled by vyos_net_name, so skip them.
+# KERNEL=="vf_*" catches already-renamed Mellanox and MANA VFs.
+# DRIVERS=="mlx*_core" and DRIVERS=="mana" on Azure catch VF interfaces
+# in an unexpected intermediate state (still named ethN/eN) that must not
+# be remapped by vyos_net_name.
+# This guard is intentionally scoped to Microsoft Azure to
+# avoid excluding bare-metal Mellanox NICs on physical hardware, which do
+# need persistent naming via vyos_net_name.
+KERNEL=="vf_*", 							GOTO="vyos_net_end"
+ATTR{[dmi/id]sys_vendor}=="Microsoft Corporation", DRIVERS=="mlx*_core",	GOTO="vyos_net_end"
+ATTR{[dmi/id]sys_vendor}=="Microsoft Corporation", DRIVERS=="mana",      	GOTO="vyos_net_end"
+
 # Do name change for ethernet and wireless devices only
 KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"
 

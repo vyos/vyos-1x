@@ -178,6 +178,11 @@ def discover_physical_interfaces(sys_class_net: str = '/sys/class/net') -> dict:
     """Return {kernel_name: mac} for every interface backed by a real bus
     device - excludes lo, bridges, bonds, VLANs, veth, tunnels, etc.
 
+    Also excludes interfaces enslaved to another netdev (master symlink
+    present), which covers Azure VF datapath interfaces bound under their
+    synthetic parent. Those are acceleration children, not independent
+    primary interfaces, and must not be candidates for hw-id naming.
+
     sys_class_net is overridable for testing against a fake sysfs tree.
     """
     interfaces = {}
@@ -187,6 +192,14 @@ def discover_physical_interfaces(sys_class_net: str = '/sys/class/net') -> dict:
 
     for entry in net_dir.iterdir():
         if not (entry / 'device').exists():
+            logger.debug(
+                f"skipping '{entry.name}': no backing device in sysfs"
+            )
+            continue
+        if (entry / 'master').exists():
+            logger.debug(
+                f"skipping '{entry.name}': interface is enslaved via master link"
+            )
             continue
         mac = get_permanent_mac(entry.name, sys_class_net)
         if mac:
