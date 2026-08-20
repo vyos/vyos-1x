@@ -122,7 +122,8 @@ def get_qat_proc_path(qat_dev):
                     elif re.search('bsf', elm_list[elm]):
                         q_list = elm_list[elm].split(": ")
                         q_bsf = q_list[1]
-        return "/sys/kernel/debug/qat_"+q_type+"_"+q_bsf+"/"
+        if q_type and q_bsf:
+            return f'/sys/kernel/debug/qat_{q_type}_{q_bsf}/'
 
     print(f'Could not determine the debugfs path for {qat_dev}')
     sys.exit(1)
