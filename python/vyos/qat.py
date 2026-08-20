@@ -88,7 +88,12 @@ def find_devices() -> list:
         driver = None
         driver_link = os.path.join(device_path, 'driver')
         if os.path.islink(driver_link):
-            driver = os.path.basename(os.readlink(driver_link))
+            try:
+                driver = os.path.basename(os.readlink(driver_link))
+            except FileNotFoundError:
+                # The device can be unbound between the two calls. Report it
+                # as unbound rather than aborting the whole scan.
+                pass
 
         devices.append(
             {
