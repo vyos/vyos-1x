@@ -624,6 +624,32 @@ def renew_client_lease(raw: bool, family: ArgFamily, interface: str):
         call(f'systemctl restart dhclient@{interface}.service')
 
 
+def _release_isc_dhclient(interface: str) -> None:
+    """Send DHCPv4 RELEASE, then stop dhclient@.
+
+    ExecStop is -x (no RELEASE) so disable/restart keep INIT-REBOOT / HA
+    lease seeds. Op-mode "release dhcp interface" is the explicit RELEASE
+    path: dhclient -r with the unit's -cf/-pf/-lf, then systemctl stop so
+    Restart=always does not start a new client after the main PID exits.
+    """
+    from vyos.defaults import directories
+    from vyos.utils.network import get_interface_vrf
+
+    lease_dir = directories['isc_dhclient_dir']
+    conf = f'{lease_dir}/dhclient_{interface}.conf'
+    pid = f'{lease_dir}/dhclient_{interface}.pid'
+    leases = f'{lease_dir}/dhclient_{interface}.leases'
+    vrf = get_interface_vrf(interface)
+    if vrf == 'default':
+        vrf = None
+
+    call(
+        f'/sbin/dhclient -4 -r -cf {conf} -pf {pid} -lf {leases} {interface}',
+        vrf=vrf,
+    )
+    call(f'systemctl stop dhclient@{interface}.service')
+
+
 @_verify_client
 def release_client_lease(raw: bool, family: ArgFamily, interface: str):
     if not raw:
@@ -632,7 +658,7 @@ def release_client_lease(raw: bool, family: ArgFamily, interface: str):
     if family == 'inet6':
         call(f'systemctl stop dhcp6c@{interface}.service')
     else:
-        call(f'systemctl stop dhclient@{interface}.service')
+        _release_isc_dhclient(interface)
 
 
 if __name__ == '__main__':
