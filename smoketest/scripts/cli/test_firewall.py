@@ -402,8 +402,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['fib daddr type prohibit', 'drop'],
         ]
 
-        self.verify_nftables_chain(nftables_search_v4, 'ip vyos_filter', 'NAME_smoketest')
-        self.verify_nftables_chain(nftables_search_v6, 'ip6 vyos_filter', 'NAME6_smoketest')
+        self.verify_nftables_chain(
+            nftables_search_v4, 'ip vyos_filter', 'NAME_smoketest'
+        )
+        self.verify_nftables_chain(
+            nftables_search_v6, 'ip6 vyos_filter', 'NAME6_smoketest'
+        )
 
         nftables_search_v4_raw = [
             ['fib daddr type local', 'notrack'],

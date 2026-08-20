@@ -216,35 +216,37 @@ def verify_jump_target(firewall, hook, jump_target, family, recursive=False):
 
 def is_node_empty(rule_conf):
     is_empty_list = []
-    is_empty_list.append([
-                        ['add_address_to_group'],
-                        ['connection_status'],
-                        ['destination'],
-                        ['destination', 'group'],
-                        ['destination', 'geoip'],
-                        ['fib'],
-                        ['fib', 'match'],
-                        ['fragment'],
-                        ['gre'],
-                        ['gre', 'flags'],
-                        ['hop_limit'],
-                        ['icmp'],
-                        ['icmpv6'],
-                        ['inbound_interface'],
-                        ['ipsec'],
-                        ['limit'],
-                        ['log_options'],
-                        ['outbound_interface'],
-                        ['set'],
-                        ['source'],
-                        ['source', 'group'],
-                        ['source', 'geoip'],
-                        ['tcp'],
-                        ['tcp', 'flags'],
-                        ['time'],
-                        ['ttl'],
-                        ['vlan']
-                        ])
+    is_empty_list.append(
+        [
+            ['add_address_to_group'],
+            ['connection_status'],
+            ['destination'],
+            ['destination', 'group'],
+            ['destination', 'geoip'],
+            ['fib'],
+            ['fib', 'match'],
+            ['fragment'],
+            ['gre'],
+            ['gre', 'flags'],
+            ['hop_limit'],
+            ['icmp'],
+            ['icmpv6'],
+            ['inbound_interface'],
+            ['ipsec'],
+            ['limit'],
+            ['log_options'],
+            ['outbound_interface'],
+            ['set'],
+            ['source'],
+            ['source', 'group'],
+            ['source', 'geoip'],
+            ['tcp'],
+            ['tcp', 'flags'],
+            ['time'],
+            ['ttl'],
+            ['vlan'],
+        ]
+    )
 
     for node in is_empty_list[0]:
         if dict_search_args(rule_conf, *node) == {}:
