@@ -68,7 +68,9 @@ class TestConfigSessionRecover(TestCase):
         with patch.object(
             s,
             '_ConfigSession__run_command',
-            side_effect=ConfigSessionError('calling validateSetPath() without config session'),
+            side_effect=ConfigSessionError(
+                'calling validateSetPath() without config session'
+            ),
         ):
             self.assertFalse(s.session_exists())
 
@@ -166,7 +168,9 @@ class TestConfigSessionRecover(TestCase):
                         ):
                             with patch(
                                 'vyos.configsession.VyconfSession',
-                                side_effect=ConfigSessionError('vyconf construct failed'),
+                                side_effect=ConfigSessionError(
+                                    'vyconf construct failed'
+                                ),
                             ):
                                 with patch(
                                     'vyos.configsession.weakref.finalize'
