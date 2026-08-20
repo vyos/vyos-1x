@@ -22,8 +22,9 @@ from unittest import TestCase
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-# Host checkouts (macOS/dev) may lack VyOS packaging deps; stub before import.
-for _mod in (
+# Host checkouts (macOS/dev) may lack VyOS packaging deps; stub only while
+# importing configsession so later nose2 tests see real modules.
+_stub_modules = (
     'cracklib',
     'requests',
     'psutil',
@@ -35,11 +36,16 @@ for _mod in (
     'vyos.proto',
     'vyos.proto.vyconf_pb2',
     'vyos.proto.vyconf_client',
-):
-    sys.modules.setdefault(_mod, MagicMock())
+)
+_missing_stubs = {
+    module: MagicMock()
+    for module in _stub_modules
+    if module not in sys.modules
+}
 
-from vyos.configsession import ConfigSession
-from vyos.configsession import ConfigSessionError
+with patch.dict(sys.modules, _missing_stubs):
+    from vyos.configsession import ConfigSession
+    from vyos.configsession import ConfigSessionError
 
 
 def _make_session_stub() -> ConfigSession:
