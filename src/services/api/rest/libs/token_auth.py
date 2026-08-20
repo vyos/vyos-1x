@@ -44,7 +44,7 @@ def verify_oidc_token(token: str):
             import json as _json
 
             disc_url = f"{state.oidc_issuer}/.well-known/openid-configuration"
-            with _req.urlopen(disc_url) as r:
+            with _req.urlopen(disc_url, timeout=10) as r:
                 jwks_uri = _json.loads(r.read())["jwks_uri"]
         jwks_client = PyJWKClient(jwks_uri, cache_keys=True)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
