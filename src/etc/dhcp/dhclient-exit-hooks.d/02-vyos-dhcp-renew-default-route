@@ -14,13 +14,17 @@
 # and append ${VRF_OPTION} so VRF leases see the same table the add uses.
 #
 # If option 3 changes across a same-IP RENEW, drop defaults via gateways
-# that disappeared from $new_routers. Otherwise FRR keeps the old nexthop
-# and the kernel shows ECMP over old+new. Compare $old_routers vs
-# $new_routers (same pattern as 98-vyos-static-routes-dhclient-hook).
+# that disappeared from $new_routers (including option 3 going away entirely).
+# Otherwise FRR keeps the old nexthop and the kernel shows ECMP over old+new.
+# Compare $old_routers vs $new_routers (same pattern as
+# 98-vyos-static-routes-dhclient-hook). The no-default-route enter hook blanks
+# new_routers; removing a leftover option-3 default is the right outcome there
+# too, so cleanup runs before the empty-new_routers return.
 #
 # Adds still use the enter-hook ip() wrapper so FRR gets tag/distance
-# IF_METRIC. Honor no-default-route (enter hook blanks new_routers) and
-# skip when classless static routes are present (stock ignores option 3).
+# IF_METRIC. Skip when classless static routes are present (stock ignores
+# option 3). Wrapper exit status is not a gate: vtysh "no ip route" fails
+# when the route is already gone. Verify the kernel table with /usr/sbin/ip.
 
 RUN="yes"
 
@@ -38,13 +42,15 @@ if [ -n "$new_rfc3442_classless_static_routes" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
-if [ -z "$new_routers" ]; then
-    return 0 2>/dev/null || exit 0
-fi
+# Kernel/FRR-installed default present? Real ip(8) only — never the wrapper.
+_default_via_present() {
+    /usr/sbin/ip -4 route show default via "$1" dev "${interface}" ${VRF_OPTION} 2>/dev/null | grep -q .
+}
 
 if_metric="${IF_METRIC:-210}"
 
-# Drop defaults via gateways the server no longer announces.
+# Drop defaults via gateways the server no longer announces, including when
+# option 3 disappeared (empty new_routers) or no-default-route blanked it.
 if [ -n "$old_routers" ] && [ "$old_routers" != "$new_routers" ]; then
     for router in $old_routers; do
         skip=
@@ -61,12 +67,20 @@ if [ -n "$old_routers" ] && [ "$old_routers" != "$new_routers" ]; then
             "RENEW/REBIND: removing stale default via ${router} dev ${interface}"
         # Wrapper: FRR-aware del (staticd + kernel).
         ip -4 route del default via "${router}" dev "${interface}" >/dev/null 2>&1
+        if _default_via_present "${router}"; then
+            logmsg warn \
+                "RENEW/REBIND: stale default still present via ${router} dev ${interface}"
+        fi
     done
 fi
 
+# Honor no-default-route / missing option 3: nothing to install.
+if [ -z "$new_routers" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
 for router in $new_routers; do
-    # Read-only check: real ip(8), not the enter-hook wrapper.
-    if /usr/sbin/ip -4 route show default via "${router}" dev "${interface}" ${VRF_OPTION} 2>/dev/null | grep -q .; then
+    if _default_via_present "${router}"; then
         if_metric=$((if_metric + 1))
         continue
     fi
@@ -77,6 +91,11 @@ for router in $new_routers; do
     # Uses enter-hook ip() wrapper when defined (FRR-aware); EEXIST-safe.
     ip -4 route add default via "${router}" dev "${interface}" \
         metric "${if_metric}" >/dev/null 2>&1
+
+    if ! _default_via_present "${router}"; then
+        logmsg warn \
+            "RENEW/REBIND: default still missing via ${router} dev ${interface} after add"
+    fi
 
     if_metric=$((if_metric + 1))
 done
