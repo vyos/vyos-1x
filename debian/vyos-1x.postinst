@@ -199,12 +199,23 @@ if [ ! -x $POSTCONFIG_SCRIPT ]; then
     mkdir -p $(dirname $POSTCONFIG_SCRIPT)
     touch $POSTCONFIG_SCRIPT
     chmod 755 $POSTCONFIG_SCRIPT
-    cat <<EOF >>$POSTCONFIG_SCRIPT
+    # Quoted heredoc: the runner references $DIR / $script / $?.
+    # Existing custom /config scripts are not replaced (test -x above).
+    cat <<'EOF' >>$POSTCONFIG_SCRIPT
 #!/bin/sh
 # This script is executed at boot time after VyOS configuration is fully applied.
 # Any modifications required to work around unfixed bugs
 # or use services not available through the VyOS CLI system can be placed here.
+#
+# Executable files in /config/scripts/post-config.d/ are run in name order
+# (same idea as post-upgrade.d). Failures are logged; boot continues.
 
+DIR=/config/scripts/post-config.d
+[ -d "$DIR" ] || exit 0
+for script in "$DIR"/*; do
+    [ -f "$script" ] && [ -x "$script" ] || continue
+    "$script" || logger -t vyos-postconfig "post-config.d/$(basename "$script") failed (exit $?)"
+done
 EOF
 fi
 
