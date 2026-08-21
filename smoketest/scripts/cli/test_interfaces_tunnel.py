@@ -498,6 +498,33 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
 
+    def test_multiple_gre_tunnel_keyless_different_source_interface(self):
+        # Tunnels bound to different source-interfaces stay distinct for the
+        # Kernel even when they share one local and remote address - "dev" is
+        # compared as parms.link - so no GRE key is needed to tell them apart
+        remote = '1.2.3.4'
+        tunnels = {
+            'tun10': source_if,
+            'tun20': source_if2,
+        }
+
+        for tunnel, interface in tunnels.items():
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+            self.cli_set(self._base_path + [tunnel, 'source-interface', interface])
+            self.cli_set(self._base_path + [tunnel, 'remote', remote])
+
+        self.cli_commit()
+
+        for tunnel, interface in tunnels.items():
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual(interface, conf['link'])
+            self.assertEqual('gre', conf['linkinfo']['info_kind'])
+            self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+            self.assertEqual(remote, conf['linkinfo']['info_data']['remote'])
+            self.assertNotIn('ikey', conf['linkinfo']['info_data'])
+
     def test_tunnel_invalid_source_interface(self):
         encapsulation = 'gre'
         remote = '192.0.2.1'
