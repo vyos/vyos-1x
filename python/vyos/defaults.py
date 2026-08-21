@@ -49,6 +49,7 @@ systemd_services = {
     'openconnect': 'ocserv.service',
     'syslog' : 'syslog.service',
     'snmpd' : 'snmpd.service',
+    'kdump': 'kdump-tools.service',
 }
 
 internal_ports = {
@@ -115,3 +116,10 @@ config_sync_exclusion_list = os.path.join(
 # Sits between the l3mdev rule (1000) and the l3mdev unreachable rule (2000),
 # ensuring fwmark-tagged tunnel packets are routed into the correct VRF table.
 wireguard_fwmark_pref = '1998'
+
+# Tiered auto-sizing based on total system RAM, determined by
+# empirical testing across representative VyOS deployments:
+#   1G  -  8G RAM  ->  reserve 512M
+#   8G  - 64G RAM  ->  reserve 768M
+#   64G+      RAM  ->  reserve 1G
+KDUMP_DEFAULT_MEMORY_AUTO = '1G-8G:512M,8G-64G:768M,64G-:1G'

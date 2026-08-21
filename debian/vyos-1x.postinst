@@ -134,6 +134,7 @@ setcap cap_sys_time=pe /bin/date
 # create needed directories
 mkdir -p /var/log/user
 mkdir -p /var/core
+mkdir -p /var/crash
 mkdir -p /opt/vyatta/etc/config/auth
 mkdir -p /opt/vyatta/etc/config/scripts
 mkdir -p /opt/vyatta/etc/config/user-data

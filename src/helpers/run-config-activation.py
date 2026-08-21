@@ -30,6 +30,7 @@ from vyos.utils.activate import set_activation
 from vyos.utils.activate import is_active
 from vyos.utils.system import load_as_module
 from vyos.utils.func import FalseCallable
+from vyos.utils.kernel import get_kernel_boot_arg
 from vyos.defaults import directories
 from vyos.defaults import activation_list
 
@@ -54,7 +55,7 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
-if 'vyos-activate-debug' in Path('/proc/cmdline').read_text():
+if get_kernel_boot_arg('vyos-activate-debug') is not None:
     print(f'\nactivate-debug enabled: file {checkpoint_file}_* on error')
     debug = checkpoint_file
     logger.setLevel(logging.DEBUG)
