@@ -189,8 +189,11 @@ def verify(tunnel):
                 # A keyless tunnel never collides with a keyed one, as the Kernel
                 # only matches a tunnel carrying no key against another tunnel
                 # carrying no key, see ip_tunnel_key_match() in
-                # include/net/ip_tunnels.h
-                if their_key is not None:
+                # include/net/ip_tunnels.h. A zero key does not count as a key
+                # here - ip_tunnel_lookup() ends in a flag-blind compare and
+                # ip6gre_tunnel_locate() compares the key with no flag gate at
+                # all, so "key 0" and no key stay ambiguous on receive.
+                if their_key is not None and their_key != '0':
                     continue
 
                 # If no IP GRE key is defined we cannot have more than one GRE tunnel

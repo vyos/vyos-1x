@@ -525,6 +525,24 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(remote, conf['linkinfo']['info_data']['remote'])
             self.assertNotIn('ikey', conf['linkinfo']['info_data'])
 
+    def test_multiple_gre_tunnel_zero_key(self):
+        # A zero GRE key cannot be told apart from an unset key on receive, thus
+        # it does not make a tunnel unique - a non-zero key does
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-interface', source_if])
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '0'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '50'])
+        self.cli_commit()
+
+        conf = get_interface_config('tun20')
+        self.assertEqual('0.0.0.50', conf['linkinfo']['info_data']['ikey'])
+        self.assertEqual('0.0.0.50', conf['linkinfo']['info_data']['okey'])
+
     def test_tunnel_invalid_source_interface(self):
         encapsulation = 'gre'
         remote = '192.0.2.1'
