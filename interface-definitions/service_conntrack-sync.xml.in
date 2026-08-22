@@ -148,23 +148,37 @@
                   <help>IP address of the peer to send the UDP conntrack info to. This disables multicast.</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IP address to listen for incoming connections</description>
+                    <description>IPv4 address of conntrack synchronization peer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of conntrack synchronization peer</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="ipv4-address"/>
+                    <validator name="ip-address"/>
                   </constraint>
                 </properties>
               </leafNode>
               #include <include/port-number.xml.i>
             </children>
           </tagNode>
-          #include <include/listen-address-ipv4.xml.i>
+          #include <include/listen-address.xml.i>
           <leafNode name="mcast-group">
             <properties>
               <help>Multicast group to use for syncing conntrack entries</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Multicast IPv4 group address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Multicast IPv6 group address</description>
+              </valueHelp>
               <constraint>
                 <validator name="ipv4-multicast"/>
+                <validator name="ipv6-multicast"/>
               </constraint>
+              <constraintErrorMessage>Multicast IPv4/IPv6 address required</constraintErrorMessage>
             </properties>
             <defaultValue>225.0.0.50</defaultValue>
           </leafNode>

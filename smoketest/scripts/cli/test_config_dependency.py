@@ -19,6 +19,7 @@ from time import sleep
 
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import cmdl
+from vyos.utils.file import read_file
 from vyos.configsession import ConfigSessionError
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -77,12 +78,14 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
         bonding_base = ['interfaces', 'bonding']
         bond_interface = 'bond0'
         bond_address = '192.0.2.1/24'
+        bond_ipv6_address = '2001:db8:9166::1/64'
         vrrp_group_base = ['high-availability', 'vrrp', 'group']
         vrrp_sync_group_base = ['high-availability', 'vrrp', 'sync-group']
         vrrp_group = 'ETH2'
         vrrp_sync_group = 'GROUP'
         conntrack_sync_base = ['service', 'conntrack-sync']
         conntrack_peer = '192.0.2.77'
+        conntrack_ipv6_peer = '2001:db8:9166::2'
 
         # simple set to trigger in-session conntrack -> conntrack-sync
         # dependency; note that this is triggered on boot in 1.4 due to
@@ -92,10 +95,9 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'ethernet', 'eth2', 'address',
                       '198.51.100.2/24'])
 
-        self.cli_set(bonding_base + [bond_interface, 'address',
-                                     bond_address])
-        self.cli_set(bonding_base + [bond_interface, 'member', 'interface',
-                                     'eth3'])
+        self.cli_set(bonding_base + [bond_interface, 'address', bond_address])
+        self.cli_set(bonding_base + [bond_interface, 'address', bond_ipv6_address])
+        self.cli_set(bonding_base + [bond_interface, 'member', 'interface', 'eth3'])
 
         self.cli_set(vrrp_group_base + [vrrp_group, 'address',
                                         '198.51.100.200/24'])
@@ -114,6 +116,39 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
                                             'peer', conntrack_peer])
 
         self.cli_commit()
+
+        config = read_file('/run/conntrackd/conntrackd.conf')
+        self.assertIn(f'IPv4_Destination_Address {conntrack_peer}', config)
+        self.assertTrue(is_systemd_service_running('conntrackd.service'))
+
+        # Test the IPv6 case
+        self.cli_delete(conntrack_sync_base + ['interface', bond_interface, 'peer'])
+        self.cli_set(
+            conntrack_sync_base
+            + ['interface', bond_interface, 'peer', conntrack_ipv6_peer]
+        )
+        self.cli_set(
+            conntrack_sync_base + ['listen-address', bond_ipv6_address.split('/')[0]]
+        )
+
+        self.cli_commit()
+
+        config = read_file('/run/conntrackd/conntrackd.conf')
+        self.assertIn(f'IPv6_address {bond_ipv6_address.split("/")[0]}', config)
+        self.assertIn(f'IPv6_Destination_Address {conntrack_ipv6_peer}', config)
+        self.assertTrue(is_systemd_service_running('conntrackd.service'))
+
+        # Test IPv6 multicast
+        conntrack_ipv6_mcast_group = 'ff12::9166'
+        self.cli_delete(conntrack_sync_base + ['interface', bond_interface, 'peer'])
+        self.cli_delete(conntrack_sync_base + ['listen-address'])
+        self.cli_set(conntrack_sync_base + ['mcast-group', conntrack_ipv6_mcast_group])
+
+        self.cli_commit()
+
+        config = read_file('/run/conntrackd/conntrackd.conf')
+        self.assertIn(f'IPv6_address {conntrack_ipv6_mcast_group}', config)
+        self.assertTrue(is_systemd_service_running('conntrackd.service'))
 
         # clean up
         self.cli_delete(bonding_base)
