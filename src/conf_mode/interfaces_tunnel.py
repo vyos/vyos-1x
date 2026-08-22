@@ -48,6 +48,18 @@ def get_tunnel_endpoint(address):
         return None
     return address
 
+
+def get_tunnel_key(key):
+    """
+    A zero GRE key cannot be told apart from a key which is not set at all when a
+    packet is received, thus it does not make a tunnel unique - ip_tunnel_lookup()
+    ends in a flag-blind compare and ip6gre_tunnel_locate() compares the key with
+    no flag gate at all
+    """
+    if key == '0':
+        return None
+    return key
+
 def get_config(config=None):
     """
     Retrieve CLI config as dictionary. Dictionary can never be empty, as at least
@@ -163,6 +175,14 @@ def verify(tunnel):
             their_source_if = dict_search('source_interface', o_tunnel_conf)
             their_remote = get_tunnel_endpoint(dict_search('remote', o_tunnel_conf))
 
+            # Both sides must classify a zero key the same way, else the very same
+            # pair of tunnels is accepted or rejected depending on which of the two
+            # is being verified. Remember whether one was configured, the error
+            # message differs from the one for a tunnel carrying no key at all.
+            zero_key = '0' in [our_key, their_key]
+            our_key = get_tunnel_key(our_key)
+            their_key = get_tunnel_key(their_key)
+
             # The Kernel identifies a tunnel by the tuple of local address, remote
             # address, source-interface and - if configured - the GRE key, see
             # ip_tunnel_find() in net/ipv4/ip_tunnel.c. A differing remote address
@@ -189,11 +209,8 @@ def verify(tunnel):
                 # A keyless tunnel never collides with a keyed one, as the Kernel
                 # only matches a tunnel carrying no key against another tunnel
                 # carrying no key, see ip_tunnel_key_match() in
-                # include/net/ip_tunnels.h. A zero key does not count as a key
-                # here - ip_tunnel_lookup() ends in a flag-blind compare and
-                # ip6gre_tunnel_locate() compares the key with no flag gate at
-                # all, so "key 0" and no key stay ambiguous on receive.
-                if their_key is not None and their_key != '0':
+                # include/net/ip_tunnels.h
+                if their_key is not None:
                     continue
 
                 # If no IP GRE key is defined we cannot have more than one GRE tunnel
@@ -209,6 +226,12 @@ def verify(tunnel):
                     tmp = 'source-interface'
                     if our_address is not None:
                         tmp = 'source-address'
+                    if zero_key:
+                        raise ConfigError(
+                            'A zero "ip key" parameter cannot be told apart from '
+                            'an unset one - use a non-zero key to run more than '
+                            f'one GRE based tunnel on the same {tmp} as "{o_tunnel}"'
+                        )
                     raise ConfigError(
                         'Missing required "ip key" parameter when running more '
                         f'than one GRE based tunnel on the same {tmp}'

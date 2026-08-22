@@ -544,6 +544,16 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual('0.0.0.50', conf['linkinfo']['info_data']['ikey'])
         self.assertEqual('0.0.0.50', conf['linkinfo']['info_data']['okey'])
 
+        # Dropping back to a zero key must be rejected just the same. Only the
+        # tunnel which changed is verified again here, so this is the case a
+        # check trusting its own zero key - but not the neighbours - lets
+        # through: both tunnels commit, and every later commit touching the
+        # keyless one is refused from then on
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '0'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
     def test_tunnel_invalid_source_interface(self):
         encapsulation = 'gre'
         remote = '192.0.2.1'
