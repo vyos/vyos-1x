@@ -908,18 +908,19 @@ def kea_high_availability_json(config):
         'max-ack-delay': 5000,
         'max-unacked-clients': 10,
         'peers': [
-        {
-            'name': os.uname()[1],
-            'url': f'http://{source_addr}:647/',
-            'role': peer1_role,
-            'auto-failover': True
-        },
-        {
-            'name': config['name'],
-            'url': f'http://{remote_addr}:647/',
-            'role': peer2_role,
-            'auto-failover': True
-        }]
+            {
+                'name': os.uname()[1],
+                'url': f'http://{bracketize_ipv6(source_addr)}:647/',
+                'role': peer1_role,
+                'auto-failover': True,
+            },
+            {
+                'name': config['name'],
+                'url': f'http://{bracketize_ipv6(remote_addr)}:647/',
+                'role': peer2_role,
+                'auto-failover': True,
+            },
+        ],
     }
 
     if 'ca_cert_file' in config:
