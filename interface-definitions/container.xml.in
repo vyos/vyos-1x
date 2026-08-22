@@ -27,6 +27,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="allow-host-cgroups">
+            <properties>
+              <help>Allow sharing host cgroup namespace with container</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="capability">
             <properties>
               <help>Grant individual Linux capability to container instance</help>

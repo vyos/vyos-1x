@@ -475,6 +475,10 @@ def generate_run_arguments(name, container_config, host_ident, network_config):
     if 'allow_host_pid' in container_config:
       host_pid = '--pid host'
 
+    cgroupns = ''
+    if 'allow_host_cgroups' in container_config:
+      cgroupns = '--cgroupns host'
+
     name_server = []
     if 'name_server' in container_config:
         for ns in container_config['name_server']:
@@ -486,7 +490,7 @@ def generate_run_arguments(name, container_config, host_ident, network_config):
 
     container_base_cmd = f'--detach --interactive --tty --replace {capabilities} {privileged} --cpus {cpu_quota} {sysctl_opt} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} --log-driver={log_driver} ' \
-                         f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid}'
+                         f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid} {cgroupns}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:
