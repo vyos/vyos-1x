@@ -223,9 +223,14 @@ def verify(tunnel):
                     # Note that lack of a None check here is deliberate.
                     # source-if and source-ip matching while unset (all None) is a fail
                     # source-ifs set and matching with unset source-ips is a fail
-                    tmp = 'source-interface'
-                    if our_address is not None:
-                        tmp = 'source-address'
+
+                    # Name what the two tunnels really have in common. An "any"
+                    # source-address normalises to None and cannot pick the noun,
+                    # and a tunnel carrying no source-interface always has a
+                    # source-address, see verify_tunnel()
+                    tmp = 'source-address'
+                    if our_source_if is not None:
+                        tmp = 'source-interface'
                     if zero_key:
                         raise ConfigError(
                             'A zero "ip key" parameter cannot be told apart from '
