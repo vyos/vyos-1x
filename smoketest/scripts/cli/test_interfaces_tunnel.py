@@ -501,7 +501,8 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
     def test_multiple_gre_tunnel_keyless_different_source_interface(self):
         # Tunnels bound to different source-interfaces stay distinct for the
         # Kernel even when they share one local and remote address - "dev" is
-        # compared as parms.link - so no GRE key is needed to tell them apart
+        # compared as the tunnel link index - so no GRE key is needed to tell
+        # them apart
         remote = '1.2.3.4'
         tunnels = {
             'tun10': source_if,

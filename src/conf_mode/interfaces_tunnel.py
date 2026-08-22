@@ -201,7 +201,8 @@ def verify(tunnel):
                 # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
                 if their_address == our_address and their_source_if == our_source_if:
                     # A differing source-interface alone already keeps both apart,
-                    # it is passed as "dev" and compared by the Kernel as parms.link.
+                    # it is passed as "dev" and compared by the Kernel as the
+                    # tunnel link index, see ip_tunnel_find().
                     # Note that lack of a None check here is deliberate.
                     # source-if and source-ip matching while unset (all None) is a fail
                     # source-ifs set and matching with unset source-ips is a fail
