@@ -433,6 +433,7 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
         f'LogDriver={container_config["log_driver"]}',
         f'PodmanArgs=--memory={container_config["memory"]}m',
         f'ShmSize={container_config["shared_memory"]}m',
+        f'StopTimeout={container_config["stop_timeout"]}',
         f'PodmanArgs=--cpus={container_config["cpu_quota"]}',
         'PodmanArgs=--interactive',
         'PodmanArgs=--tty',
