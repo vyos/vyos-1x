@@ -442,6 +442,86 @@ def get_dhcp_router(interface):
             address = address.split()[0]
             return address
 
+
+def _decode_rfc3442_routes(encoded):
+    """Decode the DHCP classless static route option (RFC 3442).
+
+    Takes the option as dhclient exports it, a space separated list of decimal
+    octets, and returns a list of (prefix, router) tuples. An all zero router
+    is returned as an empty string - the destination is then reachable on-link.
+    A malformed option yields an empty list.
+    """
+    from ipaddress import ip_network
+
+    try:
+        octets = [int(octet) for octet in encoded.split()]
+    except ValueError:
+        return []
+    if not all(0 <= octet <= 255 for octet in octets):
+        return []
+
+    # Every route is encoded as the width of the destination descriptor,
+    # followed by only the significant octets of the destination, followed by
+    # all four octets of the router.
+    routes = []
+    while octets:
+        prefix_length = octets.pop(0)
+        if prefix_length > 32:
+            return []
+        width = (prefix_length + 7) // 8
+        if len(octets) < width + 4:
+            return []
+        destination = octets[:width] + [0] * (4 - width)
+        router = octets[width : width + 4]
+        del octets[: width + 4]
+        # A prefix length of zero is the default route, which is retrieved
+        # from the router option by get_dhcp_router()
+        if prefix_length == 0:
+            continue
+        # The descriptor carries a subnet number, but a server may leave
+        # host bits set in the final octet. FRR masks the prefix when it
+        # accepts the route, so it has to be masked here too - an unmasked
+        # prefix never matches the one FRR reports back, and frr-reload would
+        # then delete and re-add the route on every reload.
+        destination = ip_network(
+            '.'.join(str(octet) for octet in destination) + f'/{prefix_length}',
+            strict=False,
+        )
+        # An all zero router means the destination is reachable on-link. The
+        # dhclient hooks install such a route without a next hop, so it has to
+        # be rendered the same way or FRR is handed a different route.
+        if router == [0, 0, 0, 0]:
+            router = ''
+        else:
+            router = '.'.join(str(octet) for octet in router)
+        routes.append((str(destination), router))
+
+    return routes
+
+
+@register_filter('get_dhcp_classless_static_routes')
+def get_dhcp_classless_static_routes(interface):
+    """Static routes can be received via the DHCP classless static route
+    option. This helper is used to get them from the DHCP reply.
+
+    Returns a list of (prefix, router) tuples, empty if the option was not
+    received. The default route is not included, it is retrieved using
+    get_dhcp_router().
+    """
+    lease_file = directories['isc_dhclient_dir'] + f'/dhclient_{interface}.lease'
+    if not os.path.exists(lease_file):
+        return []
+
+    from vyos.utils.file import read_file
+
+    for line in read_file(lease_file).splitlines():
+        if 'new_rfc3442_classless_static_routes' in line:
+            _, encoded, _ = line.split("'")
+            return _decode_rfc3442_routes(encoded)
+
+    return []
+
+
 @register_filter('natural_sort')
 def natural_sort(iterable):
     import re
