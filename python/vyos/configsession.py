@@ -494,6 +494,9 @@ class ConfigSession(object):
         out = self.__run_command(cmd)
         return out
 
-    def traceroute(self, host):
-        out = self.__run_command(TRACEROUTE + [host])
+    def traceroute(self, host, vrf: str | None = None):
+        cmd = TRACEROUTE + [host]
+        if vrf is not None:
+            cmd += ['--vrf', vrf]
+        out = self.__run_command(cmd)
         return out
