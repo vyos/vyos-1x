@@ -324,7 +324,22 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         # GRE key must be supplied with a 0.0.0.0 source address
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+        # A zero key is no key at all for such a tunnel - with an any
+        # source-address and no remote it catches every packet, exactly as a
+        # keyless tunnel would
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '0'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', key])
+
+        self.cli_commit()
+
+        # A remote address identifies the tunnel on its own, so a zero key is
+        # no longer a problem
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '0'])
+        self.cli_set(self._base_path + [interface, 'remote', remote_ip4])
 
         self.cli_commit()
 
