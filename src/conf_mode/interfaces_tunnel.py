@@ -49,14 +49,15 @@ def get_tunnel_endpoint(address):
     return address
 
 
-def get_tunnel_key(key):
+def get_tunnel_key(key, no_endpoints):
     """
-    A zero GRE key cannot be told apart from a key which is not set at all when a
-    packet is received, thus it does not make a tunnel unique - ip_tunnel_lookup()
-    ends in a flag-blind compare and ip6gre_tunnel_locate() compares the key with
-    no flag gate at all
+    A zero GRE key only fails to make a tunnel unique when neither a local nor a
+    remote address is set - ip_tunnel_lookup() then ends in a loop which compares
+    the key without testing the flag saying that a key is set at all. A tunnel
+    which carries an address is matched before that, by ip_tunnel_key_match(),
+    where a zero key and an unset key differ
     """
-    if key == '0':
+    if no_endpoints and key == '0':
         return None
     return key
 
@@ -175,13 +176,18 @@ def verify(tunnel):
             their_source_if = dict_search('source_interface', o_tunnel_conf)
             their_remote = get_tunnel_endpoint(dict_search('remote', o_tunnel_conf))
 
-            # Both sides must classify a zero key the same way, else the very same
-            # pair of tunnels is accepted or rejected depending on which of the two
-            # is being verified. Remember whether one was configured, the error
+            # A zero key only fails to make a tunnel unique when neither of the
+            # two carries a local or a remote address, see get_tunnel_key(). Both
+            # sides must classify it the same way, else the very same pair of
+            # tunnels is accepted or rejected depending on which of the two is
+            # being verified. Remember whether one was configured, the error
             # message differs from the one for a tunnel carrying no key at all.
+            no_endpoints = not any(
+                [our_address, our_remote, their_address, their_remote]
+            )
             zero_key = '0' in [our_key, their_key]
-            our_key = get_tunnel_key(our_key)
-            their_key = get_tunnel_key(their_key)
+            our_key = get_tunnel_key(our_key, no_endpoints)
+            their_key = get_tunnel_key(their_key, no_endpoints)
 
             # The Kernel identifies a tunnel by the tuple of local address, remote
             # address, source-interface and - if configured - the GRE key, see
