@@ -74,6 +74,7 @@ from .models import RebootModel
 from .models import ResetModel
 from .models import RenewModel
 from .models import ImportPkiModel
+from .models import PingModel
 from .models import PoweroffModel
 from .models import TracerouteModel
 
@@ -218,6 +219,7 @@ class MultipartRequest(Request):
                         '/container-image',
                         '/image',
                         '/configure-section',
+                        '/ping',
                         '/traceroute',
                     ):
                         if 'path' not in c:
@@ -948,6 +950,30 @@ def poweroff_op(data: PoweroffModel):
     try:
         if op == 'poweroff':
             res = session.poweroff(path)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception:
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occurred. Check the logs for details.')
+
+    return success(res)
+
+
+@router.post('/ping')
+def ping_op(data: PingModel):
+    state = SessionState()
+    session = state.session
+
+    op = data.op
+    host = data.host
+    count = data.count
+    vrf = data.vrf
+
+    try:
+        if op == 'ping':
+            res = session.ping(host, count, vrf)
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
