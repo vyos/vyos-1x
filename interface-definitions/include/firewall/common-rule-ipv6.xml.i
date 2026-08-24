@@ -14,6 +14,7 @@
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
     #include <include/firewall/mac-address.xml.i>
+    #include <include/firewall/mac-address-mask.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
     #include <include/firewall/source-destination-dynamic-group-ipv6.xml.i>
@@ -38,6 +39,7 @@
     #include <include/firewall/fqdn.xml.i>
     #include <include/firewall/geoip.xml.i>
     #include <include/firewall/mac-address.xml.i>
+    #include <include/firewall/mac-address-mask.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
     #include <include/firewall/source-destination-dynamic-group-ipv6.xml.i>

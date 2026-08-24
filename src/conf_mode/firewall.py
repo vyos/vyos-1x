@@ -404,6 +404,10 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                 if len({'asn', 'country_code'} & set(side_conf['geoip'])) > 1:
                     raise ConfigError(f'{rule_num}Only one of asn or country-code can be specified')
 
+            if 'mac_address_mask' in side_conf:
+                if 'mac_address' not in side_conf:
+                    raise ConfigError(f'{rule_num}mac-address must be defined when using mac-address-mask')
+
             if 'group' in side_conf:
                 if len({'address_group', 'network_group', 'domain_group', 'remote_group'} & set(side_conf['group'])) > 1:
                     raise ConfigError(f'{rule_num}Only one address-group, network-group, remote-group or domain-group can be specified')

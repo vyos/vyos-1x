@@ -170,6 +170,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             prefix = side[0]
             side_conf = rule_conf[side]
             address_mask = side_conf.get('address_mask', None)
+            mac_address_mask = side_conf.get('mac_address_mask', None)
 
             if 'address' in side_conf:
                 suffix = side_conf['address']
@@ -237,10 +238,16 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_{geoip_prefix}{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
 
             if 'mac_address' in side_conf:
-                suffix = side_conf["mac_address"]
-                if suffix[0] == '!':
-                    suffix = f'!= {suffix[1:]}'
-                output.append(f'ether {prefix}addr {suffix}')
+                suffix = side_conf['mac_address']
+                operator = ''
+                exclude = suffix[0] == '!'
+                if exclude:
+                    operator = '!= '
+                    suffix = suffix[1:]
+                if mac_address_mask:
+                    operator = '!=' if exclude else '=='
+                    operator = f'& {mac_address_mask} {operator} '
+                output.append(f'ether {prefix}addr {operator}{suffix}')
 
             if 'port' in side_conf:
                 proto = rule_conf['protocol']
