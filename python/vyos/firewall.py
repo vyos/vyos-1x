@@ -243,7 +243,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 geoip_prefix = 'CC' if country_code else 'ASN'
                 operator = ''
                 hook_name = ''
-                if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
+                if dict_search_args(side_conf, 'geoip', 'inverse_match') is not None:
                     operator = '!='
                 if hook == 'FWD':
                     hook_name = 'forward'
@@ -254,7 +254,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if hook == 'PRE':
                     hook_name = 'prerouting'
                 if hook == 'NAM':
-                    hook_name = f'name'
+                    hook_name = 'name'
                 # for policy
                 if hook == 'route' or hook == 'route6':
                     hook_name = hook
@@ -433,7 +433,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
 
     if 'packet_type' in rule_conf:
-        output.append(f'pkttype ' + rule_conf['packet_type'])
+        output.append('pkttype ' + rule_conf['packet_type'])
 
     if 'dscp' in rule_conf:
         dscp_str = ','.join(rule_conf['dscp'])
