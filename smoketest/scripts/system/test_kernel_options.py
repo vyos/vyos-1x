@@ -69,6 +69,15 @@ class TestKernelModules(unittest.TestCase):
         for option in options_to_check:
             self.assertIn(option, self._config_data)
 
+    def test_nft_nat(self):
+        options_to_check = [
+            'CONFIG_NF_TABLES_INET',
+            'CONFIG_NFT_NAT'
+        ]
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
     def test_synproxy_enabled(self):
         options_to_check = [
             'CONFIG_NFT_SYNPROXY',
