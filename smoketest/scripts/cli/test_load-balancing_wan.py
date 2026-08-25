@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import tempfile
 import unittest
 import time
 
@@ -390,6 +391,89 @@ echo "$ifname - $state" > {hook_output_path}
 
         with open(hook_output_path, 'r') as f:
             self.assertIn('eth0 - FAILED', f.read())
+
+    def test_user_defined_health_check_script_env(self):
+        isp_interfaces = {
+            'eth0': ('203.0.113.2/30', '203.0.113.1'),
+            'eth1': ('192.0.2.2/30', '192.0.2.1'),
+        }
+        lan_iface = 'eth2'
+        temp_dir = tempfile.TemporaryDirectory(prefix='wlb_health_check_')
+        self.addCleanup(temp_dir.cleanup)
+        script_path = os.path.join(temp_dir.name, 'health_check.sh')
+        output_path = os.path.join(temp_dir.name, 'health_check_output')
+
+        health_check_script = f"""
+#!/bin/sh
+
+printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
+    "$WLB_INTERFACE_NAME" "$WLB_SCRIPT_IFACE" >> {output_path}
+
+[ "$WLB_INTERFACE_NAME" = "$WLB_SCRIPT_IFACE" ]
+"""
+
+        write_file(script_path, health_check_script)
+        chmod_755(script_path)
+
+        for isp_iface, (address, nexthop) in isp_interfaces.items():
+            self.cli_set(['interfaces', 'ethernet', isp_iface, 'address', address])
+            self.cli_set(
+                base_path + ['wan', 'interface-health', isp_iface, 'failure-count', '1']
+            )
+            self.cli_set(
+                base_path + ['wan', 'interface-health', isp_iface, 'nexthop', nexthop]
+            )
+            self.cli_set(
+                base_path + ['wan', 'interface-health', isp_iface, 'success-count', '1']
+            )
+            self.cli_set(
+                base_path
+                + [
+                    'wan',
+                    'interface-health',
+                    isp_iface,
+                    'test',
+                    '10',
+                    'test-script',
+                    script_path,
+                ]
+            )
+            self.cli_set(
+                base_path
+                + [
+                    'wan',
+                    'interface-health',
+                    isp_iface,
+                    'test',
+                    '10',
+                    'type',
+                    'user-defined',
+                ]
+            )
+
+        self.cli_set(
+            ['interfaces', 'ethernet', lan_iface, 'address', '198.51.100.2/30']
+        )
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', lan_iface])
+
+        for isp_iface in isp_interfaces:
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp_iface])
+
+        self.cli_commit()
+
+        def check_script_output():
+            if not os.path.exists(output_path):
+                return False
+
+            with open(output_path, 'r') as f:
+                output = f.read()
+
+            return all(
+                f'WLB_INTERFACE_NAME={isp_iface} WLB_SCRIPT_IFACE={isp_iface}' in output
+                for isp_iface in isp_interfaces
+            )
+
+        wait_for(check_script_output)
 
     def test_firewall_groups(self):
         isp1_iface = 'eth0'
