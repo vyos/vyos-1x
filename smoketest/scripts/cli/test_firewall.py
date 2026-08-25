@@ -444,6 +444,37 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_mac_mask(self):
+        name = 'smoketest-mac-mask'
+        mac_address = '00:53:00:00:00:01'
+        mac_mask = 'ff:ff:ff:00:00:00'
+
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
+
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'destination', 'mac-address', mac_address])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'destination', 'mac-address-mask', mac_mask])
+
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'source', 'mac-address', f'!{mac_address}'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'source', 'mac-address-mask', mac_mask])
+
+        # mac-address-mask requires mac-address
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'source', 'mac-address-mask', mac_mask])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(['firewall', 'ipv4', 'name', name, 'rule', '3'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'daddr & {mac_mask} == {mac_address}'],
+            [f'saddr & {mac_mask} != {mac_address}']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
     def test_ipv4_dynamic_groups(self):
         group01 = 'knock01'
         group02 = 'allowed'
