@@ -182,6 +182,12 @@ def initialization(session: SessionState, app: FastAPI = app):
         session.keys = flatten_keys(server_config)
 
     rest_config = server_config.get('rest', {})
+    # Reset REST auth settings on reload so removed config nodes don't persist in-memory
+    session.rest_token_exp = None
+    session.rest_secret_len = None
+    session.oidc_issuer = None
+    session.oidc_jwks_uri = None
+    session.oidc_audience = None
     session.debug = bool('debug' in rest_config)
     session.strict = bool('strict' in rest_config)
     if isinstance(rest_config, dict):

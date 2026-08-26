@@ -1046,9 +1046,10 @@ def traceroute_op(data: TracerouteModel):
 
 
 @router.post('/token')
-def token_op(data: ApiModel):
+def token_op(data: ApiModel, x_api_key: Optional[str] = Header(None)):
     session = SessionState()
-    key_id = check_auth(session.keys, data.key)
+    key = data.key or x_api_key
+    key_id = check_auth(session.keys, key)
     if not key_id:
         raise HTTPException(status_code=401, detail='Valid API key is required')
     return success(generate_token(key_id))

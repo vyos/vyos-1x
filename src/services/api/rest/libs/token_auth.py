@@ -46,6 +46,7 @@ def verify_oidc_token(token: str):
             disc_url = f"{state.oidc_issuer}/.well-known/openid-configuration"
             with _req.urlopen(disc_url, timeout=10) as r:
                 jwks_uri = _json.loads(r.read())["jwks_uri"]
+            state.oidc_jwks_uri = jwks_uri
         jwks_client = PyJWKClient(jwks_uri, cache_keys=True)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
         decode_options = {"require": ["exp"]}
@@ -60,9 +61,8 @@ def verify_oidc_token(token: str):
         else:
             decode_options["verify_aud"] = False
         payload = jwt.decode(token, signing_key.key, **decode_kwargs)
-        return payload.get("sub") or payload.get("client_id") or "oidc-client"
-    except Exception as e:
-        print(f"OIDC token validation failed: {e}", flush=True)
+        return payload.get("sub") or payload.get("client_id")
+    except Exception:
         return None
 
 
