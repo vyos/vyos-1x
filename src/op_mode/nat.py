@@ -99,6 +99,18 @@ def _get_raw_translation(direction, family, address=None):
     return _xml_to_dict(xml)
 
 
+def _get_interface(rule):
+    interface = 'any'
+    for expr in rule.get('rule', {}).get('expr', []):
+        match = expr.get('match')
+        if match and jmespath.search('left.meta.key', match) in ('iifname', 'oifname'):
+            interface = match.get('right')
+            break
+    if isinstance(interface, str) and interface.startswith('@'):
+        interface = interface[3:]
+    return interface
+
+
 def _get_formatted_output_rules(data, direction, family):
 
 
@@ -142,10 +154,7 @@ def _get_formatted_output_rules(data, direction, family):
             rule_number = comment.split('-')[-1]
             rule_number = rule_number.split(' ')[0]
         if 'expr' in rule['rule']:
-            interface = rule.get('rule').get('expr')[0].get('match').get('right') \
-                if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
-            if interface[0] == '@':
-                interface = interface[3:]
+            interface = _get_interface(rule)
         for index, match in enumerate(jmespath.search('rule.expr[*].match', rule)):
             if 'payload' in match['left']:
                 # Handle NAT rule containing comma-separated list of ports
@@ -257,8 +266,7 @@ def _get_formatted_output_statistics(data, direction):
             rule_number = comment.split('-')[-1]
             rule_number = rule_number.split(' ')[0]
         if 'expr' in rule['rule']:
-            interface = rule.get('rule').get('expr')[0].get('match').get('right') \
-                if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
+            interface = _get_interface(rule)
             packets = jmespath.search('rule.expr[*].counter.packets | [0]', rule)
             _bytes = jmespath.search('rule.expr[*].counter.bytes | [0]', rule)
         data_entries.append([rule_number, packets, _bytes, interface])
@@ -298,13 +306,11 @@ def _get_formatted_translation(dict_data, nat_direction, family, verbose):
                         reply_dport = meta['layer4']['dport']
                     proto = meta['layer4']['protoname']
             if direction == 'independent':
-                conn_id = meta['id']
                 timeout = meta.get('timeout', 'n/a')
                 orig_src = f'{orig_src}:{orig_sport}' if orig_sport else orig_src
                 orig_dst = f'{orig_dst}:{orig_dport}' if orig_dport else orig_dst
                 reply_src = f'{reply_src}:{reply_sport}' if reply_sport else reply_src
                 reply_dst = f'{reply_dst}:{reply_dport}' if reply_dport else reply_dst
-                state = meta['state'] if 'state' in meta else ''
                 mark = meta.get('mark', '')
                 zone = meta['zone'] if 'zone' in meta else ''
                 if nat_direction == 'source':
