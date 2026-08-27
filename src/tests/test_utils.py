@@ -174,7 +174,9 @@ class TestVyOSUtils(TestCase):
             'vyos.utils.network.is_intf_addr_assigned', return_value=True
         ) as mock_is_assigned:
             # vrf='red' → should find it on eth0
-            self.assertTrue(is_addr_assigned('10.0.0.1', vrf='red', allow_nonlocal=True))
+            self.assertTrue(
+                is_addr_assigned('10.0.0.1', vrf='red', allow_nonlocal=True)
+            )
             mock_is_assigned.assert_called_once_with('eth0', '10.0.0.1')
 
     def test_is_addr_assigned_wrong_vrf(self):
@@ -189,7 +191,9 @@ class TestVyOSUtils(TestCase):
         ), patch(
             'vyos.utils.network.is_intf_addr_assigned', return_value=True
         ):
-            self.assertFalse(is_addr_assigned('10.0.0.1', vrf='blue', allow_nonlocal=True))
+            self.assertFalse(
+                is_addr_assigned('10.0.0.1', vrf='blue', allow_nonlocal=True)
+            )
 
     def test_is_listen_port_wildcard_ipv4(self):
         """Service on 0.0.0.0 must match even when a specific address filter is given."""

@@ -471,7 +471,9 @@ def is_ipv6_link_local(addr):
     return False
 
 
-def is_addr_assigned(ip_address: str, vrf=None, include_vrf=False, allow_nonlocal: bool = False) -> bool:
+def is_addr_assigned(
+    ip_address: str, vrf=None, include_vrf=False, allow_nonlocal: bool = False
+) -> bool:
     """ Verify if the given IPv4/IPv6 address is assigned to any interface """
     from netifaces import interfaces # pylint: disable = no-name-in-module
     from vyos.utils.network import get_interface_config
@@ -479,13 +481,15 @@ def is_addr_assigned(ip_address: str, vrf=None, include_vrf=False, allow_nonloca
 
     # Check if sysctl to allow nonlocal binds is set for given afi and caller allows nonlocal binds,
     # skip check accordingly
-    if allow_nonlocal and ((
-        is_ipv4_address(ip_address)
-        and sysctl_read(['net', 'ipv4', 'ip_nonlocal_bind']) == "1"
-    ) or (
-        is_ipv6_address(ip_address)
-        and sysctl_read(['net', 'ipv6', 'ip_nonlocal_bind']) == "1"
-    )):
+    if allow_nonlocal and (
+        (
+            is_ipv4_address(ip_address)
+            and sysctl_read(['net', 'ipv4', 'ip_nonlocal_bind']) == "1"
+        ) or (
+            is_ipv6_address(ip_address)
+            and sysctl_read(['net', 'ipv6', 'ip_nonlocal_bind']) == "1"
+        )
+    ):
         return True
 
     for interface in interfaces():
@@ -768,10 +772,12 @@ def is_ipv4_address(addr: str) -> bool:
     :return: bool: True if provided address is valid
     """
     from ipaddress import ip_interface
+
     try:
         return ip_interface(addr).version == 4
     except Exception:
         return False
+
 
 def is_ipv6_address(addr: str) -> bool:
     """
@@ -780,10 +786,12 @@ def is_ipv6_address(addr: str) -> bool:
     :return: bool: True if provided address is valid
     """
     from ipaddress import ip_interface
+
     try:
         return ip_interface(addr).version == 6
     except Exception:
         return False
+
 
 def is_ipv4_range(addr: str) -> bool:
     """
@@ -799,6 +807,7 @@ def is_ipv4_range(addr: str) -> bool:
     except Exception:
         return False
 
+
 def is_ipv6_range(addr: str) -> bool:
     """
     Validates if the provided address is a valid IPv6 range.
@@ -813,6 +822,7 @@ def is_ipv6_range(addr: str) -> bool:
     except Exception:
         return False
 
+
 def is_ipv4_address_or_range(addr: str) -> bool:
     """
     Validates if the provided address is a valid IPv4, CIDR or IPv4 range
@@ -821,6 +831,7 @@ def is_ipv4_address_or_range(addr: str) -> bool:
     """
     return is_ipv4_address(addr) or is_ipv4_range(addr)
 
+
 def is_ipv6_address_or_range(addr: str) -> bool:
     """
     Validates if the provided address is a valid IPv6, CIDR or IPv6 range
@@ -828,6 +839,7 @@ def is_ipv6_address_or_range(addr: str) -> bool:
     :return: bool: True if provided address is valid
     """
     return is_ipv6_address(addr) or is_ipv6_range(addr)
+
 
 def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -> list:
     """
