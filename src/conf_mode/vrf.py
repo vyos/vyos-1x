@@ -249,7 +249,7 @@ def apply(vrf):
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if interface_exists(tmp):
-            # T5492: deleting a VRF instance may leafe processes running
+            # T5492: deleting a VRF instance may leave processes running
             # (e.g. dhclient) as there is a dependency ordering issue in the CLI.
             # We need to ensure that we stop the dhclient processes first so
             # a proper DHCP RELEASE message is sent (ExecStop is -x, T9109)
