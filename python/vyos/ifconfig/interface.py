@@ -1563,7 +1563,7 @@ class Interface(Control):
             if os.path.isfile(release_pid):
                 os.remove(release_pid)
 
-    def set_dhcp(self, enable: bool, vrf_changed: bool=False, release: bool=False):
+    def set_dhcp(self, enable: bool, vrf_changed: bool = False, release: bool = False):
         """
         Enable/Disable DHCP client on a given interface.
 
@@ -1633,8 +1633,13 @@ class Interface(Control):
                         prefixlen = address_dict['prefixlen']
                         self.del_addr(f'{address}/{prefixlen}')
 
-            # cleanup old config files
-            for file in [dhclient_config_file, systemd_override_file, dhclient_lease_file]:
+            # Keep the ISC lease DB on the stop-only path (VRF move, disable)
+            # so the next start can INIT-REBOOT. Delete it only after an
+            # explicit RELEASE.
+            cleanup_files = [dhclient_config_file, systemd_override_file]
+            if release:
+                cleanup_files.append(dhclient_lease_file)
+            for file in cleanup_files:
                 if os.path.isfile(file):
                     os.remove(file)
 
