@@ -34,8 +34,11 @@
 #
 # Adds still use the enter-hook ip() wrapper so FRR gets tag/distance
 # IF_METRIC. Skip when classless static routes are present (stock ignores
-# option 3). Wrapper exit status is not a gate: vtysh "no ip route" fails
-# when the route is already gone. Verify the kernel table with /usr/sbin/ip.
+# option 3) — but still drop leftover option-3 defaults first, because
+# 02-vyos-dhcp-renew-rfc3442 only removes old RFC3442 routes. Do not
+# mutate $new_routers (later exit hooks still read it).
+# Wrapper exit status is not a gate: vtysh "no ip route" fails when the
+# route is already gone. Verify the kernel table with /usr/sbin/ip.
 
 RUN="yes"
 
@@ -48,13 +51,10 @@ case "$reason" in
     *) return 0 2>/dev/null || exit 0 ;;
 esac
 
-# Stock: option 3 ignored when RFC3442 classless routes are present
-if [ -n "$new_rfc3442_classless_static_routes" ]; then
-    return 0 2>/dev/null || exit 0
-fi
-
 # Kernel default via $1 on $interface? Real ip(8) JSON — never the wrapper.
 # Matches both a single-nexthop default and a multipath nexthop group.
+# Do not match kernel .metric to IF_METRIC: FRR installs distance IF_METRIC
+# in staticd, but the kernel row is typically proto static metric 20.
 _default_via_present() {
     local gw="$1"
     local json
@@ -67,15 +67,23 @@ _default_via_present() {
         )' >/dev/null 2>&1
 }
 
+# Stock ignores option 3 when RFC3442 classless routes are present. Treat
+# that as an empty effective option-3 set so leftover option-3 defaults
+# are still dropped on a same-IP renew that switches to classless routes.
+effective_new_routers="$new_routers"
+if [ -n "$new_rfc3442_classless_static_routes" ]; then
+    effective_new_routers=""
+fi
+
 # Drop defaults via gateways the server no longer announces, including when
-# option 3 disappeared (empty new_routers). Metric numbering matches the
-# original install / 01-vyos-cleanup: IF_METRIC, then +1 per old_routers
-# entry (keepers included, or the 211+ leftover is missed).
-if [ -n "$old_routers" ] && [ "$old_routers" != "$new_routers" ]; then
+# option 3 disappeared (empty effective_new_routers). Metric numbering
+# matches the original install / 01-vyos-cleanup: IF_METRIC, then +1 per
+# old_routers entry (keepers included, or the 211+ leftover is missed).
+if [ -n "$old_routers" ] && [ "$old_routers" != "$effective_new_routers" ]; then
     if_metric="${IF_METRIC:-210}"
     for router in $old_routers; do
         skip=
-        for keep in $new_routers; do
+        for keep in $effective_new_routers; do
             if [ "$router" = "$keep" ]; then
                 skip=1
                 break
@@ -104,8 +112,8 @@ if [ -n "$old_routers" ] && [ "$old_routers" != "$new_routers" ]; then
     done
 fi
 
-# Honor no-default-route / missing option 3: nothing to install.
-if [ -z "$new_routers" ]; then
+# Honor RFC3442 / no-default-route / missing option 3: nothing to install.
+if [ -n "$new_rfc3442_classless_static_routes" ] || [ -z "$new_routers" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
