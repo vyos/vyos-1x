@@ -165,13 +165,14 @@ def get_kernel_serial_console() -> Tuple[Optional[str], Optional[str], Optional[
     command line which was used during system boot.
     """
     import re
+    from vyos.utils.file import read_file
 
     cmdline_console_re = re.compile(
-        r'(?P<console_type>tty(?:S|AMA))(?P<console_num>\d+),(?P<console_speed>\d+)'
+        r'(?:^|\s)console=(?P<console_type>tty(?:S|AMA))(?P<console_num>\d+),(?P<console_speed>\d+)(?=\s|$)'
     )
 
-    console_value = get_kernel_boot_arg('console') or ''
-    if m := cmdline_console_re.search(console_value):
+    kernel_cmdline = read_file('/proc/cmdline')
+    if m := cmdline_console_re.search(kernel_cmdline):
         return (
             m.group('console_type'),
             m.group('console_num'),
