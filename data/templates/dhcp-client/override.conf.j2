@@ -10,8 +10,8 @@ ExecStop=
 # -x: stop without DHCPRELEASE. -r releases the lease to the server and
 # wipes local recovery state (INIT-REBOOT / HA lease seed). Use -x so a
 # restart or disable keeps the ISC -lf DB and does not RELEASE a lease the
-# peer HA node may still hold under a shared MAC. Op-mode
-# "release dhcp interface" still calls dhclient -r, then stops the unit.
+# peer HA node may still hold under a shared MAC. Explicit RELEASE is
+# Interface.release_dhcp_lease() (op-mode, delete address dhcp, VRF delete).
 ExecStop={{ vrf_command }}/sbin/dhclient -4 -x {{ dhclient_options }} {{ ifname }}
 WorkingDirectory={{ isc_dhclient_dir }}
 PIDFile={{ isc_dhclient_dir }}/dhclient_%i.pid
