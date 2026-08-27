@@ -9,7 +9,8 @@ ConditionPathExists=/run/dhclient/dhclient_%i.conf
 Type=exec
 ExecStart=/sbin/dhclient -4 -d $DHCLIENT_OPTS
 # -x stops without DHCPRELEASE (preserves -lf for INIT-REBOOT / HA seed).
-# Explicit RELEASE is op-mode "release dhcp interface" (dhclient -r, then stop).
+# Explicit RELEASE (op-mode, delete address dhcp, VRF delete) uses
+# Interface.release_dhcp_lease() — not ExecStop.
 ExecStop=/sbin/dhclient -4 -x $DHCLIENT_OPTS
 Restart=always
 RestartPreventExitStatus=
