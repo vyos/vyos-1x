@@ -87,6 +87,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'sysctl', 'parameter',
                                   'kernel.msgmax', 'value', '4096'])
         self.cli_set(base_path + ['name', cont_name, 'log-driver', 'journald'])
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-cgroups'])
         # commit changes
         self.cli_commit()
 
@@ -104,6 +105,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         l = cmd_to_json(['container', 'inspect', cont_name])
         self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
         self.assertEqual(l['Config']['Healthcheck']['Test'], ['NONE'])
+        self.assertEqual(l['HostConfig']['CgroupMode'], 'host')
 
     def test_healthcheck(self):
         cont_name = 'health-test'
