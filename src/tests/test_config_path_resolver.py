@@ -154,9 +154,7 @@ class TestConfigPathResolver(TestCase):
         # TestConfigPathResolver: a derived network-group value with host
         # bits set (e.g. an interface address copied verbatim) is not a
         # canonical network and must be rejected, not rendered as-is
-        conf = DictConfig(
-            {'interfaces': {'eth0': {'address': ['203.0.113.5/24']}}}
-        )
+        conf = DictConfig({'interfaces': {'eth0': {'address': ['203.0.113.5/24']}}})
         groups = {
             'network_group': {
                 'smoketest_bad': {
