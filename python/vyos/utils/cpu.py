@@ -120,3 +120,55 @@ def get_available_cpus():
 def get_half_cpus():
     """ return 1/2 of the numbers of available CPUs """
     return max(1, os.cpu_count() // 2)
+
+
+# Aliases for the architecture names reported by platform.machine()
+_arch_alias = {
+    'x86_64': 'amd64',
+    'amd64': 'amd64',
+    'aarch64': 'arm64',
+    'arm64': 'arm64',
+}
+
+def _normalize_arch(arch):
+    return _arch_alias.get(arch.lower(), arch.lower())
+
+def get_cpu_arch():
+    """ Returns the normalized CPU architecture of the running system,
+        e.g. "amd64" or "arm64". Architectures we do not know about are
+        returned as reported by platform.machine()
+    """
+    import platform
+
+    return _normalize_arch(platform.machine())
+
+def cpu_arch(*architectures):
+    """ Decorator restricting a unittest TestCase or test method to a list
+        of CPU architectures. If the current architecture is not supported,
+        the test is skipped instead of failing.
+
+        Both the native names (x86_64, aarch64) and the Debian names
+        (amd64, arm64) are accepted.
+
+        Usage:
+            @cpu_arch('amd64')
+            def test_intel_modules(self):
+                ...
+
+            @cpu_arch('amd64', 'arm64')
+            class TestFoo(unittest.TestCase):
+                ...
+    """
+    import unittest
+
+    # Allow both cpu_arch('amd64', 'arm64') and cpu_arch(['amd64', 'arm64'])
+    if len(architectures) == 1 and isinstance(architectures[0], (list, tuple, set)):
+        architectures = tuple(architectures[0])
+
+    supported = {_normalize_arch(arch) for arch in architectures}
+    current = get_cpu_arch()
+
+    reason = (f'Only supported on CPU architecture: {", ".join(sorted(supported))} '
+              f'(running on {current})')
+
+    return unittest.skipUnless(current in supported, reason)

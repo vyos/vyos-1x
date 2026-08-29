@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+
+from vyos.utils.cpu import cpu_arch
 from vyos.utils.process import cmdl
 
 modules = {
@@ -27,22 +29,29 @@ modules = {
 }
 
 class TestKernelModules(unittest.TestCase):
-    def test_load_modules(self):
-        success = True
+    def _load_modules(self, name):
         not_found = []
-        for msk in modules:
-            not_found = []
-            ms = modules[msk]
-            for m in ms:
-                # We want to uncover all modules that fail,
-                # not fail at the first one
-                try:
-                    cmdl(['modprobe', m])
-                except:
-                    success = False
-                    not_found.append(m)
+        for module in modules[name]:
+            # We want to uncover all modules that fail,
+            # not fail at the first one
+            try:
+                cmdl(['modprobe', module])
+            except:
+                not_found.append(module)
 
-            self.assertTrue(success, 'One or more modules not found: ' + ', '.join(not_found))
+        self.assertFalse(not_found, f'One or more {name} modules not found: '
+                                    + ', '.join(not_found))
+
+    @cpu_arch('amd64')
+    def test_load_modules_intel(self):
+        self._load_modules('intel')
+
+    @cpu_arch('amd64')
+    def test_load_modules_intel_qat(self):
+        self._load_modules('intel_qat')
+
+    def test_load_modules_accel_ppp(self):
+        self._load_modules('accel_ppp')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
