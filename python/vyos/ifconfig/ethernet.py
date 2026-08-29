@@ -19,7 +19,6 @@ from glob import glob
 
 from vyos.base import Warning
 from vyos.ethtool import Ethtool
-from vyos.netlink import coalesce
 from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
@@ -511,6 +510,11 @@ class EthernetIf(Interface):
         # Nothing to apply
         if not params:
             return None
+
+        # Imported here rather than at module scope: vyos.netlink.coalesce
+        # imports pyroute2, which every consumer of vyos.ifconfig would
+        # otherwise pay for on import.
+        from vyos.netlink import coalesce
 
         # Override boolean parameters to true if they exist and supported by NIC driver
         for boolean_param in coalesce.get_all_params(boolean=True):

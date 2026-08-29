@@ -18,7 +18,6 @@ import json
 import signal
 
 from time import time
-from tabulate import tabulate
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.convert import seconds_to_human
@@ -166,4 +165,6 @@ class VRRP(object):
 
         # add to the active list disabled instances
         groups.extend(cls.disabled())
+        from tabulate import tabulate
+
         return tabulate(groups, headers)
