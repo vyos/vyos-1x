@@ -66,6 +66,7 @@ from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import interface_exists
+from vyos.utils.network import get_interface_config
 
 from vyos import ConfigError
 from vyos import airbag
@@ -960,6 +961,13 @@ def apply(openvpn):
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
             cmdl(['sysctl', '-w', 'net.ipv4.ip_nonlocal_bind=1'])
+
+    # The interface type follows the data path, and OpenVPN will not adopt a
+    # device of the wrong kind - drop a leftover from the previous setting.
+    if interface_exists(interface):
+        offloaded = dict_search('linkinfo.info_kind', get_interface_config(interface))
+        if (dict_search('offload.dco', openvpn) is not None) != (offloaded == 'ovpn'):
+            VTunIf(interface).remove()
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
