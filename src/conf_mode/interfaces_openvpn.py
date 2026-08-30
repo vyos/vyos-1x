@@ -76,6 +76,21 @@ group = 'openvpn'
 
 cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
+# Ciphers implemented by the in-tree "ovpn" Kernel module. Any other cipher
+# must be handled in userspace and thus rules out DCO. The module also does
+# ChaCha20-Poly1305, which the CLI does not offer.
+dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+# Raw options that make OpenVPN fall back to the userspace data path, taken
+# from dco_check_option() and dco_check_option_ce()
+dco_incompatible_options = [
+    'allow-compression',
+    'comp-lzo',
+    'compress',
+    'fragment',
+    'http-proxy',
+    'management-query-proxy',
+    'socks-proxy',
+]
 otp_path = '/config/auth/openvpn'
 otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
@@ -208,6 +223,42 @@ def verify_data_ciphers_fallback(openvpn):
     if openvpn['mode'] != 'site-to-site':
         if dict_search('encryption.data_ciphers_fallback', openvpn):
             raise ConfigError('Cipher fallback is valid only in site-to-site mode')
+
+def verify_dco(openvpn):
+    if dict_search('offload.dco', openvpn) is None:
+        return
+
+    if openvpn['device_type'] != 'tun':
+        raise ConfigError('DCO requires "device-type tun"')
+
+    if openvpn['mode'] == 'server':
+        topology = dict_search('server.topology', openvpn)
+        if topology != 'subnet':
+            raise ConfigError(
+                f'DCO requires "server topology subnet", got "{topology}"'
+            )
+
+    if 'shared_secret_key' in openvpn:
+        raise ConfigError('DCO is incompatible with "shared-secret-key"')
+
+    if 'use_lzo_compression' in openvpn:
+        raise ConfigError('DCO is incompatible with "use-lzo-compression"')
+
+    ciphers = dict_search('encryption.data_ciphers', openvpn) or []
+    fallback = dict_search('encryption.data_ciphers_fallback', openvpn)
+    if fallback:
+        ciphers = ciphers + [fallback]
+
+    for cipher in ciphers:
+        if cipher not in dco_ciphers:
+            raise ConfigError(f'DCO does not support cipher "{cipher}"')
+
+    # A raw option OpenVPN refuses to offload leaves the daemon on the
+    # userspace data path, where it can not use the interface it was given
+    for option in dict_search('openvpn_option', openvpn) or []:
+        tmp = option.lstrip('-').split()
+        if tmp and tmp[0] in dco_incompatible_options:
+            raise ConfigError(f'DCO is incompatible with "openvpn-option {tmp[0]}"')
 
 def verify_pki(openvpn):
     pki = openvpn['pki']
@@ -662,6 +713,7 @@ def verify(openvpn):
     verify_mirror_redirect(openvpn)
 
     verify_data_ciphers_fallback(openvpn)
+    verify_dco(openvpn)
 
     return None
 
