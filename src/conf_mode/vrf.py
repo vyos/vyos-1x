@@ -48,10 +48,44 @@ config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 k_mod = ['vrf']
 
 nftables_table = 'inet vrf_zones'
+# Only the original direction is zoned on purpose - do not "fix" this to a
+# plain "ct zone set" (T3655, T6097).
+#
+# Leaving the reply tuple in the default zone 0 is what makes default route
+# leaking work: the reply of a leaked and NATed flow enters the default VRF
+# (e.g. pppoe0), where no zone is assigned, and can only be matched if the
+# reply tuple lives in zone 0 as well. Zoning both directions puts it in the
+# VRF zone instead and the reply is never found again.
+#
+# The flip side is that reply tuples of different VRFs collide in zone 0. That
+# is resolved by the NAT engine reallocating the clashing tuple - see the anchor
+# table below.
 nftables_rules = {
     'vrf_zones_ct_in': 'counter ct original zone set iifname map @ct_iface_map',
     'vrf_zones_ct_out': 'counter ct original zone set oifname map @ct_iface_map'
 }
+
+# The NAT engine only reallocates a clashing reply tuple if nf_nat is registered
+# for the address family, and it only gets registered once a "type nat" chain
+# exists. NAT itself brings its own tables, but zoning is also active without it
+# (e.g. VRF plus a stateful firewall rule), and IPv6 rarely has any NAT at all -
+# which is what broke IPv6 while IPv4 kept working by accident.
+#
+# This anchor table provides that chain. A "type nat" chain in the inet family
+# registers nf_nat for IPv4 and IPv6 in one go, so a single table covers both.
+#
+# It is tied to the zone rules rather than created unconditionally at boot
+# because a registered nf_nat costs roughly 200ns per new connection - measured
+# at +19% (IPv4) and +11% (IPv6) on a pure connection setup benchmark, while
+# established traffic is unaffected.
+#
+# It carries a name of its own so no other component can take it down: every
+# other place that removes an nftables table names its own one. Whatever makes
+# conntrack_required() flip (nat, nat66, firewall, load-balancing wan) pulls in
+# system_conntrack, which lists vrf as a dependent, so we are called again and
+# can add or remove the anchor accordingly.
+nftables_nat_anchor = 'inet vrf_zones_nat'
+nftables_nat_anchor_chain = 'anchor'
 
 def has_rule(af : str, priority : int, table : str=None):
     """
@@ -83,6 +117,22 @@ def is_nft_vrf_zone_rule_setup() -> bool:
     tmp = loads(cmdl(['nft', '-j', 'list', 'table', 'inet', 'vrf_zones'], sudo=True))
     num_rules = len(search("nftables[].rule[].chain", tmp))
     return bool(num_rules)
+
+def nft_vrf_nat_anchor(enable: bool) -> None:
+    """
+    Create or remove the nat anchor table the conntrack zoning depends on
+    """
+    table = nftables_nat_anchor.split()
+    if enable:
+        # both commands are idempotent, no need to probe for existence
+        cmdl(['nft', 'add', 'table'] + table)
+        cmdl(['nft', 'add', 'chain'] + table + [nftables_nat_anchor_chain,
+              '{', 'type', 'nat', 'hook', 'postrouting', 'priority', '99;',
+              'policy', 'accept;', '}'])
+    else:
+        # this runs on every commit that does not need zoning, so a missing
+        # table is the normal case and must not raise
+        cmdl(['nft', 'delete', 'table'] + table, expect=[0, 1])
 
 def vrf_interfaces(c, match):
     matched = []
@@ -358,10 +408,17 @@ def apply(vrf):
         if vrf['conntrack'] and not nft_vrf_zone_rule_setup:
             for chain, rule in nftables_rules.items():
                 cmdl(f'nft add rule inet vrf_zones {chain} {rule}'.split())
+        # Deliberately not guarded by nft_vrf_zone_rule_setup: that guard only
+        # lets the rules above be installed on the transition into "zoning
+        # needed", while the anchor tables have to be re-asserted on every run
+        # that wants zoning, even when the rules are already in place
+        if vrf['conntrack']:
+            nft_vrf_nat_anchor(True)
 
     if 'name' not in vrf or not vrf['conntrack']:
         for chain, rule in nftables_rules.items():
             cmdl(f'nft flush chain inet vrf_zones {chain}'.split())
+        nft_vrf_nat_anchor(False)
 
     # Return default ip rule values
     if 'name' not in vrf:
