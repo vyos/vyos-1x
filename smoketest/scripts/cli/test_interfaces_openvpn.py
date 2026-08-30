@@ -419,6 +419,49 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
+    def test_openvpn_server_dco_verify(self):
+        # Configurations the "ovpn" Kernel module can not serve must be
+        # rejected once data channel offload is requested
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        # check validate() - DCO is tun only
+        self.cli_set(path + ['device-type', 'tap'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(path + ['device-type', 'tun'])
+
+        # check validate() - DCO serves "topology subnet" only
+        self.cli_set(path + ['server', 'topology', 'net30'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(path + ['server', 'topology', 'subnet'])
+
+        # check validate() - DCO implements AES-GCM only
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256'])
+
+        # check validate() - DCO has no compression
+        self.cli_set(path + ['use-lzo-compression'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(path + ['use-lzo-compression'])
+
+        self.cli_commit()
+
     def test_openvpn_server_subnet_topology(self):
         # Create OpenVPN server interfaces using different client subnets.
         # Validate configuration afterwards.
@@ -649,6 +692,23 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['encryption', 'cipher', '3des'])
 
         self.cli_commit()
+
+    def test_openvpn_site2site_dco_verify(self):
+        # DCO has no static key data path
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'cipher', '3des'])
+        self.cli_commit()
+
+        # check validate() - DCO cannot be combined with a shared secret
+        self.cli_set(path + ['offload', 'dco'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
     def test_openvpn_options(self):
         # Ensure OpenVPN process restart on openvpn-option CLI node change
