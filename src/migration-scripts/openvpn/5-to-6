@@ -1,0 +1,95 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8264: "offload dco" used to be accepted next to settings the Kernel module
+# can not serve, because OpenVPN 2.6 silently ignored the module. Now that the
+# offload is real those combinations are rejected, so drop the request from
+# configurations that would otherwise fail to load.
+
+from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'openvpn']
+dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+dco_incompatible_options = [
+    'comp-lzo',
+    'disable-dco',
+    'fragment',
+    'http-proxy',
+    'management-query-proxy',
+    'socks-proxy',
+]
+dco_conditional_options = {
+    'allow-compression': 'no',
+    'compress': 'migrate',
+}
+
+
+def _offloadable(options: list) -> bool:
+    """Whether every raw option leaves the data path offloadable."""
+    for option in options:
+        tmp = option.split()
+        if not tmp:
+            continue
+        keyword = tmp[0].lstrip('-')
+        if keyword in dco_incompatible_options:
+            return False
+        keep = dco_conditional_options.get(keyword)
+        if keep is not None and tmp[1:] != [keep]:
+            return False
+    return True
+
+
+def _value(config: ConfigTree, path: list):
+    # return_value() raises on a missing path, and nodes carrying a CLI
+    # default are usually absent from a saved configuration
+    return config.return_value(path) if config.exists(path) else None
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    for interface in config.list_nodes(base):
+        path = base + [interface]
+        if not config.exists(path + ['offload', 'dco']):
+            continue
+
+        ciphers = []
+        if config.exists(path + ['encryption', 'data-ciphers']):
+            ciphers += config.return_values(path + ['encryption', 'data-ciphers'])
+        fallback = _value(config, path + ['encryption', 'data-ciphers-fallback'])
+        if fallback:
+            ciphers.append(fallback)
+
+        options = []
+        if config.exists(path + ['openvpn-option']):
+            options = config.return_values(path + ['openvpn-option'])
+
+        topology = None
+        if _value(config, path + ['mode']) == 'server':
+            topology = _value(config, path + ['server', 'topology'])
+
+        if (
+            _value(config, path + ['device-type']) == 'tap'
+            or config.exists(path + ['shared-secret-key'])
+            or config.exists(path + ['use-lzo-compression'])
+            or (topology is not None and topology != 'subnet')
+            or any(cipher not in dco_ciphers for cipher in ciphers)
+            or not _offloadable(options)
+        ):
+            offload = path + ['offload']
+            config.delete(offload + ['dco'])
+            if config.exists(offload) and not config.list_nodes(offload):
+                config.delete(offload)
