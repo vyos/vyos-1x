@@ -185,15 +185,21 @@ class TestUnmatchedCandidates(unittest.TestCase):
 
 class TestMatchPendingNodes(unittest.TestCase):
     """A pending node's hw-id is unknown by construction - there's no MAC
-    to check a candidate against - so matching must only ever happen in
-    the unambiguous exactly-one-pending/exactly-one-candidate case per
-    type. Confirmed in the field: a naive deterministic fill (sorting
-    pending nodes and candidates together like numeric gaps) silently
-    bound a configured node's address to a different physical NIC than
-    its own, because an already-provisioned box's existing names have no
-    relationship to PCIe/MAC sort order. Guessing in any other
-    cardinality risks the same mistake; leaving the node unresolved and
-    reported is safer.
+    to check a candidate against - so matching only ever happens on an
+    exact cover: as many pending nodes of a type as unconfigured
+    candidates of that type. Confirmed in the field: a naive
+    deterministic fill (sorting pending nodes and candidates together
+    like numeric gaps) silently bound a configured node's address to a
+    different physical NIC than its own, because an already-provisioned
+    box's existing names have no relationship to PCIe/MAC sort order.
+    With MORE candidates than nodes there is no way to tell which one is
+    the node's own hardware, so nothing is matched.
+
+    An exact cover is a different situation: every node receives real
+    hardware whatever happens, so only the permutation is open, and
+    refusing strands 100% of the nodes on interfaces that do not exist
+    (the multi-NIC cloud-init report). Those are paired in canonical
+    hardware order, which is why pcie_address is pinned below.
     """
 
     def setUp(self):
@@ -201,6 +207,19 @@ class TestMatchPendingNodes(unittest.TestCase):
                                      return_value=False)
         self.is_wireless = patcher.start()
         self.addCleanup(patcher.stop)
+
+        # see TestComputeBootstrapPlan.setUp() - keep the canonical order
+        # off the build host's real sysfs, so these exercise MAC rank
+        distance_patcher = mock.patch.object(resolver, 'pcie_distance',
+                                              return_value=0)
+        self.pcie_distance = distance_patcher.start()
+        self.addCleanup(distance_patcher.stop)
+
+        address_patcher = mock.patch.object(
+            resolver, 'pcie_address',
+            return_value=resolver.PCIE_ADDRESS_UNKNOWN)
+        self.pcie_address = address_patcher.start()
+        self.addCleanup(address_patcher.stop)
 
     def test_unambiguous_single_pending_single_candidate_matches(self):
         pending = {'ethernet': {'eth1'}, 'wireless': set()}
@@ -215,6 +234,69 @@ class TestMatchPendingNodes(unittest.TestCase):
         candidates = [('m1', 'eth9')]
         matched = resolver.match_pending_nodes(pending, candidates)
         self.assertEqual(matched, {})
+
+    def test_exact_cover_pairs_in_canonical_hardware_order(self):
+        # the multi-NIC cloud-init shape: two address-bearing nodes with
+        # no hw-id and exactly two unconfigured NICs. Refusing here would
+        # strand BOTH addresses on interfaces that never come to exist,
+        # so they are paired - lowest node index to first-sorted hardware.
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('bb', 'eth8'), ('aa', 'eth9')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'aa': 'eth1', 'bb': 'eth2'})
+
+    def test_exact_cover_pairs_by_pci_slot_not_mac_magnitude(self):
+        # the reported silent-swap shape: hardware order must come from
+        # the PCI address, not from raw MAC rank - here the numerically
+        # LOWER mac sits in the HIGHER slot and must get the higher name.
+        self.pcie_address.side_effect = lambda name: {
+            'eth8': ((0, 0, 5, 0),),
+            'eth9': ((0, 0, 6, 0),),
+        }[name]
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('52:54:00:00:00:22', 'eth9'),
+                      ('52:54:00:ff:00:21', 'eth8')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'52:54:00:ff:00:21': 'eth1',
+                                    '52:54:00:00:00:22': 'eth2'})
+
+    def test_exact_cover_orders_node_names_numerically(self):
+        # 'eth10' must pair after 'eth2', not before it as a plain
+        # lexical sort of the names would have it.
+        pending = {'ethernet': {'eth2', 'eth10'}, 'wireless': set()}
+        candidates = [('aa', 'eth8'), ('bb', 'eth9')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'aa': 'eth2', 'bb': 'eth10'})
+
+    def test_three_pending_three_candidates_cover(self):
+        pending = {'ethernet': {'eth0', 'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('cc', 'eth7'), ('aa', 'eth9'), ('bb', 'eth8')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'aa': 'eth0', 'bb': 'eth1', 'cc': 'eth2'})
+
+    def test_three_pending_two_candidates_no_match(self):
+        pending = {'ethernet': {'eth0', 'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('aa', 'eth9'), ('bb', 'eth8')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+    def test_two_pending_three_candidates_no_match(self):
+        # one candidate too many - the field-reported "unrelated interface
+        # freed in the same boot" hazard, at a larger cardinality.
+        pending = {'ethernet': {'eth0', 'eth1'}, 'wireless': set()}
+        candidates = [('aa', 'eth9'), ('bb', 'eth8'), ('cc', 'eth7')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+    def test_covers_are_judged_per_type_not_across_types(self):
+        # ethernet covers 2:2 while wireless is 1:2 - the ethernet nodes
+        # are still paired, and the wireless one is still left pending.
+        self.is_wireless.side_effect = lambda name: name.startswith('radio')
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': {'wlan0'}}
+        candidates = [('aa', 'eth9'), ('bb', 'eth8'),
+                      ('cc', 'radio0'), ('dd', 'radio1')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'aa': 'eth1', 'bb': 'eth2'})
 
     def test_one_pending_two_candidates_no_match(self):
         # the field-reported shape: an unrelated second candidate (e.g.
@@ -480,10 +562,151 @@ class TestPcieDistance(unittest.TestCase):
                           resolver.PCIE_DISTANCE_UNKNOWN)
 
     def test_no_pci_segment_at_all_returns_sentinel(self):
-        # simulated USB NIC: resolved path has no PCI BDF component
+        # resolved path has no PCI BDF component at all
         self._make_iface_pointing_at('eth5', 'usb1', '1-1', '1-1:1.0')
         self.assertEqual(resolver.pcie_distance('eth5', self.tmp),
                           resolver.PCIE_DISTANCE_UNKNOWN)
+
+    def test_usb_nic_behind_its_controller_is_not_a_sentinel(self):
+        # a real USB NIC resolves THROUGH the xHCI controller, so it has a
+        # perfectly ordinary hop-count - the sentinel above is rarer than
+        # it looks, which is why the address tie-break matters here too.
+        self._make_iface_pointing_at(
+            'eth6', 'pci0000:00', '0000:00:14.0', 'usb1', '1-1', '1-1:1.0')
+        self.assertEqual(resolver.pcie_distance('eth6', self.tmp), 1)
+
+
+class TestPcieAddress(unittest.TestCase):
+    """Hop depth alone ties for every NIC on the same bus - the normal
+    case in a VM, where the hypervisor allocates one slot per attached
+    NIC off the same root bus. The field report was exactly that: two
+    virtio NICs at equal depth, ordered by raw MAC magnitude, which
+    reversed the hypervisor's slot order and put each configured address
+    on the wrong physical wire. The full bus address is what breaks that
+    tie correctly.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.devices_root = os.path.join(self.tmp, 'devices')
+        os.makedirs(self.devices_root)
+
+    def _make_iface_pointing_at(self, name, *path_segments):
+        target = os.path.join(self.devices_root, *path_segments)
+        os.makedirs(target, exist_ok=True)
+        iface_path = os.path.join(self.tmp, name)
+        os.mkdir(iface_path)
+        os.symlink(target, os.path.join(iface_path, 'device'))
+
+    def test_shallow_device_is_its_own_bdf(self):
+        self._make_iface_pointing_at('eth0', 'pci0000:00', '0000:00:1f.6')
+        self.assertEqual(resolver.pcie_address('eth0', self.tmp),
+                          ((0, 0, 0x1f, 6),))
+
+    def test_deep_device_keeps_the_whole_path_root_first(self):
+        self._make_iface_pointing_at(
+            'eth1', 'pci0000:00', '0000:00:1c.0',
+            '0000:01:00.0', '0000:02:04.0')
+        self.assertEqual(resolver.pcie_address('eth1', self.tmp),
+                          ((0, 0, 0x1c, 0), (0, 1, 0, 0), (0, 2, 4, 0)))
+
+    def test_virtio_indirection_skipped_like_pcie_distance(self):
+        self._make_iface_pointing_at(
+            'eth2', 'pci0000:00', '0000:00:12.0', 'virtio2', 'net')
+        self.assertEqual(resolver.pcie_address('eth2', self.tmp),
+                          ((0, 0, 0x12, 0),))
+
+    def test_same_slot_orders_by_pci_slot_number(self):
+        # the reported shape: two NICs on the same bus, different slots
+        self._make_iface_pointing_at('ethA', 'pci0000:00', '0000:00:05.0')
+        self._make_iface_pointing_at('ethB', 'pci0000:00', '0000:00:06.0')
+        self.assertLess(resolver.pcie_address('ethA', self.tmp),
+                         resolver.pcie_address('ethB', self.tmp))
+
+    def test_multifunction_siblings_order_by_function(self):
+        # a dual-port card: port 0 must come before port 1, and hop count
+        # cannot tell them apart at all
+        self._make_iface_pointing_at(
+            'ethC', 'pci0000:00', '0000:00:1c.0', '0000:03:00.0')
+        self._make_iface_pointing_at(
+            'ethD', 'pci0000:00', '0000:00:1c.0', '0000:03:00.1')
+        self.assertEqual(resolver.pcie_distance('ethC', self.tmp),
+                          resolver.pcie_distance('ethD', self.tmp))
+        self.assertLess(resolver.pcie_address('ethC', self.tmp),
+                         resolver.pcie_address('ethD', self.tmp))
+
+    def test_missing_device_symlink_returns_sentinel(self):
+        os.mkdir(os.path.join(self.tmp, 'eth3'))
+        self.assertEqual(resolver.pcie_address('eth3', self.tmp),
+                          resolver.PCIE_ADDRESS_UNKNOWN)
+
+    def test_broken_device_symlink_returns_sentinel(self):
+        iface_path = os.path.join(self.tmp, 'eth4')
+        os.mkdir(iface_path)
+        os.symlink(os.path.join(self.devices_root, 'does-not-exist'),
+                    os.path.join(iface_path, 'device'))
+        self.assertEqual(resolver.pcie_address('eth4', self.tmp),
+                          resolver.PCIE_ADDRESS_UNKNOWN)
+
+    def test_sentinel_sorts_after_every_real_address(self):
+        # it must not be the empty tuple, which would sort FIRST
+        self._make_iface_pointing_at('eth5', 'pci0000:00', '0000:00:1f.6')
+        self.assertLess(resolver.pcie_address('eth5', self.tmp),
+                         resolver.PCIE_ADDRESS_UNKNOWN)
+
+
+class TestCanonicalSortKey(unittest.TestCase):
+    """One canonical hardware order, shared by ordinary bootstrap naming
+    and by pending-node pairing - if they disagreed, a name assigned by
+    one would contradict the other.
+    """
+
+    def test_distance_still_leads_over_address(self):
+        # an onboard NIC deep in the bus address space must still beat an
+        # add-in card behind a bridge, whatever their addresses look like
+        with mock.patch.object(resolver, 'pcie_distance',
+                                side_effect=lambda n: {'a': 1, 'b': 2}[n]), \
+             mock.patch.object(resolver, 'pcie_address',
+                                side_effect=lambda n: {'a': ((0, 0, 0x1f, 6),),
+                                                        'b': ((0, 0, 1, 0),)}[n]):
+            self.assertLess(resolver.canonical_sort_key('zz', 'a'),
+                             resolver.canonical_sort_key('aa', 'b'))
+
+    def test_address_beats_mac_magnitude_at_equal_distance(self):
+        with mock.patch.object(resolver, 'pcie_distance', return_value=1), \
+             mock.patch.object(resolver, 'pcie_address',
+                                side_effect=lambda n: {'a': ((0, 0, 5, 0),),
+                                                        'b': ((0, 0, 6, 0),)}[n]):
+            # 'a' has the numerically HIGHER mac but the lower slot
+            self.assertLess(resolver.canonical_sort_key('ff:ff', 'a'),
+                             resolver.canonical_sort_key('00:00', 'b'))
+
+    def test_mac_is_the_last_resort_tie_break(self):
+        with mock.patch.object(resolver, 'pcie_distance', return_value=1), \
+             mock.patch.object(resolver, 'pcie_address',
+                                return_value=resolver.PCIE_ADDRESS_UNKNOWN):
+            self.assertLess(resolver.canonical_sort_key('aa', 'x'),
+                             resolver.canonical_sort_key('bb', 'y'))
+
+
+class TestNodeNameOrder(unittest.TestCase):
+    """Pending node names are paired with hardware in index order, which
+    has to be numeric - a plain sort puts 'eth10' before 'eth2'.
+    """
+
+    def test_numeric_not_lexical(self):
+        self.assertEqual(sorted(['eth10', 'eth2', 'eth1'],
+                                 key=resolver.node_name_order),
+                          ['eth1', 'eth2', 'eth10'])
+
+    def test_name_without_index_sorts_last(self):
+        self.assertEqual(sorted(['eth1', 'lan'],
+                                 key=resolver.node_name_order),
+                          ['eth1', 'lan'])
+        self.assertEqual(sorted(['lan', 'eth9'],
+                                 key=resolver.node_name_order),
+                          ['eth9', 'lan'])
 
 
 class TestComputeBootstrapPlan(unittest.TestCase):
@@ -506,6 +729,39 @@ class TestComputeBootstrapPlan(unittest.TestCase):
                                               return_value=0)
         self.pcie_distance = distance_patcher.start()
         self.addCleanup(distance_patcher.stop)
+
+        # the fake names below ('eth0', 'eth1', ...) exist for real on some
+        # build hosts - without this, pcie_address() would resolve the
+        # host's own sysfs for those and the sentinel for the rest, making
+        # the canonical order host-dependent. Pinned to the sentinel so
+        # these tests keep exercising pure MAC-rank ordering.
+        address_patcher = mock.patch.object(
+            resolver, 'pcie_address',
+            return_value=resolver.PCIE_ADDRESS_UNKNOWN)
+        self.pcie_address = address_patcher.start()
+        self.addCleanup(address_patcher.stop)
+
+    def test_equal_distance_orders_by_pci_slot_not_mac_magnitude(self):
+        # the reported silent-swap shape, at the bootstrap-naming layer:
+        # both NICs sit at the same depth, so MAC rank used to decide -
+        # the lower slot must win regardless of MAC magnitude.
+        self.pcie_address.side_effect = lambda name: {
+            'ethA': ((0, 0, 5, 0),),
+            'ethB': ((0, 0, 6, 0),),
+        }[name]
+        current = {'ethB': '52:54:00:00:00:22', 'ethA': '52:54:00:ff:00:21'}
+        plan = resolver.compute_bootstrap_plan({}, current, {})
+        self.assertEqual(plan, {'ethA': 'eth0', 'ethB': 'eth1'})
+
+    def test_distance_still_beats_pci_address(self):
+        self.pcie_distance.side_effect = lambda name: {'ethA': 2, 'ethB': 1}[name]
+        self.pcie_address.side_effect = lambda name: {
+            'ethA': ((0, 0, 5, 0),),
+            'ethB': ((0, 0, 6, 0),),
+        }[name]
+        current = {'ethA': 'aa', 'ethB': 'bb'}
+        plan = resolver.compute_bootstrap_plan({}, current, {})
+        self.assertEqual(plan, {'ethB': 'eth0', 'ethA': 'eth1'})
 
     def test_sorted_by_mac_independent_of_current_names(self):
         # names are in the OPPOSITE order of their MACs
@@ -635,6 +891,17 @@ class TestComputeBootstrapPlanGapFill(unittest.TestCase):
         self.pcie_distance = distance_patcher.start()
         self.addCleanup(distance_patcher.stop)
 
+        # the fake names below ('eth0', 'eth1', ...) exist for real on some
+        # build hosts - without this, pcie_address() would resolve the
+        # host's own sysfs for those and the sentinel for the rest, making
+        # the canonical order host-dependent. Pinned to the sentinel so
+        # these tests keep exercising pure MAC-rank ordering.
+        address_patcher = mock.patch.object(
+            resolver, 'pcie_address',
+            return_value=resolver.PCIE_ADDRESS_UNKNOWN)
+        self.pcie_address = address_patcher.start()
+        self.addCleanup(address_patcher.stop)
+
     def test_open_name_filled_like_an_ordinary_gap(self):
         # 'eth1' has nothing configured for it and no pending reservation
         # - it is simply the lowest open name.
@@ -701,18 +968,46 @@ class TestComputeBootstrapPlanGapFill(unittest.TestCase):
         self.assertEqual(plan.get('eth0'), 'eth6')
 
     def test_pending_name_reserved_against_unrelated_bootstrap_candidate(self):
-        # 'eth1' is pending (no hw-id) - two unrelated new NICs discovered
-        # this boot must not land on it just because sequential numbering
-        # would otherwise reach it as the second assignment.
-        configured = {}
+        # 'eth1' is pending (no hw-id) on a box that already has an
+        # established ethernet baseline (eth0's own hw-id) - two unrelated
+        # new NICs discovered this boot must not land on it just because
+        # sequential numbering would otherwise reach it as the second
+        # assignment.
+        configured = {'m0': 'eth0'}
         pending = {'ethernet': {'eth1'}, 'wireless': set()}
+        current = {'eth0': 'm0', 'eth9': 'aa', 'eth8': 'bb'}
+        plan = resolver.compute_bootstrap_plan(configured, current, {},
+                                                pending=pending)
+        self.assertEqual(plan.get('eth9'), 'eth2')
+        self.assertEqual(plan.get('eth8'), 'eth3')
+        self.assertNotEqual(plan.get('eth9'), 'eth1')
+        self.assertNotEqual(plan.get('eth8'), 'eth1')
+
+    def test_pending_name_not_reserved_with_no_established_baseline(self):
+        # 'eth0' is pending (e.g. a cloud-init/first-boot script wrote it
+        # into config.boot before this script ever ran) on a box that has
+        # NEVER bound a real ethernet hw-id - there is no established
+        # mapping to protect, so it is just another open slot and
+        # competes for it like any other unconfigured candidate, exactly
+        # as it would if `pending` had not been passed at all.
+        configured = {}
+        pending = {'ethernet': {'eth0'}, 'wireless': set()}
         current = {'eth9': 'aa', 'eth8': 'bb'}
         plan = resolver.compute_bootstrap_plan(configured, current, {},
                                                 pending=pending)
         self.assertEqual(plan.get('eth9'), 'eth0')
-        self.assertEqual(plan.get('eth8'), 'eth2')
-        self.assertNotEqual(plan.get('eth9'), 'eth1')
-        self.assertNotEqual(plan.get('eth8'), 'eth1')
+        self.assertEqual(plan.get('eth8'), 'eth1')
+
+    def test_pending_name_reserved_if_baseline_exists_for_other_type(self):
+        # an established WIRELESS baseline must not protect a pending
+        # ETHERNET node - the two type groups are judged independently.
+        configured = {'w0': 'wlan0'}
+        pending = {'ethernet': {'eth0'}, 'wireless': set()}
+        current = {'eth9': 'aa', 'eth8': 'bb'}
+        plan = resolver.compute_bootstrap_plan(configured, current, {},
+                                                pending=pending)
+        self.assertEqual(plan.get('eth9'), 'eth0')
+        self.assertEqual(plan.get('eth8'), 'eth1')
 
     def test_reclaimed_candidate_excluded_from_ordinary_bootstrap(self):
         # main() already matched this candidate to a pending node via
@@ -722,7 +1017,7 @@ class TestComputeBootstrapPlanGapFill(unittest.TestCase):
         configured = {}
         current = {'eth9': 'm1', 'eth8': 'm2'}
         plan = resolver.compute_bootstrap_plan(configured, current, {},
-                                                reclaimed_macs={'m1'})
+                                                reclaimed={'m1': 'eth1'})
         self.assertNotIn('eth9', plan)
         self.assertIn('eth8', plan)
 
@@ -993,6 +1288,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1096,6 +1394,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1149,6 +1450,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1197,6 +1501,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1246,6 +1553,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1263,19 +1573,17 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
         self.assertEqual(status['pending_unresolved'], ['eth2'])
         self.assertEqual(status['reclaimed'], {})
 
-    def test_simultaneous_ambiguity_holds_back_every_candidate(self):
+    def test_simultaneous_pending_nodes_are_covered_by_their_hardware(self):
         # two NICs' hw-id were deleted before the same reboot (eth0 and
         # eth2, nodes left in place), and both came back racily named.
-        # Each candidate's MAC happens to obviously "belong" to one
-        # specific pending node (racyA's mac ends in :00, matching what
-        # eth0 used to be; racyB's mac ends in :02, matching eth2) - but
-        # there is no way to actually verify that pairing, so with 2
-        # pending nodes and 2 candidates present at once, neither may be
-        # auto-matched: guessing the "obvious" pairing risks silently
-        # binding a configured node's settings to the wrong physical NIC
-        # if the guess is ever wrong. Both stay pending and reported;
-        # both candidates still get a real, settings-free hw-id via
-        # ordinary bootstrap naming.
+        # This is an exact cover - 2 pending nodes, 2 unconfigured
+        # candidates - so both nodes are filled, paired in canonical
+        # hardware order. Holding them back instead (the earlier policy)
+        # left eth0/eth2's addresses configured on interfaces that never
+        # came to exist, permanently, while the hardware bootstrapped at
+        # eth8/eth9; every node gets real hardware either way here, so
+        # only the permutation is open and PCI slot order decides it.
+        # The pairing is logged as a warning for exactly that reason.
         configured = {
             'm1': 'eth1', 'm3': 'eth3', 'm4': 'eth4',
             'm5': 'eth5', 'm6': 'eth6', 'm7': 'eth7',
@@ -1308,24 +1616,164 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
 
-        # neither pending node is guessed at - both candidates land on
-        # fresh, settings-free bootstrap names instead (no ordinary gaps
-        # exist here, so both go beyond the highest configured index)
-        self.assertNotIn('eth0', state)
-        self.assertNotIn('eth2', state)
-        self.assertEqual(state.get('eth8'), 'aa:bb:cc:dd:ee:00')
-        self.assertEqual(state.get('eth9'), 'aa:bb:cc:dd:ee:02')
+        # both pending nodes now have real hardware under them, and
+        # nothing was bootstrapped past the highest configured index
+        self.assertEqual(state.get('eth0'), 'aa:bb:cc:dd:ee:00')
+        self.assertEqual(state.get('eth2'), 'aa:bb:cc:dd:ee:02')
+        self.assertNotIn('eth8', state)
+        self.assertNotIn('eth9', state)
 
+        # hints under the reclaimed names, so vyos-interface-rescan.py
+        # writes the fresh hw-id into the EXISTING node and its address
+        # and description survive
         hints = set(os.listdir(self.udev_dir))
-        self.assertEqual(hints, {'eth8', 'eth9'})
+        self.assertEqual(hints, {'eth0', 'eth2'})
 
         status = json.loads(resolver.status_file.read_text())
-        self.assertEqual(status['pending_unresolved'], ['eth0', 'eth2'])
-        self.assertEqual(status['reclaimed'], {})
+        self.assertEqual(status['pending_unresolved'], [])
+        self.assertEqual(status['reclaimed'], {'aa:bb:cc:dd:ee:00': 'eth0',
+                                                'aa:bb:cc:dd:ee:02': 'eth2'})
+        # inferred from slot order rather than being the single
+        # possibility - surfaced separately so an admin can verify it
+        self.assertEqual(status['reclaimed_by_topology'], ['eth0', 'eth2'])
+
+    def test_cloud_init_multi_nic_addresses_are_not_stranded(self):
+        """Field report, kvm/libvirt qcow2 + NoCloud user-data on a three
+        NIC guest: cloud-init synthesized an hw-id for eth0 only, while
+        `vyos_config_commands` also set addresses on eth1 and eth2. That
+        left 2 pending nodes and 2 unconfigured NICs, which used to be
+        refused as ambiguous while eth1/eth2 stayed RESERVED (eth0's
+        hw-id makes has_established_baseline() true) - so the real NICs
+        were renamed to eth3/eth4 and both configured addresses sat on
+        interfaces that did not exist, across reboots.
+        """
+        configured = {'52:54:00:00:00:10': 'eth0'}
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        state = {
+            'eth0': '52:54:00:00:00:10',
+            'eth1': '52:54:00:ff:00:21',  # libvirt slot 0000:00:05.0
+            'eth2': '52:54:00:00:00:22',  # libvirt slot 0000:00:06.0
+        }
+        slots = {
+            'eth0': ((0, 0, 4, 0),),
+            'eth1': ((0, 0, 5, 0),),
+            'eth2': ((0, 0, 6, 0),),
+        }
+
+        def fake_discover(*_a, **_kw):
+            return dict(state)
+
+        def fake_run(command, *_a, **_kw):
+            parts = command.split()
+            if 'name' in parts:
+                old = parts[parts.index('dev') + 1]
+                new = parts[parts.index('name') + 1]
+                if old in state:
+                    state[new] = state.pop(old)
+                    slots[new] = slots.pop(old, resolver.PCIE_ADDRESS_UNKNOWN)
+            return 0
+
+        with mock.patch.object(resolver, 'get_configfile_interfaces',
+                                return_value=configured), \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes',
+                                return_value=pending), \
+             mock.patch.object(resolver, 'discover_physical_interfaces',
+                                side_effect=fake_discover), \
+             mock.patch.object(resolver, 'is_wireless_interface',
+                                return_value=False), \
+             mock.patch.object(resolver, 'pcie_distance', return_value=1), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 side_effect=lambda name: slots.get(
+                     name, resolver.PCIE_ADDRESS_UNKNOWN)), \
+             mock.patch.object(resolver, 'run', side_effect=fake_run), \
+             mock.patch('time.sleep'):
+            resolver.main()
+
+        # nothing moved, and in particular nothing landed on eth3/eth4
+        self.assertEqual(state, {
+            'eth0': '52:54:00:00:00:10',
+            'eth1': '52:54:00:ff:00:21',
+            'eth2': '52:54:00:00:00:22',
+        })
+
+        # hints under eth1/eth2 so vyos-interface-rescan.py writes the
+        # hw-id into those EXISTING nodes and their addresses survive.
+        # eth0 already has an hw-id, so it needs no hint.
+        self.assertEqual(set(os.listdir(self.udev_dir)), {'eth1', 'eth2'})
+
+        status = json.loads(resolver.status_file.read_text())
+        self.assertEqual(status['pending_unresolved'], [])
+        self.assertEqual(status['renamed'], {})
+        self.assertEqual(status['reclaimed'], {'52:54:00:ff:00:21': 'eth1',
+                                                '52:54:00:00:00:22': 'eth2'})
+
+    def test_cloud_init_multi_nic_names_follow_pci_slot_order(self):
+        """Second field report, same shape: the addresses matched their
+        logical names, but the resolver swapped WHICH physical NIC each
+        name identified. Both NICs sit at the same PCIe depth, so the old
+        (distance, mac) key fell through to raw MAC magnitude - and
+        52:54:00:00:00:22 (slot 6) sorts below 52:54:00:ff:00:21 (slot 5),
+        reversing the hypervisor's attach order. Both data links then had
+        100% packet loss, silently, and the swap froze into config.boot.
+        Here the NICs arrive under the OPPOSITE names to make the point.
+        """
+        configured = {}
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        state = {
+            'eth1': '52:54:00:00:00:22',  # slot 6, arrived first this boot
+            'eth2': '52:54:00:ff:00:21',  # slot 5
+        }
+        slots = {
+            'eth1': ((0, 0, 6, 0),),
+            'eth2': ((0, 0, 5, 0),),
+        }
+
+        def fake_discover(*_a, **_kw):
+            return dict(state)
+
+        def fake_run(command, *_a, **_kw):
+            parts = command.split()
+            if 'name' in parts:
+                old = parts[parts.index('dev') + 1]
+                new = parts[parts.index('name') + 1]
+                if old in state:
+                    state[new] = state.pop(old)
+                    slots[new] = slots.pop(old, resolver.PCIE_ADDRESS_UNKNOWN)
+            return 0
+
+        with mock.patch.object(resolver, 'get_configfile_interfaces',
+                                return_value=configured), \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes',
+                                return_value=pending), \
+             mock.patch.object(resolver, 'discover_physical_interfaces',
+                                side_effect=fake_discover), \
+             mock.patch.object(resolver, 'is_wireless_interface',
+                                return_value=False), \
+             mock.patch.object(resolver, 'pcie_distance', return_value=1), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 side_effect=lambda name: slots.get(
+                     name, resolver.PCIE_ADDRESS_UNKNOWN)), \
+             mock.patch.object(resolver, 'run', side_effect=fake_run), \
+             mock.patch('time.sleep'):
+            resolver.main()
+
+        # the lower PCI slot takes the lower name, whatever the MACs say
+        self.assertEqual(state['eth1'], '52:54:00:ff:00:21')
+        self.assertEqual(state['eth2'], '52:54:00:00:00:22')
+
+        status = json.loads(resolver.status_file.read_text())
+        self.assertEqual(status['pending_unresolved'], [])
+        self.assertEqual(status['reclaimed'], {'52:54:00:ff:00:21': 'eth1',
+                                                '52:54:00:00:00:22': 'eth2'})
 
     def test_squatting_pending_candidate_still_reclaims_correctly(self):
         # field report: deleting eth7's hw-id (node left in place) produced
@@ -1372,6 +1820,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1431,6 +1882,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()
@@ -1496,6 +1950,9 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
              mock.patch.object(resolver, 'is_wireless_interface',
                                 return_value=False), \
              mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 return_value=resolver.PCIE_ADDRESS_UNKNOWN), \
              mock.patch.object(resolver, 'run', side_effect=fake_run), \
              mock.patch('time.sleep'):
             resolver.main()

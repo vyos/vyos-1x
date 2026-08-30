@@ -385,6 +385,14 @@ warn_missing_interface_hardware ()
         [ -n "${intf}" ] || continue
         log_failure_msg "interface '${intf}' still has no hw-id configured after this boot's naming pass - bind it manually, e.g. 'set interfaces ethernet ${intf} hw-id <mac>', or remove the node if it is no longer needed"
     done
+
+    # these nodes DID get hardware, but which NIC went to which name was
+    # inferred from PCI slot order rather than being the only possibility
+    jq -r '.reclaimed_by_topology // [] | .[]' "${status_file}" 2>/dev/null | \
+        while read -r intf; do
+        [ -n "${intf}" ] || continue
+        log_warning_msg "interface '${intf}' had no hw-id and was matched to hardware by PCI slot order - verify it is the port you expect before relying on its configuration"
+    done
 }
 
 cleanup_post_commit_hooks () {
