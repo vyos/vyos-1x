@@ -36,6 +36,7 @@ remote {{ remote }}
 {% endif %}
 {% if shared_secret_key is vyos_defined %}
 secret /run/openvpn/{{ ifname }}_shared.key
+allow-deprecated-insecure-static-crypto
 {% endif %}
 {% if persistent_tunnel is vyos_defined %}
 persist-tun
