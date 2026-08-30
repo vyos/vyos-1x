@@ -70,12 +70,12 @@ bind ipv6only
 mode server
 tls-server
 {%     if server is vyos_defined %}
-{%         if server.subnet is vyos_defined %}
-{%             if server.topology is vyos_defined('point-to-point') %}
+{%         if server.topology is vyos_defined('point-to-point') %}
 topology p2p
-{%             elif server.topology is vyos_defined %}
+{%         elif server.topology is vyos_defined %}
 topology {{ server.topology }}
-{%             endif %}
+{%         endif %}
+{%         if server.subnet is vyos_defined %}
 {%             for subnet in server.subnet %}
 {%                 if subnet | is_ipv4 %}
 server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} {{ 'nopool' if server.client_ip_pool is vyos_defined and server.client_ip_pool.disable is not vyos_defined else '' }}
