@@ -23,12 +23,14 @@ migration_script = 'src/migration-scripts/openvpn/5-to-6'
 
 dco = ['interfaces', 'openvpn', 'vtun10', 'offload', 'dco']
 
+
 def load_migrate():
     loader = importlib.machinery.SourceFileLoader('openvpn_5_to_6', migration_script)
     spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
     return module.migrate
+
 
 def config_tree(body):
     return ConfigTree(
@@ -41,6 +43,7 @@ def config_tree(body):
         '    }\n'
         '}\n'
     )
+
 
 class TestOpenVPNMigration(TestCase):
     def setUp(self):
@@ -66,6 +69,51 @@ class TestOpenVPNMigration(TestCase):
         self.migrate(config)
         self.assertTrue(config.exists(dco))
 
+    def test_incompatible_option_drops_dco(self):
+        config = config_tree(
+            '        mode server\n        openvpn-option "--fragment 1300"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_harmless_option_keeps_dco(self):
+        config = config_tree(
+            '        mode server\n        openvpn-option "--persist-tun"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_interfaces_are_independent(self):
+        # an interface without "offload" must be left alone, and dropping the
+        # offload from one must not disturb another
+        config = ConfigTree(
+            'interfaces {\n'
+            '    openvpn vtun10 {\n'
+            '        mode server\n'
+            '        device-type tap\n'
+            '        offload {\n'
+            '            dco\n'
+            '        }\n'
+            '    }\n'
+            '    openvpn vtun11 {\n'
+            '        mode server\n'
+            '    }\n'
+            '    openvpn vtun12 {\n'
+            '        mode server\n'
+            '        offload {\n'
+            '            dco\n'
+            '        }\n'
+            '    }\n'
+            '}\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(['interfaces', 'openvpn', 'vtun10', 'offload']))
+        self.assertTrue(config.exists(['interfaces', 'openvpn', 'vtun11']))
+        self.assertFalse(config.exists(['interfaces', 'openvpn', 'vtun11', 'offload']))
+        self.assertTrue(
+            config.exists(['interfaces', 'openvpn', 'vtun12', 'offload', 'dco'])
+        )
+
     def test_minimal_dco_is_kept(self):
         # a plain tun server spells out neither device-type nor topology,
         # which is the usual shape of a saved configuration
@@ -82,8 +130,7 @@ class TestOpenVPNMigration(TestCase):
 
     def test_shared_secret_drops_dco(self):
         config = config_tree(
-            '        mode site-to-site\n'
-            '        shared-secret-key ovpn_test\n'
+            '        mode site-to-site\n        shared-secret-key ovpn_test\n'
         )
         self.migrate(config)
         self.assertFalse(config.exists(dco))

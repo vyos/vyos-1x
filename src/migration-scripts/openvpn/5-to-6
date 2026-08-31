@@ -22,6 +22,24 @@ from vyos.configtree import ConfigTree
 
 base = ['interfaces', 'openvpn']
 dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+dco_incompatible_options = [
+    'allow-compression',
+    'comp-lzo',
+    'compress',
+    'fragment',
+    'http-proxy',
+    'management-query-proxy',
+    'socks-proxy',
+]
+
+
+def _offloadable(options: list) -> bool:
+    """Whether every raw option leaves the data path offloadable."""
+    for option in options:
+        tmp = option.lstrip('-').split()
+        if tmp and tmp[0] in dco_incompatible_options:
+            return False
+    return True
 
 
 def _value(config: ConfigTree, path: list):
@@ -46,6 +64,10 @@ def migrate(config: ConfigTree) -> None:
         if fallback:
             ciphers.append(fallback)
 
+        options = []
+        if config.exists(path + ['openvpn-option']):
+            options = config.return_values(path + ['openvpn-option'])
+
         topology = None
         if _value(config, path + ['mode']) == 'server':
             topology = _value(config, path + ['server', 'topology'])
@@ -56,6 +78,7 @@ def migrate(config: ConfigTree) -> None:
             or config.exists(path + ['use-lzo-compression'])
             or (topology is not None and topology != 'subnet')
             or any(cipher not in dco_ciphers for cipher in ciphers)
+            or not _offloadable(options)
         ):
             offload = path + ['offload']
             config.delete(offload + ['dco'])
