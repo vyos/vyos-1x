@@ -57,12 +57,39 @@ def _value(config: ConfigTree, path: list):
     return config.return_value(path) if config.exists(path) else None
 
 
+def _clamp_keepalive(config: ConfigTree, path: list) -> None:
+    """Bring a server keepalive within what verify() accepts."""
+    if _value(config, path + ['mode']) != 'server':
+        return
+
+    # both nodes carry a CLI default, so they render even when absent
+    interval = int(_value(config, path + ['keep-alive', 'interval']) or 10)
+    count = int(_value(config, path + ['keep-alive', 'failure-count']) or 60)
+
+    # a zero interval renders "keepalive 0 0" and turns keepalive off, which
+    # OpenVPN and verify() both leave alone
+    if interval < 1:
+        return
+
+    # the timeout is interval * failure-count: it has to reach twice the
+    # interval and stay below 12 hours. Beyond an interval of 21600 no count
+    # satisfies both - the CLI range stops at 600, so only a hand-edited
+    # configuration gets there and its interval is rejected anyway.
+    wanted = min(max(count, 2), max(2, 43200 // interval))
+    if wanted != count:
+        config.set(path + ['keep-alive', 'failure-count'], value=str(wanted))
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(base):
         return
 
     for interface in config.list_nodes(base):
         path = base + [interface]
+
+        # unrelated to the offload, so it runs for every interface
+        _clamp_keepalive(config, path)
+
         if not config.exists(path + ['offload', 'dco']):
             continue
 

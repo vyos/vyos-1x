@@ -483,6 +483,28 @@ def verify(openvpn):
         if openvpn['protocol'] == 'tcp-active':
             raise ConfigError('Protocol "tcp-active" is not valid in server mode')
 
+        # The rendered "keepalive" timeout is interval * failure-count. OpenVPN
+        # limits ping and keepalive to 24 hours and doubles the timeout on the
+        # server, so the rendered value can not exceed 12 hours.
+        keep_alive = openvpn['keep_alive']
+        interval = int(keep_alive['interval'])
+        failure_count = int(keep_alive['failure_count'])
+        timeout = interval * failure_count
+
+        # A zero interval renders "keepalive 0 0", on which OpenVPN skips its
+        # own sanity checks - that is how a configuration turns keepalive off,
+        # so only an enabled one has to satisfy them
+        if interval > 0:
+            # the timeout has to be at least twice the interval, which the CLI
+            # ranges do not enforce
+            if failure_count < 2:
+                raise ConfigError('Keepalive "failure-count" must be at least 2')
+
+            if timeout > 43200:
+                raise ConfigError(
+                    f'Keepalive timeout of {timeout} seconds cannot exceed 43200'
+                )
+
         if dict_search('authentication.username', openvpn) or dict_search('authentication.password', openvpn):
             raise ConfigError('Cannot specify "authentication" in server mode')
 
