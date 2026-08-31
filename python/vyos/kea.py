@@ -725,11 +725,32 @@ def kea_get_server_leases(
     return data
 
 
-def _build_relay_hex_condition(sub_option_index, value):
+def _kea_hex_literal(value):
     if value.startswith('0x'):
-        return f'relay4[{sub_option_index}].hex == {value}'
-    else:
-        return f'relay4[{sub_option_index}].hex == 0x{value.encode().hex().lower()}'
+        return value
+    return f'0x{value.encode().hex().lower()}'
+
+
+def _build_hex_condition(kea_path, value):
+    return f'{kea_path}.hex == {_kea_hex_literal(value)}'
+
+
+def _build_relay_hex_condition(sub_option_index, value):
+    return _build_hex_condition(f'relay4[{sub_option_index}]', value)
+
+
+def _build_option_match_condition(option_number, match_config):
+    kea_path = f'option[{option_number}]'
+
+    if 'substring' in match_config:
+        substring_config = match_config['substring']
+        offset = substring_config.get('offset', '0')
+        value_hex = _kea_hex_literal(substring_config['value'])
+        # length is expressed in bytes; a hex literal is '0x' + 2 hex digits per byte
+        length = substring_config.get('length') or str((len(value_hex) - 2) // 2)
+        return f'substring({kea_path}.hex, {offset}, {length}) == {value_hex}'
+
+    return _build_hex_condition(kea_path, match_config['value'])
 
 
 def kea_build_client_class_test(config):
@@ -748,6 +769,12 @@ def kea_build_client_class_test(config):
                     2, config['relay_agent_information']['remote_id']
                 )
             )
+
+    if 'hostname' in config:
+        conditions.append(_build_option_match_condition(12, config['hostname']))
+
+    if 'vendor_class_id' in config:
+        conditions.append(_build_option_match_condition(60, config['vendor_class_id']))
 
     test = ' and '.join(conditions)
 

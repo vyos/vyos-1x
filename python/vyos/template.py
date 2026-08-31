@@ -937,6 +937,7 @@ def kea_high_availability_json(config):
 @register_filter('kea_client_class_json')
 def kea_client_class_json(client_classes):
     from vyos.kea import kea_build_client_class_test
+    from vyos.kea import kea_parse_options
     from json import dumps
     out = []
 
@@ -948,6 +949,15 @@ def kea_client_class_json(client_classes):
             'name': name,
             'test': kea_build_client_class_test(config)
         }
+
+        if 'option' in config:
+            client_class['option-data'] = kea_parse_options(config['option'])
+
+            if 'bootfile_name' in config['option']:
+                client_class['boot-file-name'] = config['option']['bootfile_name']
+
+            if 'bootfile_server' in config['option']:
+                client_class['next-server'] = config['option']['bootfile_server']
 
         out.append(client_class)
 
