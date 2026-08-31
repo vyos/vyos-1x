@@ -363,6 +363,89 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.verify_service_running()
 
+    def test_dhcp_client_class_option_match(self):
+        shared_net_name = 'SMOKE-1'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+        range_1_start = inc_ip(subnet, 40)
+        range_1_stop = inc_ip(subnet, 50)
+
+        self.setup_single_pool_range(
+            range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+        )
+
+        client_class = base_path + ['client-class', 'phone']
+        bootfile = 'https://provisioning.example.com/'
+        domain = 'phones.example.com'
+
+        # value and substring are mutually exclusive
+        self.cli_set(client_class + ['hostname', 'value', 'SEP0'])
+        self.cli_set(client_class + ['hostname', 'substring', 'value', 'SEP0'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['hostname', 'value'])
+
+        # invalid hex is rejected, same as relay-agent-information
+        self.cli_set(client_class + ['vendor-class-id', 'value', '0xHELLOWORLD'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['vendor-class-id', 'value'])
+
+        self.cli_set(client_class + ['vendor-class-id', 'value', 'YEALINK'])
+        self.cli_set(client_class + ['option', 'bootfile-name', bootfile])
+        self.cli_set(client_class + ['option', 'domain-name', domain])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(obj, ['Dhcp4', 'client-classes', 0], 'name', 'phone')
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            'substring(option[12].hex, 0, 4) == 0x53455030 and option[60].hex == 0x5945414c494e4b',
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'client-classes', 0], 'boot-file-name', bootfile
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'option-data',
+            [
+                {'name': 'domain-name', 'data': domain},
+                {'name': 'boot-file-name', 'data': bootfile},
+            ],
+        )
+
+        self.cli_delete(client_class + ['hostname'])
+        self.cli_delete(client_class + ['vendor-class-id', 'value'])
+
+        # substring form, with an explicit offset and hex value
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'offset', '2'])
+        self.cli_set(
+            client_class + ['vendor-class-id', 'substring', 'value', '0x4c494e4b']
+        )
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            'substring(option[60].hex, 2, 4) == 0x4c494e4b',
+        )
+
+        self.verify_service_running()
+
     def test_dhcp_vendor_option_ubiquiti(self):
         shared_net_name = 'SMOKE-1'
 
