@@ -438,19 +438,19 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         # check validate() - DCO is tun only
         self.cli_set(path + ['device-type', 'tap'])
-        with self.assertRaisesRegex(ConfigSessionError, 'device-type tun'):
+        with self.assertRaisesRegex(ConfigSessionError, r'device-type\s+tun'):
             self.cli_commit()
         self.cli_set(path + ['device-type', 'tun'])
 
         # check validate() - DCO serves "topology subnet" only
         self.cli_set(path + ['server', 'topology', 'net30'])
-        with self.assertRaisesRegex(ConfigSessionError, 'topology subnet'):
+        with self.assertRaisesRegex(ConfigSessionError, r'topology\s+subnet'):
             self.cli_commit()
         self.cli_set(path + ['server', 'topology', 'subnet'])
 
         # check validate() - DCO implements AES-GCM only
         self.cli_set(path + ['encryption', 'data-ciphers', 'aes256'])
-        with self.assertRaisesRegex(ConfigSessionError, 'does not support cipher'):
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
             self.cli_commit()
         self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256'])
 
@@ -462,7 +462,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         # check validate() - a raw option OpenVPN refuses to offload
         self.cli_set(path + ['openvpn-option', '--fragment 1300'])
-        with self.assertRaisesRegex(ConfigSessionError, 'openvpn-option fragment'):
+        with self.assertRaisesRegex(ConfigSessionError, r'openvpn-option\s+fragment'):
             self.cli_commit()
         self.cli_delete(path + ['openvpn-option', '--fragment 1300'])
 
@@ -742,7 +742,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['offload', 'dco'])
         self.cli_set(path + ['encryption', 'cipher', '3des'])
 
-        with self.assertRaisesRegex(ConfigSessionError, 'deprecated for TLS mode'):
+        with self.assertRaisesRegex(ConfigSessionError, r'deprecated\s+for\s+TLS'):
             self.cli_commit()
 
         # without the cipher the same tunnel is accepted, so the rejection is
@@ -1001,6 +1001,34 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
         self.cli_delete(base_path)
         self.cli_commit()
+
+    def test_openvpn_server_keepalive_limit(self):
+        # The CLI ranges still allow a keepalive timeout beyond what OpenVPN
+        # accepts once the limit lands
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+
+        # check validate() - interval * failure-count exceeds 12 hours
+        self.cli_set(path + ['keep-alive', 'interval', '600'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '1000'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+43200'):
+            self.cli_commit()
+
+        # 600 * 72 is exactly 12 hours, which OpenVPN still accepts
+        self.cli_set(path + ['keep-alive', 'failure-count', '72'])
+        self.cli_commit()
+
+        # a config the daemon refuses still commits, so check it came up
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('keepalive 600 43200', config)
 
     def test_openvpn_server_reject_unconfigured_clients(self):
         # T8998: reject-unconfigured-clients without server client entries
