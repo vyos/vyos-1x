@@ -444,6 +444,25 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             'substring(option[60].hex, 2, 4) == 0x4c494e4b',
         )
 
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'offset'])
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
+
+        # an odd number of hex digits must still round up to a whole byte
+        # for the auto-computed length, matching how Kea itself pads the
+        # literal - regression test for a single hex digit
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', '0x1'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            'substring(option[60].hex, 0, 1) == 0x1',
+        )
+
         self.verify_service_running()
 
     def test_dhcp_vendor_option_ubiquiti(self):
