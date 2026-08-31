@@ -746,8 +746,10 @@ def _build_option_match_condition(option_number, match_config):
         substring_config = match_config['substring']
         offset = substring_config.get('offset', '0')
         value_hex = _kea_hex_literal(substring_config['value'])
-        # length is expressed in bytes; a hex literal is '0x' + 2 hex digits per byte
-        length = substring_config.get('length') or str((len(value_hex) - 2) // 2)
+        # length is expressed in bytes; a hex literal is '0x' + 2 hex digits per
+        # byte, rounded up since Kea itself pads an odd number of hex digits
+        # with a leading zero
+        length = substring_config.get('length') or str((len(value_hex) - 1) // 2)
         return f'substring({kea_path}.hex, {offset}, {length}) == {value_hex}'
 
     return _build_hex_condition(kea_path, match_config['value'])
