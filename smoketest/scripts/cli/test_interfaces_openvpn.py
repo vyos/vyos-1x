@@ -26,6 +26,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
 from vyos.template import address_from_cidr
 from vyos.template import inc_ip
@@ -715,7 +716,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         config = read_file(f'/run/openvpn/{interface}.conf')
         self.assertIn('secret /run/openvpn/', config)
         self.assertIn('allow-deprecated-insecure-static-crypto', config)
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
         # check validate() - DCO cannot be combined with a shared secret
         self.cli_set(path + ['offload', 'dco'])
@@ -748,6 +749,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         # without the cipher the same tunnel is accepted, so the rejection is
         # attributable and not an unrelated failure
         self.cli_delete(path + ['encryption', 'cipher'])
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+
         self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256gcm'])
         self.cli_commit()
 
@@ -1021,12 +1026,17 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+43200'):
             self.cli_commit()
 
+        # 600 * 73 is only just over, so the constant is pinned from both sides
+        self.cli_set(path + ['keep-alive', 'failure-count', '73'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+43200'):
+            self.cli_commit()
+
         # 600 * 72 is exactly 12 hours, which OpenVPN still accepts
         self.cli_set(path + ['keep-alive', 'failure-count', '72'])
         self.cli_commit()
 
         # a config the daemon refuses still commits, so check it came up
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
         config = read_file(f'/run/openvpn/{interface}.conf')
         self.assertIn('keepalive 600 43200', config)
 
