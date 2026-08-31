@@ -2,7 +2,7 @@
 {% set l2tp_ike = ike_group[l2tp.ike_group] if l2tp.ike_group is vyos_defined else None %}
 {% set l2tp_esp = esp_group[l2tp.esp_group] if l2tp.esp_group is vyos_defined else None %}
     l2tp_remote_access {
-        proposals = {{ l2tp_ike | get_esp_ike_cipher | join(',') if l2tp_ike else l2tp_ike_default }}
+        proposals = {{ l2tp_ike | get_esp_ike_cipher(esn=False) | join(',') if l2tp_ike else l2tp_ike_default }}
         local_addrs = {{ l2tp_outside_address }}
         dpd_delay = 15s
         dpd_timeout = 45s
