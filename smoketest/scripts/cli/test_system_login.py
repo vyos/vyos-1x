@@ -34,6 +34,7 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.utils.auth import DEFAULT_PASSWORD
 from vyos.utils.auth import get_current_user
 from vyos.utils.auth import get_local_passwd_entries
+from vyos.utils.cpu import cpu_arch
 from vyos.utils.process import cmdl
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
@@ -291,15 +292,31 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(base_path + ['user', ssh_user])
 
-    def test_radius_kernel_features(self):
-        # T2886: RADIUS requires some Kernel options to be present
+    def _verify_kernel_options(self, options: list):
         kernel_config = GzipFile('/proc/config.gz').read().decode('UTF-8')
-
-        # T2886 - RADIUS authentication - check for statically compiled options
-        options = ['CONFIG_AUDIT', 'CONFIG_AUDITSYSCALL', 'CONFIG_AUDIT_ARCH']
-
         for option in options:
             self.assertIn(f'{option}=y', kernel_config)
+
+    def test_radius_kernel_features(self):
+        # T2886: RADIUS requires some Kernel options to be present
+        # Check for statically compiled options common to all architectures
+        self._verify_kernel_options(['CONFIG_AUDIT', 'CONFIG_AUDITSYSCALL'])
+
+    # The Kernel provides the audit subsystem either as an architecture
+    # specific (CONFIG_AUDIT_ARCH) or as a generic implementation
+    # (CONFIG_AUDIT_GENERIC) - "config AUDIT_GENERIC" in lib/Kconfig depends
+    # on "!AUDIT_ARCH", thus we must test for the proper one per architecture.
+    @cpu_arch('amd64')
+    def test_radius_kernel_features_amd64(self):
+        # T2886: x86 implements its own audit code
+        self._verify_kernel_options(['CONFIG_AUDIT_ARCH'])
+
+    @cpu_arch('arm64')
+    def test_radius_kernel_features_arm64(self):
+        # T2886: arm64 has no CONFIG_AUDIT_ARCH and uses the generic
+        # implementation instead
+        self._verify_kernel_options(['CONFIG_AUDIT_GENERIC',
+                                     'CONFIG_AUDIT_ARCH_COMPAT_GENERIC'])
 
     def test_system_login_radius_ipv4(self):
         radius_servers = ['100.64.0.4', '100.64.0.5']
