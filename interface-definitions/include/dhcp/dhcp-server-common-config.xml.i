@@ -42,6 +42,135 @@
         </leafNode>
       </children>
     </node>
+    <node name="hostname">
+      <properties>
+        <help>Match DHCP Option 12 (hostname)</help>
+      </properties>
+      <children>
+        <leafNode name="value">
+          <properties>
+            <help>Filters on the exact contents of the option</help>
+            <valueHelp>
+              <format>hex</format>
+              <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+            </valueHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Any other text string is interpreted as ASCII text</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+        <node name="substring">
+          <properties>
+            <help>Filters on part of the option contents</help>
+          </properties>
+          <children>
+            <leafNode name="offset">
+              <properties>
+                <help>Byte offset from the start of the option value (default: 0)</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>Byte offset</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="length">
+              <properties>
+                <help>Number of bytes to compare (default: length of value)</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>Byte length</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="value">
+              <properties>
+                <help>Filters on part of the option contents</help>
+                <valueHelp>
+                  <format>hex</format>
+                  <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>Any other text string is interpreted as ASCII text</description>
+                </valueHelp>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="vendor-class-id">
+      <properties>
+        <help>Match DHCP Option 60 (vendor class identifier)</help>
+      </properties>
+      <children>
+        <leafNode name="value">
+          <properties>
+            <help>Filters on the exact contents of the option</help>
+            <valueHelp>
+              <format>hex</format>
+              <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+            </valueHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Any other text string is interpreted as ASCII text</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+        <node name="substring">
+          <properties>
+            <help>Filters on part of the option contents</help>
+          </properties>
+          <children>
+            <leafNode name="offset">
+              <properties>
+                <help>Byte offset from the start of the option value (default: 0)</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>Byte offset</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="length">
+              <properties>
+                <help>Number of bytes to compare (default: length of value)</help>
+                <valueHelp>
+                  <format>u32:1-255</format>
+                  <description>Byte length</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="value">
+              <properties>
+                <help>Filters on part of the option contents</help>
+                <valueHelp>
+                  <format>hex</format>
+                  <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>Any other text string is interpreted as ASCII text</description>
+                </valueHelp>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    #include <include/dhcp/option-v4.xml.i>
   </children>
 </tagNode>
 #include <include/generic-disable-node.xml.i>
