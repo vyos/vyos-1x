@@ -212,3 +212,67 @@ class TestOpenVPNMigration(TestCase):
         )
         self.migrate(config)
         self.assertTrue(config.exists(dco))
+
+    def test_keepalive_left_alone_when_valid(self):
+        config = config_tree(
+            '        mode server\n'
+            '        keep-alive {\n'
+            '            interval 10\n'
+            '            failure-count 60\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '60')
+
+    def test_disabled_keepalive_survives(self):
+        # "interval 0" renders "keepalive 0 0", which turns keepalive off and
+        # loads fine - the migration must not turn it into something else
+        config = config_tree(
+            '        mode server\n'
+            '        keep-alive {\n'
+            '            interval 0\n'
+            '            failure-count 60\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        base_ka = ['interfaces', 'openvpn', 'vtun10', 'keep-alive']
+        self.assertEqual(config.return_value(base_ka + ['interval']), '0')
+        self.assertEqual(config.return_value(base_ka + ['failure-count']), '60')
+
+    def test_keepalive_below_twice_the_interval_is_clamped(self):
+        config = config_tree(
+            '        mode server\n'
+            '        keep-alive {\n'
+            '            interval 10\n'
+            '            failure-count 1\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '2')
+
+    def test_keepalive_over_twelve_hours_is_clamped(self):
+        config = config_tree(
+            '        mode server\n'
+            '        keep-alive {\n'
+            '            interval 600\n'
+            '            failure-count 1000\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        # 600 * 72 is exactly 12 hours
+        self.assertEqual(config.return_value(tmp), '72')
+
+    def test_keepalive_ignored_outside_server_mode(self):
+        config = config_tree(
+            '        mode client\n'
+            '        keep-alive {\n'
+            '            interval 600\n'
+            '            failure-count 1000\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '1000')
