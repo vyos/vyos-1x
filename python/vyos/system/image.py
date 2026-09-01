@@ -283,6 +283,49 @@ def if_not_live_boot(func):
     return wrapper
 
 def is_running_as_container() -> bool:
-    if Path('/.dockerenv').exists():
+    """Detect if the system is running inside a container
+
+    Returns:
+        bool: True if running as container (Docker, Podman, LXC, ...)
+    """
+    # Docker and Podman drop a marker file into the container root
+    if Path('/.dockerenv').exists() or Path('/run/.containerenv').exists():
         return True
+    # systemd sets container= in the environment of PID 1 for all container
+    # types it knows about - this is only readable by root
+    try:
+        environ = Path('/proc/1/environ').read_bytes().decode(errors='ignore')
+        if 'container=' in environ:
+            return True
+    except (OSError, PermissionError):
+        pass
     return False
+
+def has_persistence() -> bool:
+    """Detect if a persistence storage partition is mounted
+
+    Returns:
+        bool: True if the persistence partition is available
+    """
+    return bool(disk.find_persistence())
+
+def if_persistence(func):
+    """Decorator to call function only if persistence storage is available.
+    Without it there is no writeable GRUB configuration to operate on"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if has_persistence():
+            ret = func(*args, **kwargs)
+            return ret
+        return None
+    return wrapper
+
+def if_not_container(func):
+    """Decorator to call function only if not running inside a container"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not is_running_as_container():
+            ret = func(*args, **kwargs)
+            return ret
+        return None
+    return wrapper

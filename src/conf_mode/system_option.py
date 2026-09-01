@@ -600,6 +600,11 @@ def generate_cmdline_for_kexec(options):
 
 def apply(options):
     kexec_required, cmdline_new = generate_cmdline_for_kexec(options)
+    # T9269: a container does not own the Kernel cmdline - it belongs to the
+    # host system, thus neither kexec nor a reboot would apply anything and the
+    # options always compare as changed
+    if image.is_running_as_container():
+        kexec_required = False
     if kexec_required:
         if not boot_configuration_complete() and os.getenv('VYOS_CONFIGD'):
             cmdl([
