@@ -83,14 +83,19 @@ dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
 # Raw options that make OpenVPN fall back to the userspace data path, taken
 # from dco_check_option() and dco_check_option_ce()
 dco_incompatible_options = [
-    'allow-compression',
     'comp-lzo',
-    'compress',
+    'disable-dco',
     'fragment',
     'http-proxy',
     'management-query-proxy',
     'socks-proxy',
 ]
+# these rule out the offload for every value but one - notably "compress
+# migrate", which is what OpenVPN suggests to keep it
+dco_conditional_options = {
+    'allow-compression': 'no',
+    'compress': 'migrate',
+}
 otp_path = '/config/auth/openvpn'
 otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
@@ -154,7 +159,7 @@ def get_config(config=None):
 
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
-    if is_node_changed(conf, base + [ifname, 'enable-dco']):
+    if is_node_changed(conf, base + [ifname, 'offload']):
         openvpn.update({'restart_required': {}})
 
     # Detect changes that are limited to per-client CCD entries (T6478).
@@ -256,9 +261,16 @@ def verify_dco(openvpn):
     # A raw option OpenVPN refuses to offload leaves the daemon on the
     # userspace data path, where it can not use the interface it was given
     for option in dict_search('openvpn_option', openvpn) or []:
-        tmp = option.lstrip('-').split()
-        if tmp and tmp[0] in dco_incompatible_options:
-            raise ConfigError(f'DCO is incompatible with "openvpn-option {tmp[0]}"')
+        tmp = option.split()
+        if not tmp:
+            continue
+        keyword = tmp[0].lstrip('-')
+        if keyword in dco_incompatible_options:
+            raise ConfigError(f'DCO is incompatible with "openvpn-option {keyword}"')
+        if keyword in dco_conditional_options:
+            keep = dco_conditional_options[keyword]
+            if tmp[1:] != [keep]:
+                raise ConfigError(f'DCO requires "openvpn-option {keyword} {keep}"')
 
 def verify_pki(openvpn):
     pki = openvpn['pki']
@@ -475,7 +487,17 @@ def verify(openvpn):
         # limits ping and keepalive to 24 hours and doubles the timeout on the
         # server, so the rendered value can not exceed 12 hours.
         keep_alive = openvpn['keep_alive']
-        timeout = int(keep_alive['interval']) * int(keep_alive['failure_count'])
+        interval = int(keep_alive['interval'])
+        failure_count = int(keep_alive['failure_count'])
+        timeout = interval * failure_count
+
+        # OpenVPN wants both parameters positive and the timeout at least
+        # twice the interval, which the CLI ranges do not enforce
+        if interval < 1:
+            raise ConfigError('Keepalive "interval" must be at least 1')
+        if failure_count < 2:
+            raise ConfigError('Keepalive "failure-count" must be at least 2')
+
         if timeout > 43200:
             raise ConfigError(
                 f'Keepalive timeout of {timeout} seconds cannot exceed 43200'
