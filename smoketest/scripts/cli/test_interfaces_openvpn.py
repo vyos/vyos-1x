@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import os
 import unittest
 
 from glob import glob
 from ipaddress import IPv4Network
 from netifaces import interfaces # pylint: disable = no-name-in-module
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -28,6 +30,10 @@ from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
+from vyos.utils.network import get_interface_config
+from vyos.netlink.ovpn import get_ovpn_mode
+from vyos.netlink.ovpn import OVPN_MODE_MP
+from vyos.netlink.ovpn import OVPN_MODE_P2P
 from vyos.template import address_from_cidr
 from vyos.template import inc_ip
 from vyos.template import last_host_address
@@ -189,6 +195,70 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
+    def test_openvpn_client_dco(self):
+        # A client that can not reach its server never gets far enough to make
+        # the interface, so this is the one case where VyOS is definitively the
+        # creator - and the only coverage of the point-to-point mode.
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'client'])
+        self.cli_set(path + ['remote-host', '192.0.2.1'])
+        self.cli_set(path + ['remote-port', '1194'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(interface, multipoint=False)
+
+    def test_openvpn_client_dco_raw_option(self):
+        # A raw option no longer keeps VyOS from creating the device: the
+        # offload is the user's responsibility once they pass one, and a
+        # client that cannot reach its server would otherwise never get an
+        # interface for update() to configure.
+        interface = 'vtun5040'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'client'])
+        self.cli_set(path + ['remote-host', '192.0.2.1'])
+        self.cli_set(path + ['remote-port', '1194'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_set(path + ['openvpn-option', '--verb 3'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(interface, multipoint=False)
+
+    def test_openvpn_device_type_change(self):
+        # The Kernel pins tun against tap when the device is made, so changing
+        # "device-type" has to recreate it - a daemon asking for "tap" can not
+        # be handed the "tun" device left behind.
+        interface = 'vtun5010'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'client'])
+        self.cli_set(path + ['remote-host', '192.0.2.1'])
+        self.cli_set(path + ['remote-port', '1194'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_commit()
+
+        tmp = get_interface_config(interface)
+        self.assertEqual(tmp['linkinfo']['info_data']['type'], 'tun')
+
+        self.cli_set(path + ['device-type', 'tap'])
+        self.cli_commit()
+
+        tmp = get_interface_config(interface)
+        self.assertEqual(tmp['linkinfo']['info_data']['type'], 'tap')
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
     def test_openvpn_client_interfaces(self):
         # Create OpenVPN client interfaces connecting to different
@@ -420,6 +490,88 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
+    def assertDcoDataPath(self, interface, multipoint=True):
+        # An "ovpn" device in the wrong operating mode is adopted by the daemon
+        # just the same and then rejects every peer, and iproute2 cannot show
+        # the mode - so ask the Kernel for it directly. Checking only the link
+        # kind would not tell a working tunnel from a broken one.
+        wanted = OVPN_MODE_MP if multipoint else OVPN_MODE_P2P
+        mode = None
+        for _ in range(10):
+            mode = get_ovpn_mode(interface)
+            if mode == wanted:
+                break
+            sleep(1)
+
+        # tell "the daemon never came up" apart from "DCO was declined"
+        self.assertIn(interface, interfaces(), f'{interface} does not exist')
+        self.assertEqual(mode, wanted, f'{interface} is not DCO backed, mode is {mode}')
+
+        # VyOS creates the device itself, so finding it in the right mode does
+        # not yet mean the daemon took the configuration and stayed up
+        self.assertTrue(
+            is_systemd_service_running(f'openvpn@{interface}.service'),
+            f'openvpn@{interface}.service is not running',
+        )
+
+    def test_openvpn_server_dco_raw_option(self):
+        # A raw option OpenVPN still offloads must leave the tunnel offloaded.
+        # VyOS creates the device either way - verify() turns away the options
+        # known to drop the offload, and beyond those it is the user's own
+        # responsibility.
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_set(path + ['openvpn-option', '--persist-tun'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(interface)
+
+    def test_openvpn_server_dco_toggle(self):
+        # Enabling the offload on a running interface must move the data path
+        # into the Kernel. The interface already exists as a tun device, so a
+        # stale one has to be dropped or the offload is silently declined.
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_commit()
+
+        # without the offload the daemon is told to keep away from the Kernel
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        self.assertIn('disable-dco', read_file(f'/run/openvpn/{interface}.conf'))
+
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        self.assertNotIn('disable-dco', read_file(f'/run/openvpn/{interface}.conf'))
+        self.assertDcoDataPath(interface)
+
+        # and back off again - the offloaded device must not survive either
+        self.cli_delete(path + ['offload'])
+        self.cli_commit()
+
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        self.assertIn('disable-dco', read_file(f'/run/openvpn/{interface}.conf'))
+        self.assertIsNone(get_ovpn_mode(interface))
+        tmp = json.loads(cmdl(['ip', '-d', '-j', 'link', 'show', 'dev', interface]))
+        self.assertEqual(tmp[0].get('linkinfo', {}).get('info_kind'), 'tun')
+
     def test_openvpn_server_dco_verify(self):
         # Configurations the "ovpn" Kernel module can not serve must be
         # rejected once data channel offload is requested
@@ -436,6 +588,9 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
         self.cli_set(path + ['offload', 'dco'])
         self.cli_commit()
+
+        config_file = f'/run/openvpn/{interface}.conf'
+        self.assertDcoDataPath(interface)
 
         # check validate() - DCO is tun only
         self.cli_set(path + ['device-type', 'tap'])
@@ -496,9 +651,14 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # every rejection above stopped in verify(), so the daemon still has to
-        # be running on the configuration this test started from
-        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        # every rejection above stopped in verify(), so nothing has touched the
+        # interface yet - reconfigure it for real and check the offload survives
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes128gcm'])
+        self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_commit()
+
+        self.assertIn('data-ciphers AES-128-GCM', read_file(config_file))
+        self.assertDcoDataPath(interface)
 
     def test_openvpn_two_dco_interfaces(self):
         # The script runs once per interface, so the first invocation must not
@@ -520,11 +680,11 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        # the premise of this test is that both daemons hold an "ovpn" device
+        # when the first one goes away, so check the offload, not just the
+        # service - assertDcoDataPath() covers the service too
         for ifname in ifnames:
-            self.assertTrue(
-                is_systemd_service_running(f'openvpn@{ifname}.service'),
-                f'openvpn@{ifname}.service is not running',
-            )
+            self.assertDcoDataPath(ifname)
 
         # both at once, so one daemon still holds the module when the other goes
         for ifname in ifnames:
@@ -831,7 +991,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['openvpn-option', '--cipher AES-256-GCM'])
         self.cli_commit()
 
-        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        self.assertDcoDataPath(interface, multipoint=False)
 
     def test_openvpn_options(self):
         # Ensure OpenVPN process restart on openvpn-option CLI node change
