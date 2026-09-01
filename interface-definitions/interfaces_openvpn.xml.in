@@ -328,7 +328,7 @@
           </node>
           <leafNode name="openvpn-option">
             <properties>
-              <help>Additional OpenVPN options. You must use the syntax of openvpn.conf in this text-field. Using this without proper knowledge may result in a crashed OpenVPN server. Check system log to look for errors.</help>
+              <help>Additional OpenVPN options. You must use the syntax of openvpn.conf in this text-field. Using this without proper knowledge may result in a crashed OpenVPN server, or in data channel offload being declined. Check system log to look for errors.</help>
               <multi/>
             </properties>
           </leafNode>
