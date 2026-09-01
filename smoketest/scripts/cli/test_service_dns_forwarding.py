@@ -248,6 +248,44 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('dns64-prefix')
         self.assertEqual(tmp, dns_prefix)
 
+    def test_recursion_exclude_address(self):
+        recursion_exclude_address = [
+            '198.18.0.0/15',
+            '!127.0.0.0/8',
+            '2001:db8:ffff::1',
+            '!2001:db8::/32',
+        ]
+        for network in recursion_exclude_address:
+            self.cli_set(base_path + ['recursion-exclude-address', network])
+
+        self.cli_commit()
+
+        self.assertEqual(
+            get_config_value(r'dont-query\+'), ','.join(recursion_exclude_address)
+        )
+
+        # Removing all configured values must remove the incremental setting,
+        # allowing PowerDNS to use its native defaults again.
+        self.cli_delete(base_path + ['recursion-exclude-address'])
+        self.cli_commit()
+        config = read_file(CONFIG_FILE)
+        self.assertNotIn('\ndont-query=', config)
+        self.assertNotIn('\ndont-query+=', config)
+
+    def test_recursion_exclude_address_conflicting_entry_order(self):
+        self.cli_set(base_path + ['recursion-exclude-address', '1.0.0.0/8'])
+        self.cli_set(base_path + ['recursion-exclude-address', '!1.0.0.0/8'])
+        self.cli_commit()
+        self.assertEqual(get_config_value(r'dont-query\+'), '1.0.0.0/8,!1.0.0.0/8')
+
+        self.cli_delete(base_path + ['recursion-exclude-address'])
+        self.cli_commit()
+
+        self.cli_set(base_path + ['recursion-exclude-address', '!1.0.0.0/8'])
+        self.cli_set(base_path + ['recursion-exclude-address', '1.0.0.0/8'])
+        self.cli_commit()
+        self.assertEqual(get_config_value(r'dont-query\+'), '!1.0.0.0/8,1.0.0.0/8')
+
     def test_exclude_throttle_adress(self):
         exclude_throttle_adress_examples = [
             '192.168.128.255',
