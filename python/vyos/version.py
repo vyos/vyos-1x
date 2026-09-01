@@ -104,15 +104,18 @@ def get_full_version_data(fname=version_file):
         boot_via = "installed image"
     version_data['boot_via'] = boot_via
 
-    # Get hardware details from DMI
-    dmi = '/sys/class/dmi/id'
-    version_data['hardware_vendor'] = read_file(dmi + '/sys_vendor', 'Unknown')
-    version_data['hardware_model'] = read_file(dmi +'/product_name','Unknown')
+    # Get hardware details from DMI - a container has no hardware of its own and
+    # would report the DMI data of the host system, thus the keys are left unset
+    # and consumers are expected to omit them
+    if not is_running_as_container():
+        dmi = '/sys/class/dmi/id'
+        version_data['hardware_vendor'] = read_file(dmi + '/sys_vendor', 'Unknown')
+        version_data['hardware_model'] = read_file(dmi +'/product_name','Unknown')
 
-    # These two assume script is run as root, normal users can't access those files
-    subsystem = '/sys/class/dmi/id/subsystem/id'
-    version_data['hardware_serial'] = read_file(subsystem + '/product_serial','Unknown')
-    version_data['hardware_uuid'] = read_file(subsystem + '/product_uuid', 'Unknown')
+        # These two assume script is run as root, normal users can't access those files
+        subsystem = '/sys/class/dmi/id/subsystem/id'
+        version_data['hardware_serial'] = read_file(subsystem + '/product_serial','Unknown')
+        version_data['hardware_uuid'] = read_file(subsystem + '/product_uuid', 'Unknown')
 
     return version_data
 

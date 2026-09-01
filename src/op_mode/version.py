@@ -48,11 +48,13 @@ Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
 System type:      {{system_type}}
 Secure Boot:      {{secure_boot}}
+{%- if hardware_vendor is defined %}
 
 Hardware vendor:  {{hardware_vendor}}
 Hardware model:   {{hardware_model}}
 Hardware S/N:     {{hardware_serial}}
 Hardware UUID:    {{hardware_uuid}}
+{%- endif %}
 
 Copyright:        VyOS maintainers and contributors
 {%- if limerick %}
