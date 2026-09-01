@@ -69,6 +69,36 @@ class TestOpenVPNMigration(TestCase):
         self.migrate(config)
         self.assertTrue(config.exists(dco))
 
+    def test_compress_migrate_keeps_dco(self):
+        # the option OpenVPN suggests for keeping the offload with legacy
+        # clients must not cost the interface its offload
+        config = config_tree(
+            '        mode server\n        openvpn-option "--compress migrate"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_compress_algorithm_drops_dco(self):
+        config = config_tree(
+            '        mode server\n        openvpn-option "--compress lzo"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_allow_compression_no_keeps_dco(self):
+        config = config_tree(
+            '        mode server\n        openvpn-option "--allow-compression no"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_allow_compression_asym_drops_dco(self):
+        config = config_tree(
+            '        mode server\n        openvpn-option "--allow-compression asym"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
     def test_incompatible_option_drops_dco(self):
         config = config_tree(
             '        mode server\n        openvpn-option "--fragment 1300"\n'

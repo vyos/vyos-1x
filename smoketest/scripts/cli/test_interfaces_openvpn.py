@@ -1020,6 +1020,12 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
         self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
 
+        # check validate() - OpenVPN needs both parameters positive and the
+        # timeout at least twice the interval
+        self.cli_set(path + ['keep-alive', 'failure-count', '1'])
+        with self.assertRaisesRegex(ConfigSessionError, r'at\s+least\s+2'):
+            self.cli_commit()
+
         # check validate() - interval * failure-count exceeds 12 hours
         self.cli_set(path + ['keep-alive', 'interval', '600'])
         self.cli_set(path + ['keep-alive', 'failure-count', '1000'])
