@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-import cracklib
 import math
 import re
 import string
@@ -76,15 +75,21 @@ def calculate_entropy(charset: str, passwd: str) -> float:
 
 def evaluate_strength(passwd: str) -> dict[str, str]:
     """ Evaluates password strength and returns a check result dict """
-    charset = (cracklib.ASCII_UPPERCASE + cracklib.ASCII_LOWERCASE +
-        string.punctuation + string.digits)
-
     result = {
         'strength': '',
         'error': '',
     }
 
     try:
+        # Imported here rather than at module scope: importing cracklib opens
+        # its dictionary database, so this module stays importable without it.
+        # Kept inside the try so that a missing or broken package is reported
+        # as EPasswdStrength.ERROR instead of escaping this function.
+        import cracklib
+
+        charset = (cracklib.ASCII_UPPERCASE + cracklib.ASCII_LOWERCASE +
+            string.punctuation + string.digits)
+
         cracklib.FascistCheck(passwd)
     except ValueError as e:
         # The password is vulnerable to dictionary attack no matter the entropy

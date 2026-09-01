@@ -16,9 +16,6 @@
 import functools
 import os
 
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
-from jinja2 import ChainableUndefined
 from vyos.defaults import directories
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import makedir
@@ -41,6 +38,13 @@ _CLEVER_FUNCTIONS = {}
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
 def _get_environment(location=None):
+    # Imported here rather than at module scope: most importers of this module
+    # want only the pure-Python predicates (is_ipv4, is_ipv6, ...) and never
+    # render a template, so they should not pay for jinja2. This function is
+    # lru_cache'd, so the import happens at most once per process.
+    from jinja2 import Environment
+    from jinja2 import FileSystemLoader
+    from jinja2 import ChainableUndefined
     from os import getenv
 
     if location is None:

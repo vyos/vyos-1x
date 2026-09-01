@@ -13,21 +13,43 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.utils import assertion
-from vyos.utils import auth
-from vyos.utils import boot
-from vyos.utils import commit
-from vyos.utils import configfs
-from vyos.utils import convert
-from vyos.utils import cpu
-from vyos.utils import dict
-from vyos.utils import file
-from vyos.utils import io
-from vyos.utils import kernel
-from vyos.utils import list
-from vyos.utils import locking
-from vyos.utils import misc
-from vyos.utils import network
-from vyos.utils import permission
-from vyos.utils import process
-from vyos.utils import system
+import importlib
+
+__all__ = [
+    'assertion',
+    'auth',
+    'boot',
+    'commit',
+    'configfs',
+    'convert',
+    'cpu',
+    'dict',
+    'file',
+    'io',
+    'kernel',
+    'list',
+    'locking',
+    'misc',
+    'network',
+    'permission',
+    'process',
+    'system',
+]
+
+
+def __getattr__(name):
+    """Import submodules on first access (PEP 562).
+
+    Importing them eagerly pulled the whole set into every consumer of
+    'from vyos.utils.<sub> import <name>', which is a measurable cost on the
+    conf-mode script path where each script is a fresh interpreter.
+    """
+    if name not in __all__:
+        raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    mod = importlib.import_module(f'{__name__}.{name}')
+    globals()[name] = mod
+    return mod
+
+
+def __dir__():
+    return sorted(list(globals()) + __all__)

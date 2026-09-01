@@ -31,10 +31,7 @@ Example of the version data dict::
 
 import os
 
-import requests
 import vyos.defaults
-from vyos.system.image import is_live_boot
-from urllib3.util import retry
 
 from vyos.utils.file import read_file
 from vyos.utils.file import read_json
@@ -70,6 +67,11 @@ def get_version(fname=version_file):
 
 
 def get_full_version_data(fname=version_file):
+    # Imported here rather than at module scope: vyos.system.image pulls in
+    # vyos.system.grub -> vyos.template -> jinja2, which every consumer of
+    # vyos.version would otherwise pay for on import.
+    from vyos.system.image import is_live_boot
+
     version_data = get_version_data(fname)
 
     # Get system architecture (well, kernel architecture rather)
@@ -125,6 +127,9 @@ def get_remote_version(url):
       }
     ]
     """
+
+    import requests
+    from urllib3.util import retry
 
     headers = {}
     session = requests.Session()

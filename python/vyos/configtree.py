@@ -18,6 +18,7 @@ import json
 import logging
 
 from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
+from functools import lru_cache
 from typing import TYPE_CHECKING
 from pathlib import Path
 
@@ -30,6 +31,105 @@ if TYPE_CHECKING:
 BUILD_PATH = '/tmp/libvyosconfig/_build/libvyosconfig.so'
 INSTALL_PATH = '/usr/lib/libvyosconfig.so.0'
 LIBPATH = BUILD_PATH if os.path.isfile(BUILD_PATH) else INSTALL_PATH
+
+# C symbol -> (argtypes, restype). A restype of None means "leave the ctypes
+# default (c_int)", which is what these entry points relied on before.
+_PROTOTYPES = {
+    'from_string': ([c_char_p], c_void_p),
+    'get_error': ([], c_char_p),
+    'to_string': ([c_void_p, c_bool], c_char_p),
+    'to_commands': ([c_void_p, c_char_p], c_char_p),
+    'read_internal': ([c_char_p], c_void_p),
+    'write_internal': ([c_void_p, c_char_p], None),
+    'read_internal_string': ([c_char_p], c_void_p),
+    'write_internal_string': ([c_void_p], c_char_p),
+    'to_json': ([c_void_p], c_char_p),
+    'to_json_ast': ([c_void_p], c_char_p),
+    'create_node': ([c_void_p, c_char_p], c_int),
+    'set_add_value': ([c_void_p, c_char_p, c_char_p], c_int),
+    'delete_value': ([c_void_p, c_char_p, c_char_p], c_int),
+    'delete_node': ([c_void_p, c_char_p], c_int),
+    'rename_node': ([c_void_p, c_char_p, c_char_p], c_int),
+    'copy_node': ([c_void_p, c_char_p, c_char_p], c_int),
+    'set_replace_value': ([c_void_p, c_char_p, c_char_p], c_int),
+    'set_valueless': ([c_void_p, c_char_p], c_int),
+    'exists': ([c_void_p, c_char_p], c_int),
+    'value_exists': ([c_void_p, c_char_p, c_char_p], c_int),
+    'list_nodes': ([c_void_p, c_char_p], c_char_p),
+    'return_value': ([c_void_p, c_char_p], c_char_p),
+    'return_values': ([c_void_p, c_char_p], c_char_p),
+    'is_tag': ([c_void_p, c_char_p], c_int),
+    'set_tag': ([c_void_p, c_char_p, c_bool], c_int),
+    'is_leaf': ([c_void_p, c_char_p], c_bool),
+    'set_leaf': ([c_void_p, c_char_p, c_bool], c_int),
+    # third argument 'with_node' was passed unchecked before
+    'get_subtree': ([c_void_p, c_char_p, c_bool], c_void_p),
+    'destroy': ([c_void_p], None),
+    'equal': ([c_void_p, c_void_p], c_bool),
+    'config_dict': (
+        [c_void_p, c_void_p, c_void_p, c_char_p, c_bool, c_bool],
+        c_char_p,
+    ),
+    'diff_tree': ([c_char_p, c_void_p, c_void_p], c_void_p),
+    'diff_compare': ([c_bool, c_char_p, c_void_p, c_void_p], c_char_p),
+    'diff_show': ([c_void_p, c_void_p, c_void_p, c_char_p], c_char_p),
+    'tree_union': ([c_void_p, c_void_p], c_void_p),
+    'tree_merge': ([c_bool, c_void_p, c_void_p], c_void_p),
+    'mask_inclusive': ([c_void_p, c_void_p], c_void_p),
+    'mask_exclusive': ([c_void_p, c_void_p], c_void_p),
+    'subtree_from_partial': ([c_void_p, c_void_p, c_void_p, c_char_p], c_void_p),
+    'reference_tree_to_json': ([c_char_p, c_char_p, c_char_p], None),
+    'merge_reference_tree_cache': ([c_char_p, c_char_p, c_char_p], None),
+    'interface_definitions_to_cache': ([c_char_p, c_char_p], None),
+    'reference_tree_cache_to_json': ([c_char_p, c_char_p], None),
+    # returns a tree pointer; without an explicit restype ctypes defaulted to
+    # c_int and truncated it to 32 bits
+    'validate_tree_filter': ([c_void_p, c_char_p, c_char_p], c_void_p),
+    # vyos.referencetree
+    'read_internal_string_reference_tree': ([c_char_p], c_void_p),
+    'write_internal_reference_tree': ([c_void_p, c_char_p], None),
+    'to_json_reference_tree': ([c_void_p], c_char_p),
+}
+
+
+class _Lib:
+    """Lazily resolving, prototype-declaring wrapper around libvyosconfig.
+
+    A symbol is looked up and given its argtypes/restype on first use, then
+    cached as an instance attribute so __getattr__ is bypassed from then on.
+    Resolution stays lazy on purpose: not every build of the library exports
+    every entry point, and the previous per-instance binding code only failed
+    on symbols that were actually used.
+    """
+
+    def __init__(self, libpath):
+        self.__dict__['_lib'] = cdll.LoadLibrary(libpath)
+
+    def __getattr__(self, name):
+        try:
+            argtypes, restype = _PROTOTYPES[name]
+        except KeyError:
+            raise AttributeError(
+                f'{name} is not a known libvyosconfig entry point'
+            ) from None
+        func = getattr(self._lib, name)
+        func.argtypes = argtypes
+        if restype is not None:
+            func.restype = restype
+        setattr(self, name, func)
+        return func
+
+
+@lru_cache(maxsize=None)
+def get_lib(libpath=LIBPATH):
+    """Load libvyosconfig once per process.
+
+    Every ConfigTree/DiffTree used to re-open the library and re-assign all
+    argtypes/restypes in its constructor; the result is cached here instead.
+    Loading stays lazy so that importing this module does not require the
+    shared object to be present.
+    """
+    return _Lib(libpath)
 
 
 def replace_backslash(s, search, replace):
@@ -95,137 +195,7 @@ class ConfigTree:
         arg = [(k, v) for (k, v) in zip(arg_names, args) if v is not None][0]
 
         self.__config = None
-        self.__lib = cdll.LoadLibrary(libpath)
-
-        # Import functions
-        self.__from_string = self.__lib.from_string
-        self.__from_string.argtypes = [c_char_p]
-        self.__from_string.restype = c_void_p
-
-        self.__get_error = self.__lib.get_error
-        self.__get_error.argtypes = []
-        self.__get_error.restype = c_char_p
-
-        self.__to_string = self.__lib.to_string
-        self.__to_string.argtypes = [c_void_p, c_bool]
-        self.__to_string.restype = c_char_p
-
-        self.__to_commands = self.__lib.to_commands
-        self.__to_commands.argtypes = [c_void_p, c_char_p]
-        self.__to_commands.restype = c_char_p
-
-        self.__read_internal = self.__lib.read_internal
-        self.__read_internal.argtypes = [c_char_p]
-        self.__read_internal.restype = c_void_p
-
-        self.__write_internal = self.__lib.write_internal
-        self.__write_internal.argtypes = [c_void_p, c_char_p]
-
-        self.__read_internal_string = self.__lib.read_internal_string
-        self.__read_internal_string.argtypes = [c_char_p]
-        self.__read_internal_string.restype = c_void_p
-
-        self.__write_internal_string = self.__lib.write_internal_string
-        self.__write_internal_string.argtypes = [c_void_p]
-        self.__write_internal_string.restype = c_char_p
-
-        self.__to_json = self.__lib.to_json
-        self.__to_json.argtypes = [c_void_p]
-        self.__to_json.restype = c_char_p
-
-        self.__to_json_ast = self.__lib.to_json_ast
-        self.__to_json_ast.argtypes = [c_void_p]
-        self.__to_json_ast.restype = c_char_p
-
-        self.__create_node = self.__lib.create_node
-        self.__create_node.argtypes = [c_void_p, c_char_p]
-        self.__create_node.restype = c_int
-
-        self.__set_add_value = self.__lib.set_add_value
-        self.__set_add_value.argtypes = [c_void_p, c_char_p, c_char_p]
-        self.__set_add_value.restype = c_int
-
-        self.__delete_value = self.__lib.delete_value
-        self.__delete_value.argtypes = [c_void_p, c_char_p, c_char_p]
-        self.__delete_value.restype = c_int
-
-        self.__delete = self.__lib.delete_node
-        self.__delete.argtypes = [c_void_p, c_char_p]
-        self.__delete.restype = c_int
-
-        self.__rename = self.__lib.rename_node
-        self.__rename.argtypes = [c_void_p, c_char_p, c_char_p]
-        self.__rename.restype = c_int
-
-        self.__copy = self.__lib.copy_node
-        self.__copy.argtypes = [c_void_p, c_char_p, c_char_p]
-        self.__copy.restype = c_int
-
-        self.__set_replace_value = self.__lib.set_replace_value
-        self.__set_replace_value.argtypes = [c_void_p, c_char_p, c_char_p]
-        self.__set_replace_value.restype = c_int
-
-        self.__set_valueless = self.__lib.set_valueless
-        self.__set_valueless.argtypes = [c_void_p, c_char_p]
-        self.__set_valueless.restype = c_int
-
-        self.__exists = self.__lib.exists
-        self.__exists.argtypes = [c_void_p, c_char_p]
-        self.__exists.restype = c_int
-
-        self.__value_exists = self.__lib.value_exists
-        self.__value_exists.argtypes = [c_void_p, c_char_p, c_char_p]
-        self.__value_exists.restype = c_int
-
-        self.__list_nodes = self.__lib.list_nodes
-        self.__list_nodes.argtypes = [c_void_p, c_char_p]
-        self.__list_nodes.restype = c_char_p
-
-        self.__return_value = self.__lib.return_value
-        self.__return_value.argtypes = [c_void_p, c_char_p]
-        self.__return_value.restype = c_char_p
-
-        self.__return_values = self.__lib.return_values
-        self.__return_values.argtypes = [c_void_p, c_char_p]
-        self.__return_values.restype = c_char_p
-
-        self.__is_tag = self.__lib.is_tag
-        self.__is_tag.argtypes = [c_void_p, c_char_p]
-        self.__is_tag.restype = c_int
-
-        self.__set_tag = self.__lib.set_tag
-        self.__set_tag.argtypes = [c_void_p, c_char_p, c_bool]
-        self.__set_tag.restype = c_int
-
-        self.__is_leaf = self.__lib.is_leaf
-        self.__is_leaf.argtypes = [c_void_p, c_char_p]
-        self.__is_leaf.restype = c_bool
-
-        self.__set_leaf = self.__lib.set_leaf
-        self.__set_leaf.argtypes = [c_void_p, c_char_p, c_bool]
-        self.__set_leaf.restype = c_int
-
-        self.__get_subtree = self.__lib.get_subtree
-        self.__get_subtree.argtypes = [c_void_p, c_char_p]
-        self.__get_subtree.restype = c_void_p
-
-        self.__destroy = self.__lib.destroy
-        self.__destroy.argtypes = [c_void_p]
-
-        self.__equal = self.__lib.equal
-        self.__equal.argtypes = [c_void_p, c_void_p]
-        self.__equal.restype = c_bool
-
-        self.__config_dict = self.__lib.config_dict
-        self.__config_dict.argtypes = [
-            c_void_p,
-            c_void_p,
-            c_void_p,
-            c_char_p,
-            c_bool,
-            c_bool,
-        ]
-        self.__config_dict.restype = c_char_p
+        self.__lib = get_lib(libpath)
 
         match arg:
             case ('address', address):
@@ -236,18 +206,18 @@ class ConfigTree:
                     cache_string = Path(internal).read_bytes()
                 except OSError as e:
                     raise ValueError(f'Failed to read internal cache file: {e}')
-                config = self.__read_internal_string(cache_string)
+                config = self.__lib.read_internal_string(cache_string)
                 if config is None:
-                    msg = self.__get_error().decode()
+                    msg = self.__lib.get_error().decode()
                     raise ValueError(
                         f'Failed to read internal representation from file {internal}: {msg}'
                     )
                 self.__config = config
                 self.__version = ''
             case ('internal_string', internal_string):
-                config = self.__read_internal_string(internal_string.encode())
+                config = self.__lib.read_internal_string(internal_string.encode())
                 if config is None:
-                    msg = self.__get_error().decode()
+                    msg = self.__lib.get_error().decode()
                     raise ValueError(
                         f'Failed to read internal representation from string: {msg}'
                     )
@@ -256,9 +226,9 @@ class ConfigTree:
             case ('config_string', config_string):
                 config_section, version_section = extract_version(config_string)
                 config_section = escape_backslash(config_section)
-                config = self.__from_string(config_section.encode())
+                config = self.__lib.from_string(config_section.encode())
                 if config is None:
-                    msg = self.__get_error().decode()
+                    msg = self.__lib.get_error().decode()
                     raise ValueError(f'Failed to parse config: {msg}')
                 self.__config = config
                 self.__version = version_section
@@ -286,11 +256,11 @@ class ConfigTree:
 
     def __del__(self):
         if self.__config is not None:
-            self.__destroy(self.__config)
+            self.__lib.destroy(self.__config)
 
     def __eq__(self, other):
         if isinstance(other, ConfigTree):
-            return self.__equal(self.get_tree(), other.get_tree())
+            return self.__lib.equal(self.get_tree(), other.get_tree())
         return False
 
     def __str__(self):
@@ -303,18 +273,18 @@ class ConfigTree:
         return self.__version
 
     def write_cache(self, file_name):
-        cache_string = self.__write_internal_string(self.get_tree())
+        cache_string = self.__lib.write_internal_string(self.get_tree())
         try:
             Path(file_name).write_bytes(cache_string)
         except OSError as e:
             raise ValueError(f'Failed to write internal cache file: {e}')
 
     def write_internal_string(self) -> str:
-        res = self.__write_internal_string(self.get_tree())
+        res = self.__lib.write_internal_string(self.get_tree())
         return res.decode()
 
     def to_string(self, ordered_values=False, no_version=False):
-        config_string = self.__to_string(self.__config, ordered_values).decode()
+        config_string = self.__lib.to_string(self.__config, ordered_values).decode()
         config_string = unescape_backslash(config_string)
         if no_version:
             return config_string
@@ -322,23 +292,23 @@ class ConfigTree:
         return config_string
 
     def to_commands(self, op='set'):
-        commands = self.__to_commands(self.__config, op.encode()).decode()
+        commands = self.__lib.to_commands(self.__config, op.encode()).decode()
         commands = unescape_backslash(commands)
         return commands
 
     def to_json(self):
-        return self.__to_json(self.__config).decode()
+        return self.__lib.to_json(self.__config).decode()
 
     def to_json_ast(self):
-        return self.__to_json_ast(self.__config).decode()
+        return self.__lib.to_json_ast(self.__config).decode()
 
     def create_node(self, path):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__create_node(self.__config, path_str)
+        res = self.__lib.create_node(self.__config, path_str)
         if res != 0:
-            msg = self.__get_error().decode()
+            msg = self.__lib.get_error().decode()
             raise ConfigTreeError(f'{msg}: {path}')
 
     def set(self, path, value=None, replace=True):
@@ -354,17 +324,17 @@ class ConfigTree:
         path_str = ' '.join(map(str, path)).encode()
 
         if value is None:
-            res = self.__set_valueless(self.__config, path_str)
+            res = self.__lib.set_valueless(self.__config, path_str)
         else:
             if replace:
-                res = self.__set_replace_value(
+                res = self.__lib.set_replace_value(
                     self.__config, path_str, str(value).encode()
                 )
             else:
-                res = self.__set_add_value(self.__config, path_str, str(value).encode())
+                res = self.__lib.set_add_value(self.__config, path_str, str(value).encode())
 
         if res != 0:
-            msg = self.__get_error().decode()
+            msg = self.__lib.get_error().decode()
             raise ConfigTreeError(
                 f'{msg}: path "{path}" value "{value}" replace "{replace}"'
             )
@@ -378,9 +348,9 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__delete(self.__config, path_str)
+        res = self.__lib.delete_node(self.__config, path_str)
         if res != 0:
-            msg = self.__get_error().decode()
+            msg = self.__lib.get_error().decode()
             raise ConfigTreeError(f'{msg}: path "{path}"')
 
         if self.__migration:
@@ -390,9 +360,9 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__delete_value(self.__config, path_str, value.encode())
+        res = self.__lib.delete_value(self.__config, path_str, value.encode())
         if res != 0:
-            msg = self.__get_error().decode()
+            msg = self.__lib.get_error().decode()
             raise ConfigTreeError(f'{msg}: path "{path}" value "{value}"')
 
         if self.__migration:
@@ -408,9 +378,9 @@ class ConfigTree:
         if self.exists(new_path):
             raise ConfigTreeError(f'Name {new_name} already exists')
 
-        res = self.__rename(self.__config, path_str, newname_str)
+        res = self.__lib.rename_node(self.__config, path_str, newname_str)
         if res != 0:
-            msg = self.__get_error().decode()
+            msg = self.__lib.get_error().decode()
             raise ConfigTreeError(f'{msg}: {path}')
 
         if self.__migration:
@@ -427,9 +397,9 @@ class ConfigTree:
         # Check if a node with intended new name already exists
         if self.exists(new_path):
             raise ConfigTreeError()
-        res = self.__copy(self.__config, oldpath_str, newpath_str)
+        res = self.__lib.copy_node(self.__config, oldpath_str, newpath_str)
         if res != 0:
-            msg = self.__get_error().decode()
+            msg = self.__lib.get_error().decode()
             raise ConfigTreeError(msg)
 
         if self.__migration:
@@ -441,21 +411,21 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__exists(self.__config, path_str)
+        res = self.__lib.exists(self.__config, path_str)
         return bool(res)
 
     def value_exists(self, path, value):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__value_exists(self.__config, path_str, value.encode())
+        res = self.__lib.value_exists(self.__config, path_str, value.encode())
         return bool(res)
 
     def list_nodes(self, path, path_must_exist=True):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res_json = self.__list_nodes(self.__config, path_str).decode()
+        res_json = self.__lib.list_nodes(self.__config, path_str).decode()
         res = json.loads(res_json)
 
         if res is None:
@@ -468,7 +438,7 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res_json = self.__return_value(self.__config, path_str).decode()
+        res_json = self.__lib.return_value(self.__config, path_str).decode()
         res = json.loads(res_json)
 
         if res is None:
@@ -479,7 +449,7 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res_json = self.__return_values(self.__config, path_str).decode()
+        res_json = self.__lib.return_values(self.__config, path_str).decode()
         res = json.loads(res_json)
 
         if res is None:
@@ -490,41 +460,41 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__is_tag(self.__config, path_str)
+        res = self.__lib.is_tag(self.__config, path_str)
         return bool(res)
 
     def set_tag(self, path, value=True):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__set_tag(self.__config, path_str, value)
+        res = self.__lib.set_tag(self.__config, path_str, value)
         if res == 0:
             return True
-        msg = self.__get_error().decode()
+        msg = self.__lib.get_error().decode()
         raise ConfigTreeError(f'{msg}: {path}')
 
     def is_leaf(self, path):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__is_leaf(self.__config, path_str)
+        res = self.__lib.is_leaf(self.__config, path_str)
         return bool(res)
 
     def set_leaf(self, path, value):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__set_leaf(self.__config, path_str, value)
+        res = self.__lib.set_leaf(self.__config, path_str, value)
         if res == 0:
             return True
-        msg = self.__get_error().decode()
+        msg = self.__lib.get_error().decode()
         raise ConfigTreeError(f'{msg}: {path}')
 
     def get_subtree(self, path, with_node=False):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__get_subtree(self.__config, path_str, with_node)
+        res = self.__lib.get_subtree(self.__config, path_str, with_node)
         subt = ConfigTree(address=res)
         return subt
 
@@ -534,7 +504,7 @@ class ConfigTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res_json = self.__config_dict(
+        res_json = self.__lib.config_dict(
             self.__config,
             ref_tree.get_tree(),
             mask.get_tree(),
@@ -561,18 +531,12 @@ def diff_compare(left, right, path=None, commands=False, libpath=LIBPATH):
     check_path(path)
     path_str = ' '.join(map(str, path)).encode()
 
-    __lib = cdll.LoadLibrary(libpath)
-    __diff_compare = __lib.diff_compare
-    __diff_compare.argtypes = [c_bool, c_char_p, c_void_p, c_void_p]
-    __diff_compare.restype = c_char_p
-    __get_error = __lib.get_error
-    __get_error.argtypes = []
-    __get_error.restype = c_char_p
+    lib = get_lib(libpath)
 
-    res = __diff_compare(commands, path_str, left.get_tree(), right.get_tree())
+    res = lib.diff_compare(commands, path_str, left.get_tree(), right.get_tree())
     res = res.decode()
     if res == '#1@':
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
     res = unescape_backslash(res)
@@ -587,18 +551,12 @@ def diff_show(rt, left, right, path=None, libpath=LIBPATH):
     check_path(path)
     path_str = ' '.join(map(str, path)).encode()
 
-    __lib = cdll.LoadLibrary(libpath)
-    __diff_show = __lib.diff_show
-    __diff_show.argtypes = [c_void_p, c_void_p, c_void_p, c_char_p]
-    __diff_show.restype = c_char_p
-    __get_error = __lib.get_error
-    __get_error.argtypes = []
-    __get_error.restype = c_char_p
+    lib = get_lib(libpath)
 
-    res = __diff_show(rt.get_tree(), left.get_tree(), right.get_tree(), path_str)
+    res = lib.diff_show(rt.get_tree(), left.get_tree(), right.get_tree(), path_str)
     res = res.decode()
     if res == '#1@':
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
     res = unescape_backslash(res)
@@ -613,15 +571,9 @@ def union(left, right, libpath=LIBPATH):
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
         raise TypeError('Arguments must be instances of ConfigTree')
 
-    __lib = cdll.LoadLibrary(libpath)
-    __tree_union = __lib.tree_union
-    __tree_union.argtypes = [c_void_p, c_void_p]
-    __tree_union.restype = c_void_p
-    __get_error = __lib.get_error
-    __get_error.argtypes = []
-    __get_error.restype = c_char_p
+    lib = get_lib(libpath)
 
-    res = __tree_union(left.get_tree(), right.get_tree())
+    res = lib.tree_union(left.get_tree(), right.get_tree())
     tree = ConfigTree(address=res)
 
     return tree
@@ -635,15 +587,9 @@ def merge(left, right, destructive=False, libpath=LIBPATH):
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
         raise TypeError('Arguments must be instances of ConfigTree')
 
-    __lib = cdll.LoadLibrary(libpath)
-    __tree_merge = __lib.tree_merge
-    __tree_merge.argtypes = [c_bool, c_void_p, c_void_p]
-    __tree_merge.restype = c_void_p
-    __get_error = __lib.get_error
-    __get_error.argtypes = []
-    __get_error.restype = c_char_p
+    lib = get_lib(libpath)
 
-    res = __tree_merge(destructive, left.get_tree(), right.get_tree())
+    res = lib.tree_merge(destructive, left.get_tree(), right.get_tree())
     tree = ConfigTree(address=res)
 
     return tree
@@ -655,19 +601,13 @@ def mask_inclusive(left, right, libpath=LIBPATH):
         raise TypeError('Arguments must be instances of ConfigTree')
 
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __mask_inclusive = __lib.mask_inclusive
-        __mask_inclusive.argtypes = [c_void_p, c_void_p]
-        __mask_inclusive.restype = c_void_p
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
+        lib = get_lib(libpath)
 
-        res = __mask_inclusive(left.get_tree(), right.get_tree())
+        res = lib.mask_inclusive(left.get_tree(), right.get_tree())
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
     tree = ConfigTree(address=res)
@@ -681,19 +621,13 @@ def mask_exclusive(left, right, libpath=LIBPATH):
         raise TypeError('Arguments must be instances of ConfigTree')
 
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __mask_exclusive = __lib.mask_exclusive
-        __mask_exclusive.argtypes = [c_void_p, c_void_p]
-        __mask_exclusive.restype = c_void_p
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
+        lib = get_lib(libpath)
 
-        res = __mask_exclusive(left.get_tree(), right.get_tree())
+        res = lib.mask_exclusive(left.get_tree(), right.get_tree())
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
     tree = ConfigTree(address=res)
@@ -741,15 +675,9 @@ def subtree_from_partial(
     path_str = ' '.join(map(str, path)).encode()
 
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __subtree_from_partial = __lib.subtree_from_partial
-        __subtree_from_partial.argtypes = [c_void_p, c_void_p, c_void_p, c_char_p]
-        __subtree_from_partial.restype = c_void_p
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
+        lib = get_lib(libpath)
 
-        res = __subtree_from_partial(
+        res = lib.subtree_from_partial(
             reference_tree.get_tree(),
             config_tree.get_tree(),
             start.get_tree(),
@@ -758,7 +686,7 @@ def subtree_from_partial(
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
     tree = ConfigTree(address=res)
@@ -769,72 +697,52 @@ def subtree_from_partial(
 def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH):
     # pylint: disable=raise-missing-from
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __reference_tree_to_json = __lib.reference_tree_to_json
-        __reference_tree_to_json.argtypes = [c_char_p, c_char_p, c_char_p]
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
-        res = __reference_tree_to_json(
+        lib = get_lib(libpath)
+        res = lib.reference_tree_to_json(
             internal_cache.encode(), from_dir.encode(), to_file.encode()
         )
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
 
 def merge_reference_tree_cache(cache_dir, primary_name, result_name, libpath=LIBPATH):
     # pylint: disable=raise-missing-from
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __merge_reference_tree_cache = __lib.merge_reference_tree_cache
-        __merge_reference_tree_cache.argtypes = [c_char_p, c_char_p, c_char_p]
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
-        res = __merge_reference_tree_cache(
+        lib = get_lib(libpath)
+        res = lib.merge_reference_tree_cache(
             cache_dir.encode(), primary_name.encode(), result_name.encode()
         )
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
 
 def interface_definitions_to_cache(from_dir, cache_path, libpath=LIBPATH):
     # pylint: disable=raise-missing-from
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __interface_definitions_to_cache = __lib.interface_definitions_to_cache
-        __interface_definitions_to_cache.argtypes = [c_char_p, c_char_p]
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
-        res = __interface_definitions_to_cache(from_dir.encode(), cache_path.encode())
+        lib = get_lib(libpath)
+        res = lib.interface_definitions_to_cache(from_dir.encode(), cache_path.encode())
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
 
 def reference_tree_cache_to_json(cache_path, render_file, libpath=LIBPATH):
     # pylint: disable=raise-missing-from
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __reference_tree_cache_to_json = __lib.reference_tree_cache_to_json
-        __reference_tree_cache_to_json.argtypes = [c_char_p, c_char_p]
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
-        res = __reference_tree_cache_to_json(cache_path.encode(), render_file.encode())
+        lib = get_lib(libpath)
+        res = lib.reference_tree_cache_to_json(cache_path.encode(), render_file.encode())
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:
-        msg = __get_error().decode()
+        msg = lib.get_error().decode()
         raise ConfigTreeError(msg)
 
 
@@ -847,19 +755,14 @@ def validate_tree_filter(
 ):
     # pylint: disable=raise-missing-from
     try:
-        __lib = cdll.LoadLibrary(libpath)
-        __validate_tree_filter = __lib.validate_tree_filter
-        __validate_tree_filter.argtypes = [c_void_p, c_char_p, c_char_p]
-        __get_error = __lib.get_error
-        __get_error.argtypes = []
-        __get_error.restype = c_char_p
-        res = __validate_tree_filter(
+        lib = get_lib(libpath)
+        res = lib.validate_tree_filter(
             config_tree.get_tree(), cache_path.encode(), validator_dir.encode()
         )
     except Exception as e:
         raise ConfigTreeError(e)
 
-    msg = __get_error().decode()
+    msg = lib.get_error().decode()
     tree = ConfigTree(address=res)
 
     return tree, msg
@@ -896,16 +799,12 @@ class DiffTree:
         self.left = left
         self.right = right
 
-        self.__lib = cdll.LoadLibrary(libpath)
-
-        self.__diff_tree = self.__lib.diff_tree
-        self.__diff_tree.argtypes = [c_char_p, c_void_p, c_void_p]
-        self.__diff_tree.restype = c_void_p
+        self.__lib = get_lib(libpath)
 
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__diff_tree(path_str, left.get_tree(), right.get_tree())
+        res = self.__lib.diff_tree(path_str, left.get_tree(), right.get_tree())
 
         # full diff config_tree and python dict representation
         self.full = ConfigTree(address=res)

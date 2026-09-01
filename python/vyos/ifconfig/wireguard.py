@@ -19,11 +19,7 @@ import time
 from datetime import timedelta
 from tempfile import NamedTemporaryFile
 
-from hurry.filesize import size
-from hurry.filesize import alternative
-
 from vyos.base import Warning
-from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
@@ -84,6 +80,11 @@ class WireGuardOperational(Operational):
         return output
 
     def show_interface(self):
+        # Imported here rather than at module scope: display-only helpers should
+        # not be on the vyos.ifconfig import path.
+        from hurry.filesize import size
+        from hurry.filesize import alternative
+
         from vyos.config import Config
 
         c = Config()
@@ -183,6 +184,10 @@ class WireGuardOperational(Operational):
         return output
 
     def reset_peer(self, peer_name=None, public_key=None):
+        # Imported here rather than at module scope: vyos.configquery pulls in
+        # the whole vyos.config tree.
+        from vyos.configquery import ConfigTreeQuery
+
         c = ConfigTreeQuery()
         tmp = c.get_config_dict(['interfaces', 'wireguard', self.ifname],
                                 effective=True, get_first_key=True,
