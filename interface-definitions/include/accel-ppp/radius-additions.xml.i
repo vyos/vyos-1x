@@ -116,6 +116,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="blast-protection">
+      <properties>
+        <help>Include Message-Authenticator attribute in Access-Request</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <node name="dynamic-author">
       <properties>
         <help>Dynamic Authorization Extension/Change of Authorization server</help>
