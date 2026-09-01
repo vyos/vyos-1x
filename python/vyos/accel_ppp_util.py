@@ -162,6 +162,15 @@ def verify_accel_ppp_authentication(config, local_users=True):
         if not dict_search("authentication.radius.server", config):
             raise ConfigError("RADIUS authentication requires at least one server")
 
+        ma_include_request = dict_search(
+            'authentication.radius.message_authenticator.include_access_request', config)
+        ma_require_response = dict_search(
+            'authentication.radius.message_authenticator.require_access_response', config)
+        if ma_require_response is not None and ma_include_request is None:
+            Warning(
+                'Message-Authenticator is not included in Access-Request packets; '
+                'so the RADIUS server might omit it from Access response packets')
+
         for server in dict_search("authentication.radius.server", config):
             radius_config = config["authentication"]["radius"]["server"][server]
             if "key" not in radius_config:

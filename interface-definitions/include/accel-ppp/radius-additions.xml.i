@@ -116,6 +116,25 @@
         <valueless/>
       </properties>
     </leafNode>
+    <node name="message-authenticator">
+      <properties>
+        <help>RADIUS Message-Authenticator attribute options</help>
+      </properties>
+      <children>
+        <leafNode name="include-access-request">
+          <properties>
+            <help>Include Message-Authenticator attribute in Access-Request</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        <leafNode name="require-access-response">
+          <properties>
+            <help>Require Message-Authenticator attribute in Access-Accept, Access-Reject and Access-Challenge</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
     <node name="dynamic-author">
       <properties>
         <help>Dynamic Authorization Extension/Change of Authorization server</help>
