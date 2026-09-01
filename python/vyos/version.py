@@ -90,11 +90,15 @@ def get_full_version_data(fname=version_file):
         else:
             version_data['system_type'] = f"{hypervisor} guest"
 
-    # Get boot type, it can be livecd or installed image
+    # Get boot type, it can be a container, livecd or installed image
     # In installed images, the squashfs image file is named after its image version,
     # while on livecd it's just "filesystem.squashfs", that's how we tell a livecd boot
     # from an installed image
-    if is_live_boot():
+    if is_running_as_container():
+        # A container is never booted on its own - is_live_boot() would parse the
+        # Kernel cmdline of the host system
+        boot_via = "container image"
+    elif is_live_boot():
         boot_via = "livecd"
     else:
         boot_via = "installed image"
