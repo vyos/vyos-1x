@@ -71,18 +71,24 @@ def get_full_version_data(fname=version_file):
     # vyos.system.grub -> vyos.template -> jinja2, which every consumer of
     # vyos.version would otherwise pay for on import.
     from vyos.system.image import is_live_boot
+    from vyos.system.image import is_running_as_container
 
     version_data = get_version_data(fname)
 
     # Get system architecture (well, kernel architecture rather)
     version_data['system_arch'], _ = popen('uname -m', stderr=DEVNULL)
 
-    hypervisor,code = popen('hvinfo', stderr=DEVNULL)
-    if code == 1:
-         # hvinfo returns 1 if it cannot detect any hypervisor
-         version_data['system_type'] = 'bare metal'
+    # A container shares the Kernel with - and inherits the DMI/CPUID data of -
+    # its host, thus hvinfo would report the hypervisor of the host system
+    if is_running_as_container():
+        version_data['system_type'] = 'container'
     else:
-        version_data['system_type'] = f"{hypervisor} guest"
+        hypervisor,code = popen('hvinfo', stderr=DEVNULL)
+        if code == 1:
+             # hvinfo returns 1 if it cannot detect any hypervisor
+             version_data['system_type'] = 'bare metal'
+        else:
+            version_data['system_type'] = f"{hypervisor} guest"
 
     # Get boot type, it can be livecd or installed image
     # In installed images, the squashfs image file is named after its image version,
