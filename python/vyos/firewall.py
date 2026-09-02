@@ -95,6 +95,434 @@ def find_nftables_rule(table, chain, rule_matches=[]):
 def remove_nftables_rule(table, chain, handle):
     cmdl(['nft', 'delete', 'rule', table, chain, 'handle', str(handle)], sudo=True)
 
+# Flow-group (nftables concatenations)
+#
+# Flow-groups map to concatenated nftables sets so related packet fields are
+# matched together (e.g. source address . destination port) rather than as
+# independent criteria.
+#
+# nftables limits concatenated set keys to NFT_DATA_VALUE_MAXLEN (64 bytes).
+# See: https://git.netfilter.org/nftables/tree/include/linux/netfilter/nf_tables.h
+#      (#define NFT_DATA_VALUE_MAXLEN 64)
+NFT_CONCAT_MAX_KEY_SIZE = 64
+
+# ICMP type numbers -> symbolic names from `nft describe icmp_type`
+ICMP_TYPE_NUM_TO_NAME = {
+    0: 'echo-reply',
+    3: 'destination-unreachable',
+    4: 'source-quench',
+    5: 'redirect',
+    8: 'echo-request',
+    9: 'router-advertisement',
+    10: 'router-solicitation',
+    11: 'time-exceeded',
+    12: 'parameter-problem',
+    13: 'timestamp-request',
+    14: 'timestamp-reply',
+    15: 'info-request',
+    16: 'info-reply',
+    17: 'address-mask-request',
+    18: 'address-mask-reply',
+}
+
+# ICMPv6 type numbers -> symbolic names from `nft describe icmpv6_type`
+# (132 has two aliases; prefer mld-listener-reduction to match existing CLI)
+ICMPV6_TYPE_NUM_TO_NAME = {
+    1: 'destination-unreachable',
+    2: 'packet-too-big',
+    3: 'time-exceeded',
+    4: 'parameter-problem',
+    128: 'echo-request',
+    129: 'echo-reply',
+    130: 'mld-listener-query',
+    131: 'mld-listener-report',
+    132: 'mld-listener-reduction',
+    133: 'nd-router-solicit',
+    134: 'nd-router-advert',
+    135: 'nd-neighbor-solicit',
+    136: 'nd-neighbor-advert',
+    137: 'nd-redirect',
+    138: 'router-renumbering',
+    141: 'ind-neighbor-solicit',
+    142: 'ind-neighbor-advert',
+    143: 'mld2-listener-report',
+}
+
+# Valid ICMP codes keyed by type name (IANA / RFC792+)
+ICMP_CODE_BY_TYPE = {
+    'echo-reply': {0},
+    'destination-unreachable': set(range(0, 16)),
+    'source-quench': {0},
+    'redirect': {0, 1, 2, 3},
+    'echo-request': {0},
+    'router-advertisement': {0},
+    'router-solicitation': {0},
+    'time-exceeded': {0, 1},
+    'parameter-problem': {0, 1, 2},
+    'timestamp-request': {0},
+    'timestamp-reply': {0},
+    'info-request': {0},
+    'info-reply': {0},
+    'address-mask-request': {0},
+    'address-mask-reply': {0},
+}
+
+# Valid ICMPv6 codes keyed by type name (IANA / RFC4443+)
+ICMPV6_CODE_BY_TYPE = {
+    'destination-unreachable': set(range(0, 10)),
+    'packet-too-big': {0},
+    'time-exceeded': {0, 1},
+    'parameter-problem': set(range(0, 11)),
+    'echo-request': {0},
+    'echo-reply': {0},
+    'mld-listener-query': {0},
+    'mld-listener-report': {0},
+    'mld-listener-done': {0},
+    'mld-listener-reduction': {0},
+    'nd-router-solicit': {0},
+    'nd-router-advert': {0},
+    'nd-neighbor-solicit': {0},
+    'nd-neighbor-advert': {0},
+    'nd-redirect': {0},
+    'router-renumbering': {0, 1, 255},
+    'ind-neighbor-solicit': {0},
+    'ind-neighbor-advert': {0},
+    'mld2-listener-report': {0},
+}
+
+def icmp_type_to_name(value, family='ipv4'):
+    """Resolve an ICMP/ICMPv6 type number or name to its symbolic name.
+
+    Numeric values are looked up in the ``nft describe`` type map. Symbolic
+    names are accepted as-is when they appear in the code-by-type map.
+
+    Args:
+        value: Type as configured (e.g. ``8`` or ``echo-request``).
+        family: ``ipv4`` for ICMP, ``ipv6`` for ICMPv6.
+
+    Returns:
+        The symbolic type name, or None if ``value`` is not a known type.
+    """
+    type_map = ICMP_TYPE_NUM_TO_NAME if family == 'ipv4' else ICMPV6_TYPE_NUM_TO_NAME
+    code_map = ICMP_CODE_BY_TYPE if family == 'ipv4' else ICMPV6_CODE_BY_TYPE
+    value = str(value)
+
+    if value.isdigit():
+        return type_map.get(int(value))
+
+    if value in code_map:
+        return value
+
+    return None
+
+def icmp_codes_for_type(type_name, family='ipv4'):
+    """Return the set of valid ICMP/ICMPv6 codes for a type name, or None."""
+    code_map = ICMP_CODE_BY_TYPE if family == 'ipv4' else ICMPV6_CODE_BY_TYPE
+    return code_map.get(type_name)
+
+# Maps CLI flow-group parameters to nftables match expressions and key sizes.
+# ``expr`` is used in typeof / rule matches; ``size`` feeds the 64-byte key check;
+# ``quote`` marks values that must be quoted in set elements (e.g. ifnames).
+FLOW_GROUP_PARAMS = {
+    'ipv4': {
+        'inbound-interface': {
+            'expr': 'iifname',
+            'size': 16,
+            'quote': True,
+        },
+        'outbound-interface': {
+            'expr': 'oifname',
+            'size': 16,
+            'quote': True,
+        },
+        'ipv4-source-address': {
+            'expr': 'ip saddr',
+            'size': 4,
+        },
+        'ipv4-destination-address': {
+            'expr': 'ip daddr',
+            'size': 4,
+        },
+        'source-port': {
+            'expr': 'th sport',
+            'size': 2,
+        },
+        'destination-port': {
+            'expr': 'th dport',
+            'size': 2,
+        },
+        'protocol': {
+            'expr': 'meta l4proto',
+            'size': 1,
+        },
+        'mark': {
+            'expr': 'meta mark',
+            'size': 4,
+        },
+        'connection-mark': {
+            'expr': 'ct mark',
+            'size': 4,
+        },
+        'dscp': {
+            'expr': 'ip dscp',
+            'size': 1,
+        },
+        'icmp-type': {
+            'expr': 'icmp type',
+            'size': 1,
+        },
+        'icmp-code': {
+            'expr': 'icmp code',
+            'size': 1,
+        },
+    },
+    'ipv6': {
+        'inbound-interface': {
+            'expr': 'iifname',
+            'size': 16,
+            'quote': True,
+        },
+        'outbound-interface': {
+            'expr': 'oifname',
+            'size': 16,
+            'quote': True,
+        },
+        'ipv6-source-address': {
+            'expr': 'ip6 saddr',
+            'size': 16,
+        },
+        'ipv6-destination-address': {
+            'expr': 'ip6 daddr',
+            'size': 16,
+        },
+        'source-port': {
+            'expr': 'th sport',
+            'size': 2,
+        },
+        'destination-port': {
+            'expr': 'th dport',
+            'size': 2,
+        },
+        'protocol': {
+            'expr': 'meta l4proto',
+            'size': 1,
+        },
+        'mark': {
+            'expr': 'meta mark',
+            'size': 4,
+        },
+        'connection-mark': {
+            'expr': 'ct mark',
+            'size': 4,
+        },
+        'dscp': {
+            'expr': 'ip6 dscp',
+            'size': 1,
+        },
+        'icmpv6-type': {
+            'expr': 'icmpv6 type',
+            'size': 1,
+        },
+        'icmpv6-code': {
+            'expr': 'icmpv6 code',
+            'size': 1,
+        },
+    },
+}
+
+def flow_group_parameters(group_conf):
+    """Return the flow-group parameter list from config.
+
+    A multi leaf with a single value may be stored as a bare string rather than
+    a list; normalize so callers always receive a list.
+    """
+    parameters = group_conf.get('parameter', [])
+    if isinstance(parameters, str):
+        return [parameters]
+    return list(parameters) if parameters else []
+
+def _rule_has_path(rule_conf, path):
+    """Return True if ``path`` exists under ``rule_conf`` (via dict_search_args)."""
+    return dict_search_args(rule_conf, *path) is not None
+
+def flow_group_rule_conflicts(rule_conf, parameters):
+    """Find rule options that duplicate a referenced flow-group's parameters.
+
+    A rule must not also configure criteria already matched by the flow-group
+    (e.g. ``source address`` when the group includes ``ipv4-source-address``).
+
+    Args:
+        rule_conf: Firewall rule config dict.
+        parameters: Flow-group parameter names (CLI form with hyphens).
+
+    Returns:
+        List of ``(parameter, rule_option)`` pairs for each conflict found.
+    """
+    address_sides = {
+        'source': [
+            (['source', 'address'], 'source address'),
+            (['source', 'fqdn'], 'source fqdn'),
+            (['source', 'geoip'], 'source geoip'),
+            (['source', 'group', 'address_group'], 'source group address-group'),
+            (['source', 'group', 'network_group'], 'source group network-group'),
+            (['source', 'group', 'domain_group'], 'source group domain-group'),
+            (['source', 'group', 'remote_group'], 'source group remote-group'),
+            (['source', 'group', 'dynamic_address_group'], 'source group dynamic-address-group'),
+        ],
+        'destination': [
+            (['destination', 'address'], 'destination address'),
+            (['destination', 'fqdn'], 'destination fqdn'),
+            (['destination', 'geoip'], 'destination geoip'),
+            (['destination', 'group', 'address_group'], 'destination group address-group'),
+            (['destination', 'group', 'network_group'], 'destination group network-group'),
+            (['destination', 'group', 'domain_group'], 'destination group domain-group'),
+            (['destination', 'group', 'remote_group'], 'destination group remote-group'),
+            (['destination', 'group', 'dynamic_address_group'], 'destination group dynamic-address-group'),
+        ],
+    }
+
+    # Map each flow-group parameter to rule config paths that conflict with it
+    checks = {
+        'inbound-interface': [
+            (['inbound_interface'], 'inbound-interface'),
+        ],
+        'outbound-interface': [
+            (['outbound_interface'], 'outbound-interface'),
+        ],
+        'ipv4-source-address': address_sides['source'],
+        'ipv6-source-address': address_sides['source'],
+        'ipv4-destination-address': address_sides['destination'],
+        'ipv6-destination-address': address_sides['destination'],
+        'source-port': [
+            (['source', 'port'], 'source port'),
+            (['source', 'group', 'port_group'], 'source group port-group'),
+        ],
+        'destination-port': [
+            (['destination', 'port'], 'destination port'),
+            (['destination', 'group', 'port_group'], 'destination group port-group'),
+        ],
+        'protocol': [
+            (['protocol'], 'protocol'),
+        ],
+        'mark': [
+            (['mark'], 'mark'),
+        ],
+        'connection-mark': [
+            (['connection_mark'], 'connection-mark'),
+        ],
+        'dscp': [
+            (['dscp'], 'dscp'),
+            (['dscp_exclude'], 'dscp-exclude'),
+        ],
+        'icmp-type': [
+            (['icmp'], 'icmp'),
+        ],
+        'icmp-code': [
+            (['icmp'], 'icmp'),
+        ],
+        'icmpv6-type': [
+            (['icmpv6'], 'icmpv6'),
+        ],
+        'icmpv6-code': [
+            (['icmpv6'], 'icmpv6'),
+        ],
+    }
+
+    conflicts = []
+    seen = set()
+    for param in parameters:
+        for path, option in checks.get(param, []):
+            if _rule_has_path(rule_conf, path):
+                key = (param, option)
+                if key not in seen:
+                    seen.add(key)
+                    conflicts.append(key)
+    return conflicts
+
+def flow_group_key_size(parameters, family):
+    """Calculate the concatenated nftables key size for a parameter list.
+
+    Args:
+        parameters: Flow-group parameter names in CLI order.
+        family: ``ipv4`` or ``ipv6``.
+
+    Returns:
+        ``(total_bytes, [(param, size_bytes), ...])`` for error reporting.
+    """
+    param_meta = FLOW_GROUP_PARAMS[family]
+    sizes = []
+    total = 0
+    for param in parameters:
+        size = param_meta[param]['size']
+        sizes.append((param, size))
+        total += size
+    return total, sizes
+
+def flow_group_typeof(parameters, family):
+    """Build an nftables ``typeof`` / match expression for the parameter list.
+
+    Example: ``['ipv4-source-address', 'destination-port']`` →
+    ``ip saddr . th dport``.
+    """
+    param_meta = FLOW_GROUP_PARAMS[family]
+    return ' . '.join(param_meta[p]['expr'] for p in parameters)
+
+# nftables limits user comments to NFT_USERDATA_MAXLEN (128 characters).
+# CLI descriptions allow up to 255 characters; truncate before emitting.
+NFT_COMMENT_MAX_LEN = 128
+
+def flow_group_nft_comment(text):
+    """Format a CLI description as an nftables ``comment "..."`` clause.
+
+    Descriptions are truncated to ``NFT_COMMENT_MAX_LEN`` to match the
+    nftables userdata limit, then quotes/backslashes are escaped.
+    """
+    truncated = str(text)[:NFT_COMMENT_MAX_LEN]
+    escaped = truncated.replace('\\', '\\\\').replace('"', '\\"')
+    return f'comment "{escaped}"'
+
+def flow_group_format_element(match_conf, parameters, family):
+    """Format one match as an nftables concatenated set element.
+
+    Values follow parameter order. ICMP types are rendered as symbolic names
+    when possible; interface names are quoted. Match ``description`` becomes a
+    per-element comment when present.
+    """
+    param_meta = FLOW_GROUP_PARAMS[family]
+    parts = []
+    for param in parameters:
+        key = param.replace('-', '_')
+        value = match_conf[key]
+        if param in ('icmp-type', 'icmpv6-type'):
+            # Prefer symbolic names in nftables output
+            type_name = icmp_type_to_name(value, family)
+            if type_name:
+                value = type_name
+        if param_meta[param].get('quote'):
+            value = f'"{value}"'
+        parts.append(str(value))
+    element = ' . '.join(parts)
+    if 'description' in match_conf:
+        element = f'{element} {flow_group_nft_comment(match_conf["description"])}'
+    return element
+
+def flow_group_elements(group_conf, family):
+    """Build the comma-separated elements string for a flow-group set.
+
+    Disabled matches are omitted. Returns an empty string when there are no
+    enabled matches.
+    """
+    parameters = flow_group_parameters(group_conf)
+    matches = group_conf.get('match', {})
+    if not parameters or not matches:
+        return ''
+    elements = []
+    for match_conf in matches.values():
+        if 'disable' in match_conf:
+            continue
+        elements.append(flow_group_format_element(match_conf, parameters, family))
+    return ', '.join(elements)
+
 # Functions below used by template generation
 
 def nft_action(vyos_action):
@@ -102,7 +530,7 @@ def nft_action(vyos_action):
         return 'return'
     return vyos_action
 
-def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
+def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name, flow_groups=None):
     output = []
 
     if ip_name == 'ip6':
@@ -111,6 +539,14 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     else:
         def_suffix = ''
         family = 'bri' if ip_name == 'bri' else 'ipv4'
+
+    if 'flow_group' in rule_conf and flow_groups:
+        # Attach the referenced flow-group config for this rule
+        group_name = rule_conf['flow_group']
+        if group_name[0] == '!':
+            group_name = group_name[1:]
+        if group_name in flow_groups:
+            rule_conf['_flow_group'] = flow_groups[group_name]
 
     if 'state' in rule_conf and rule_conf['state']:
         states = ",".join([s for s in rule_conf['state']])
@@ -150,6 +586,20 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if proto == 'tcp_udp':
             proto = '{tcp, udp}'
         output.append(f'meta l4proto {operator} {proto}')
+
+    if '_flow_group' in rule_conf:
+        group_name = rule_conf['flow_group']
+        operator = ''
+        if group_name[0] == '!':
+            operator = '!='
+            group_name = group_name[1:]
+        parameters = flow_group_parameters(rule_conf['_flow_group'])
+        expr = flow_group_typeof(parameters, family)
+        set_name = f'FG{"6" if family == "ipv6" else "4"}_{group_name}'
+        if operator:
+            output.append(f'{expr} {operator} @{set_name}')
+        else:
+            output.append(f'{expr} @{set_name}')
 
     if 'ethernet_type' in rule_conf:
         ether_type_mapping = {

@@ -169,6 +169,8 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+          #include <include/firewall/ipv4-flow-group.xml.i>
+          #include <include/firewall/ipv6-flow-group.xml.i>
           <tagNode name="interface-group">
             <properties>
               <help>Firewall interface-group</help>
