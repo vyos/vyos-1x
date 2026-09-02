@@ -299,13 +299,13 @@ def apply(vrf):
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if interface_exists(tmp):
-            # T5492: deleting a VRF instance may leafe processes running
+            # T5492: deleting a VRF instance may leave processes running
             # (e.g. dhclient) as there is a dependency ordering issue in the CLI.
             # We need to ensure that we stop the dhclient processes first so
-            # a proper DHCLP RELEASE message is sent
+            # a proper DHCP RELEASE message is sent (ExecStop is -x, T9109)
             for interface in get_vrf_members(tmp):
                 vrf_iface = Interface(interface)
-                vrf_iface.set_dhcp(False)
+                vrf_iface.set_dhcp(False, release=True)
                 vrf_iface.set_dhcpv6(False)
 
             # Remove nftables conntrack zone map item
