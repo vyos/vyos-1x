@@ -19,7 +19,7 @@
 {% if peer_conf.childless is vyos_defined %}
         childless = {{ peer_conf.childless }}
 {% endif %}
-        proposals = {{ ike | get_esp_ike_cipher | join(',') }}
+        proposals = {{ ike | get_esp_ike_cipher(esn=False) | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
 {% if peer_conf.virtual_address is vyos_defined %}
         vips = {{ peer_conf.virtual_address | join(', ') }}

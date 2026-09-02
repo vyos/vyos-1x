@@ -487,7 +487,16 @@ def get_first_ike_dh_group(ike_group):
     return 'dh-group2' # Fallback on dh-group2
 
 @register_filter('get_esp_ike_cipher')
-def get_esp_ike_cipher(group_config, ike_group=None):
+def get_esp_ike_cipher(group_config, ike_group=None, esn=True):
+    """Render strongSwan proposal strings.
+
+    esn=True  : ESP/CHILD_SA proposals, where ESN transforms are meaningful
+    esn=False : IKE_SA proposals. ESN is a CHILD_SA transform (RFC 7296
+                section 3.3.2, Transform Type 5) and has no meaning in an
+                IKE_SA proposal. Emitting it there breaks interoperability
+                with implementations that reject the malformed payload
+                without replying at all (observed with Cisco FTD, T9254).
+    """
     pfs_lut = {
         'dh-group1'  : 'modp768',
         'dh-group2'  : 'modp1024',
@@ -534,10 +543,12 @@ def get_esp_ike_cipher(group_config, ike_group=None):
                     group = get_first_ike_dh_group(ike_group)
                 tmp += '-' + pfs_lut[group]
 
-            # For 'optional' and 'disabled' we need two values as
-            # proposal without '-esn'/'-noesn' is incompatible with
-            # proposals with any of them.
-            if 'esn' in proposal:
+            # ESP/CHILD_SA only. For 'optional' and 'disabled' we need two
+            # values as a proposal without '-esn'/'-noesn' is incompatible
+            # with proposals carrying any of them. This pairing is meaningless
+            # for an IKE_SA, which has no ESN transform at all - see the esn
+            # parameter above.
+            if esn and 'esn' in proposal:
                 if proposal['esn'] == 'required':
                     tmp += '-esn'
                 elif proposal['esn'] == 'optional':

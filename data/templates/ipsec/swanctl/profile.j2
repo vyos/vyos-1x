@@ -5,7 +5,7 @@
 {% if profile_conf.bind.tunnel is vyos_defined %}
 {%     for interface in profile_conf.bind.tunnel %}
     dmvpn-{{ name }}-{{ interface }} {
-        proposals = {{ ike_group[profile_conf.ike_group] | get_esp_ike_cipher | join(',') }}
+        proposals = {{ ike_group[profile_conf.ike_group] | get_esp_ike_cipher(esn=False) | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
