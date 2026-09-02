@@ -1,0 +1,140 @@
+# T9085: reinstall missing IPv4 default on RENEW/REBIND
+#
+# Stock dhclient-script only installs option-3 defaults on BOUND/REBOOT (or
+# when the leased IP changes). The RENEW/REBIND same-IP path only runs
+# "ip addr change" and never rechecks the default. If the kernel default was
+# flushed while the lease remained valid (staged valid_lft expiry, manual
+# delete, remetric races), RENEW leaves the interface with a live address and
+# no default via $new_routers.
+#
+# Presence check MUST use /usr/sbin/ip, not the enter-hook ip() wrapper.
+# That wrapper sends any `ip … route` that is not `del` through vtysh as an
+# add, so `ip -4 route show` both misses the kernel table and writes a
+# staticd duplicate. Use `ip -j` so a multipath default (two DHCP WANs at
+# the same distance) is visible — `ip route show default via GW dev IF`
+# returns nothing for a nexthop group. Append ${VRF_OPTION} so VRF leases
+# see the same table the add uses.
+#
+# If option 3 changes across a same-IP RENEW, drop defaults via gateways
+# that disappeared from $new_routers (including option 3 going away entirely).
+# Otherwise FRR keeps the old nexthop and the kernel shows ECMP over old+new.
+# Compare $old_routers vs $new_routers (same pattern as
+# 98-vyos-static-routes-dhclient-hook). Delete with the same per-router
+# metric 01-vyos-cleanup uses (${IF_METRIC}, then +1 per old_routers
+# entry): a wrapper delete without metric always issues distance 210, which
+# misses the 211+ FRR leftovers and can leave a ghost as the kernel default
+# after option 3 is cleared.
+#
+# 06-vyos-nodefaultroute blanks new_routers and sets VYOS_NO_DEFAULT_ROUTE.
+# Skip the stale-delete (and its vtysh session) when that flag is set and
+# the kernel has no default via that gateway — otherwise a server that
+# force-sends option 3 logs "removing stale default" on every renew.
+# If a leftover kernel default exists (no-default-route just set), still
+# delete it.
+#
+# Adds still use the enter-hook ip() wrapper so FRR gets tag/distance
+# IF_METRIC. Skip when classless static routes are present (stock ignores
+# option 3) — but still drop leftover option-3 defaults first, because
+# 02-vyos-dhcp-renew-rfc3442 only removes old RFC3442 routes. Do not
+# mutate $new_routers (later exit hooks still read it).
+# Wrapper exit status is not a gate: vtysh "no ip route" fails when the
+# route is already gone. Verify the kernel table with /usr/sbin/ip.
+
+RUN="yes"
+
+if [ "$RUN" != "yes" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+case "$reason" in
+    RENEW|REBIND) ;;
+    *) return 0 2>/dev/null || exit 0 ;;
+esac
+
+# Kernel default via $1 on $interface? Real ip(8) JSON — never the wrapper.
+# Matches both a single-nexthop default and a multipath nexthop group.
+# Do not match kernel .metric to IF_METRIC: FRR installs distance IF_METRIC
+# in staticd, but the kernel row is typically proto static metric 20.
+_default_via_present() {
+    local gw="$1"
+    local json
+    json=$(/usr/sbin/ip -j -4 route show default ${VRF_OPTION} 2>/dev/null) || return 1
+    [ -n "$json" ] || return 1
+    echo "$json" | jq -e --arg gw "$gw" --arg dev "$interface" \
+        'any(.[];
+            (.gateway == $gw and .dev == $dev)
+            or any(.nexthops[]?; .gateway == $gw and .dev == $dev)
+        )' >/dev/null 2>&1
+}
+
+# Stock ignores option 3 when RFC3442 classless routes are present. Treat
+# that as an empty effective option-3 set so leftover option-3 defaults
+# are still dropped on a same-IP renew that switches to classless routes.
+effective_new_routers="$new_routers"
+if [ -n "$new_rfc3442_classless_static_routes" ]; then
+    effective_new_routers=""
+fi
+
+# Drop defaults via gateways the server no longer announces, including when
+# option 3 disappeared (empty effective_new_routers). Metric numbering
+# matches the original install / 01-vyos-cleanup: IF_METRIC, then +1 per
+# old_routers entry (keepers included, or the 211+ leftover is missed).
+if [ -n "$old_routers" ] && [ "$old_routers" != "$effective_new_routers" ]; then
+    if_metric="${IF_METRIC:-210}"
+    for router in $old_routers; do
+        skip=
+        for keep in $effective_new_routers; do
+            if [ "$router" = "$keep" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ -n "$skip" ]; then
+            if_metric=$((if_metric + 1))
+            continue
+        fi
+        # no-default-route blanks new_routers every renew; only act if a
+        # leftover default is actually present.
+        if [ -n "$VYOS_NO_DEFAULT_ROUTE" ] && ! _default_via_present "${router}"; then
+            if_metric=$((if_metric + 1))
+            continue
+        fi
+        logmsg info \
+            "RENEW/REBIND: removing stale default via ${router} dev ${interface} metric ${if_metric}"
+        # Wrapper: FRR-aware del (staticd + kernel) at the install distance.
+        ip -4 route del default via "${router}" dev "${interface}" \
+            metric "${if_metric}" >/dev/null 2>&1
+        if _default_via_present "${router}"; then
+            logmsg warn \
+                "RENEW/REBIND: stale default still present via ${router} dev ${interface}"
+        fi
+        if_metric=$((if_metric + 1))
+    done
+fi
+
+# Honor RFC3442 / no-default-route / missing option 3: nothing to install.
+if [ -n "$new_rfc3442_classless_static_routes" ] || [ -z "$new_routers" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+if_metric="${IF_METRIC:-210}"
+for router in $new_routers; do
+    if _default_via_present "${router}"; then
+        if_metric=$((if_metric + 1))
+        continue
+    fi
+
+    logmsg info \
+        "RENEW/REBIND: reinstalling missing default via ${router} dev ${interface} metric ${if_metric}"
+
+    # Uses enter-hook ip() wrapper when defined (FRR-aware); EEXIST-safe.
+    ip -4 route add default via "${router}" dev "${interface}" \
+        metric "${if_metric}" >/dev/null 2>&1
+
+    if ! _default_via_present "${router}"; then
+        logmsg warn \
+            "RENEW/REBIND: default still missing via ${router} dev ${interface} after add"
+    fi
+
+    if_metric=$((if_metric + 1))
+done
