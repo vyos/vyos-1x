@@ -26,6 +26,7 @@ from vyos.template import inc_ip
 remote_ip4 = '192.0.2.100'
 remote_ip6 = '2001:db8::ffff'
 source_if = 'dum2222'
+source_if2 = 'dum2223'
 mtu = 1476
 
 class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
@@ -45,10 +46,12 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         # create some test interfaces
         cls.cli_set(cls, ['interfaces', 'dummy', source_if, 'address', cls.local_v4 + '/32'])
         cls.cli_set(cls, ['interfaces', 'dummy', source_if, 'address', cls.local_v6 + '/128'])
+        cls.cli_set(cls, ['interfaces', 'dummy', source_if2])
 
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'dummy', source_if])
+        cls.cli_delete(cls, ['interfaces', 'dummy', source_if2])
         super().tearDownClass()
 
     def test_ipv4_encapsulations(self):
@@ -321,7 +324,22 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         # GRE key must be supplied with a 0.0.0.0 source address
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+        # A zero key is no key at all for such a tunnel - with an any
+        # source-address and no remote it catches every packet, exactly as a
+        # keyless tunnel would
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '0'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', key])
+
+        self.cli_commit()
+
+        # A remote address identifies the tunnel on its own, so a zero key is
+        # no longer a problem
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '0'])
+        self.cli_set(self._base_path + [interface, 'remote', remote_ip4])
 
         self.cli_commit()
 
@@ -393,6 +411,213 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(tunnel_config['source_interface'], conf['link'])
             self.assertEqual(tunnel_config['encapsulation'],    conf['linkinfo']['info_kind'])
             self.assertEqual(tunnel_config['remote'],           conf['linkinfo']['info_data']['remote'])
+
+    def test_multiple_gre_tunnel_same_key_different_remote(self):
+        # The Kernel identifies a tunnel by local address, remote address,
+        # source-interface and key - a differing remote address is enough to
+        # make both tunnels unique, even if they share one GRE key
+        ip_key = '10'
+        tunnels = {
+            'tun10': '1.2.3.4',
+            'tun20': '1.2.3.5',
+        }
+
+        for tunnel, remote in tunnels.items():
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+            self.cli_set(self._base_path + [tunnel, 'remote', remote])
+            self.cli_set(self._base_path + [tunnel, 'parameters', 'ip', 'key', ip_key])
+
+        self.cli_commit()
+
+        for tunnel, remote in tunnels.items():
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual('gre', conf['linkinfo']['info_kind'])
+            self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+            self.assertEqual(remote, conf['linkinfo']['info_data']['remote'])
+            self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+            self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
+
+    def test_multiple_gre_tunnel_same_key_different_source_interface(self):
+        # Tunnels bound to different source-interfaces are distinct for the
+        # Kernel, thus they are free to share one GRE key
+        ip_key = '20'
+        tunnels = {
+            'tun10': source_if,
+            'tun20': source_if2,
+        }
+
+        for tunnel, interface in tunnels.items():
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-interface', interface])
+            self.cli_set(self._base_path + [tunnel, 'parameters', 'ip', 'key', ip_key])
+
+        self.cli_commit()
+
+        for tunnel, interface in tunnels.items():
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual(interface, conf['link'])
+            self.assertEqual('gre', conf['linkinfo']['info_kind'])
+            self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+            self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
+
+    def test_multiple_gre_tunnel_any_remote(self):
+        # The Kernel stores an unset remote address as the any address, thus
+        # "remote 0.0.0.0" and an unset remote must be treated alike - creating
+        # both would fail with "add tunnel "gre0" failed: File exists"
+        ip_key = '30'
+
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+            self.cli_set(self._base_path + [tunnel, 'parameters', 'ip', 'key', ip_key])
+        self.cli_set(self._base_path + ['tun10', 'remote', '0.0.0.0'])
+
+        # Both tunnels resolve to the same Kernel tunnel - this must be rejected
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # A differing key makes them unique again
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '31'])
+        self.cli_commit()
+
+    def test_multiple_gre_tunnel_keyless_and_keyed(self):
+        # A keyless tunnel is distinct from a keyed one even when both share
+        # the same local and remote address - the Kernel only matches a tunnel
+        # carrying no key against another tunnel carrying no key
+        ip_key = '40'
+
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+        self.cli_set(self._base_path + ['tun20', 'remote', '0.0.0.0'])
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', ip_key])
+
+        self.cli_commit()
+
+        # Re-verifying the keyless tunnel must keep succeeding - if it does not,
+        # the next commit touching it fails and it is lost on the next boot
+        self.cli_set(self._base_path + ['tun10', 'description', 'foo'])
+        self.cli_commit()
+
+        conf = get_interface_config('tun10')
+        self.assertEqual('gre', conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertNotIn('ikey', conf['linkinfo']['info_data'])
+
+        conf = get_interface_config('tun20')
+        self.assertEqual('gre', conf['linkinfo']['info_kind'])
+        self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+        self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
+
+    def test_multiple_gre_tunnel_keyless_different_source_interface(self):
+        # Tunnels bound to different source-interfaces stay distinct for the
+        # Kernel even when they share one local and remote address - "dev" is
+        # compared as the tunnel link index - so no GRE key is needed to tell
+        # them apart
+        remote = '1.2.3.4'
+        tunnels = {
+            'tun10': source_if,
+            'tun20': source_if2,
+        }
+
+        for tunnel, interface in tunnels.items():
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+            self.cli_set(self._base_path + [tunnel, 'source-interface', interface])
+            self.cli_set(self._base_path + [tunnel, 'remote', remote])
+
+        self.cli_commit()
+
+        for tunnel, interface in tunnels.items():
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual(interface, conf['link'])
+            self.assertEqual('gre', conf['linkinfo']['info_kind'])
+            self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+            self.assertEqual(remote, conf['linkinfo']['info_data']['remote'])
+            self.assertNotIn('ikey', conf['linkinfo']['info_data'])
+
+    def test_multiple_gre_tunnel_zero_key(self):
+        # Carrying neither a source-address nor a remote, these tunnels are only
+        # told apart by their key - and a zero key does not do that, it cannot be
+        # told from an unset one on receive. A non-zero key can
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-interface', source_if])
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '0'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '50'])
+        self.cli_commit()
+
+        conf = get_interface_config('tun20')
+        self.assertEqual('0.0.0.50', conf['linkinfo']['info_data']['ikey'])
+        self.assertEqual('0.0.0.50', conf['linkinfo']['info_data']['okey'])
+
+        # Dropping back to a zero key must be rejected just the same. Only the
+        # tunnel which changed is verified again here, so this is the case a
+        # check trusting its own zero key - but not the neighbours - lets
+        # through: both tunnels commit, and every later commit touching the
+        # keyless one is refused from then on
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '0'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_multiple_gre_tunnel_zero_key_with_endpoints(self):
+        # A zero key does tell a tunnel apart from a keyless one as soon as a
+        # local or a remote address is set - the Kernel then matches through
+        # ip_tunnel_key_match(), which tests the flag saying that a key is set
+        # before it compares the value
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '0'])
+
+        # The same holds when it is the remote address which identifies them
+        for tunnel in ['tun30', 'tun40']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-interface', source_if])
+            self.cli_set(self._base_path + [tunnel, 'remote', remote_ip4])
+        self.cli_set(self._base_path + ['tun40', 'parameters', 'ip', 'key', '0'])
+
+        self.cli_commit()
+
+        # Re-verifying the keyless tunnels must keep succeeding - if it does
+        # not, the next commit touching them fails and they are lost on the
+        # next boot
+        for tunnel in ['tun10', 'tun30']:
+            self.cli_set(self._base_path + [tunnel, 'description', 'foo'])
+
+        self.cli_commit()
+
+        for tunnel in ['tun10', 'tun20']:
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual('gre', conf['linkinfo']['info_kind'])
+            self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+
+        for tunnel in ['tun30', 'tun40']:
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual(source_if, conf['link'])
+            self.assertEqual('gre', conf['linkinfo']['info_kind'])
+            self.assertEqual(remote_ip4, conf['linkinfo']['info_data']['remote'])
+
+        # The keyless tunnels must have stayed keyless. That the commit went
+        # through at all is what proves the zero key reached the Kernel with its
+        # flag set - dropped, it would have left two keyless tunnels sharing one
+        # endpoint and the second of them could not have been created
+        for tunnel in ['tun10', 'tun30']:
+            conf = get_interface_config(tunnel)
+
+            self.assertNotIn('ikey', conf['linkinfo']['info_data'])
 
     def test_tunnel_invalid_source_interface(self):
         encapsulation = 'gre'
