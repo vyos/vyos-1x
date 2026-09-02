@@ -34,6 +34,21 @@ dco_conditional_options = {
     'allow-compression': 'no',
     'compress': 'migrate',
 }
+dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
+dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
+
+
+def _offloadable_ciphers(value: str) -> bool:
+    """Whether every cipher of a raw negotiation list can be offloaded."""
+    for cipher in value.split(':'):
+        # OpenVPN drops a "?" prefixed cipher only when it does not know it at
+        # all, so an optional one still has to be offloadable
+        name = cipher.lstrip('?')
+        # "DEFAULT" stands for the built-in list, which OpenVPN expands - case
+        # sensitively - to AEAD ciphers alone before it weighs the offload
+        if name != 'DEFAULT' and name.upper() not in dco_raw_ciphers:
+            return False
+    return True
 
 
 def _offloadable(options: list) -> bool:
@@ -48,6 +63,9 @@ def _offloadable(options: list) -> bool:
         keep = dco_conditional_options.get(keyword)
         if keep is not None and tmp[1:] != [keep]:
             return False
+        if keyword in dco_cipher_options and tmp[1:]:
+            if not _offloadable_ciphers(tmp[1]):
+                return False
     return True
 
 
