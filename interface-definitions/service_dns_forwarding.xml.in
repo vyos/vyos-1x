@@ -889,6 +889,22 @@
                       <multi/>
                     </properties>
                   </leafNode>
+                  <leafNode name="security-status-poll-domain">
+                    <properties>
+                      <help>Domain name for the periodic PowerDNS security status poll, which checks the running version for known vulnerabilities (default: disabled)</help>
+                      <valueHelp>
+                        <format>secpoll.powerdns.com</format>
+                        <description>Use PowerDNS' own security status poll domain</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Custom domain to poll instead</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="fqdn"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <tagNode name="zone-cache">
