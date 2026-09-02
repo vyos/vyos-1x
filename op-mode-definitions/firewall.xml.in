@@ -773,4 +773,28 @@
       </node>
     </children>
   </node>
+  <node name="update">
+    <children>
+      <node name="firewall">
+        <properties>
+          <help>Update firewall information</help>
+        </properties>
+        <children>
+          <node name="group">
+            <properties>
+              <help>Update firewall group</help>
+            </properties>
+            <children>
+              <leafNode name="apply-paths">
+                <properties>
+                  <help>Re-resolve apply-path derived group membership and push it into nftables, without a firewall commit</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/firewall.py --action update_apply_path_groups</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>

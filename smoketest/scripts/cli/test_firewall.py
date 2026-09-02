@@ -167,6 +167,122 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['system', 'static-host-mapping'])
         self.cli_commit()
 
+    def test_apply_path(self):
+        # "protocols static route" is not under the "firewall" subtree that
+        # tearDown() cleans up, so it must be removed here even if an
+        # assertion below fails - otherwise it leaks into later tests.
+        derived_networks = ['203.0.113.0/24', '203.0.114.0/24']
+        for network in derived_networks:
+            self.cli_set(['protocols', 'static', 'route', network, 'blackhole'])
+
+        try:
+            self.cli_set(
+                [
+                    'firewall',
+                    'group',
+                    'network-group',
+                    'smoketest_derived',
+                    'network',
+                    '172.16.200.0/24',
+                ]
+            )
+            self.cli_set(
+                [
+                    'firewall',
+                    'group',
+                    'network-group',
+                    'smoketest_derived',
+                    'apply-path',
+                    'protocols static route',
+                ]
+            )
+
+            self.cli_set(
+                [
+                    'firewall',
+                    'ipv4',
+                    'forward',
+                    'filter',
+                    'rule',
+                    '1',
+                    'action',
+                    'accept',
+                ]
+            )
+            self.cli_set(
+                [
+                    'firewall',
+                    'ipv4',
+                    'forward',
+                    'filter',
+                    'rule',
+                    '1',
+                    'source',
+                    'group',
+                    'network-group',
+                    'smoketest_derived',
+                ]
+            )
+
+            self.cli_commit()
+
+            # The manually configured member and both derived members (from
+            # "protocols static route") must all end up in the rendered set
+            nftables_search = [
+                ['ip saddr @N_smoketest_derived', 'accept'],
+                ['elements = { 172.16.200.0/24, 203.0.113.0/24,'],
+                ['203.0.114.0/24 }'],
+            ]
+            self.verify_nftables(nftables_search, 'ip vyos_filter')
+        finally:
+            for network in derived_networks:
+                self.cli_delete(['protocols', 'static', 'route', network])
+            self.cli_commit()
+
+    def test_apply_path_invalid_value(self):
+        # apply-path values never go through a CLI-level <validator/>, as
+        # they are not entered on the CLI. A resolved value that is not
+        # valid for the target leaf (here: a network-group name resolved
+        # into an address-group's "address" leaf) must be rejected instead
+        # of silently entering the nftables set.
+        self.cli_set(
+            [
+                'firewall',
+                'group',
+                'network-group',
+                'smoketest_apply_path_source',
+                'network',
+                '172.16.201.0/24',
+            ]
+        )
+
+        self.cli_set(
+            [
+                'firewall',
+                'group',
+                'address-group',
+                'smoketest_bad_apply_path',
+                'address',
+                '10.0.0.1',
+            ]
+        )
+        self.cli_set(
+            [
+                'firewall',
+                'group',
+                'address-group',
+                'smoketest_bad_apply_path',
+                'apply-path',
+                'firewall group network-group',
+            ]
+        )
+
+        # ConfigError() wraps its message at 72 characters, so match only a
+        # short fragment that can't be split across a wrap point
+        error_message = 'resolved invalid'
+        with self.assertRaisesRegex(ConfigSessionError, error_message):
+            self.cli_commit()
+
     def test_nested_groups(self):
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network1', 'network', '172.16.101.0/24'])

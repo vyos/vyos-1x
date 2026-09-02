@@ -80,6 +80,7 @@
                   <multi/>
                 </properties>
               </leafNode>
+              #include <include/firewall/apply-path.xml.i>
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
@@ -227,6 +228,7 @@
                   <multi/>
                 </properties>
               </leafNode>
+              #include <include/firewall/apply-path.xml.i>
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
@@ -262,6 +264,7 @@
                   <multi/>
                 </properties>
               </leafNode>
+              #include <include/firewall/apply-path.xml.i>
             </children>
           </tagNode>
           <tagNode name="mac-group">
@@ -330,6 +333,7 @@
                   <multi/>
                 </properties>
               </leafNode>
+              #include <include/firewall/apply-path.xml.i>
             </children>
           </tagNode>
           <tagNode name="port-group">

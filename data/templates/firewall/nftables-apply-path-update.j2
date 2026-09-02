@@ -1,0 +1,39 @@
+#!/usr/sbin/nft -f
+
+{% if sets.v4 is vyos_defined %}
+{%     for setname, member_list in sets.v4.items() %}
+flush set ip vyos_filter {{ setname }}
+{%     endfor %}
+
+table ip vyos_filter {
+{%     for setname, member_list in sets.v4.items() %}
+    set {{ setname }} {
+        type ipv4_addr
+        flags interval
+        auto-merge
+{%         if member_list %}
+        elements = { {{ member_list | join(",") }} }
+{%         endif %}
+    }
+{%     endfor %}
+}
+{% endif %}
+
+{% if sets.v6 is vyos_defined %}
+{%     for setname, member_list in sets.v6.items() %}
+flush set ip6 vyos_filter {{ setname }}
+{%     endfor %}
+
+table ip6 vyos_filter {
+{%     for setname, member_list in sets.v6.items() %}
+    set {{ setname }} {
+        type ipv6_addr
+        flags interval
+        auto-merge
+{%         if member_list %}
+        elements = { {{ member_list | join(",") }} }
+{%         endif %}
+    }
+{%     endfor %}
+}
+{% endif %}
