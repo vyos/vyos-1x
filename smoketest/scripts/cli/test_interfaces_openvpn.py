@@ -467,7 +467,38 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['openvpn-option', '--fragment 1300'])
 
+        # check validate() - a raw negotiation list overrides the CLI one, so a
+        # cipher DCO can not serve must be caught there as well
+        self.cli_set(path + ['openvpn-option', '--data-ciphers AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--data-ciphers AES-256-CBC'])
+
+        # check validate() - OpenVPN still honours the 2.4 name for it
+        self.cli_set(path + ['openvpn-option', '--ncp-ciphers AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--ncp-ciphers AES-256-CBC'])
+
+        # an offloadable raw list is fine, ChaCha20-Poly1305 included
+        self.cli_set(
+            path + ['openvpn-option', '--data-ciphers AES-256-GCM:CHACHA20-POLY1305']
+        )
         self.cli_commit()
+        self.cli_delete(
+            path + ['openvpn-option', '--data-ciphers AES-256-GCM:CHACHA20-POLY1305']
+        )
+
+        # so is the built-in list, which OpenVPN expands to AEAD ciphers alone
+        self.cli_set(path + ['openvpn-option', '--data-ciphers DEFAULT'])
+        self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--data-ciphers DEFAULT'])
+
+        self.cli_commit()
+
+        # every rejection above stopped in verify(), so the daemon still has to
+        # be running on the configuration this test started from
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
     def test_openvpn_server_subnet_topology(self):
         # Create OpenVPN server interfaces using different client subnets.
@@ -755,6 +786,18 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256gcm'])
         self.cli_commit()
+
+        # a raw "--cipher" is the fallback cipher in this mode, so it decides
+        # the offload the very same way
+        self.cli_set(path + ['openvpn-option', '--cipher AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+
+        self.cli_delete(path + ['openvpn-option', '--cipher AES-256-CBC'])
+        self.cli_set(path + ['openvpn-option', '--cipher AES-256-GCM'])
+        self.cli_commit()
+
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
     def test_openvpn_options(self):
         # Ensure OpenVPN process restart on openvpn-option CLI node change
