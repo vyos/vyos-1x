@@ -228,37 +228,50 @@ def is_member(conf, interface, intftype=None):
 
 def is_mirror_intf(conf, interface, direction=None):
     """
-    Check whether the passed interface is used for port mirroring. Direction
-    is optional, if not passed it will search all known direction
-    (currently ingress and egress)
+    Check whether the passed interface is used as the mirror target of other
+    interfaces, including VLAN (vif, vif-s, vif-c) sub-interfaces. Direction
+    is optional, if not passed it will search all known direction (currently
+    ingress and egress)
 
     Returns:
     None -> Interface is not a monitor interface
-    Array() -> This interface is a monitor interface of interfaces
+    dict -> {source interface name : source interface config dict} for every
+            interface mirroring into the passed interface
     """
-    from vyos.ifconfig import Section
-
     directions = ['ingress', 'egress']
     if direction not in directions + [None]:
         raise ValueError(f'Unknown interface mirror direction "{direction}"')
 
     direction = directions if direction == None else [direction]
 
-    ret_val = None
+    ret_val = {}
     base = ['interfaces']
 
-    for dir in direction:
-        for iftype in conf.list_nodes(base):
-            iftype_base = base + [iftype]
-            for intf in conf.list_nodes(iftype_base):
-                mirror = iftype_base + [intf, 'mirror', dir, interface]
-                if conf.exists(mirror):
-                    path = ['interfaces', Section.section(intf), intf]
-                    tmp = conf.get_config_dict(path, key_mangling=('-', '_'),
-                                               get_first_key=True)
-                    ret_val = {intf : tmp}
+    def add_mirror_source(path, ifname):
+        """path: CLI path of the (sub-)interface, ifname: its kernel name"""
+        for dir in direction:
+            if conf.exists(path + ['mirror', dir, interface]):
+                ret_val[ifname] = conf.get_config_dict(
+                    path, key_mangling=('-', '_'), get_first_key=True
+                )
+                return
 
-    return ret_val
+    for iftype in conf.list_nodes(base):
+        iftype_base = base + [iftype]
+        for intf in conf.list_nodes(iftype_base):
+            intf_base = iftype_base + [intf]
+            add_mirror_source(intf_base, intf)
+            for vif in conf.list_nodes(intf_base + ['vif']):
+                add_mirror_source(intf_base + ['vif', vif], f'{intf}.{vif}')
+            for vif_s in conf.list_nodes(intf_base + ['vif-s']):
+                add_mirror_source(intf_base + ['vif-s', vif_s], f'{intf}.{vif_s}')
+                for vif_c in conf.list_nodes(intf_base + ['vif-s', vif_s, 'vif-c']):
+                    add_mirror_source(
+                        intf_base + ['vif-s', vif_s, 'vif-c', vif_c],
+                        f'{intf}.{vif_s}.{vif_c}',
+                    )
+
+    return ret_val if ret_val else None
 
 def has_address_configured(conf, intf):
     """

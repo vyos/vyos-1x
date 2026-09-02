@@ -39,6 +39,7 @@ from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_address
 from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.network import interface_exists
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
@@ -1639,33 +1640,47 @@ class Interface(Control):
         # Please refer to the document for details
         #   - https://man7.org/linux/man-pages/man8/tc.8.html
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
-        # Depending if we are the source or the target interface of the port
-        # mirror we need to setup some variables.
 
         # Don't allow for netns yet
         if 'netns' in self.config:
             return None
 
-        source_if = self.ifname
+        # Our own mirror/redirect configuration
+        self._apply_mirror_redirect(self.ifname, self.config)
 
-        mirror_config = None
-        if 'mirror' in self.config:
-            mirror_config = self.config['mirror']
-        if 'is_mirror_intf' in self.config:
-            source_if = next(iter(self.config['is_mirror_intf']))
-            mirror_config = self.config['is_mirror_intf'][source_if].get('mirror', None)
+        # Interfaces using us as their mirror target: interface types are
+        # committed in priority order, so we may not have existed yet when
+        # those interfaces were configured and their tc(8) filter could
+        # not be installed. Install it on their behalf now that we exist
+        # T3089, T6393
+        for source_if, source_config in self.config.get('is_mirror_intf', {}).items():
+            if not interface_exists(source_if):
+                continue
+            self._apply_mirror_redirect(source_if, source_config)
 
-        redirect_config = None
-
+    def _apply_mirror_redirect(self, source_if, config):
+        """
+        Install the tc(8) mirror or redirect filters of interface source_if
+        according to its configuration dictionary config. Depending if we are
+        the source or the target interface of the port mirror, source_if is
+        either our own or the mirroring interface.
+        """
         # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
         # qdisc on specified device") - we simply cleanup all stuff here
-        if not 'qos' in self.config:
+        if not 'qos' in config:
             self._popen(f'tc qdisc del dev {source_if} root 2>/dev/null')
             self._popen(f'tc qdisc del dev {source_if} ingress 2>/dev/null')
 
         # Apply interface mirror policy
-        if mirror_config:
-            for direction, target_if in mirror_config.items():
+        if 'mirror' in config:
+            for direction, target_if in config['mirror'].items():
+                if not interface_exists(target_if):
+                    print(
+                        f'Mirror target "{target_if}" of "{source_if}" does not '
+                        'exist yet, tc filter will be installed once it is created'
+                    )
+                    continue
+
                 if direction == 'ingress':
                     handle = 'ffff: ingress'
                     parent = 'ffff:'
@@ -1683,11 +1698,11 @@ class Interface(Control):
                 if err: print('tc filter for mirror port failed')
 
         # Apply interface traffic redirection policy
-        elif 'redirect' in self.config:
+        elif 'redirect' in config:
             _, err = self._popen(f'tc qdisc add dev {source_if} handle ffff: ingress')
             if err: print(f'tc qdisc add for redirect failed!')
 
-            target_if = self.config['redirect']
+            target_if = config['redirect']
             _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
                                  f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
                                  f'egress redirect dev {target_if}')
