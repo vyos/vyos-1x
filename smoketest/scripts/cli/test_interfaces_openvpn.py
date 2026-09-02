@@ -467,6 +467,33 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['openvpn-option', '--fragment 1300'])
 
+        # check validate() - a raw negotiation list overrides the CLI one, so a
+        # cipher DCO can not serve must be caught there as well
+        self.cli_set(path + ['openvpn-option', '--data-ciphers AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--data-ciphers AES-256-CBC'])
+
+        # check validate() - OpenVPN still honours the 2.4 name for it
+        self.cli_set(path + ['openvpn-option', '--ncp-ciphers AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--ncp-ciphers AES-256-CBC'])
+
+        # an offloadable raw list is fine, ChaCha20-Poly1305 included
+        self.cli_set(
+            path + ['openvpn-option', '--data-ciphers AES-256-GCM:CHACHA20-POLY1305']
+        )
+        self.cli_commit()
+        self.cli_delete(
+            path + ['openvpn-option', '--data-ciphers AES-256-GCM:CHACHA20-POLY1305']
+        )
+
+        # so is the built-in list, which OpenVPN expands to AEAD ciphers alone
+        self.cli_set(path + ['openvpn-option', '--data-ciphers DEFAULT'])
+        self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--data-ciphers DEFAULT'])
+
         self.cli_commit()
 
     def test_openvpn_server_subnet_topology(self):
