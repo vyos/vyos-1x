@@ -234,17 +234,20 @@ def generate(https):
         ca_name = https['certificates']['ca_certificate']
         pki_ca = dict_search(f'pki.ca.{ca_name}', https)
         if pki_ca:
-            # Build chain for the selected CA only (not all configured CAs)
-            # to prevent any other CA from authenticating REST API clients
-            all_ca_certs = {
-                load_certificate(cert_data['certificate'])
-                for cert_data in dict_search('pki.ca', https, default={}).values()
-            }
+            # Write only the selected CA certificate to the nginx trust bundle.
+            # Using find_chain() would walk up to the root CA, allowing sibling
+            # intermediates under the same root to authenticate. Writing only the
+            # configured CA restricts the mTLS trust boundary to certificates
+            # issued directly by that CA.
             selected_ca = load_certificate(pki_ca['certificate'])
-            ca_chain_certs = find_chain(selected_ca, all_ca_certs)
             mtls_ca_path = os.path.join(cert_dir, f'{ca_name}_mtls_ca.pem')
-            ca_chain = '\n'.join(encode_certificate(c) for c in ca_chain_certs)
-            write_file(mtls_ca_path, ca_chain, user=user, group=group, mode=0o644)
+            write_file(
+                mtls_ca_path,
+                encode_certificate(selected_ca),
+                user=user,
+                group=group,
+                mode=0o644,
+            )
             https['certificates']['mtls_ca_path'] = mtls_ca_path
             https['certificates']['verify_client'] = dict_search(
                 'certificates.verify_client', https
