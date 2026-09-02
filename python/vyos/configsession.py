@@ -204,8 +204,21 @@ class ConfigSession(object):
             self._vyconf_session = None
 
         self.shared = shared
+        self._finalizer = None
+        self._rebind_vyconf_finalizer()
 
-        if not self.shared and self._vyconf_session:
+    def _rebind_vyconf_finalizer(self):
+        """
+        (Re)register weakref finalizer for the current VyconfSession.
+
+        Call whenever self._vyconf_session is replaced so finalize_vyconf tears
+        down the live session, not a stale object left from an earlier setup.
+        """
+        finalizer = getattr(self, '_finalizer', None)
+        if finalizer is not None:
+            finalizer.detach()
+            self._finalizer = None
+        if not getattr(self, 'shared', False) and self._vyconf_session is not None:
             self._finalizer = weakref.finalize(
                 self, self.finalize_vyconf, self._vyconf_session
             )
@@ -267,6 +280,61 @@ class ConfigSession(object):
 
     def vyconf_backend(self) -> bool:
         return bool(self._vyconf_session)
+
+    def session_exists(self) -> bool:
+        """
+        Return True if the underlying cli-shell-api config session is still live.
+
+        Used by long-lived callers (HTTP API) that keep one ConfigSession for the
+        process lifetime and must detect mid-life session death.
+        """
+        try:
+            self.__run_command([CLI_SHELL_API, 'inSession'])
+            return True
+        except ConfigSessionError:
+            return False
+
+    def ensure_session(self) -> bool:
+        """
+        Ensure a live config session exists for this object.
+
+        If the session has died, best-effort teardown and re-setup using the same
+        session id / environment. Returns True if a live session is available
+        after the call, False if re-setup failed (caller may recreate the object).
+        """
+        if self.session_exists():
+            return True
+
+        try:
+            subprocess.check_output(
+                [CLI_SHELL_API, 'teardownSession'],
+                env=self.__session_env,
+                stderr=subprocess.STDOUT,
+            )
+        except Exception:
+            # Session may already be gone; continue to setup.
+            pass
+
+        try:
+            self.__run_command([CLI_SHELL_API, 'setupSession'])
+            # Build replacement first so a failed VyconfSession() does not leave
+            # a dead backend while session_exists() already returns True.
+            new_vyconf_session = None
+            if vyconf_backend() and boot_configuration_complete():
+                new_vyconf_session = VyconfSession(
+                    pid=self.__session_id, on_error=ConfigSessionError
+                )
+            self._vyconf_session = new_vyconf_session
+            # Detach any finalizer bound to a previous VyconfSession and bind
+            # one for the replacement (or none if vyconf is off).
+            self._rebind_vyconf_finalizer()
+            return self.session_exists()
+        except ConfigSessionError:
+            # setupSession may have succeeded while Vyconf construction failed —
+            # drop the stale backend so the next call cannot route through it.
+            self._vyconf_session = None
+            self._rebind_vyconf_finalizer()
+            return False
 
     def set(self, path, value=None):
         if not value:
@@ -367,10 +435,17 @@ class ConfigSession(object):
         return out
 
     def discard(self):
-        if self._vyconf_session is None:
-            self.__run_command([DISCARD])
-        else:
-            out, _ = self._vyconf_session.discard()
+        try:
+            if self._vyconf_session is None:
+                self.__run_command([DISCARD])
+            else:
+                self._vyconf_session.discard()
+        except ConfigSessionError as e:
+            # Dead session: discard must not cascade a second error (HTTP API
+            # error paths always call discard; re-raising turns a 400 into 500).
+            if 'without config session' in str(e):
+                return
+            raise
 
     def show_config(self, path, format='raw'):
         if self._vyconf_session is None:

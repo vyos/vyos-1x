@@ -89,6 +89,49 @@ lock = Lock()
 
 asynclock = asyncio.Lock()
 
+# Substring from cli-shell-api / my_* when the config session is gone.
+_SESSION_LOST_MARKER = 'without config session'
+_SESSION_UNAVAILABLE = 'config session unavailable; retry'
+
+
+def _is_session_lost(err: BaseException) -> bool:
+    return _SESSION_LOST_MARKER in str(err)
+
+
+def _recover_api_session(state: SessionState) -> bool:
+    """
+    Re-establish a live ConfigSession for the HTTP API process.
+
+    Caller must hold the configure lock. Prefer ensure_session on the existing
+    object; fall back to constructing a new ConfigSession with the process PID.
+    Returns True if state.session is usable afterward.
+    """
+    # Local import: avoid circular import at module load (ConfigSession → …)
+    import os
+
+    from vyos.configsession import ConfigSession
+
+    session = state.session
+    if session is not None:
+        try:
+            if session.ensure_session():
+                LOG.warning('HTTP API config session re-established via ensure_session')
+                return True
+        except Exception as e:
+            LOG.warning('ensure_session failed: %s', e)
+
+    try:
+        # Prevent __del__ on the dead object from racing teardown of the new one.
+        if session is not None:
+            session.shared = True
+        state.session = ConfigSession(os.getpid())
+        LOG.warning('HTTP API config session recreated')
+        return True
+    except Exception as e:
+        LOG.error('failed to recreate HTTP API config session: %s', e)
+        return False
+
+
 def check_auth(key_list, key):
     key_id = None
     for k in key_list:
@@ -372,8 +415,6 @@ def _execute_configure_op(
     is_background_job = background_tasks is None
 
     state = SessionState()
-    session = state.session
-    env = session.get_session_env()
 
     # A non-zero confirm_time will start commit-confirm timer on commit
     confirm_time = 0
@@ -391,12 +432,25 @@ def _execute_configure_op(
     # so the lock is really global
     lock.acquire()
 
-    config = Config(session_env=env)
-
     status = 200
     msg = None
     error_msg = None
+    env = None
+    session = None
     try:
+        # Mid-life session death leaves the process up but every configure
+        # failing until restart. Heal before touching the shared session.
+        session = state.session
+        if session is None or not session.session_exists():
+            if not _recover_api_session(state):
+                status = 503
+                error_msg = _SESSION_UNAVAILABLE
+                raise ConfigSessionError(error_msg)
+            session = state.session
+
+        env = session.get_session_env()
+        config = Config(session_env=env)
+
         for c in data:
             op = c.op
             op_error = ConfigSessionError(f"'{op}' is not a valid operation")
@@ -493,20 +547,29 @@ def _execute_configure_op(
 
         LOG.info(f"Configuration modified via HTTP API using key '{state.id}'")
     except ConfigSessionError as e:
-        session.discard()
-        status = 400
+        if session is not None:
+            session.discard()
         if state.debug:
             LOG.critical(f'ConfigSessionError:\n {traceback.format_exc()}')
-        error_msg = str(e)
+        if _is_session_lost(e) or error_msg == _SESSION_UNAVAILABLE:
+            # Recover for the next request; do not leave the process wedged.
+            if status != 503:
+                _recover_api_session(state)
+            status = 503
+            error_msg = _SESSION_UNAVAILABLE
+        else:
+            status = 400
+            error_msg = str(e)
     except Exception:
-        session.discard()
+        if session is not None:
+            session.discard()
         LOG.critical(traceback.format_exc())
         status = 500
 
         # Don't give the details away to the outer world
         error_msg = 'An internal error occurred. Check the logs for details.'
     finally:
-        if 'IN_COMMIT_CONFIRM' in env:
+        if env is not None and 'IN_COMMIT_CONFIRM' in env:
             del env['IN_COMMIT_CONFIRM']
         lock.release()
 
