@@ -544,6 +544,55 @@ class BasicInterfaceTest:
                     self.assertFalse(is_mirrored_to(interface, mirror, 'ffff'))
                     self.assertFalse(is_mirrored_to(interface, mirror, '1'))
 
+        def test_span_mirror_target_created_later(self):
+            if not self._test_mirror:
+                self.skipTest(MSG_TESTCASE_UNSUPPORTED)
+
+            mirror = 'tun21354'
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+            # A mirror target which is neither configured nor existing must
+            # still be rejected
+            for interface in self._interfaces:
+                self.cli_set(
+                    self._base_path + [interface, 'mirror', 'ingress', 'tun4711']
+                )
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            # Mirror into a target which is created in the very same commit,
+            # after the mirroring interfaces due to its higher priority
+            for interface in self._interfaces:
+                self.cli_set(self._base_path + [interface, 'mirror', 'ingress', mirror])
+                self.cli_set(self._base_path + [interface, 'mirror', 'egress', mirror])
+            self.cli_set(['interfaces', 'tunnel', mirror, 'encapsulation', 'gre'])
+            self.cli_set(
+                ['interfaces', 'tunnel', mirror, 'source-address', '198.51.100.1']
+            )
+            self.cli_set(['interfaces', 'tunnel', mirror, 'remote', '198.51.100.254'])
+            self.cli_commit()
+
+            try:
+                # every mirroring interface must have its
+                # filters, not only the last one found
+                for interface in self._interfaces:
+                    self.assertTrue(is_mirrored_to(interface, mirror, 'ffff'))
+                    self.assertTrue(is_mirrored_to(interface, mirror, '1'))
+            finally:
+                # delete interface mirror and target
+                for interface in self._interfaces:
+                    self.cli_delete(self._base_path + [interface, 'mirror'])
+                self.cli_delete(['interfaces', 'tunnel', mirror])
+                self.cli_commit()
+
+            # check that configuration from tc is removed
+
+            for interface in self._interfaces:
+                self.assertFalse(is_mirrored_to(interface, mirror, 'ffff'))
+                self.assertFalse(is_mirrored_to(interface, mirror, '1'))
+
         def test_interface_disable(self):
             # Check if description can be added to interface and
             # can be read back
