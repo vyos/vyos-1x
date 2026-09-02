@@ -14,6 +14,12 @@
   logfile = ""
   hostname = "{{ hostname }}"
   omit_hostname = false
+{% if global_tag is vyos_defined %}
+[global_tags]
+{%     for tag, tag_config in global_tag.items() %}
+  {{ tag }} = "{{ tag_config.value }}"
+{%     endfor %}
+{% endif %}
 {% if azure_data_explorer is vyos_defined %}
 ### Azure Data Explorer ###
 [[outputs.azure_data_explorer]]

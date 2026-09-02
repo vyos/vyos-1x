@@ -13,6 +13,26 @@
               <priority>1280</priority>
             </properties>
             <children>
+              <tagNode name="global-tag">
+                <properties>
+                  <help>Global tag applied to every metric collected by this agent</help>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Tag name is limited to alphanumerical characters and can contain hyphens and underscores</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="value">
+                    <properties>
+                      <help>Value of this global tag</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Tag value</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
               <node name="influxdb">
                 <properties>
                   <help>Output plugin InfluxDB</help>

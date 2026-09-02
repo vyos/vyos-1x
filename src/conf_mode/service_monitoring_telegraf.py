@@ -126,6 +126,12 @@ def verify(monitoring):
 
     verify_vrf(monitoring)
 
+    # Verify global-tag
+    if 'global_tag' in monitoring:
+        for tag, tag_config in monitoring['global_tag'].items():
+            if 'value' not in tag_config:
+                raise ConfigError(f'Global tag "{tag}" has no value assigned!')
+
     # Verify influxdb
     if 'influxdb' in monitoring:
         if 'authentication' not in monitoring['influxdb'] or \
