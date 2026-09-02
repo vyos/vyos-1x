@@ -90,6 +90,14 @@ vrf {{ vrf }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
+{# IPv4 routes from DHCP interfaces received via RFC 3442 (option 121) #}
+{% if dhcp is vyos_defined %}
+{%     for interface, interface_config in dhcp.items() %}
+{%         for prefix, next_hop in interface | get_dhcp_classless_static_routes %}
+{{ ip_prefix }} route {{ prefix }} {{ next_hop }} {{ interface }} tag 210 {{ interface_config.dhcp_options.default_route_distance if interface_config.dhcp_options.default_route_distance is vyos_defined }}
+{%         endfor %}
+{%     endfor %}
+{% endif %}
 {# IPv4 default routes from PPPoE interfaces #}
 {% if pppoe is vyos_defined %}
 {%     for interface, interface_config in pppoe.items() if interface_config.no_default_route is not vyos_defined %}
