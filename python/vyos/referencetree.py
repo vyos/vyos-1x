@@ -25,7 +25,7 @@ class ReferenceTreeError(Exception):
 
 
 class ReferenceTree:
-    # pylint: disable=too-many-instance-attributes,raise-missing-from
+    # pylint: disable=too-many-instance-attributes,raise-missing-from,import-outside-toplevel
     def __init__(self, cache_file=reference_tree_cache, libpath=LIBPATH):
         self.__pointer = None
         self.__lib = get_lib(libpath)
@@ -61,3 +61,49 @@ class ReferenceTree:
 
     def to_json(self):
         return self.__lib.to_json_reference_tree(self.__pointer).decode()
+
+    def get_owner(self, path):
+        return self.__lib.get_owner(self.__pointer, path.encode()).decode()
+
+    def get_multi_nodes(self, tag_value_placeholder='', as_tuple=False):
+        import json
+
+        res = self.__lib.get_multi_nodes(
+            self.__pointer, tag_value_placeholder.encode()
+        ).decode()
+        sort = sorted(json.loads(res))
+        return list(map(tuple, sort)) if as_tuple else sort
+
+    def get_tag_nodes(self, tag_value_placeholder='', as_tuple=False):
+        import json
+
+        res = self.__lib.get_tag_nodes(
+            self.__pointer, tag_value_placeholder.encode()
+        ).decode()
+        sort = sorted(json.loads(res))
+        return list(map(tuple, sort)) if as_tuple else sort
+
+    def get_nodes_of_kind(self, kind, tag_value_placeholder=''):
+        import json
+
+        res = self.__lib.get_nodes_of_kind(
+            self.__pointer, kind.encode(), tag_value_placeholder.encode()
+        ).decode()
+        return sorted(json.loads(res))
+
+    def get_rdeps_of_kind(self, kind, tag_value_placeholder=''):
+        import json
+
+        res = self.__lib.get_rdeps_of_kind(
+            self.__pointer, kind.encode(), tag_value_placeholder.encode()
+        ).decode()
+        return sorted(json.loads(res))
+
+    def get_rdeps_of_kind_data(self, kind, tag_value_placeholder='', as_tuple=True):
+        import json
+
+        res = self.__lib.get_rdeps_of_kind_data(
+            self.__pointer, kind.encode(), tag_value_placeholder.encode()
+        ).decode()
+        sort = sorted(json.loads(res))
+        return list(map(tuple, sort)) if as_tuple else sort

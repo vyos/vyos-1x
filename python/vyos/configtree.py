@@ -78,6 +78,7 @@ _PROTOTYPES = {
     'mask_inclusive': ([c_void_p, c_void_p], c_void_p),
     'mask_exclusive': ([c_void_p, c_void_p], c_void_p),
     'subtree_from_partial': ([c_void_p, c_void_p, c_void_p, c_char_p], c_void_p),
+    'subtree_values_of_path': ([c_void_p, c_void_p, c_char_p], c_char_p),
     'reference_tree_to_json': ([c_char_p, c_char_p, c_char_p], None),
     'merge_reference_tree_cache': ([c_char_p, c_char_p, c_char_p], None),
     'interface_definitions_to_cache': ([c_char_p, c_char_p], None),
@@ -89,6 +90,12 @@ _PROTOTYPES = {
     'read_internal_string_reference_tree': ([c_char_p], c_void_p),
     'write_internal_reference_tree': ([c_void_p, c_char_p], None),
     'to_json_reference_tree': ([c_void_p], c_char_p),
+    'get_owner': ([c_void_p, c_char_p], c_char_p),
+    'get_multi_nodes': ([c_void_p, c_char_p], c_char_p),
+    'get_tag_nodes': ([c_void_p, c_char_p], c_char_p),
+    'get_nodes_of_kind': ([c_void_p, c_char_p, c_char_p], c_char_p),
+    'get_rdeps_of_kind': ([c_void_p, c_char_p, c_char_p], c_char_p),
+    'get_rdeps_of_kind_data': ([c_void_p, c_char_p, c_char_p], c_char_p),
 }
 
 
@@ -101,6 +108,8 @@ class _Lib:
     every entry point, and the previous per-instance binding code only failed
     on symbols that were actually used.
     """
+
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, libpath):
         self.__dict__['_lib'] = cdll.LoadLibrary(libpath)
@@ -331,7 +340,9 @@ class ConfigTree:
                     self.__config, path_str, str(value).encode()
                 )
             else:
-                res = self.__lib.set_add_value(self.__config, path_str, str(value).encode())
+                res = self.__lib.set_add_value(
+                    self.__config, path_str, str(value).encode()
+                )
 
         if res != 0:
             msg = self.__lib.get_error().decode()
@@ -694,6 +705,35 @@ def subtree_from_partial(
     return tree
 
 
+def subtree_values_of_path(
+    config_tree: ConfigTree,
+    path: list[str],
+    reference_tree: 'ReferenceTree',
+    libpath=LIBPATH,
+) -> list[tuple[list[str], list[str]]]:
+    # pylint: disable=raise-missing-from
+    check_path(path)
+    path_str = ' '.join(map(str, path)).encode()
+
+    try:
+        lib = get_lib(libpath)
+
+        res = lib.subtree_values_of_path(
+            reference_tree.get_tree(),
+            config_tree.get_tree(),
+            path_str,
+        )
+        res = res.decode()
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if res == '#1@':
+        msg = lib.get_error().decode()
+        raise ConfigTreeError(msg)
+
+    lst = json.loads(res)
+    return list(map(tuple, lst))
+
+
 def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH):
     # pylint: disable=raise-missing-from
     try:
@@ -738,7 +778,9 @@ def reference_tree_cache_to_json(cache_path, render_file, libpath=LIBPATH):
     # pylint: disable=raise-missing-from
     try:
         lib = get_lib(libpath)
-        res = lib.reference_tree_cache_to_json(cache_path.encode(), render_file.encode())
+        res = lib.reference_tree_cache_to_json(
+            cache_path.encode(), render_file.encode()
+        )
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:

@@ -8,6 +8,7 @@ open Commitd_client
 module VT = Vytree
 module CT = Config_tree
 module RT = Reference_tree
+module Util_rt = Util_reference_tree
 module TA = Tree_alg
 module CDict = Config_dict
 module D = Diff
@@ -566,6 +567,45 @@ let config_dict c_ptr_c c_ptr_r c_ptr_m path get_node with_defaults =
     let with_node = not get_node in
     CDict.config_dict ~with_defaults:with_defaults ~with_first_node:with_node rt ct mask path
 
+let get_owner c_ptr path =
+    let rt = Root.get c_ptr in
+    let path = split_on_whitespace path in
+    match Util_rt.get_path_owner rt path with
+    | Some o -> o
+    | None -> ""
+
+let get_multi_nodes c_ptr tag_value_placeholder =
+    let rt = Root.get c_ptr in
+    Util_rt.get_multi_nodes_yojson ~tag_value_placeholder:tag_value_placeholder rt
+
+let get_tag_nodes c_ptr tag_value_placeholder =
+    let rt = Root.get c_ptr in
+    Util_rt.get_tag_nodes_yojson ~tag_value_placeholder:tag_value_placeholder rt
+
+let get_nodes_of_kind c_ptr kind tag_value_placeholder =
+    let rt = Root.get c_ptr in
+    Util_rt.get_nodes_of_kind_yojson ~tag_value_placeholder:tag_value_placeholder rt kind
+
+let get_rdeps_of_kind c_ptr kind tag_value_placeholder =
+    let rt = Root.get c_ptr in
+    Util_rt.get_rdeps_of_kind_yojson ~tag_value_placeholder:tag_value_placeholder rt kind
+
+let get_rdeps_of_kind_data c_ptr kind tag_value_placeholder =
+    let rt = Root.get c_ptr in
+    Util_rt.get_rdeps_of_kind_data_yojson ~tag_value_placeholder:tag_value_placeholder rt kind
+
+let subtree_values_of_path c_ptr_rt c_ptr_ct path =
+    let rt = Root.get c_ptr_rt in
+    let ct = Root.get c_ptr_ct in
+    let path = split_on_whitespace path in
+    try
+        error_message := "";
+        (Derived.subtree_values_of_path_yojson[@alert "-exn"]) rt ct path
+    with
+        Derived.Malformed_path s ->
+            let msg = Printf.sprintf "Malformed path: \'%s\'" s in
+            error_message := msg; "#1@"
+
 module Stubs(I : Cstubs_inverted.INTERNAL) =
 struct
 
@@ -615,4 +655,11 @@ struct
   let () = I.internal "subtree_from_partial" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning (ptr void)) subtree_from_partial
   let () = I.internal "validate_tree_filter" ((ptr void) @-> string @-> string @-> returning (ptr void)) validate_tree_filter
   let () = I.internal "config_dict" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> bool @-> bool @-> returning string) config_dict
+  let () = I.internal "get_owner" ((ptr void) @-> string @-> returning string) get_owner
+  let () = I.internal "get_multi_nodes" ((ptr void) @-> string @-> returning string) get_multi_nodes
+  let () = I.internal "get_tag_nodes" ((ptr void) @-> string @-> returning string) get_tag_nodes
+  let () = I.internal "get_nodes_of_kind" ((ptr void) @-> string @-> string @-> returning string) get_nodes_of_kind
+  let () = I.internal "get_rdeps_of_kind" ((ptr void) @-> string @-> string @-> returning string) get_rdeps_of_kind
+  let () = I.internal "get_rdeps_of_kind_data" ((ptr void) @-> string @-> string @-> returning string) get_rdeps_of_kind_data
+  let () = I.internal "subtree_values_of_path" ((ptr void) @-> (ptr void) @-> string @-> returning string) subtree_values_of_path
 end
