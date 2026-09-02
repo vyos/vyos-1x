@@ -41,11 +41,37 @@ from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 
 PROCESS_NAME = 'vpp_main'
+VPP_EXPORTER_PROCESS_NAME = 'vpp_prometheus_export'
 VPP_CONF = '/run/vpp/vpp.conf'
 base_path = ['vpp']
+prometheus_base_path = ['service', 'monitoring', 'prometheus']
 resource_path = base_path + ['settings', 'resource-allocation']
 interfaces_path = ['interfaces', 'vpp']
 interface = 'eth1'
+vpp_exporter_service_file = '/etc/systemd/system/vpp_exporter.service'
+vpp_exporter_enable_link = '/etc/systemd/system/vpp.service.wants/vpp_exporter.service'
+vpp_exporter_vrf = 'vpp-exporter'
+vpp_system_stat_patterns = (
+    '^/sys/heartbeat$',
+    '^/sys/last_stats_clear$',
+    '^/sys/boottime$',
+    '^/sys/vector_rate$',
+    '^/sys/vector_rate_per_worker$',
+    '^/sys/loops_per_worker$',
+    '^/sys/num_worker_threads$',
+    '^/sys/last_update$',
+    '^/sys/input_rate$',
+)
+vpp_nat44_stat_patterns = (
+    '^/nat44-.*/total-sessions$',
+    '^/nat44-ed/max-cfg-sessions$',
+    '^/nat44-ed/in2out/fastpath/.*$',
+    '^/nat44-ed/out2in/fastpath/.*$',
+    '^/nat44-ed/in2out/slowpath/.*$',
+    '^/nat44-ed/out2in/slowpath/.*$',
+    '^/nat44-ed/hairpinning$',
+)
+vpp_acl_stat_patterns = ('^/acl/.*/matches$',)
 
 
 def get_vpp_config():
@@ -122,6 +148,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             # Ensure these cleanup operations always run
             self.cli_delete(base_path)
             self.cli_delete(interfaces_path)
+            self.cli_delete(prometheus_base_path)
+            self.cli_delete(['vrf', 'name', vpp_exporter_vrf])
             self.cli_commit()
 
             # delete address and any custom MAC for the Ethernet interface
@@ -907,6 +935,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
             conf = get_vpp_config()
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
+
+    def test_11_4_statseg_per_node_counters(self):
+        self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
+        self.cli_commit()
+
+        conf = get_vpp_config()
+        self.assertEqual(conf['statseg']['per-node-counters'], 'on')
 
     def test_12_vpp_ipsec_xfrm_nl(self):
         rx_buffer_zise = default_resource_map.get('netlink_rx_buffer_size')
@@ -1833,6 +1868,91 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Verify promisc is disabled
         _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
         self.assertNotRegex(out, r'flags:.*\bpromisc\b')
+
+    def test_26_1_vpp_exporter_default_groups(self):
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_commit()
+
+        file_content = read_file(vpp_exporter_service_file)
+        self.assertIn('port 9482', file_content)
+        self.assertIn('socket-name /run/vpp/stats.sock', file_content)
+        self.assertIn('^/interfaces', file_content)
+        self.assertIn('^/err', file_content)
+        self.assertIn('^/buffer-pools', file_content)
+        for pattern in vpp_system_stat_patterns:
+            self.assertIn(pattern, file_content)
+        self.assertIn('^/workers', file_content)
+        self.assertIn('^/mem', file_content)
+        self.assertNotIn('^/nodes', file_content)
+        for pattern in vpp_nat44_stat_patterns:
+            self.assertNotIn(pattern, file_content)
+        for pattern in vpp_acl_stat_patterns:
+            self.assertNotIn(pattern, file_content)
+        self.assertIn('PartOf=vpp.service', file_content)
+        self.assertIn('BindsTo=vpp.service', file_content)
+        self.assertIn('WantedBy=vpp.service', file_content)
+        self.assertTrue(os.path.islink(vpp_exporter_enable_link))
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+        self.cli_delete(prometheus_base_path)
+        self.cli_commit()
+
+        self.assertFalse(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+        self.assertFalse(os.path.exists(vpp_exporter_service_file))
+        self.assertFalse(os.path.lexists(vpp_exporter_enable_link))
+
+    def test_26_2_vpp_exporter_selected_groups(self):
+        exporter_path = prometheus_base_path + ['vpp-exporter']
+        self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
+        self.cli_set(exporter_path)
+        self.cli_set(exporter_path + ['stat-group', 'interfaces'])
+        self.cli_set(exporter_path + ['stat-group', 'buffer-pools'])
+        self.cli_set(exporter_path + ['stat-group', 'system'])
+        self.cli_set(exporter_path + ['stat-group', 'nodes'])
+        self.cli_set(exporter_path + ['stat-group', 'memory'])
+        self.cli_set(exporter_path + ['stat-group', 'nat44'])
+        self.cli_set(exporter_path + ['stat-group', 'acl'])
+        self.cli_commit()
+
+        file_content = read_file(vpp_exporter_service_file)
+        self.assertIn('^/interfaces', file_content)
+        self.assertIn('^/buffer-pools', file_content)
+        for pattern in vpp_system_stat_patterns:
+            self.assertIn(pattern, file_content)
+        self.assertIn('^/nodes', file_content)
+        self.assertIn('^/mem', file_content)
+        for pattern in vpp_nat44_stat_patterns:
+            self.assertIn(pattern, file_content)
+        for pattern in vpp_acl_stat_patterns:
+            self.assertIn(pattern, file_content)
+        self.assertNotIn('^/err', file_content)
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+        rc, output = rc_cmd(
+            'curl --silent --show-error --connect-timeout 2 --max-time 15 '
+            'http://127.0.0.1:9482/metrics'
+        )
+        self.assertEqual(rc, 0)
+        self.assertIn('nodes_calls{', output)
+        self.assertIn('sys_num_worker_threads', output)
+
+    def test_26_3_vpp_exporter_vrf(self):
+        self.cli_set(['vrf', 'name', vpp_exporter_vrf, 'table', '1001'])
+        self.cli_set(prometheus_base_path + ['vpp-exporter', 'vrf', vpp_exporter_vrf])
+        self.cli_commit()
+
+        file_content = read_file(vpp_exporter_service_file)
+        self.assertIn(
+            f'ExecStart=ip vrf exec {vpp_exporter_vrf} '
+            '/usr/bin/vpp_prometheus_export',
+            file_content,
+        )
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+        self.cli_delete(prometheus_base_path)
+        self.cli_commit()
+        self.cli_delete(['vrf', 'name', vpp_exporter_vrf])
+        self.cli_commit()
 
 
 if __name__ == '__main__':
