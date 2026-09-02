@@ -91,6 +91,34 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'username = "{loki_username}"', config)
         self.assertIn(f'password = "{loki_password}"', config)
 
+    def test_03_global_tags(self):
+        tags = {
+            'role': 'edge-router',
+            'site-id': 'fra01',
+        }
+
+        for tag, value in tags.items():
+            self.cli_set(base_path + ['global-tag', tag, 'value', value])
+        self.cli_set(base_path + ['prometheus-client'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+
+        self.assertIn(f'[global_tags]', config)
+        for tag, value in tags.items():
+            self.assertIn(f'{tag} = "{value}"', config)
+
+    def test_04_global_tag_no_value(self):
+        self.cli_set(base_path + ['prometheus-client'])
+        self.cli_set(base_path + ['global-tag', 'incomplete-tag'])
+        # value not set - commit must fail
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['global-tag', 'incomplete-tag'])
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
