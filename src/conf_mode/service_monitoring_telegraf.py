@@ -29,6 +29,7 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
+from vyos.xml_ref import default_value
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -117,6 +118,50 @@ def get_config(config=None):
     if not conf.exists(base + ['loki']):
         del monitoring['loki']
 
+    # T9260: relay the local Prometheus frr-exporter endpoint through
+    # Telegraf's inputs.prometheus plugin, so FRR routing state can reach the
+    # already configured Telegraf outputs without an external Prometheus
+    # scraper having to be given inbound access to the router.
+    if 'frr_metrics' in monitoring:
+        frr_exporter_base = ['service', 'monitoring', 'prometheus', 'frr-exporter']
+        if not conf.exists(frr_exporter_base):
+            # frr_exporter isn't configured/running - nothing to relay
+            monitoring['frr_metrics'] = {'not_configured': True}
+        else:
+            frr_exporter = conf.get_config_dict(
+                frr_exporter_base,
+                key_mangling=('-', '_'),
+                get_first_key=True,
+                with_recursive_defaults=True,
+            )
+
+            # frr_exporter listens on all addresses when no listen-address is
+            # configured, so a loopback scrape is always possible in that case
+            address = '127.0.0.1'
+            if 'listen_address' in frr_exporter:
+                address = frr_exporter['listen_address'][0]
+
+            # Keep the Prometheus input in sync with the prometheus-client
+            # output metric_version, when that output is configured
+            if 'prometheus_client' in monitoring:
+                metric_version = monitoring['prometheus_client']['metric_version']
+            else:
+                metric_version = default_value(
+                    base + ['prometheus-client', 'metric-version']
+                )
+
+            monitoring['frr_metrics'] = {
+                'address': address,
+                'port': frr_exporter['port'],
+                'metric_version': metric_version,
+            }
+
+            # frr_exporter runs under "ip vrf exec" when a VRF is set - if
+            # Telegraf runs in a different VRF (or none), the loopback
+            # scrape will not reach it
+            if frr_exporter.get('vrf') != monitoring.get('vrf'):
+                monitoring['frr_metrics']['vrf_mismatch'] = {}
+
     return monitoring
 
 def verify(monitoring):
@@ -181,6 +226,20 @@ def verify(monitoring):
                 raise ConfigError(
                     f'Authentication "username" and "password" are mandatory!'
                 )
+
+    # Verify local FRR metrics relay
+    if 'frr_metrics' in monitoring:
+        if 'not_configured' in monitoring['frr_metrics']:
+            raise ConfigError(
+                '"service monitoring prometheus frr-exporter" must be '
+                'configured before FRR metrics can be relayed via Telegraf!'
+            )
+
+        if 'vrf_mismatch' in monitoring['frr_metrics']:
+            raise ConfigError(
+                'Telegraf and the Prometheus frr-exporter must run in the '
+                'same VRF for FRR metrics to be relayed locally!'
+            )
 
     return None
 
