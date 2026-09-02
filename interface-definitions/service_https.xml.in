@@ -50,6 +50,73 @@
                       <hidden/>
                     </properties>
                   </leafNode>
+                  <node name="authentication">
+                    <properties>
+                      <help>REST authentication</help>
+                    </properties>
+                    <children>
+                      <leafNode name="expiration">
+                        <properties>
+                          <help>Token time to expire in seconds</help>
+                          <valueHelp>
+                            <format>u32:60-31536000</format>
+                            <description>Token lifetime in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 60-31536000"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>3600</defaultValue>
+                      </leafNode>
+                      <leafNode name="secret-length">
+                        <properties>
+                          <help>Length of shared secret in bytes</help>
+                          <valueHelp>
+                            <format>u32:16-65535</format>
+                            <description>Byte length of generated shared secret</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 16-65535"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>32</defaultValue>
+                      </leafNode>
+                      <node name="oidc">
+                        <properties>
+                          <help>OpenID Connect authentication</help>
+                        </properties>
+                        <children>
+                          <leafNode name="issuer">
+                            <properties>
+                              <help>OIDC issuer URL (must match iss claim in token)</help>
+                              <valueHelp>
+                                <format>url</format>
+                                <description>OIDC issuer URL e.g. https://keycloak.example.com/realms/vyos</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="jwks-url">
+                            <properties>
+                              <help>JWKS endpoint URL (if different from issuer discovery)</help>
+                              <valueHelp>
+                                <format>url</format>
+                                <description>JWKS endpoint URL e.g. https://keycloak.example.com/realms/vyos/protocol/openid-connect/certs</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="audience">
+                            <properties>
+                              <help>Expected audience claim in OIDC tokens</help>
+                              <valueHelp>
+                                <format>txt</format>
+                                <description>Audience value e.g. vyos-api or account</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                 </children>
               </node>
               <node name="graphql">
@@ -166,6 +233,25 @@
               #include <include/pki/ca-certificate.xml.i>
               #include <include/pki/certificate.xml.i>
               #include <include/pki/dh-params.xml.i>
+              <leafNode name="verify-client">
+                <properties>
+                  <help>Require client certificate verification (mTLS)</help>
+                  <completionHelp>
+                    <list>optional required</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>optional</format>
+                    <description>Request but do not require client certificate</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>required</format>
+                    <description>Require valid client certificate</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(optional|required)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <leafNode name="tls-version">

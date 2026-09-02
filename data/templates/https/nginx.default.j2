@@ -48,14 +48,24 @@ server {
     ssl_prefer_server_ciphers on;
     ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK';
 
+{% if certificates.mtls_ca_path is vyos_defined %}
+    # mTLS - client certificate verification
+    ssl_client_certificate {{ certificates.mtls_ca_path }};
+    ssl_verify_client {{ "on" if certificates.verify_client == "required" else certificates.verify_client }};
+    ssl_verify_depth 2;
+{% endif %}
     # proxy settings for HTTP API, if enabled; 503, if not
-    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|ping|traceroute|info|docs|openapi.json|redoc|graphql|renew) {
+    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|ping|traceroute|info|docs|openapi.json|redoc|graphql|renew|token) {
 {% if api is vyos_defined %}
         proxy_pass http://unix:/run/api.sock;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 600;
         proxy_buffering off;
+{%     if certificates.mtls_ca_path is vyos_defined %}
+        proxy_set_header X-Client-Verify $ssl_client_verify;
+        proxy_set_header X-Client-DN $ssl_client_s_dn;
+{%     endif %}
 {% else %}
         return 503;
 {% endif %}
