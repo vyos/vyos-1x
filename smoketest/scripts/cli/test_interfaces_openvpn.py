@@ -517,6 +517,53 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
+    def test_openvpn_missing_shared_secret_references(self):
+        interface = 'vtun5099'
+        path = base_path + [interface]
+        missing_key = 'NONEXISTENT'
+        pki_key_path = ['pki', 'openvpn', 'shared-secret', 'ovpn_test']
+
+        self.cli_delete(pki_key_path)
+
+        try:
+            self.cli_set(path + ['mode', 'server'])
+            self.cli_set(path + ['server', 'subnet', '10.20.30.0/24'])
+            self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+
+            self.cli_set(path + ['tls', 'auth-key', missing_key])
+            with self.assertRaisesRegex(
+                ConfigSessionError,
+                rf'Invalid "tls auth-key" value "{missing_key}" on OpenVPN interface\s+{interface}',
+            ):
+                self.cli_commit()
+
+            self.cli_delete(path + ['tls', 'auth-key'])
+            self.cli_set(path + ['tls', 'crypt-key', missing_key])
+            with self.assertRaisesRegex(
+                ConfigSessionError,
+                rf'Invalid "tls crypt-key" value "{missing_key}" on OpenVPN interface\s+{interface}',
+            ):
+                self.cli_commit()
+
+            self.cli_delete(path + ['tls'])
+            self.cli_delete(path + ['server'])
+            self.cli_set(path + ['mode', 'site-to-site'])
+            self.cli_set(path + ['local-address', '10.0.0.1'])
+            self.cli_set(path + ['remote-address', '10.0.0.2'])
+            self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+            self.cli_set(path + ['shared-secret-key', missing_key])
+            with self.assertRaisesRegex(
+                ConfigSessionError,
+                rf'Invalid "shared-secret-key" value "{missing_key}" on OpenVPN interface\s+{interface}',
+            ):
+                self.cli_commit()
+        finally:
+            self.cli_delete(base_path)
+            self.cli_set(pki_key_path + ['key'], ovpn_key_data.replace('\n', ''))
+            self.cli_commit()
+
     def test_openvpn_server_ip_version(self):
         # Test the server mode behavior combined with each IP protocol version
 
