@@ -19,6 +19,8 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import call_dependents
+from vyos.configdep import set_dependents
 from vyos.configdict import is_node_changed
 from vyos.configdict import node_changed
 from vyos.configdiff import Diff
@@ -48,6 +50,17 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['service', 'monitoring', 'prometheus']
+
+    # T9260: Telegraf's local "frr-metrics" relay reads frr-exporter's
+    # listen-address/port/vrf straight out of this config tree. The commit
+    # system only re-runs Telegraf's own conf-mode script when Telegraf's
+    # own subtree changes, so without an explicit dependency Telegraf would
+    # keep rendering a stale scrape URL whenever only frr-exporter changes
+    # (or is removed) in a commit that doesn't touch "service monitoring
+    # telegraf" at all.
+    if conf.exists(base + ['frr-exporter']) or is_node_changed(conf, base + ['frr-exporter']):
+        set_dependents('frr_exporter', conf)
+
     if not conf.exists(base):
         return None
 
@@ -208,6 +221,9 @@ def apply(monitoring):
             call(f'systemctl stop {blackbox_exporter_systemd_service}')
 
     if not monitoring:
+        # T9260: still refresh dependents (e.g. Telegraf's frr-metrics
+        # relay) even when the whole prometheus tree was removed
+        call_dependents()
         return
 
     if 'node_exporter' in monitoring:
@@ -233,6 +249,13 @@ def apply(monitoring):
             systemd_action = 'restart'
 
         call(f'systemctl {systemd_action} {blackbox_exporter_systemd_service}')
+
+    # T9260: refresh Telegraf's local frr-exporter relay, if any dependent
+    # was registered in get_config(). Deliberately not swallowed: if
+    # frr-exporter was just removed while Telegraf's "frr-metrics" is still
+    # enabled, Telegraf's own verify() must fail the commit rather than
+    # silently leaving a stale/broken scrape URL behind.
+    call_dependents()
 
 
 if __name__ == '__main__':

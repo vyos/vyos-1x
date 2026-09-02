@@ -168,6 +168,12 @@
                   #include <include/url-http-https.xml.i>
                 </children>
               </node>
+              <leafNode name="frr-metrics">
+                <properties>
+                  <help>Relay local Prometheus frr-exporter FRR routing metrics via Telegraf</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <node name="loki">
                 <properties>
                   <help>Output plugin Loki</help>
