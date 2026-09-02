@@ -683,6 +683,15 @@ def kea_get_server_leases(
 
         if inet == '4':
             data_lease['start'] = lease['start_time'].timestamp()
+            # DHCPv4 option 61. Kea returns it already colon separated, so
+            # unlike the DHCPv6 DUID below it must not go through
+            # _format_hex_string() -- that would insert a second colon after
+            # every existing one.
+            #
+            # `or` rather than a get() default: Lease4::toElement() omits the
+            # key for a client that sent no option 61, but this way an empty
+            # string reads as '-' too, matching 'hostname' two lines above.
+            data_lease['client_id'] = lease.get('client-id') or '-'
 
         if inet == '6':
             data_lease['last_communication'] = lease['start_time'].timestamp()
