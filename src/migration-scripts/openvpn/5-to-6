@@ -34,10 +34,34 @@ dco_conditional_options = {
     'allow-compression': 'no',
     'compress': 'migrate',
 }
+dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
+dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
 
 
-def _offloadable(options: list) -> bool:
+def _offloadable_ciphers(value: str) -> bool:
+    """Whether every cipher of a raw negotiation list can be offloaded."""
+    for cipher in value.split(':'):
+        # "DEFAULT" stands for the built-in list, which OpenVPN expands - case
+        # sensitively, and only as a bare token - to AEAD ciphers alone before
+        # it weighs the offload
+        if cipher == 'DEFAULT':
+            continue
+        # it strips exactly one "?", and drops such a cipher only when it does
+        # not know it at all, so an optional one still has to be offloadable
+        name = cipher[1:] if cipher.startswith('?') else cipher
+        if name.upper() not in dco_raw_ciphers:
+            return False
+    return True
+
+
+def _offloadable(options: list, mode: str) -> bool:
     """Whether every raw option leaves the data path offloadable."""
+    # site-to-site renders neither "client" nor "server", and OpenVPN then
+    # takes a raw "--cipher" as the fallback cipher
+    cipher_options = dco_cipher_options
+    if mode == 'site-to-site':
+        cipher_options = cipher_options + ['cipher']
+
     for option in options:
         tmp = option.split()
         if not tmp:
@@ -48,6 +72,9 @@ def _offloadable(options: list) -> bool:
         keep = dco_conditional_options.get(keyword)
         if keep is not None and tmp[1:] != [keep]:
             return False
+        if keyword in cipher_options and tmp[1:]:
+            if not _offloadable_ciphers(tmp[1]):
+                return False
     return True
 
 
@@ -104,8 +131,9 @@ def migrate(config: ConfigTree) -> None:
         if config.exists(path + ['openvpn-option']):
             options = config.return_values(path + ['openvpn-option'])
 
+        mode = _value(config, path + ['mode'])
         topology = None
-        if _value(config, path + ['mode']) == 'server':
+        if mode == 'server':
             topology = _value(config, path + ['server', 'topology'])
 
         if (
@@ -114,7 +142,7 @@ def migrate(config: ConfigTree) -> None:
             or config.exists(path + ['use-lzo-compression'])
             or (topology is not None and topology != 'subnet')
             or any(cipher not in dco_ciphers for cipher in ciphers)
-            or not _offloadable(options)
+            or not _offloadable(options, mode)
         ):
             offload = path + ['offload']
             config.delete(offload + ['dco'])

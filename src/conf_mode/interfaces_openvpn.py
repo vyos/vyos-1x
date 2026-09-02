@@ -96,6 +96,13 @@ dco_conditional_options = {
     'allow-compression': 'no',
     'compress': 'migrate',
 }
+# Cipher negotiation lists a raw option can override, "ncp-ciphers" being the
+# 2.4 spelling OpenVPN still accepts. A raw list wins over the one rendered
+# from "encryption data-ciphers", so it needs the very same check.
+dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
+# dco_ciphers again, spelled the way OpenVPN reports them in
+# dco_get_supported_ciphers()
+dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
 otp_path = '/config/auth/openvpn'
 otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
@@ -229,6 +236,23 @@ def verify_data_ciphers_fallback(openvpn):
         if dict_search('encryption.data_ciphers_fallback', openvpn):
             raise ConfigError('Cipher fallback is valid only in site-to-site mode')
 
+
+def unoffloadable_cipher(value):
+    """The first cipher of a raw negotiation list DCO can not serve, if any."""
+    for cipher in value.split(':'):
+        # "DEFAULT" stands for the built-in list, which OpenVPN expands - case
+        # sensitively, and only as a bare token - to AEAD ciphers alone before
+        # it weighs the offload
+        if cipher == 'DEFAULT':
+            continue
+        # it strips exactly one "?", and drops such a cipher only when it does
+        # not know it at all, so an optional one still has to be offloadable
+        name = cipher[1:] if cipher.startswith('?') else cipher
+        if name.upper() not in dco_raw_ciphers:
+            return cipher
+    return None
+
+
 def verify_dco(openvpn):
     if dict_search('offload.dco', openvpn) is None:
         return
@@ -258,6 +282,13 @@ def verify_dco(openvpn):
         if cipher not in dco_ciphers:
             raise ConfigError(f'DCO does not support cipher "{cipher}"')
 
+    # Outside server and pull mode OpenVPN takes a raw "--cipher" as the
+    # fallback cipher, which decides the offload just like a negotiation list
+    # does - and site-to-site is the mode that renders neither
+    cipher_options = dco_cipher_options
+    if openvpn['mode'] == 'site-to-site':
+        cipher_options = cipher_options + ['cipher']
+
     # A raw option OpenVPN refuses to offload leaves the daemon on the
     # userspace data path, where it can not use the interface it was given
     for option in dict_search('openvpn_option', openvpn) or []:
@@ -271,6 +302,10 @@ def verify_dco(openvpn):
             keep = dco_conditional_options[keyword]
             if tmp[1:] != [keep]:
                 raise ConfigError(f'DCO requires "openvpn-option {keyword} {keep}"')
+        if keyword in cipher_options and tmp[1:]:
+            cipher = unoffloadable_cipher(tmp[1])
+            if cipher is not None:
+                raise ConfigError(f'DCO does not support cipher "{cipher}"')
 
 def verify_pki(openvpn):
     pki = openvpn['pki']

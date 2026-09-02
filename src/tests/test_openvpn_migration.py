@@ -213,6 +213,128 @@ class TestOpenVPNMigration(TestCase):
         self.migrate(config)
         self.assertTrue(config.exists(dco))
 
+    def test_raw_cipher_list_drops_dco(self):
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_one_bad_cipher_in_a_raw_list_drops_dco(self):
+        # OpenVPN gives up the offload over a single cipher it can not offload
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers AES-256-GCM:AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_optional_raw_cipher_drops_dco(self):
+        # a "?" only keeps OpenVPN from erroring out on an unknown cipher, a
+        # known one still lands in the negotiation list
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers ?AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_raw_cipher_fallback_drops_dco(self):
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        openvpn-option "--data-ciphers-fallback AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_raw_ncp_ciphers_drops_dco(self):
+        # OpenVPN still accepts the 2.4 name for "data-ciphers"
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--ncp-ciphers AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_offloadable_raw_cipher_list_keeps_dco(self):
+        # spelled as OpenVPN normalises it, and ChaCha20-Poly1305 is offloaded
+        # too even though the CLI does not offer it
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers AES-256-GCM:CHACHA20-POLY1305"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_raw_cipher_case_is_normalised(self):
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers aes-256-gcm"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_valueless_raw_cipher_option_keeps_dco(self):
+        # OpenVPN rejects it itself, the migration must not trip over it
+        config = config_tree(
+            '        mode server\n        openvpn-option "--data-ciphers"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_default_raw_cipher_alias_keeps_dco(self):
+        # "DEFAULT" is the built-in list, and OpenVPN expands it to AEAD
+        # ciphers alone - it can never cost the interface its offload
+        config = config_tree(
+            '        mode server\n        openvpn-option "--data-ciphers DEFAULT"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_default_raw_cipher_alias_is_case_sensitive(self):
+        # OpenVPN matches the alias with strcmp(), so a lower case spelling is
+        # just an unknown cipher
+        config = config_tree(
+            '        mode server\n        openvpn-option "--data-ciphers default"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_optional_default_raw_cipher_alias_drops_dco(self):
+        # OpenVPN expands only the bare token, so "?DEFAULT" is an unknown
+        # optional cipher to it and never the built-in list
+        config = config_tree(
+            '        mode server\n' '        openvpn-option "--data-ciphers ?DEFAULT"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_doubly_optional_raw_cipher_drops_dco(self):
+        # it strips exactly one "?", leaving a cipher it does not know
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers ??AES-256-GCM"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_optional_offloadable_raw_cipher_keeps_dco(self):
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers ?AES-256-GCM"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_default_raw_cipher_alias_with_a_bad_cipher_drops_dco(self):
+        config = config_tree(
+            '        mode server\n'
+            '        openvpn-option "--data-ciphers DEFAULT:BF-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
     def test_keepalive_left_alone_when_valid(self):
         config = config_tree(
             '        mode server\n'
@@ -276,3 +398,30 @@ class TestOpenVPNMigration(TestCase):
         self.migrate(config)
         tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
         self.assertEqual(config.return_value(tmp), '1000')
+
+    def test_raw_cipher_drops_dco_in_site_to_site(self):
+        # site-to-site renders neither "client" nor "server", so OpenVPN takes
+        # a raw "--cipher" as the fallback cipher and gives up the offload
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        openvpn-option "--cipher AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertFalse(config.exists(dco))
+
+    def test_raw_cipher_keeps_dco_in_server_mode(self):
+        # with "server" OpenVPN only warns that --cipher is deprecated, the
+        # offload is decided by the negotiation list alone
+        config = config_tree(
+            '        mode server\n        openvpn-option "--cipher AES-256-CBC"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
+
+    def test_offloadable_raw_cipher_keeps_dco_in_site_to_site(self):
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        openvpn-option "--cipher AES-256-GCM"\n'
+        )
+        self.migrate(config)
+        self.assertTrue(config.exists(dco))
