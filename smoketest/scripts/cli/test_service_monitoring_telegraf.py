@@ -25,6 +25,7 @@ from vyos.utils.file import read_file
 PROCESS_NAME = 'telegraf'
 TELEGRAF_CONF = '/run/telegraf/telegraf.conf'
 base_path = ['service', 'monitoring', 'telegraf']
+prometheus_base_path = ['service', 'monitoring', 'prometheus']
 org = 'log@in.local'
 token = 'GuRJc12tIzfjnYdKRAIYbxdWd2aTpOT9PVYNddzDnFV4HkAcD7u7-kndTFXjGuXzJN6TTxmrvPODB4mnFcseDV=='
 port = '8888'
@@ -117,6 +118,67 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['global-tag', 'incomplete-tag'])
+        self.cli_commit()
+
+    def test_05_frr_metrics_requires_frr_exporter(self):
+        # frr-metrics can not be enabled unless the Prometheus frr-exporter
+        # is configured
+        self.cli_set(base_path + ['prometheus-client'])
+        self.cli_set(base_path + ['frr-metrics'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['frr-metrics'])
+        # commit again to leave a valid, running config for tearDown()
+        self.cli_commit()
+
+    def test_06_frr_metrics(self):
+        frr_exporter_port = '9342'
+        self.cli_set(base_path + ['prometheus-client'])
+        self.cli_set(prometheus_base_path + ['frr-exporter'])
+        self.cli_set(base_path + ['frr-metrics'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn(f'[[inputs.prometheus]]', config)
+        self.assertIn(f'urls = ["http://127.0.0.1:{frr_exporter_port}/metrics"]', config)
+        self.assertIn(f'metric_version = 2', config)
+        self.assertIn(f'name_override = "frr"', config)
+
+        # frr-metrics must be removed together with frr-exporter, otherwise
+        # the next commit fails verification and leaves telegraf stopped
+        self.cli_delete(base_path + ['frr-metrics'])
+        self.cli_delete(prometheus_base_path)
+        self.cli_commit()
+
+    def test_07_frr_metrics_tracks_frr_exporter_changes(self):
+        # T9260 regression test: changing frr-exporter's listen-address or
+        # port alone - without touching "service monitoring telegraf" at
+        # all - must still refresh the scrape URL Telegraf renders, since
+        # Telegraf's own conf-mode script is not otherwise re-run when only
+        # frr-exporter's subtree changes
+        new_listen_address = '127.0.0.2'
+        new_port = '9999'
+
+        self.cli_set(base_path + ['prometheus-client'])
+        self.cli_set(prometheus_base_path + ['frr-exporter'])
+        self.cli_set(base_path + ['frr-metrics'])
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn('urls = ["http://127.0.0.1:9342/metrics"]', config)
+
+        # Only touch the Prometheus frr-exporter subtree
+        self.cli_set(prometheus_base_path + ['frr-exporter', 'listen-address', new_listen_address])
+        self.cli_set(prometheus_base_path + ['frr-exporter', 'port', new_port])
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn(f'urls = ["http://{new_listen_address}:{new_port}/metrics"]', config)
+
+        self.cli_delete(base_path + ['frr-metrics'])
+        self.cli_delete(prometheus_base_path)
         self.cli_commit()
 
 
