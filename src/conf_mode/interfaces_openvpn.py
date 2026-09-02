@@ -96,6 +96,13 @@ dco_conditional_options = {
     'allow-compression': 'no',
     'compress': 'migrate',
 }
+# Cipher negotiation lists a raw option can override, "ncp-ciphers" being the
+# 2.4 spelling OpenVPN still accepts. A raw list wins over the one rendered
+# from "encryption data-ciphers", so it needs the very same check.
+dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
+# dco_ciphers again, spelled the way OpenVPN reports them in
+# dco_get_supported_ciphers()
+dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
 otp_path = '/config/auth/openvpn'
 otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
@@ -229,6 +236,22 @@ def verify_data_ciphers_fallback(openvpn):
         if dict_search('encryption.data_ciphers_fallback', openvpn):
             raise ConfigError('Cipher fallback is valid only in site-to-site mode')
 
+
+def unoffloadable_cipher(value):
+    """The first cipher of a raw negotiation list DCO can not serve, if any."""
+    for cipher in value.split(':'):
+        # OpenVPN drops a "?" prefixed cipher only when it does not know it at
+        # all, so an optional one still has to be offloadable
+        name = cipher.lstrip('?')
+        # "DEFAULT" stands for the built-in list, which OpenVPN expands - case
+        # sensitively - to AEAD ciphers alone before it weighs the offload
+        if name == 'DEFAULT':
+            continue
+        if name.upper() not in dco_raw_ciphers:
+            return cipher
+    return None
+
+
 def verify_dco(openvpn):
     if dict_search('offload.dco', openvpn) is None:
         return
@@ -271,6 +294,10 @@ def verify_dco(openvpn):
             keep = dco_conditional_options[keyword]
             if tmp[1:] != [keep]:
                 raise ConfigError(f'DCO requires "openvpn-option {keyword} {keep}"')
+        if keyword in dco_cipher_options and tmp[1:]:
+            cipher = unoffloadable_cipher(tmp[1])
+            if cipher is not None:
+                raise ConfigError(f'DCO does not support cipher "{cipher}"')
 
 def verify_pki(openvpn):
     pki = openvpn['pki']
