@@ -173,13 +173,13 @@ class TestUnmatchedCandidates(unittest.TestCase):
         configured = {'m0': 'eth1'}
         current = {'eth1': 'squatter-mac', 'eth9': 'm0'}
         existing_plan = {'eth1': 'eth3', 'eth9': 'eth1'}
-        candidates = resolver.unmatched_candidates(configured, current, existing_plan)
+        candidates = resolver.unmatched_candidates(configured, current)
         self.assertEqual(candidates, [('squatter-mac', 'eth1')])
 
     def test_rightful_owner_still_excluded(self):
         configured = {'m0': 'eth0'}
         current = {'eth0': 'm0'}
-        candidates = resolver.unmatched_candidates(configured, current, {})
+        candidates = resolver.unmatched_candidates(configured, current)
         self.assertEqual(candidates, [])
 
 
@@ -1088,11 +1088,13 @@ class TestComputeBootstrapPlanGapFill(unittest.TestCase):
         self.assertNotIn('eth0', plan.values())
 
     def test_unmatchable_pending_name_is_held_open_not_backfilled(self):
-        # nothing of this type has a hw-id, the pending name is carried by
-        # no candidate, and the cardinality is not a cover - so
-        # match_pending_nodes() declines. The name stays empty and is
-        # reported unresolved rather than handed to the lowest-sorting
-        # NIC, which is the case this behaviour change turns around.
+        # the divergent shape: nothing of this type has a hw-id, the
+        # pending name is carried by no candidate, and the cardinality is
+        # not a cover - so match_pending_nodes() declines. The name stays
+        # empty and is reported unresolved rather than being handed to the
+        # lowest-sorting NIC. Bootstrap naming may never fill a pending
+        # name: that silent path is what rearranged a box whose hw-ids
+        # were all deleted at once (T3871, PR #5417).
         configured = {}
         pending = {'ethernet': {'eth0'}, 'wireless': set()}
         current = {'eth5': 'n5', 'eth6': 'n6', 'eth7': 'n7'}
