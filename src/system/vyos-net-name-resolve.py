@@ -462,51 +462,68 @@ def node_name_order(name: str) -> tuple:
     return (0, int(m.group(1)), name) if m else (1, 0, name)
 
 
-def match_pending_nodes(pending: dict, candidates: list) -> dict:
+def match_pending_nodes(pending: dict, candidates: list,
+                         rules: dict = None) -> dict:
     """Match this boot's unconfigured candidates to pending (hw-id-less)
-    config nodes, one type (ethernet/wireless) at a time. Matches only on
-    an EXACT COVER - as many pending nodes of that type as unconfigured
-    candidates of that type this boot - pairing them in order: nodes by
-    their numeric index (see node_name_order()), hardware by the same
-    canonical order everything else here names by (see
-    canonical_sort_key()). Any other cardinality is left alone rather
-    than guessed.
+    config nodes, one type (ethernet/wireless) at a time.
+
+    Two rules are tried per type, in this order, and nothing is matched if
+    neither applies:
+
+    1. EXACT COVER - as many pending nodes of that type as unconfigured
+       candidates of that type this boot.
+    2. NAME-FILTERED COVER - the candidates whose CURRENT name is one of
+       the pending node names, when there are exactly as many of those as
+       there are pending nodes.
+
+    Either way the pairing itself is the same: nodes by their numeric
+    index (see node_name_order()), hardware by the canonical order
+    everything else here names by (see canonical_sort_key()).
+
+    The order of those two rules matters and must not be swapped. Rule 2
+    uses the current names only to decide WHICH candidates belong to the
+    pending group - never which node each one gets. A pending node named
+    'eth1' by cloud-init means "the second NIC as the hypervisor attached
+    it", i.e. PCI slot order; it does not mean "whatever this boot's probe
+    race happened to call eth1", because src/udev/vyos_net_name assigns
+    those provisional names in probe order without ever reading
+    config.boot. Letting a candidate claim the node bearing its own name
+    would therefore reintroduce a reported field failure where two NICs
+    arriving under each other's provisional names were left crossed, with
+    both data links silently dead.
+
+    Rule 2 exists because rule 1 is defeated by a single spare NIC.
+    Reported from the field: a cloud-init guest configured for three NICs
+    but built with four left both data nodes unmatched, so their names
+    stayed reserved, the real hardware parked on fresh names beyond them,
+    and the box never recovered - on every later boot the parked ports
+    held a hw-id, so there were no unconfigured candidates left to match.
+    Filtering by name reaches exactly the candidates that config was
+    written against and ignores the spare.
 
     A pending node still carries its OTHER settings (address,
-    description, ...), so a wrong pairing silently applies one physical
-    port's configuration to a DIFFERENT port - which is why anything but
-    an exact cover refuses. Confirmed in the field: on a real,
-    already-provisioned box (whose hw-id came from historical probe-order
-    rescan, not from any PCIe/MAC sort), a second, completely unrelated
-    candidate freed in the same boot - e.g. a different interface's
-    config being fully deleted - is enough for a naive ascending-sort
-    fill to swap the two, binding a configured node's address to the
-    wrong wire. With more candidates than nodes there is genuinely no way
-    to tell which one is the node's own hardware, and leaving it
-    unresolved and reported is safer than guessing.
+    description, ...), so a wrong pairing applies one physical port's
+    configuration to a DIFFERENT port. That is why neither rule ever
+    guesses past its own cardinality: with more name-matching candidates
+    than nodes there is genuinely no way to tell which is which, and
+    leaving the node unresolved and reported is safer.
 
-    An exact cover is different in kind, not just in degree: every node is
-    going to receive real hardware whatever happens, so the only open
-    question is the permutation - and PCI slot order is the best answer
-    available, while refusing strands 100% of the nodes on interfaces
-    that do not exist, permanently, across reboots (see the multi-NIC
-    cloud-init case in has_established_baseline()). Note this is not a
-    new class of behaviour: an unreserved pending name (no established
-    baseline) is already filled by ordinary bootstrap naming's implicit
-    ascending fill. Pairing here makes that guess explicit, logged, and
-    topology-ordered rather than gap-ordered.
-
-    It is NOT infallible, and a cover of more than one node is logged as
-    a warning for exactly that reason: a leftover scratch interface from
-    a failed rename, or a pending node whose own hardware is dead, can
-    make a false cover, and on a legacy box whose names came from
-    historical probe order the slot order carries no information about
-    which node is which.
+    Neither rule is infallible, so anything that had a permutation to get
+    wrong is logged as a warning: a leftover scratch interface from a
+    failed rename, or a pending node whose own hardware is dead, can make
+    a false cover, and on a legacy box whose names came from historical
+    probe order the slot order carries no information about which node is
+    which. A rule-2 match is warned at any cardinality, since provisional
+    names can line up by pure coincidence.
 
     A candidate that isn't reclaimed here is not otherwise held back - it
     still proceeds to ordinary bootstrap naming (see
     compute_bootstrap_plan()) and gets its own fresh, settings-free name
     instead.
+
+    rules, when given, is filled in with {'topology': set(), 'name':
+    set()} naming the nodes each rule resolved, so main() can report a
+    guess distinctly from a certainty without re-deriving which rule ran.
 
     Returns {mac: node_name} for every match this boot.
     """
@@ -515,42 +532,62 @@ def match_pending_nodes(pending: dict, candidates: list) -> dict:
         group = 'wireless' if is_wireless_interface(name) else 'ethernet'
         grouped[group].append((mac, name))
 
-    matched = {}
-    for intf_type, nodes in pending.items():
-        if not nodes:
-            continue
-        cands = grouped.get(intf_type, [])
-        if len(nodes) != len(cands):
-            cand_desc = ', '.join(f"'{name}' ({mac})" for mac, name in cands) or 'none'
-            logger.warning(
-                f'{len(nodes)} pending {intf_type} node(s) '
-                f"({', '.join(sorted(nodes, key=node_name_order))}) and "
-                f'{len(cands)} unconfigured {intf_type} candidate(s) this '
-                f'boot ({cand_desc}) - not an exact cover, leaving pending '
-                'rather than guessing'
-            )
-            continue
+    if rules is not None:
+        rules.setdefault('topology', set())
+        rules.setdefault('name', set())
 
+    matched = {}
+
+    def pair(intf_type, nodes, hardware, rule):
         targets = sorted(nodes, key=node_name_order)
-        hardware = sorted(cands, key=lambda c: canonical_sort_key(*c))
-        for target, (mac, name) in zip(targets, hardware):
+        hardware = sorted(hardware, key=lambda c: canonical_sort_key(*c))
+        for target, (mac, _name) in zip(targets, hardware):
             matched[mac] = target
 
-        if len(targets) > 1:
-            # a single node and a single candidate leave no permutation to
-            # get wrong - anything larger was ordered by PCI slot, which is
-            # a well-founded guess but still a guess, so say so loudly
-            # enough that an admin can verify the wiring
+        # one node and one candidate selected by name leave no permutation
+        # to get wrong, but the selection itself was still a guess - only
+        # a lone exact cover is free of both, and only it goes unreported
+        if rule == 'name' or len(targets) > 1:
+            if rules is not None:
+                rules[rule] |= set(targets)
             pairs = ', '.join(
                 f"{target} <- {mac} (pci {pcie_address(name)}, now '{name}')"
                 for target, (mac, name) in zip(targets, hardware)
             )
+            how = ('carry the pending node names this boot'
+                   if rule == 'name' else
+                   f"exactly cover this boot's unconfigured {intf_type} "
+                   'hardware')
             logger.warning(
-                f'{len(targets)} pending {intf_type} node(s) exactly cover '
-                f"this boot's unconfigured {intf_type} hardware - pairing "
-                f'them in PCI slot order: {pairs} - verify this matches how '
-                'the ports are actually wired'
+                f'{len(targets)} pending {intf_type} node(s) - the '
+                f'candidates that {how} were paired with them in PCI slot '
+                f'order: {pairs} - verify this matches how the ports are '
+                'actually wired'
             )
+
+    for intf_type, nodes in pending.items():
+        if not nodes:
+            continue
+        cands = grouped.get(intf_type, [])
+
+        if cands and len(nodes) == len(cands):
+            pair(intf_type, nodes, cands, 'topology')
+            continue
+
+        by_name = [(mac, name) for mac, name in cands if name in nodes]
+        if by_name and len(by_name) == len(nodes):
+            pair(intf_type, nodes, by_name, 'name')
+            continue
+
+        cand_desc = ', '.join(f"'{name}' ({mac})" for mac, name in cands) or 'none'
+        logger.warning(
+            f'{len(nodes)} pending {intf_type} node(s) '
+            f"({', '.join(sorted(nodes, key=node_name_order))}) and "
+            f'{len(cands)} unconfigured {intf_type} candidate(s) this '
+            f'boot ({cand_desc}), of which {len(by_name)} carry a pending '
+            'node name - neither an exact cover nor a name cover, leaving '
+            'pending rather than guessing'
+        )
 
     return matched
 
@@ -729,7 +766,8 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
                   pending: dict = None, reclaimed: dict = None,
                   candidates: list = None,
                   resolved_pending: set = frozenset(),
-                  reclaimed_by_topology: set = frozenset()) -> None:
+                  reclaimed_by_topology: set = frozenset(),
+                  reclaimed_by_name: set = frozenset()) -> None:
     """candidates is the full unmatched_candidates() list evaluated this
     boot (before reclaim/bootstrap assignment) - surfaced here so a
     pending node left unresolved for lack of hardware is self-diagnosable
@@ -749,6 +787,12 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
     order rather than being the single unambiguous possibility - surfaced
     separately so an admin can see which bindings were inferred and worth
     verifying against how the ports are actually wired.
+
+    reclaimed_by_name is the subset whose hardware was SELECTED by
+    carrying the pending node names this boot (match_pending_nodes()'s
+    second rule) rather than by being all that was left. Provisional names
+    can line up by coincidence, so this is reported at any cardinality,
+    including a single node.
     """
     pending = pending or {}
     reclaimed = reclaimed or {}
@@ -763,6 +807,7 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
         'pending_unresolved': sorted(all_pending - resolved),
         'reclaimed': reclaimed,
         'reclaimed_by_topology': sorted(reclaimed_by_topology),
+        'reclaimed_by_name': sorted(reclaimed_by_name),
         'unconfigured_candidates': {name: mac for mac, name in candidates},
     }
     try:
@@ -791,7 +836,7 @@ def main():
     all_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
 
     reclaimed = {}
-    reclaimed_by_topology = set()
+    reclaim_rules = {'topology': set(), 'name': set()}
     candidates = []
     if all_pending or any(mac not in configured for mac in current.values()):
         # The `all_pending` half of this condition matters even when
@@ -821,16 +866,12 @@ def main():
         # bootstrap-naming it to a new bare node and orphaning that
         # config - only on an exact cover, see match_pending_nodes()
         candidates = unmatched_candidates(configured, current, plan)
-        reclaimed = match_pending_nodes(pending, candidates)
-        # a type group of more than one node can only have matched as an
-        # exact cover paired by PCI slot order - a well-founded guess, but
-        # still a guess, so keep it distinguishable from the single
-        # unambiguous 1:1 case all the way out to the status file
-        reclaimed_by_topology = {
-            name for intf_type, nodes in pending.items()
-            if len(nodes) > 1 and nodes <= set(reclaimed.values())
-            for name in nodes
-        }
+        # match_pending_nodes() classifies each match as it makes it: a
+        # guess (paired by PCI slot order, or with hardware selected by
+        # name) stays distinguishable from the single unambiguous case all
+        # the way out to the status file and the boot console
+        reclaimed = match_pending_nodes(pending, candidates,
+                                         rules=reclaim_rules)
         candidate_by_mac = dict(candidates)
         for mac, target in reclaimed.items():
             name = candidate_by_mac[mac]
@@ -876,7 +917,8 @@ def main():
     write_status(configured, current, missing, applied,
                  pending=pending, reclaimed=reclaimed, candidates=candidates,
                  resolved_pending=resolved_pending,
-                 reclaimed_by_topology=reclaimed_by_topology)
+                 reclaimed_by_topology=reclaim_rules['topology'],
+                 reclaimed_by_name=reclaim_rules['name'])
 
 
 if __name__ == '__main__':

@@ -288,6 +288,94 @@ class TestMatchPendingNodes(unittest.TestCase):
         matched = resolver.match_pending_nodes(pending, candidates)
         self.assertEqual(matched, {})
 
+    def test_name_cover_reaches_what_an_exact_cover_cannot(self):
+        # reported from the field: a cloud-init guest configured for three
+        # NICs but built with FOUR. 2 pending nodes vs 3 candidates is not
+        # an exact cover, so refusing left both data nodes stranded on
+        # interfaces that never came to exist - and the box never
+        # recovered, because on every later boot the parked ports held a
+        # hw-id and there were no candidates left. The two candidates
+        # carrying the pending names are exactly the ones that config was
+        # written against; the spare is ignored.
+        self.pcie_address.side_effect = lambda name: {
+            'eth1': ((0, 0, 2, 0),),
+            'eth2': ((0, 0, 3, 0),),
+            'eth3': ((0, 0, 4, 0),),
+        }[name]
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('m1', 'eth1'), ('m2', 'eth2'), ('spare', 'eth3')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'m1': 'eth1', 'm2': 'eth2'})
+
+    def test_exact_cover_takes_precedence_over_the_name_cover(self):
+        # THE ordering constraint. Both rules apply here and they
+        # disagree: the NICs arrived under each other's provisional names.
+        # A pending 'eth1' means "the second NIC as the hypervisor
+        # attached it" - PCI slot order - not "whatever the probe race
+        # called eth1", so the exact cover must win and swap them. Letting
+        # the name decide would leave both data links crossed, which is a
+        # separately reported field failure (see
+        # test_cloud_init_multi_nic_names_follow_pci_slot_order).
+        self.pcie_address.side_effect = lambda name: {
+            'eth1': ((0, 0, 6, 0),),   # carries the name, but higher slot
+            'eth2': ((0, 0, 5, 0),),
+        }[name]
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('high', 'eth1'), ('low', 'eth2')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'low': 'eth1', 'high': 'eth2'})
+
+    def test_partial_name_match_is_not_a_cover(self):
+        # only one of the two pending names is carried by a candidate -
+        # there is nothing to pair the other node with, so neither is
+        # guessed at.
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        candidates = [('m1', 'eth1'), ('m3', 'eth3'), ('m4', 'eth4')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+    def test_more_name_matches_than_nodes_is_not_a_cover(self):
+        # a stale node left behind can make a candidate carry a pending
+        # name it has no claim to - more name matches than nodes means
+        # there is still no way to tell which is which.
+        pending = {'ethernet': {'eth1'}, 'wireless': set()}
+        candidates = [('m1', 'eth1'), ('m2', 'eth1x'), ('m3', 'eth1')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {})
+
+    def test_name_cover_judged_per_type(self):
+        # ethernet resolves by name cover; wireless has no name match at
+        # all and stays pending, independently.
+        self.is_wireless.side_effect = lambda name: name.startswith('radio')
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': {'wlan0'}}
+        candidates = [('m1', 'eth1'), ('m2', 'eth2'), ('spare', 'eth3'),
+                      ('r1', 'radio0'), ('r2', 'radio1')]
+        matched = resolver.match_pending_nodes(pending, candidates)
+        self.assertEqual(matched, {'m1': 'eth1', 'm2': 'eth2'})
+
+    def test_rules_classify_guesses_but_not_a_lone_exact_cover(self):
+        # a single node and a single candidate leave nothing to get wrong,
+        # so it is reported as a certainty (absent from both buckets); a
+        # name-selected match is a guess at ANY cardinality, because
+        # provisional names can line up by coincidence.
+        rules = {}
+        resolver.match_pending_nodes(
+            {'ethernet': {'eth1'}, 'wireless': set()}, [('m1', 'eth9')],
+            rules=rules)
+        self.assertEqual(rules, {'topology': set(), 'name': set()})
+
+        rules = {}
+        resolver.match_pending_nodes(
+            {'ethernet': {'eth1'}, 'wireless': set()},
+            [('m1', 'eth1'), ('m2', 'eth8')], rules=rules)
+        self.assertEqual(rules, {'topology': set(), 'name': {'eth1'}})
+
+        rules = {}
+        resolver.match_pending_nodes(
+            {'ethernet': {'eth1', 'eth2'}, 'wireless': set()},
+            [('m1', 'eth8'), ('m2', 'eth9')], rules=rules)
+        self.assertEqual(rules, {'topology': {'eth1', 'eth2'}, 'name': set()})
+
     def test_covers_are_judged_per_type_not_across_types(self):
         # ethernet covers 2:2 while wireless is 1:2 - the ethernet nodes
         # are still paired, and the wireless one is still left pending.
@@ -1714,6 +1802,87 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
         self.assertEqual(status['renamed'], {})
         self.assertEqual(status['reclaimed'], {'52:54:00:ff:00:21': 'eth1',
                                                 '52:54:00:00:00:22': 'eth2'})
+
+    def test_cloud_init_spare_nic_does_not_strand_the_configured_nodes(self):
+        """Field report: same cloud-init shape as above, but the VM has one
+        NIC MORE than the config sets up. That made 2 pending nodes vs 3
+        candidates - not an exact cover - so both nodes were refused while
+        their names stayed reserved, and all three NICs parked on fresh
+        names past them (eth3/eth4/eth5) and had a hw-id written there.
+        Both data segments were dead, and it could never recover: on every
+        later boot the parked ports held a hw-id, so the count read "2
+        pending, 0 unconfigured candidates" forever. With exactly three
+        NICs the identical config worked - the spare was the whole
+        difference.
+        """
+        configured = {'00:00:5e:00:54:31': 'eth0'}
+        pending = {'ethernet': {'eth1', 'eth2'}, 'wireless': set()}
+        state = {
+            'eth0': '00:00:5e:00:54:31',
+            'eth1': '00:00:5e:00:54:39',
+            'eth2': '00:00:5e:00:54:32',
+            'eth3': '00:00:5e:00:54:3c',  # the spare, nothing configured
+        }
+        slots = {
+            'eth0': ((0, 0, 1, 0),),
+            'eth1': ((0, 0, 2, 0),),
+            'eth2': ((0, 0, 3, 0),),
+            'eth3': ((0, 0, 4, 0),),
+        }
+
+        def fake_discover(*_a, **_kw):
+            return dict(state)
+
+        def fake_run(command, *_a, **_kw):
+            parts = command.split()
+            if 'name' in parts:
+                old = parts[parts.index('dev') + 1]
+                new = parts[parts.index('name') + 1]
+                if old in state:
+                    state[new] = state.pop(old)
+                    slots[new] = slots.pop(old, resolver.PCIE_ADDRESS_UNKNOWN)
+            return 0
+
+        with mock.patch.object(resolver, 'get_configfile_interfaces',
+                                return_value=configured), \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes',
+                                return_value=pending), \
+             mock.patch.object(resolver, 'discover_physical_interfaces',
+                                side_effect=fake_discover), \
+             mock.patch.object(resolver, 'is_wireless_interface',
+                                return_value=False), \
+             mock.patch.object(resolver, 'pcie_distance', return_value=1), \
+             mock.patch.object(
+                 resolver, 'pcie_address',
+                 side_effect=lambda name: slots.get(
+                     name, resolver.PCIE_ADDRESS_UNKNOWN)), \
+             mock.patch.object(resolver, 'run', side_effect=fake_run), \
+             mock.patch('time.sleep'):
+            resolver.main()
+
+        # the configured nodes keep their own hardware and the spare takes
+        # the next free name - nothing is pushed out to eth4/eth5
+        self.assertEqual(state, {
+            'eth0': '00:00:5e:00:54:31',
+            'eth1': '00:00:5e:00:54:39',
+            'eth2': '00:00:5e:00:54:32',
+            'eth3': '00:00:5e:00:54:3c',
+        })
+
+        # hints under eth1/eth2 so vyos-interface-rescan.py writes the
+        # hw-id into those EXISTING nodes and their addresses survive; the
+        # spare gets one too, for its own fresh node
+        self.assertEqual(set(os.listdir(self.udev_dir)),
+                          {'eth1', 'eth2', 'eth3'})
+
+        status = json.loads(resolver.status_file.read_text())
+        self.assertEqual(status['pending_unresolved'], [])
+        self.assertEqual(status['renamed'], {})
+        self.assertEqual(status['reclaimed'], {'00:00:5e:00:54:39': 'eth1',
+                                                '00:00:5e:00:54:32': 'eth2'})
+        # the hardware was selected by the names it carried this boot, so
+        # the admin is told to verify it rather than left to find out
+        self.assertEqual(status['reclaimed_by_name'], ['eth1', 'eth2'])
 
     def test_cloud_init_multi_nic_names_follow_pci_slot_order(self):
         """Second field report, same shape: the addresses matched their
