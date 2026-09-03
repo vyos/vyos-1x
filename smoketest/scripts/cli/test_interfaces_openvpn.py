@@ -14,19 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import os
 import unittest
 
 from glob import glob
 from ipaddress import IPv4Network
 from netifaces import interfaces # pylint: disable = no-name-in-module
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
+from vyos.netlink.ovpn import get_ovpn_mode
+from vyos.netlink.ovpn import OVPN_MODE_MP
+from vyos.netlink.ovpn import OVPN_MODE_P2P
 from vyos.template import address_from_cidr
 from vyos.template import inc_ip
 from vyos.template import last_host_address
@@ -188,6 +194,24 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
+    def test_openvpn_client_dco(self):
+        # A client that can not reach its server never gets far enough to make
+        # the interface, so this is the one case where VyOS is definitively the
+        # creator - and the only coverage of the point-to-point mode.
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'client'])
+        self.cli_set(path + ['remote-host', '192.0.2.1'])
+        self.cli_set(path + ['remote-port', '1194'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(interface, multipoint=False)
 
     def test_openvpn_client_interfaces(self):
         # Create OpenVPN client interfaces connecting to different
@@ -419,6 +443,168 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
+    def assertDcoDataPath(self, interface, multipoint=True):
+        # An "ovpn" device in the wrong operating mode is adopted by the daemon
+        # just the same and then rejects every peer, and iproute2 cannot show
+        # the mode - so ask the Kernel for it directly. Checking only the link
+        # kind would not tell a working tunnel from a broken one.
+        wanted = OVPN_MODE_MP if multipoint else OVPN_MODE_P2P
+        mode = None
+        for _ in range(10):
+            mode = get_ovpn_mode(interface)
+            if mode == wanted:
+                break
+            sleep(1)
+
+        # tell "the daemon never came up" apart from "DCO was declined"
+        self.assertIn(interface, interfaces(), f'{interface} does not exist')
+        self.assertEqual(mode, wanted, f'{interface} is not DCO backed, mode is {mode}')
+
+    def test_openvpn_server_dco_raw_option(self):
+        # A raw option OpenVPN still offloads must leave the tunnel offloaded,
+        # but VyOS must not pre-create the device for it - the daemon decides
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_set(path + ['openvpn-option', '--persist-tun'])
+        self.cli_commit()
+
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        self.assertDcoDataPath(interface)
+
+    def test_openvpn_server_dco_toggle(self):
+        # Enabling the offload on a running interface must move the data path
+        # into the Kernel. The interface already exists as a tun device, so a
+        # stale one has to be dropped or the offload is silently declined.
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_commit()
+
+        # without the offload the daemon is told to keep away from the Kernel
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        self.assertIn('disable-dco', read_file(f'/run/openvpn/{interface}.conf'))
+
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        self.assertNotIn('disable-dco', read_file(f'/run/openvpn/{interface}.conf'))
+        self.assertDcoDataPath(interface)
+
+        # and back off again - the offloaded device must not survive either
+        self.cli_delete(path + ['offload'])
+        self.cli_commit()
+
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        self.assertIn('disable-dco', read_file(f'/run/openvpn/{interface}.conf'))
+        self.assertIsNone(get_ovpn_mode(interface))
+        tmp = json.loads(cmdl(['ip', '-d', '-j', 'link', 'show', 'dev', interface]))
+        self.assertEqual(tmp[0].get('linkinfo', {}).get('info_kind'), 'tun')
+
+    def test_openvpn_server_dco_verify(self):
+        # Configurations the "ovpn" Kernel module can not serve must be
+        # rejected once data channel offload is requested
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        config_file = f'/run/openvpn/{interface}.conf'
+        self.assertDcoDataPath(interface)
+
+        # check validate() - DCO is tun only
+        self.cli_set(path + ['device-type', 'tap'])
+        with self.assertRaisesRegex(ConfigSessionError, r'device-type\s+tun'):
+            self.cli_commit()
+        self.cli_set(path + ['device-type', 'tun'])
+
+        # check validate() - DCO serves "topology subnet" only
+        self.cli_set(path + ['server', 'topology', 'net30'])
+        with self.assertRaisesRegex(ConfigSessionError, r'topology\s+subnet'):
+            self.cli_commit()
+        self.cli_set(path + ['server', 'topology', 'subnet'])
+
+        # check validate() - DCO implements AES-GCM only
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256'])
+
+        # check validate() - DCO has no compression
+        self.cli_set(path + ['use-lzo-compression'])
+        with self.assertRaisesRegex(ConfigSessionError, 'use-lzo-compression'):
+            self.cli_commit()
+        self.cli_delete(path + ['use-lzo-compression'])
+
+        # check validate() - a raw option OpenVPN refuses to offload
+        self.cli_set(path + ['openvpn-option', '--fragment 1300'])
+        with self.assertRaisesRegex(ConfigSessionError, r'openvpn-option\s+fragment'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--fragment 1300'])
+
+        # check validate() - a raw negotiation list overrides the CLI one, so a
+        # cipher DCO can not serve must be caught there as well
+        self.cli_set(path + ['openvpn-option', '--data-ciphers AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--data-ciphers AES-256-CBC'])
+
+        # check validate() - OpenVPN still honours the 2.4 name for it
+        self.cli_set(path + ['openvpn-option', '--ncp-ciphers AES-256-CBC'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--ncp-ciphers AES-256-CBC'])
+
+        # an offloadable raw list is fine, ChaCha20-Poly1305 included
+        self.cli_set(
+            path + ['openvpn-option', '--data-ciphers AES-256-GCM:CHACHA20-POLY1305']
+        )
+        self.cli_commit()
+        self.cli_delete(
+            path + ['openvpn-option', '--data-ciphers AES-256-GCM:CHACHA20-POLY1305']
+        )
+
+        # so is the built-in list, which OpenVPN expands to AEAD ciphers alone
+        self.cli_set(path + ['openvpn-option', '--data-ciphers DEFAULT'])
+        self.cli_commit()
+        self.cli_delete(path + ['openvpn-option', '--data-ciphers DEFAULT'])
+
+        self.cli_commit()
+
+        # every rejection above stopped in verify(), so nothing has touched the
+        # interface yet - reconfigure it for real and check the offload survives
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes128gcm'])
+        self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_commit()
+
+        self.assertIn('data-ciphers AES-128-GCM', read_file(config_file))
+        self.assertDcoDataPath(interface)
+
     def test_openvpn_server_subnet_topology(self):
         # Create OpenVPN server interfaces using different client subnets.
         # Validate configuration afterwards.
@@ -648,6 +834,62 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_set(path + ['encryption', 'cipher', '3des'])
 
+        self.cli_commit()
+
+    def test_openvpn_site2site_dco_verify(self):
+        # DCO has no static key data path
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'cipher', '3des'])
+        self.cli_commit()
+
+        # 2.7 refuses --secret without the compatibility directive
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('secret /run/openvpn/', config)
+        self.assertIn('allow-deprecated-insecure-static-crypto', config)
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+
+        # check validate() - DCO cannot be combined with a shared secret
+        self.cli_set(path + ['offload', 'dco'])
+        with self.assertRaisesRegex(ConfigSessionError, 'shared-secret-key'):
+            self.cli_commit()
+
+    def test_openvpn_site2site_dco_cipher(self):
+        # "encryption cipher" reaches OpenVPN as --cipher, which on a
+        # site-to-site tunnel also turns on the cipher fallback - so a non-AEAD
+        # value would make OpenVPN decline the offload exactly like
+        # "data-ciphers-fallback" does. verify_dco() does not need to say so
+        # only because a cipher can never be combined with TLS, and DCO always
+        # requires TLS. Pin that down: relaxing either rule brings the
+        # combination back into reach.
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'role', 'active'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_set(path + ['encryption', 'cipher', '3des'])
+
+        with self.assertRaisesRegex(ConfigSessionError, r'deprecated\s+for\s+TLS'):
+            self.cli_commit()
+
+        # without the cipher the same tunnel is accepted, so the rejection is
+        # attributable and not an unrelated failure
+        self.cli_delete(path + ['encryption', 'cipher'])
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256'])
+        with self.assertRaisesRegex(ConfigSessionError, r'support\s+cipher'):
+            self.cli_commit()
+
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256gcm'])
         self.cli_commit()
 
     def test_openvpn_options(self):
@@ -882,6 +1124,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         config = read_file(config_file)
         self.assertIn(f'dev {vtun_if}', config)
         self.assertIn(f'dev-type tap', config)
+        self.assertIn('topology subnet', config)
         self.assertIn(f'proto udp', config) # default protocol
         self.assertIn(f'auth {auth_hash}', config)
         self.assertIn(f'data-ciphers AES-192-CBC', config)
@@ -899,6 +1142,45 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
         self.cli_delete(base_path)
         self.cli_commit()
+
+    def test_openvpn_server_keepalive_limit(self):
+        # The CLI ranges still allow a keepalive timeout beyond what OpenVPN
+        # accepts once the limit lands
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', '2000'])
+        self.cli_set(path + ['server', 'subnet', '192.0.2.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+
+        # check validate() - OpenVPN needs both parameters positive and the
+        # timeout at least twice the interval
+        self.cli_set(path + ['keep-alive', 'failure-count', '1'])
+        with self.assertRaisesRegex(ConfigSessionError, r'at\s+least\s+2'):
+            self.cli_commit()
+
+        # check validate() - interval * failure-count exceeds 12 hours
+        self.cli_set(path + ['keep-alive', 'interval', '600'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '1000'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+43200'):
+            self.cli_commit()
+
+        # 600 * 73 is only just over, so the constant is pinned from both sides
+        self.cli_set(path + ['keep-alive', 'failure-count', '73'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+43200'):
+            self.cli_commit()
+
+        # 600 * 72 is exactly 12 hours, which OpenVPN still accepts
+        self.cli_set(path + ['keep-alive', 'failure-count', '72'])
+        self.cli_commit()
+
+        # a config the daemon refuses still commits, so check it came up
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('keepalive 600 43200', config)
 
     def test_openvpn_server_reject_unconfigured_clients(self):
         # T8998: reject-unconfigured-clients without server client entries
