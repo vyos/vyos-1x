@@ -154,27 +154,6 @@ def get_pending_hwid_nodes() -> dict:
     return pending
 
 
-def has_established_baseline(configured: dict, intf_type: str) -> bool:
-    """Whether config.boot already binds at least one real hw-id of this
-    type (ethernet/wireless). Used to decide whether a pending (hw-id-less)
-    node of that type needs its name reserved: that reservation exists
-    solely to protect an established mapping from a wrong guess (see
-    match_pending_nodes()), so it only makes sense once such a mapping
-    actually exists. On a box that has never bound a hw-id of this type at
-    all, there is nothing yet to protect.
-
-    Still needed alongside match_pending_nodes()' exact-cover pairing,
-    which covers a different shape: a cover consumes the whole type group,
-    so the reservation is moot whenever pairing succeeds, but a virgin box
-    whose only pending node is the default 'eth0' a cloud-init/first-boot
-    script wrote into config.boot, with several NICs present, is not a
-    cover - pairing refuses, and without this carve-out 'eth0' would stay
-    reserved and empty while the real NICs bootstrapped at eth1..ethN.
-    """
-    prefix = 'wlan' if intf_type == 'wireless' else 'eth'
-    return any(name.startswith(prefix) for name in configured.values())
-
-
 def get_permanent_mac(ifname: str, sys_class_net: str = '/sys/class/net') -> str:
     """Best-effort permanent hardware address of an interface.
 
@@ -621,15 +600,8 @@ def compute_bootstrap_plan(configured: dict, current: dict, existing_plan: dict,
     a candidate main() could not unambiguously match to one via
     match_pending_nodes() must never squat there instead, since that name
     still carries the node's other settings (address, description, ...).
-    This reservation only applies to a type (ethernet/wireless) that
-    already has at least one real hw-id binding of its own - see
-    has_established_baseline() - since it exists purely to protect an
-    established mapping from a wrong guess, and a type with no bindings
-    at all has no established mapping to protect: a hw-id-less node of
-    that type (e.g. one a cloud-init/first-boot script wrote straight
-    into config.boot before this script ever ran, on a box that has
-    never had hw-id at all) is then just another open slot, exactly like
-    a plain numeric gap, and competes for it the same way.
+    This pass may never fill a pending name - only match_pending_nodes()
+    may, and only under a rule that reports what it did.
     reclaimed is {mac: node_name} for the candidates main() already
     matched to a pending node - their macs are excluded from this pass so
     it never reassigns them elsewhere, and their target names counted as
@@ -665,14 +637,11 @@ def compute_bootstrap_plan(configured: dict, current: dict, existing_plan: dict,
     # as taken here either.
     reserved_pending = set()
     if pending:
-        for intf_type, names in pending.items():
-            if names and has_established_baseline(configured, intf_type):
-                reserved_pending |= names
-    # a reclaim target is authoritative the same way a rightful mover's
-    # is, but its plan entry's source IS a candidate, so rightful_movers
-    # deliberately filters it out above - union it back in here rather
-    # than leaning on reserved_pending, which a type with no established
-    # baseline skips.
+        for names in pending.values():
+            reserved_pending |= names
+    # a reclaim target is authoritative the same way a rightful mover's is,
+    # but its plan entry's source IS a candidate, so rightful_movers filters
+    # it out above - union it back in here
     taken = (set(current) - candidate_names - set(rightful_movers)) \
         | set(rightful_movers.values()) | reserved_pending \
         | set(reclaimed.values())
@@ -765,7 +734,6 @@ def sync_rescan_hints(current_state: dict, configured: dict,
 def write_status(configured: dict, found: dict, missing: set, plan: dict,
                   pending: dict = None, reclaimed: dict = None,
                   candidates: list = None,
-                  resolved_pending: set = frozenset(),
                   reclaimed_by_topology: set = frozenset(),
                   reclaimed_by_name: set = frozenset()) -> None:
     """candidates is the full unmatched_candidates() list evaluated this
@@ -775,12 +743,6 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
     'unconfigured_candidates' names every physical interface that was in
     the running for one, without needing a separate `ip -br link show` or
     `show configuration commands` to reconstruct the same picture by hand.
-
-    resolved_pending is every pending name real hardware ended up under
-    this boot via an ordinary bootstrap assignment - for a type with no
-    established baseline, see has_established_baseline() - rather than an
-    explicit match_pending_nodes() reclaim (already covered by
-    `reclaimed` below); only a name in neither is genuinely unresolved.
 
     reclaimed_by_topology is the subset of `reclaimed` that came from an
     exact cover of more than one pending node, i.e. was paired by PCI slot
@@ -798,13 +760,12 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
     reclaimed = reclaimed or {}
     candidates = candidates or []
     all_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
-    resolved = set(reclaimed.values()) | set(resolved_pending)
     status = {
         'configured': configured,
         'found': sorted(found.values()),
         'missing': {mac: configured[mac] for mac in sorted(missing)},
         'renamed': plan,
-        'pending_unresolved': sorted(all_pending - resolved),
+        'pending_unresolved': sorted(all_pending - set(reclaimed.values())),
         'reclaimed': reclaimed,
         'reclaimed_by_topology': sorted(reclaimed_by_topology),
         'reclaimed_by_name': sorted(reclaimed_by_name),
@@ -896,14 +857,7 @@ def main():
     applied = safe_bulk_rename(plan)
 
     final_current = discover_physical_interfaces()
-    # a pending node whose type had no established baseline (see
-    # has_established_baseline()) was never reserved above, so it may
-    # simply have been claimed by ordinary bootstrap naming instead of a
-    # match_pending_nodes() reclaim - real hardware sits under its name
-    # either way, so it is resolved, not still-pending, even though
-    # `reclaimed` (handled separately below) only tracks the former.
-    resolved_pending = all_pending & set(final_current)
-    for name in sorted(all_pending - set(reclaimed.values()) - resolved_pending):
+    for name in sorted(all_pending - set(reclaimed.values())):
         logger.warning(
             f"pending node '{name}' still has no hw-id after this boot's "
             'naming pass'
@@ -916,7 +870,6 @@ def main():
     sync_rescan_hints(final_current, configured, set(applied.keys()))
     write_status(configured, current, missing, applied,
                  pending=pending, reclaimed=reclaimed, candidates=candidates,
-                 resolved_pending=resolved_pending,
                  reclaimed_by_topology=reclaim_rules['topology'],
                  reclaimed_by_name=reclaim_rules['name'])
 
