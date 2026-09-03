@@ -393,6 +393,14 @@ warn_missing_interface_hardware ()
         [ -n "${intf}" ] || continue
         log_warning_msg "interface '${intf}' had no hw-id and was matched to hardware by PCI slot order - verify it is the port you expect before relying on its configuration"
     done
+
+    # and here even the choice of WHICH hardware was in the running came
+    # from the names the ports happened to carry this boot
+    jq -r '.reclaimed_by_name // [] | .[]' "${status_file}" 2>/dev/null | \
+        while read -r intf; do
+        [ -n "${intf}" ] || continue
+        log_warning_msg "interface '${intf}' had no hw-id and was matched to the port that carried its name this boot - verify it is the port you expect before relying on its configuration"
+    done
 }
 
 cleanup_post_commit_hooks () {
