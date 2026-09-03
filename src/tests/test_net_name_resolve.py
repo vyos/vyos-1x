@@ -1071,31 +1071,35 @@ class TestComputeBootstrapPlanGapFill(unittest.TestCase):
         self.assertNotEqual(plan.get('eth9'), 'eth1')
         self.assertNotEqual(plan.get('eth8'), 'eth1')
 
-    def test_pending_name_not_reserved_with_no_established_baseline(self):
-        # 'eth0' is pending (e.g. a cloud-init/first-boot script wrote it
-        # into config.boot before this script ever ran) on a box that has
-        # NEVER bound a real ethernet hw-id - there is no established
-        # mapping to protect, so it is just another open slot and
-        # competes for it like any other unconfigured candidate, exactly
-        # as it would if `pending` had not been passed at all.
+    def test_pending_name_reserved_even_with_no_hwid_configured(self):
+        # a pending name is off-limits here whatever else config.boot
+        # holds. This pass is not allowed to fill one at all: only
+        # match_pending_nodes() may, and only under a rule that reports
+        # what it did. Leaving a gap here for it to fall into is how the
+        # naming of a box whose hw-ids were all deleted at once was
+        # silently rearranged (T3871, PR #5417).
         configured = {}
         pending = {'ethernet': {'eth0'}, 'wireless': set()}
         current = {'eth9': 'aa', 'eth8': 'bb'}
         plan = resolver.compute_bootstrap_plan(configured, current, {},
                                                 pending=pending)
-        self.assertEqual(plan.get('eth9'), 'eth0')
-        self.assertEqual(plan.get('eth8'), 'eth1')
+        self.assertEqual(plan.get('eth9'), 'eth1')
+        self.assertEqual(plan.get('eth8'), 'eth2')
+        self.assertNotIn('eth0', plan.values())
 
-    def test_pending_name_reserved_if_baseline_exists_for_other_type(self):
-        # an established WIRELESS baseline must not protect a pending
-        # ETHERNET node - the two type groups are judged independently.
-        configured = {'w0': 'wlan0'}
+    def test_unmatchable_pending_name_is_held_open_not_backfilled(self):
+        # nothing of this type has a hw-id, the pending name is carried by
+        # no candidate, and the cardinality is not a cover - so
+        # match_pending_nodes() declines. The name stays empty and is
+        # reported unresolved rather than handed to the lowest-sorting
+        # NIC, which is the case this behaviour change turns around.
+        configured = {}
         pending = {'ethernet': {'eth0'}, 'wireless': set()}
-        current = {'eth9': 'aa', 'eth8': 'bb'}
+        current = {'eth5': 'n5', 'eth6': 'n6', 'eth7': 'n7'}
         plan = resolver.compute_bootstrap_plan(configured, current, {},
                                                 pending=pending)
-        self.assertEqual(plan.get('eth9'), 'eth0')
-        self.assertEqual(plan.get('eth8'), 'eth1')
+        self.assertEqual(plan, {'eth5': 'eth1', 'eth6': 'eth2',
+                                 'eth7': 'eth3'})
 
     def test_reclaimed_candidate_excluded_from_ordinary_bootstrap(self):
         # main() already matched this candidate to a pending node via
