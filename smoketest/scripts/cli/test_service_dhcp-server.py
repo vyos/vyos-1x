@@ -424,7 +424,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             obj,
             ['Dhcp4', 'client-classes', 0],
             'test',
-            'substring(option[12].hex, 0, 4) == 0x53455030 and option[60].hex == 0x5945414c494e4b',
+            "match('.*sep0.*', lcase(option[12].hex)) and option[60].hex == 0x5945414c494e4b",
         )
         self.verify_config_value(
             obj, ['Dhcp4', 'client-classes', 0], 'boot-file-name', bootfile
@@ -442,41 +442,53 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(client_class + ['hostname'])
         self.cli_delete(client_class + ['vendor-class-id', 'value'])
 
-        # substring form, with an explicit offset and hex value
-        self.cli_set(client_class + ['vendor-class-id', 'substring', 'offset', '2'])
+        # substring matching is case-insensitive and matches anywhere in the
+        # option contents, not just at a fixed offset
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', 'yealink'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            "match('.*yealink.*', lcase(option[60].hex))",
+        )
+
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
+
+        # regex metacharacters in the value must be escaped, not interpreted
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', 'T42.S+'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            "match('.*t42\\.s\\+.*', lcase(option[60].hex))",
+        )
+
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
+
+        # raw hex is not supported for substring matching (it can't be safely
+        # embedded into the generated regular expression)
         self.cli_set(
             client_class + ['vendor-class-id', 'substring', 'value', '0x4c494e4b']
         )
 
-        self.cli_commit()
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
-        config = read_file(KEA4_CONF)
-        obj = loads(config)
-        self.verify_config_value(
-            obj,
-            ['Dhcp4', 'client-classes', 0],
-            'test',
-            'substring(option[60].hex, 2, 4) == 0x4c494e4b',
-        )
+        # a literal single quote would break out of the Kea string literal
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', "foo'bar"])
 
-        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'offset'])
-        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
-
-        # an odd number of hex digits must still round up to a whole byte
-        # for the auto-computed length, matching how Kea itself pads the
-        # literal - regression test for a single hex digit
-        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', '0x1'])
-
-        self.cli_commit()
-
-        config = read_file(KEA4_CONF)
-        obj = loads(config)
-        self.verify_config_value(
-            obj,
-            ['Dhcp4', 'client-classes', 0],
-            'test',
-            'substring(option[60].hex, 0, 1) == 0x1',
-        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
         self.verify_service_running()
 
