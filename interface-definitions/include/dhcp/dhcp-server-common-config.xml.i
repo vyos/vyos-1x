@@ -77,18 +77,6 @@
                 </constraint>
               </properties>
             </leafNode>
-            <leafNode name="length">
-              <properties>
-                <help>Number of bytes to compare (default: length of value)</help>
-                <valueHelp>
-                  <format>u32:1-255</format>
-                  <description>Byte length</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 1-255"/>
-                </constraint>
-              </properties>
-            </leafNode>
             <leafNode name="value">
               <properties>
                 <help>Filters on part of the option contents</help>
@@ -138,18 +126,6 @@
                 </valueHelp>
                 <constraint>
                   <validator name="numeric" argument="--range 0-255"/>
-                </constraint>
-              </properties>
-            </leafNode>
-            <leafNode name="length">
-              <properties>
-                <help>Number of bytes to compare (default: length of value)</help>
-                <valueHelp>
-                  <format>u32:1-255</format>
-                  <description>Byte length</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 1-255"/>
                 </constraint>
               </properties>
             </leafNode>
