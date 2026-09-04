@@ -106,7 +106,16 @@ class VPPLoopbackInterface(Interface, VPPInterface):
         # Add loopback interface
         self.add()
 
-        VPPInterface.update(self, config)
-
-        # Apply all settings to the lcp pair (kernel) interface
+        # Apply all settings to the lcp pair (kernel) interface first: creating
+        # the kernel VLANs is what makes linux-cp create the matching VPP
+        # sub-interfaces and their taps, which the VPP-specific settings below
+        # (MTU sync to those taps) then depend on.
         super().update(config)
+
+        # Without a configured MTU the loopback keeps VPP's default; take it
+        # from the kernel so it still reaches the LCP taps and VLAN
+        # sub-interfaces. An explicit MTU is applied by VPPInterface.
+        if 'mtu' not in config:
+            config['mtu'] = self.get_mtu()
+
+        VPPInterface.update(self, config)
