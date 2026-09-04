@@ -14,12 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DHCP_HOOK_IFLIST="/tmp/static_dhcp_interfaces"
-
-# Only run if there are static routes with dhcp-interface configured
-if ! { [ -f $DHCP_HOOK_IFLIST ] && grep -qw $interface $DHCP_HOOK_IFLIST; }; then
-    return 0
-fi
+# The FRR static route configuration embeds the DHCP gateway of an interface,
+# either for "protocols static route <prefix> dhcp-interface <ifname>" or for
+# the default route implied by "interfaces <type> <ifname> address dhcp". The
+# gateway is only known at lease time, so any lease event must reconcile the
+# rendered configuration with the current lease (T8465).
 
 # Re-generate the config on the following events:
 # - BOUND: always re-generate
