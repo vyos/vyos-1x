@@ -55,22 +55,44 @@ class VPPInterface:
             if lcp_name:
                 self.vpp.iface_rxmode(lcp_name, rx_mode)
 
-    def set_mtu_vpp(self, mtu):
-        # Set MTU for the VPP interface
-        self.vpp.set_iface_mtu(self.vpp_ifname, mtu)
+    def set_mtu_vpp(self, config):
+        """Set the MTU on this interface and its VLAN sub-interfaces.
 
-        # Set MTU for the LCP pair interface
-        lcp_pair = self.vpp.lcp_pair_find(vpp_name_hw=self.vpp_ifname)
-        if lcp_pair:
-            lcp_name = lcp_pair.get('vpp_name_kernel')
-            if lcp_name:
-                self.vpp.set_iface_mtu(lcp_name, mtu)
+        The MTU is set on both the dataplane interface and its LCP tap. The
+        tap is created with MTU 0, so it always needs setting. A VLAN
+        sub-interface uses its own MTU if set, otherwise it inherits the
+        parent MTU.
+        """
+        parent_mtu = config.get('mtu')
+        if not parent_mtu:
+            return
+
+        # Fetch all LCP pairs
+        lcp_tap_map = {
+            pair.get('vpp_name_hw'): pair.get('vpp_name_kernel')
+            for pair in self.vpp.lcp_pairs_list()
+        }
+
+        # Parent: always set the dataplane interface, plus its tap if present.
+        self.vpp.set_iface_mtu(self.vpp_ifname, int(parent_mtu))
+        parent_tap = lcp_tap_map.get(self.vpp_ifname)
+        if parent_tap:
+            self.vpp.set_iface_mtu(parent_tap, int(parent_mtu))
+
+        # VLAN sub-interfaces: set the sub-interface and its tap once linux-cp
+        # has created the tap.
+        for vlan_id, vlan_config in config.get('vif', {}).items():
+            vlan_ifname = f'{self.vpp_ifname}.{vlan_id}'
+            lcp_name = lcp_tap_map.get(vlan_ifname)
+            if not lcp_name:
+                continue
+            mtu = int(vlan_config.get('mtu') or parent_mtu)
+            self.vpp.set_iface_mtu(vlan_ifname, mtu)
+            self.vpp.set_iface_mtu(lcp_name, mtu)
 
     def update(self, config):
-        # Set MTU
-        if 'mtu' in config:
-            mtu = int(config['mtu'])
-            self.set_mtu_vpp(mtu)
+        # Set MTU on the interface, its VLAN sub-interfaces, and their LCP taps
+        self.set_mtu_vpp(config)
 
         # Set rx-mode
         rx_mode = config.get('vpp_settings', {}).get('interface_rx_mode')
