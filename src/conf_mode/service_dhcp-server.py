@@ -544,6 +544,15 @@ def verify(dhcp):
         pattern = re.compile(r'^(?:0x[0-9A-Fa-f]+|(?!0x).+)$')
 
         for class_name, class_config in dhcp['client_class'].items():
+            if not any(
+                k in class_config
+                for k in ('relay_agent_information', 'hostname', 'vendor_class_id')
+            ):
+                raise ConfigError(
+                    f'Client class "{class_name}" requires at least one match condition '
+                    f'(relay-agent-information, hostname, or vendor-class-id)'
+                )
+
             if 'relay_agent_information' in class_config:
                 relay_agent_information_config = class_config['relay_agent_information']
 
@@ -568,6 +577,11 @@ def verify(dhcp):
                 if 'value' in match_config and 'substring' in match_config:
                     raise ConfigError(
                         f'Client class "{class_name}": "{option_label}" cannot use both "value" and "substring" at the same time'
+                    )
+
+                if 'value' not in match_config and 'substring' not in match_config:
+                    raise ConfigError(
+                        f'Client class "{class_name}": "{option_label}" requires either "value" or "substring value"'
                     )
 
                 if 'value' in match_config:
