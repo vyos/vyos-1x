@@ -597,9 +597,15 @@ def verify(dhcp):
                             f'Client class "{class_name}": "{option_label} substring" requires a value'
                         )
                     value = match_config['substring']['value']
-                    if not pattern.match(value):
+                    if value.startswith('0x'):
                         raise ConfigError(
-                            f'Invalid {option_label} substring value "{value}" must be either text literal or hex string starting with 0x'
+                            f'Client class "{class_name}": "{option_label} substring" only supports '
+                            f'plain text values, not raw hex'
+                        )
+                    if "'" in value:
+                        raise ConfigError(
+                            f'Client class "{class_name}": "{option_label} substring" value must not '
+                            f"contain a single quote (')"
                         )
 
     return None
