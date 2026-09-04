@@ -538,13 +538,31 @@ def verify(dhcp):
 
     if 'client_class' in dhcp:
         # Check client class values are valid
+        # Compile a regex that will scan for valid inputs. Input can be
+        # either hex in the form 0x0123456789ABCDEF or a string that
+        # does *not* start with 0x. i.e. 0xHELLOWORLD is bad
+        pattern = re.compile(r'^(?:0x[0-9A-Fa-f]+|(?!0x).+)$')
+
         for class_name, class_config in dhcp['client_class'].items():
+            if not any(
+                k in class_config
+                for k in ('relay_agent_information', 'hostname', 'vendor_class_id')
+            ):
+                raise ConfigError(
+                    f'Client class "{class_name}" requires at least one match condition '
+                    f'(relay-agent-information, hostname, or vendor-class-id)'
+                )
+
             if 'relay_agent_information' in class_config:
                 relay_agent_information_config = class_config['relay_agent_information']
-                # Compile a regex that will scan for valid inputs. Input can be
-                # either hex in the form 0x0123456789ABCDEF or a string that
-                # does *not* start with 0x. i.e. 0xHELLOWORLD is bad
-                pattern = re.compile(r'^(?:0x[0-9A-Fa-f]+|(?!0x).+)$')
+
+                if not {'circuit_id', 'remote_id'} & set(
+                    relay_agent_information_config
+                ):
+                    raise ConfigError(
+                        f'Client class "{class_name}": "relay-agent-information" requires '
+                        f'"circuit-id" or "remote-id"'
+                    )
 
                 if 'circuit_id' in relay_agent_information_config:
                     circuit_id = relay_agent_information_config['circuit_id']
@@ -555,6 +573,48 @@ def verify(dhcp):
                     remote_id = relay_agent_information_config['remote_id']
                     if not pattern.match(remote_id):
                         raise ConfigError(f'Invalid remote-id "{remote_id}" must be either text literal or hex string starting with 0x')
+
+            for match_node, option_label in (
+                ('hostname', 'hostname'),
+                ('vendor_class_id', 'vendor-class-id'),
+            ):
+                if match_node not in class_config:
+                    continue
+                match_config = class_config[match_node]
+
+                if 'value' in match_config and 'substring' in match_config:
+                    raise ConfigError(
+                        f'Client class "{class_name}": "{option_label}" cannot use both "value" and "substring" at the same time'
+                    )
+
+                if 'value' not in match_config and 'substring' not in match_config:
+                    raise ConfigError(
+                        f'Client class "{class_name}": "{option_label}" requires either "value" or "substring value"'
+                    )
+
+                if 'value' in match_config:
+                    value = match_config['value']
+                    if not pattern.match(value):
+                        raise ConfigError(
+                            f'Invalid {option_label} value "{value}" must be either text literal or hex string starting with 0x'
+                        )
+
+                if 'substring' in match_config:
+                    if 'value' not in match_config['substring']:
+                        raise ConfigError(
+                            f'Client class "{class_name}": "{option_label} substring" requires a value'
+                        )
+                    value = match_config['substring']['value']
+                    if value.startswith('0x'):
+                        raise ConfigError(
+                            f'Client class "{class_name}": "{option_label} substring" only supports '
+                            f'plain text values, not raw hex'
+                        )
+                    if "'" in value:
+                        raise ConfigError(
+                            f'Client class "{class_name}": "{option_label} substring" value must not '
+                            f"contain a single quote (')"
+                        )
 
     return None
 

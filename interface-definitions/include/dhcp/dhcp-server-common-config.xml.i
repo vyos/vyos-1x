@@ -42,6 +42,79 @@
         </leafNode>
       </children>
     </node>
+    <node name="hostname">
+      <properties>
+        <help>Match DHCP Option 12 (hostname)</help>
+      </properties>
+      <children>
+        <leafNode name="value">
+          <properties>
+            <help>Filters on the exact contents of the option</help>
+            <valueHelp>
+              <format>hex</format>
+              <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+            </valueHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Any other text string is interpreted as ASCII text</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+        <node name="substring">
+          <properties>
+            <help>Filters on whether the option contents contain this text (case-insensitive)</help>
+          </properties>
+          <children>
+            <leafNode name="value">
+              <properties>
+                <help>Text that must appear anywhere in the option contents (case-insensitive)</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>ASCII text to search for; must not contain a single quote (')</description>
+                </valueHelp>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="vendor-class-id">
+      <properties>
+        <help>Match DHCP Option 60 (vendor class identifier)</help>
+      </properties>
+      <children>
+        <leafNode name="value">
+          <properties>
+            <help>Filters on the exact contents of the option</help>
+            <valueHelp>
+              <format>hex</format>
+              <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+            </valueHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Any other text string is interpreted as ASCII text</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+        <node name="substring">
+          <properties>
+            <help>Filters on whether the option contents contain this text (case-insensitive)</help>
+          </properties>
+          <children>
+            <leafNode name="value">
+              <properties>
+                <help>Text that must appear anywhere in the option contents (case-insensitive)</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>ASCII text to search for; must not contain a single quote (')</description>
+                </valueHelp>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    #include <include/dhcp/option-v4.xml.i>
   </children>
 </tagNode>
 #include <include/generic-disable-node.xml.i>

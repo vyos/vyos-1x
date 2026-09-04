@@ -300,6 +300,14 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         client_class = base_path + ['client-class', 'test']
 
+        # relay-agent-information without circuit-id or remote-id is rejected
+        self.cli_set(client_class + ['relay-agent-information'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['relay-agent-information'])
+
         # Test that invalid hex is rejected
         self.cli_set(
             client_class + ['relay-agent-information', 'circuit-id', '0xHELLOWORLD']
@@ -361,6 +369,137 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             'test',
         )
         # Check for running process
+        self.verify_service_running()
+
+    def test_dhcp_client_class_option_match(self):
+        shared_net_name = 'SMOKE-1'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+        range_1_start = inc_ip(subnet, 40)
+        range_1_stop = inc_ip(subnet, 50)
+
+        self.setup_single_pool_range(
+            range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+        )
+
+        client_class = base_path + ['client-class', 'phone']
+        bootfile = 'https://provisioning.example.com/'
+        domain = 'phones.example.com'
+
+        # a class with options but no match condition at all is rejected
+        self.cli_set(client_class + ['option', 'domain-name', domain])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # a match node without "value" or "substring value" is rejected
+        self.cli_set(client_class + ['hostname'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['hostname'])
+        self.cli_delete(client_class + ['option', 'domain-name'])
+
+        # value and substring are mutually exclusive
+        self.cli_set(client_class + ['hostname', 'value', 'SEP0'])
+        self.cli_set(client_class + ['hostname', 'substring', 'value', 'SEP0'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['hostname', 'value'])
+
+        # invalid hex is rejected, same as relay-agent-information
+        self.cli_set(client_class + ['vendor-class-id', 'value', '0xHELLOWORLD'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['vendor-class-id', 'value'])
+
+        self.cli_set(client_class + ['vendor-class-id', 'value', 'YEALINK'])
+        self.cli_set(client_class + ['option', 'bootfile-name', bootfile])
+        self.cli_set(client_class + ['option', 'domain-name', domain])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(obj, ['Dhcp4', 'client-classes', 0], 'name', 'phone')
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            "match('.*sep0.*', lcase(option[12].hex)) and option[60].hex == 0x5945414c494e4b",
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'client-classes', 0], 'boot-file-name', bootfile
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'option-data',
+            [
+                {'name': 'domain-name', 'data': domain},
+                {'name': 'boot-file-name', 'data': bootfile},
+            ],
+        )
+
+        self.cli_delete(client_class + ['hostname'])
+        self.cli_delete(client_class + ['vendor-class-id', 'value'])
+
+        # substring matching is case-insensitive and matches anywhere in the
+        # option contents, not just at a fixed offset
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', 'yealink'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            "match('.*yealink.*', lcase(option[60].hex))",
+        )
+
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
+
+        # regex metacharacters in the value must be escaped, not interpreted
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', 'T42.S+'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            "match('.*t42\\.s\\+.*', lcase(option[60].hex))",
+        )
+
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
+
+        # raw hex is not supported for substring matching (it can't be safely
+        # embedded into the generated regular expression)
+        self.cli_set(
+            client_class + ['vendor-class-id', 'substring', 'value', '0x4c494e4b']
+        )
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
+
+        # a literal single quote would break out of the Kea string literal
+        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', "foo'bar"])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         self.verify_service_running()
 
     def test_dhcp_vendor_option_ubiquiti(self):
