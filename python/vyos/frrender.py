@@ -695,18 +695,29 @@ def get_dhcp_route_interfaces(config_dict) -> set:
     DHCP lease. Two CLI constructs end up reading the DHCP lease file via the
     "get_dhcp_router" Jinja filter and thus depend on the current lease:
 
-    - "protocols static route <prefix> dhcp-interface <ifname>"
+    - "protocols static route <prefix> dhcp-interface <ifname>", either directly
+      or below "protocols static table <id>"
     - the default route implied by "interfaces <type> <ifname> address dhcp"
 
     Both variants exist in the default VRF as well as inside any named VRF.
     """
     interfaces = set()
 
+    def _add_from_routes(route_conf):
+        if not isinstance(route_conf, dict):
+            return
+        for prefix_options in route_conf.values():
+            interfaces.update(prefix_options.get('dhcp_interface', []))
+
     def _add_from_static(static_conf):
         if not isinstance(static_conf, dict):
             return
-        for prefix_options in static_conf.get('route', {}).values():
-            interfaces.update(prefix_options.get('dhcp_interface', []))
+        _add_from_routes(static_conf.get('route'))
+        # Routes in a dedicated routing table use the same "dhcp-interface"
+        # node, thus they depend on the DHCP lease in the very same way
+        for table_config in static_conf.get('table', {}).values():
+            if isinstance(table_config, dict):
+                _add_from_routes(table_config.get('route'))
         for ifname, if_config in static_conf.get('dhcp', {}).items():
             # An interface explicitly opting out of the default route does not
             # contribute a route, thus a lease change is irrelevant for it
