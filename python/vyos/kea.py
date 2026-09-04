@@ -187,10 +187,11 @@ def kea_parse_options(config):
             }
 
             if option['type'] == 'binary':
+                values = data if isinstance(data, list) else [data]
                 option_data['csv-format'] = False
-                option_data['data'] = option_data['data'].replace(
-                    ':', ''
-                ).removeprefix('0x')
+                option_data['data'] = ''.join(
+                    value.replace(':', '').removeprefix('0x') for value in values
+                )
 
             options.append(option_data)
 

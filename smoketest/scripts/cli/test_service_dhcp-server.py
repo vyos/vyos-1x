@@ -442,11 +442,24 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             'custom-option',
             'cisco-wlc',
         ]
+        binary_vendor_option = base_path + [
+            'shared-network-name',
+            shared_net_name,
+            'option',
+            'vendor-option',
+            'custom-option',
+            'binary-data',
+        ]
         self.cli_set(vendor_option + ['code', '241'])
         self.cli_set(vendor_option + ['type', 'ipv4-address'])
         self.cli_set(vendor_option + ['array'])
         self.cli_set(vendor_option + ['data', controller_1])
         self.cli_set(vendor_option + ['data', controller_2])
+        self.cli_set(binary_vendor_option + ['code', '242'])
+        self.cli_set(binary_vendor_option + ['type', 'binary'])
+        self.cli_set(binary_vendor_option + ['array'])
+        self.cli_set(binary_vendor_option + ['data', '0x01:02'])
+        self.cli_set(binary_vendor_option + ['data', '03:04'])
 
         self.cli_commit()
 
@@ -466,6 +479,17 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
         self.verify_config_object(
             obj,
+            ['Dhcp4', 'option-def'],
+            {
+                'name': 'binary-data',
+                'code': 242,
+                'type': 'binary',
+                'space': 'vendor-encapsulated-options-space',
+                'array': True,
+            },
+        )
+        self.verify_config_object(
+            obj,
             ['Dhcp4', 'shared-networks', 0, 'option-data'],
             {'name': 'vendor-encapsulated-options'},
         )
@@ -476,6 +500,16 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'name': 'cisco-wlc',
                 'space': 'vendor-encapsulated-options-space',
                 'data': f'{controller_1}, {controller_2}',
+            },
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'option-data'],
+            {
+                'name': 'binary-data',
+                'space': 'vendor-encapsulated-options-space',
+                'data': '01020304',
+                'csv-format': False,
             },
         )
         self.verify_service_running()
