@@ -431,6 +431,14 @@ def get_dhcp_router(interface):
 
     Returns None if no router is found, returns the IP address as string if
     a router is found.
+
+    The file read here is not the dhclient lease database (dhclient_<if>.leases)
+    but the per event dump written by
+    /etc/dhcp/dhclient-exit-hooks.d/03-vyos-dhclient-hook. It is intentionally
+    not removed when the DHCP client is stopped - the RELEASE/STOP event
+    rewrites it with an empty "new_routers", which is the signal that no router
+    is available. The file name is keyed on the interface only, a VRF assignment
+    does not change it.
     """
     lease_file = directories['isc_dhclient_dir'] + f'/dhclient_{interface}.lease'
     if not os.path.exists(lease_file):

@@ -31,10 +31,8 @@ from vyos.config import config_dict_merge
 from vyos.configdict import get_dhcp_interfaces
 from vyos.configdict import get_pppoe_interfaces
 from vyos.defaults import frr_debug_enable
-from vyos.defaults import static_route_dhcp_interfaces_path
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_set_nested
-from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import cmdl
 from vyos.utils.process import rc_cmd
@@ -692,6 +690,41 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
     return dict
 
+def get_dhcp_route_interfaces(config_dict) -> set:
+    """Collect all interfaces whose static route configuration is derived from a
+    DHCP lease. Two CLI constructs end up reading the DHCP lease file via the
+    "get_dhcp_router" Jinja filter and thus depend on the current lease:
+
+    - "protocols static route <prefix> dhcp-interface <ifname>"
+    - the default route implied by "interfaces <type> <ifname> address dhcp"
+
+    Both variants exist in the default VRF as well as inside any named VRF.
+    """
+    interfaces = set()
+
+    def _add_from_static(static_conf):
+        if not isinstance(static_conf, dict):
+            return
+        for prefix_options in static_conf.get('route', {}).values():
+            interfaces.update(prefix_options.get('dhcp_interface', []))
+        for ifname, if_config in static_conf.get('dhcp', {}).items():
+            # An interface explicitly opting out of the default route does not
+            # contribute a route, thus a lease change is irrelevant for it
+            if dict_search('dhcp_options.no_default_route', if_config) != None:
+                continue
+            interfaces.add(ifname)
+
+    if not isinstance(config_dict, dict):
+        return interfaces
+
+    _add_from_static(config_dict.get('static'))
+    for vrf_name in dict_search('vrf.name', config_dict) or {}:
+        _add_from_static(
+            dict_search(f'vrf.name.{vrf_name}.protocols.static', config_dict)
+        )
+
+    return interfaces
+
 class FRRender:
     cached_config_dict = {}
     cached_dhcp_gateways = {}
@@ -707,9 +740,14 @@ class FRRender:
             tmp = type(config_dict)
             raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
 
+        # T8465: the rendered configuration embeds the current DHCP gateway,
+        # which changes independently of the CLI configuration. The interface
+        # list must be derived from the configuration itself - the DHCP hook
+        # list on disk is only written by protocols_static.py, which does not
+        # run on an interface-only commit.
         dhcp_gateways = {
             interface: get_dhcp_router(interface)
-            for interface in read_file(static_route_dhcp_interfaces_path, '').split()
+            for interface in get_dhcp_route_interfaces(config_dict)
         }
 
         if (

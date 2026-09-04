@@ -202,6 +202,39 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         # always forward to base class
         super().tearDown()
 
+    def wait_for_dhcp_router(self, interface, timeout=30):
+        """The DHCP client is started in the background (dhclient -nw), thus a
+        commit returns before a lease was acquired. In addition, moving an
+        interface into a VRF releases and re-acquires the lease. Wait until the
+        DHCP hook reported a router for the given interface."""
+        result, router = self.wait_for_result(
+            lambda: get_dhcp_router(interface),
+            lambda tmp: tmp is not None,
+            pause=1,
+            timeout=timeout,
+        )
+        self.assertTrue(
+            result, f'No DHCP router received on interface "{interface}"'
+        )
+        return router
+
+    def assert_in_frrconfig(self, needle, timeout=30, **kwargs):
+        """Assert that needle shows up in the FRR configuration. A DHCP lease
+        event reconciles the FRR configuration asynchronously via the dhclient
+        hook, thus we can not check the configuration only once."""
+        def check():
+            frrconfig = self.getFRRconfig(**kwargs)
+            if needle in frrconfig:
+                return True
+            return frrconfig
+
+        result, frrconfig = self.wait_for_result(
+            check, True, pause=1, timeout=timeout
+        )
+        self.assertTrue(
+            result, f"Expected '{needle}' in FRR config:\n{frrconfig}"
+        )
+
     def test_01_static(self):
         self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         for route, route_config in routes.items():
@@ -605,12 +638,9 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_set(interface_path + ['address', 'dhcp'])
         self.cli_commit()
 
-        # Wait for dhclient to receive IP address and default gateway
-        sleep(5)
-
-        router = get_dhcp_router(interface)
-        frrconfig = self.getFRRconfig()
-        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+        router = self.wait_for_dhcp_router(interface)
+        route_str = f'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}'
+        self.assert_in_frrconfig(route_str)
 
         # T6991: Default route is missing when there is no "protocols static"
         # CLI node entry
@@ -621,8 +651,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Re-check FRR configuration that default route is still present
-        frrconfig = self.getFRRconfig()
-        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+        self.assert_in_frrconfig(route_str)
 
         self.cli_delete(interface_path + ['address'])
         self.cli_commit()
@@ -648,7 +677,10 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_set(interface_path + ['vrf', vrf])
         self.cli_commit()
 
-        router = get_dhcp_router(interface)
+        # Moving the interface into a VRF stops and restarts the DHCP client,
+        # thus the lease is released and re-acquired - we must not read the
+        # released (empty) lease information here
+        router = self.wait_for_dhcp_router(interface)
         route_str = (
             rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}'
         )
@@ -660,7 +692,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             return frrconfig
 
         result, config = self.wait_for_result(
-            check_default_route, True, pause=1, timeout=10
+            check_default_route, True, pause=1, timeout=30
         )
 
         # First clean interfaces from VRF so that VRF can be deleted
@@ -695,8 +727,9 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         # Commit configuration
         self.cli_commit()
 
-        # Wait for dhclient to receive IP address
-        sleep(5)
+        # Wait for dhclient to receive an IP address and default gateway - the
+        # dhcp-interface routes are rendered from the lease
+        router = self.wait_for_dhcp_router(dhcp_interface)
 
         # Configure static routes with dhcp-interface
         dhcp_routes = {
@@ -734,17 +767,11 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             f'Interface {dhcp_interface} should be in hook interface list',
         )
 
-        # Get the DHCP router for verification
-        router = get_dhcp_router(dhcp_interface)
-        self.assertIsNotNone(router, 'DHCP router should be available')
-
         # Verify FRR configuration contains the static routes with DHCP router
-        frrconfig = self.getFRRconfig('ip route', end_marker='')
-
         for route in dhcp_routes.keys():
             expected_route = f'ip route {route} {router} {dhcp_interface}'
-            self.assertIn(expected_route, frrconfig, f'Static route {route} '\
-                          'with dhcp-interface should be in FRR config')
+            self.assert_in_frrconfig(expected_route, start_section='ip route',
+                                     end_marker='')
 
         # Test table-based routes with dhcp-interface
         table_id = '100'
@@ -754,15 +781,11 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify table route in FRR config
-        frrconfig = self.getFRRconfig('ip route', end_marker='')
         expected_table_route = (
             f'ip route {table_route} {router} {dhcp_interface} table {table_id}'
         )
-        self.assertIn(
-            expected_table_route,
-            frrconfig,
-            f'Table static route {table_route} with dhcp-interface should be in FRR config',
-        )
+        self.assert_in_frrconfig(expected_table_route,
+                                 start_section='ip route', end_marker='')
 
         # Clean up - remove DHCP configuration
         self.cli_delete(interface_path + ['address'])
