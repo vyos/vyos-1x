@@ -1,0 +1,150 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8264: "offload dco" used to be accepted next to settings the Kernel module
+# can not serve, because OpenVPN 2.6 silently ignored the module. Now that the
+# offload is real those combinations are rejected, so drop the request from
+# configurations that would otherwise fail to load.
+
+from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'openvpn']
+dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+dco_incompatible_options = [
+    'comp-lzo',
+    'disable-dco',
+    'fragment',
+    'http-proxy',
+    'management-query-proxy',
+    'socks-proxy',
+]
+dco_conditional_options = {
+    'allow-compression': 'no',
+    'compress': 'migrate',
+}
+dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
+dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
+
+
+def _offloadable_ciphers(value: str) -> bool:
+    """Whether every cipher of a raw negotiation list can be offloaded."""
+    for cipher in value.split(':'):
+        # "DEFAULT" stands for the built-in list, which OpenVPN expands - case
+        # sensitively, and only as a bare token - to AEAD ciphers alone before
+        # it weighs the offload
+        if cipher == 'DEFAULT':
+            continue
+        # it strips exactly one "?", and drops such a cipher only when it does
+        # not know it at all, so an optional one still has to be offloadable
+        name = cipher[1:] if cipher.startswith('?') else cipher
+        if name.upper() not in dco_raw_ciphers:
+            return False
+    return True
+
+
+def _offloadable(options: list, mode: str) -> bool:
+    """Whether every raw option leaves the data path offloadable."""
+    # site-to-site renders neither "client" nor "server", and OpenVPN then
+    # takes a raw "--cipher" as the fallback cipher
+    cipher_options = dco_cipher_options
+    if mode == 'site-to-site':
+        cipher_options = cipher_options + ['cipher']
+
+    for option in options:
+        tmp = option.split()
+        if not tmp:
+            continue
+        keyword = tmp[0].lstrip('-')
+        if keyword in dco_incompatible_options:
+            return False
+        keep = dco_conditional_options.get(keyword)
+        if keep is not None and tmp[1:] != [keep]:
+            return False
+        if keyword in cipher_options and tmp[1:]:
+            if not _offloadable_ciphers(tmp[1]):
+                return False
+    return True
+
+
+def _value(config: ConfigTree, path: list):
+    # return_value() raises on a missing path, and nodes carrying a CLI
+    # default are usually absent from a saved configuration
+    return config.return_value(path) if config.exists(path) else None
+
+
+def _clamp_keepalive(config: ConfigTree, path: list) -> None:
+    """Bring a server keepalive within what verify() accepts."""
+    if _value(config, path + ['mode']) != 'server':
+        return
+
+    # both nodes carry a CLI default, so they render even when absent
+    interval = int(_value(config, path + ['keep-alive', 'interval']) or 10)
+    count = int(_value(config, path + ['keep-alive', 'failure-count']) or 60)
+
+    # a zero interval renders "keepalive 0 0" and turns keepalive off, which
+    # OpenVPN and verify() both leave alone
+    if interval < 1:
+        return
+
+    # the timeout is interval * failure-count: it has to reach twice the
+    # interval and stay below 12 hours. Beyond an interval of 21600 no count
+    # satisfies both - the CLI range stops at 600, so only a hand-edited
+    # configuration gets there and its interval is rejected anyway.
+    wanted = min(max(count, 2), max(2, 43200 // interval))
+    if wanted != count:
+        config.set(path + ['keep-alive', 'failure-count'], value=str(wanted))
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    for interface in config.list_nodes(base):
+        path = base + [interface]
+
+        # unrelated to the offload, so it runs for every interface
+        _clamp_keepalive(config, path)
+
+        if not config.exists(path + ['offload', 'dco']):
+            continue
+
+        ciphers = []
+        if config.exists(path + ['encryption', 'data-ciphers']):
+            ciphers += config.return_values(path + ['encryption', 'data-ciphers'])
+        fallback = _value(config, path + ['encryption', 'data-ciphers-fallback'])
+        if fallback:
+            ciphers.append(fallback)
+
+        options = []
+        if config.exists(path + ['openvpn-option']):
+            options = config.return_values(path + ['openvpn-option'])
+
+        mode = _value(config, path + ['mode'])
+        topology = None
+        if mode == 'server':
+            topology = _value(config, path + ['server', 'topology'])
+
+        if (
+            _value(config, path + ['device-type']) == 'tap'
+            or config.exists(path + ['shared-secret-key'])
+            or config.exists(path + ['use-lzo-compression'])
+            or (topology is not None and topology != 'subnet')
+            or any(cipher not in dco_ciphers for cipher in ciphers)
+            or not _offloadable(options, mode)
+        ):
+            offload = path + ['offload']
+            config.delete(offload + ['dco'])
+            if config.exists(offload) and not config.list_nodes(offload):
+                config.delete(offload)

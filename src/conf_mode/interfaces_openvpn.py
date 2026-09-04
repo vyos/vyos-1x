@@ -76,6 +76,33 @@ group = 'openvpn'
 
 cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
+# Ciphers implemented by the in-tree "ovpn" Kernel module. Any other cipher
+# must be handled in userspace and thus rules out DCO. The module also does
+# ChaCha20-Poly1305, which the CLI does not offer.
+dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+# Raw options that make OpenVPN fall back to the userspace data path, taken
+# from dco_check_option() and dco_check_option_ce()
+dco_incompatible_options = [
+    'comp-lzo',
+    'disable-dco',
+    'fragment',
+    'http-proxy',
+    'management-query-proxy',
+    'socks-proxy',
+]
+# these rule out the offload for every value but one - notably "compress
+# migrate", which is what OpenVPN suggests to keep it
+dco_conditional_options = {
+    'allow-compression': 'no',
+    'compress': 'migrate',
+}
+# Cipher negotiation lists a raw option can override, "ncp-ciphers" being the
+# 2.4 spelling OpenVPN still accepts. A raw list wins over the one rendered
+# from "encryption data-ciphers", so it needs the very same check.
+dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
+# dco_ciphers again, spelled the way OpenVPN reports them in
+# dco_get_supported_ciphers()
+dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
 otp_path = '/config/auth/openvpn'
 otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
@@ -139,7 +166,7 @@ def get_config(config=None):
 
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
-    if is_node_changed(conf, base + [ifname, 'enable-dco']):
+    if is_node_changed(conf, base + [ifname, 'offload']):
         openvpn.update({'restart_required': {}})
 
     # Detect changes that are limited to per-client CCD entries (T6478).
@@ -208,6 +235,77 @@ def verify_data_ciphers_fallback(openvpn):
     if openvpn['mode'] != 'site-to-site':
         if dict_search('encryption.data_ciphers_fallback', openvpn):
             raise ConfigError('Cipher fallback is valid only in site-to-site mode')
+
+
+def unoffloadable_cipher(value):
+    """The first cipher of a raw negotiation list DCO can not serve, if any."""
+    for cipher in value.split(':'):
+        # "DEFAULT" stands for the built-in list, which OpenVPN expands - case
+        # sensitively, and only as a bare token - to AEAD ciphers alone before
+        # it weighs the offload
+        if cipher == 'DEFAULT':
+            continue
+        # it strips exactly one "?", and drops such a cipher only when it does
+        # not know it at all, so an optional one still has to be offloadable
+        name = cipher[1:] if cipher.startswith('?') else cipher
+        if name.upper() not in dco_raw_ciphers:
+            return cipher
+    return None
+
+
+def verify_dco(openvpn):
+    if dict_search('offload.dco', openvpn) is None:
+        return
+
+    if openvpn['device_type'] != 'tun':
+        raise ConfigError('DCO requires "device-type tun"')
+
+    if openvpn['mode'] == 'server':
+        topology = dict_search('server.topology', openvpn)
+        if topology != 'subnet':
+            raise ConfigError(
+                f'DCO requires "server topology subnet", got "{topology}"'
+            )
+
+    if 'shared_secret_key' in openvpn:
+        raise ConfigError('DCO is incompatible with "shared-secret-key"')
+
+    if 'use_lzo_compression' in openvpn:
+        raise ConfigError('DCO is incompatible with "use-lzo-compression"')
+
+    ciphers = dict_search('encryption.data_ciphers', openvpn) or []
+    fallback = dict_search('encryption.data_ciphers_fallback', openvpn)
+    if fallback:
+        ciphers = ciphers + [fallback]
+
+    for cipher in ciphers:
+        if cipher not in dco_ciphers:
+            raise ConfigError(f'DCO does not support cipher "{cipher}"')
+
+    # Outside server and pull mode OpenVPN takes a raw "--cipher" as the
+    # fallback cipher, which decides the offload just like a negotiation list
+    # does - and site-to-site is the mode that renders neither
+    cipher_options = dco_cipher_options
+    if openvpn['mode'] == 'site-to-site':
+        cipher_options = cipher_options + ['cipher']
+
+    # A raw option OpenVPN refuses to offload leaves the daemon on the
+    # userspace data path, where it can not use the interface it was given
+    for option in dict_search('openvpn_option', openvpn) or []:
+        tmp = option.split()
+        if not tmp:
+            continue
+        keyword = tmp[0].lstrip('-')
+        if keyword in dco_incompatible_options:
+            raise ConfigError(f'DCO is incompatible with "openvpn-option {keyword}"')
+        if keyword in dco_conditional_options:
+            keep = dco_conditional_options[keyword]
+            if tmp[1:] != [keep]:
+                raise ConfigError(f'DCO requires "openvpn-option {keyword} {keep}"')
+        if keyword in cipher_options and tmp[1:]:
+            cipher = unoffloadable_cipher(tmp[1])
+            if cipher is not None:
+                raise ConfigError(f'DCO does not support cipher "{cipher}"')
 
 def verify_pki(openvpn):
     pki = openvpn['pki']
@@ -419,6 +517,28 @@ def verify(openvpn):
     if openvpn['mode'] == 'server':
         if openvpn['protocol'] == 'tcp-active':
             raise ConfigError('Protocol "tcp-active" is not valid in server mode')
+
+        # The rendered "keepalive" timeout is interval * failure-count. OpenVPN
+        # limits ping and keepalive to 24 hours and doubles the timeout on the
+        # server, so the rendered value can not exceed 12 hours.
+        keep_alive = openvpn['keep_alive']
+        interval = int(keep_alive['interval'])
+        failure_count = int(keep_alive['failure_count'])
+        timeout = interval * failure_count
+
+        # A zero interval renders "keepalive 0 0", on which OpenVPN skips its
+        # own sanity checks - that is how a configuration turns keepalive off,
+        # so only an enabled one has to satisfy them
+        if interval > 0:
+            # the timeout has to be at least twice the interval, which the CLI
+            # ranges do not enforce
+            if failure_count < 2:
+                raise ConfigError('Keepalive "failure-count" must be at least 2')
+
+            if timeout > 43200:
+                raise ConfigError(
+                    f'Keepalive timeout of {timeout} seconds cannot exceed 43200'
+                )
 
         if dict_search('authentication.username', openvpn) or dict_search('authentication.password', openvpn):
             raise ConfigError('Cannot specify "authentication" in server mode')
@@ -662,6 +782,7 @@ def verify(openvpn):
     verify_mirror_redirect(openvpn)
 
     verify_data_ciphers_fallback(openvpn)
+    verify_dco(openvpn)
 
     return None
 
