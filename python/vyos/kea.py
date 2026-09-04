@@ -64,6 +64,7 @@ kea6_options = {
 }
 
 kea_ctrl_socket = '/var/run/kea/dhcp{inet}{vrf_append}-ctrl-socket'
+kea4_vendor_option_space = 'vendor-encapsulated-options-space'
 
 
 def _format_hex_string(in_str):
@@ -159,16 +160,169 @@ def kea_parse_options(config):
         config, 'vendor_option', 'ubiquiti', 'unifi_controller'
     )
     if unifi_controller:
-        options.append({'name': 'vendor-encapsulated-options'})
+        if not any(
+            option['name'] == 'vendor-encapsulated-options' for option in options
+        ):
+            options.append({'name': 'vendor-encapsulated-options'})
         options.append(
             {
                 'name': 'ubnt',
                 'data': unifi_controller,
-                'space': 'vendor-encapsulated-options-space',
+                'space': kea4_vendor_option_space,
             }
         )
 
+    custom_options = dict_search_args(config, 'vendor_option', 'custom_option')
+    if custom_options:
+        if not any(
+            option['name'] == 'vendor-encapsulated-options' for option in options
+        ):
+            options.append({'name': 'vendor-encapsulated-options'})
+        for name, option in custom_options.items():
+            data = option['data']
+            option_data = {
+                'name': name,
+                'data': ', '.join(data) if isinstance(data, list) else data,
+                'space': kea4_vendor_option_space,
+            }
+
+            if option['type'] == 'binary':
+                values = data if isinstance(data, list) else [data]
+                option_data['csv-format'] = False
+                option_data['data'] = ''.join(
+                    value.replace(':', '').removeprefix('0x') for value in values
+                )
+
+            options.append(option_data)
+
     return options
+
+
+def _iter_dhcp4_option_configs(config):
+    if not isinstance(config, dict):
+        return
+
+    shared_networks = config.get('shared_network_name', config)
+    if not isinstance(shared_networks, dict):
+        return
+
+    for network_config in shared_networks.values():
+        if not isinstance(network_config, dict) or 'disable' in network_config:
+            continue
+
+        if 'option' in network_config:
+            yield network_config['option']
+
+        for subnet_config in network_config.get('subnet', {}).values():
+            if not isinstance(subnet_config, dict) or 'disable' in subnet_config:
+                continue
+
+            if 'option' in subnet_config:
+                yield subnet_config['option']
+
+            for range_config in subnet_config.get('range', {}).values():
+                if isinstance(range_config, dict) and 'option' in range_config:
+                    yield range_config['option']
+
+            for host_config in subnet_config.get('static_mapping', {}).values():
+                if (
+                    isinstance(host_config, dict)
+                    and 'disable' not in host_config
+                    and 'option' in host_config
+                ):
+                    yield host_config['option']
+
+
+def _find_custom_vendor_options(config):
+    for option_config in _iter_dhcp4_option_configs(config):
+        custom_options = dict_search_args(
+            option_config, 'vendor_option', 'custom_option'
+        )
+        if custom_options:
+            yield from custom_options.items()
+
+
+def _find_unifi_vendor_options(config):
+    for option_config in _iter_dhcp4_option_configs(config):
+        unifi_controller = dict_search_args(
+            option_config, 'vendor_option', 'ubiquiti', 'unifi_controller'
+        )
+        if unifi_controller:
+            yield unifi_controller
+
+
+def kea_parse_vendor_option_defs(config):
+    option_defs_by_name = {}
+    option_defs_by_code = {}
+
+    if any(_find_unifi_vendor_options(config)):
+        option_def = {
+            'name': 'ubnt',
+            'code': 1,
+            'type': 'ipv4-address',
+            'space': kea4_vendor_option_space,
+        }
+        option_defs_by_name[option_def['name']] = option_def
+        option_defs_by_code[option_def['code']] = option_def
+
+    for name, option in _find_custom_vendor_options(config):
+        option_def = {
+            'name': name,
+            'code': int(option['code']),
+            'type': option['type'],
+            'space': kea4_vendor_option_space,
+        }
+
+        if 'array' in option:
+            option_def['array'] = True
+
+        name_key = option_def['name']
+        code_key = option_def['code']
+        if (
+            name_key in option_defs_by_name
+            and option_defs_by_name[name_key] != option_def
+        ):
+            raise ConfigError(f'Conflicting DHCP vendor option definition: {name}')
+
+        if (
+            code_key in option_defs_by_code
+            and option_defs_by_code[code_key] != option_def
+        ):
+            raise ConfigError(f'Conflicting DHCP vendor option definition: {name}')
+
+        option_defs_by_name[name_key] = option_def
+        option_defs_by_code[code_key] = option_def
+
+    return list(option_defs_by_name.values())
+
+
+def verify_kea_vendor_options(config):
+    for name, option in _find_custom_vendor_options(config):
+        missing_nodes = []
+        for node in ['code', 'data', 'type']:
+            if node not in option:
+                missing_nodes.append(node.replace('_', '-'))
+
+        if missing_nodes:
+            raise ConfigError(
+                f'DHCP vendor option "{name}" requires {" and ".join(missing_nodes)}'
+            )
+
+        data = option['data']
+        if isinstance(data, list) and len(data) > 1 and 'array' not in option:
+            raise ConfigError(
+                f'DHCP vendor option "{name}" has multiple data values but array is not enabled'
+            )
+
+        if option['type'] == 'binary':
+            values = data if isinstance(data, list) else [data]
+            for value in values:
+                hex_value = value.replace(':', '').removeprefix('0x')
+                if not re.fullmatch(r'([0-9a-fA-F]{2})+', hex_value):
+                    raise ConfigError(
+                        f'DHCP vendor option "{name}" binary data must contain '
+                        'full hexadecimal octets'
+                    )
 
 
 def kea_parse_subnet(subnet, config):

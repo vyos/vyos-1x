@@ -1023,6 +1023,13 @@ def kea_dynamic_dns_update_domains(config, type_key):
 
     return dumps(out, indent=12)
 
+@register_filter('kea_vendor_option_defs')
+def kea_vendor_option_defs(config):
+    from vyos.kea import kea_parse_vendor_option_defs
+    from json import dumps
+
+    return dumps(kea_parse_vendor_option_defs(config), indent=12)
+
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):
     from vyos.kea import kea_parse_options

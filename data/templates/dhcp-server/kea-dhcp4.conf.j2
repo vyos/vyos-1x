@@ -39,13 +39,14 @@
                 "name": "wpad-url",
                 "code": 252,
                 "type": "string"
-            },
-            {
-                "name": "ubnt",
-                "code": 1,
-                "type": "ipv4-address",
-                "space": "vendor-encapsulated-options-space"
             }
+{% if shared_network_name is vyos_defined %}
+{%     set vendor_option_defs = shared_network_name | kea_vendor_option_defs %}
+{%     if vendor_option_defs != '[]' %}
+            ,
+{{ vendor_option_defs[1:-1] }}
+{%     endif %}
+{% endif %}
         ],
 {% if dynamic_dns_update is vyos_defined %}
         "dhcp-ddns": {

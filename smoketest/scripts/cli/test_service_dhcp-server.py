@@ -396,6 +396,16 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.verify_config_object(
             obj,
+            ['Dhcp4', 'option-def'],
+            {
+                'name': 'ubnt',
+                'code': 1,
+                'type': 'ipv4-address',
+                'space': 'vendor-encapsulated-options-space',
+            },
+        )
+        self.verify_config_object(
+            obj,
             ['Dhcp4', 'shared-networks', 0, 'option-data'],
             {'name': 'vendor-encapsulated-options'},
         )
@@ -406,6 +416,100 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'name': 'ubnt',
                 'space': 'vendor-encapsulated-options-space',
                 'data': unifi_controller,
+            },
+        )
+        self.verify_service_running()
+
+    def test_dhcp_vendor_option_custom(self):
+        shared_net_name = 'SMOKE-1'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+        range_1_start = inc_ip(subnet, 40)
+        range_1_stop = inc_ip(subnet, 50)
+        controller_1 = '192.0.2.10'
+        controller_2 = '192.0.2.11'
+
+        self.setup_single_pool_range(
+            range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+        )
+
+        vendor_option = base_path + [
+            'shared-network-name',
+            shared_net_name,
+            'option',
+            'vendor-option',
+            'custom-option',
+            'cisco-wlc',
+        ]
+        binary_vendor_option = base_path + [
+            'shared-network-name',
+            shared_net_name,
+            'option',
+            'vendor-option',
+            'custom-option',
+            'binary-data',
+        ]
+        self.cli_set(vendor_option + ['code', '241'])
+        self.cli_set(vendor_option + ['type', 'ipv4-address'])
+        self.cli_set(vendor_option + ['array'])
+        self.cli_set(vendor_option + ['data', controller_1])
+        self.cli_set(vendor_option + ['data', controller_2])
+        self.cli_set(binary_vendor_option + ['code', '242'])
+        self.cli_set(binary_vendor_option + ['type', 'binary'])
+        self.cli_set(binary_vendor_option + ['array'])
+        self.cli_set(binary_vendor_option + ['data', '0x01:02'])
+        self.cli_set(binary_vendor_option + ['data', '03:04'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'option-def'],
+            {
+                'name': 'cisco-wlc',
+                'code': 241,
+                'type': 'ipv4-address',
+                'space': 'vendor-encapsulated-options-space',
+                'array': True,
+            },
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'option-def'],
+            {
+                'name': 'binary-data',
+                'code': 242,
+                'type': 'binary',
+                'space': 'vendor-encapsulated-options-space',
+                'array': True,
+            },
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'option-data'],
+            {'name': 'vendor-encapsulated-options'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'option-data'],
+            {
+                'name': 'cisco-wlc',
+                'space': 'vendor-encapsulated-options-space',
+                'data': f'{controller_1}, {controller_2}',
+            },
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'option-data'],
+            {
+                'name': 'binary-data',
+                'space': 'vendor-encapsulated-options-space',
+                'data': '01020304',
+                'csv-format': False,
             },
         )
         self.verify_service_running()
