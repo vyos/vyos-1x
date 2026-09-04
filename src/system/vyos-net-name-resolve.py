@@ -28,6 +28,13 @@
 # second chance since each uevent is only evaluated once. This script
 # sidesteps that by re-reading live state after hardware has had time to
 # settle, and by verifying/repairing the outcome rather than guessing once.
+#
+# The pass runs in three stages: move interfaces to their configured hw-id
+# names (compute_rename_plan), let hw-id-less config nodes reclaim their
+# own hardware (match_pending_nodes), then name whatever is left
+# (compute_bootstrap_plan). Each rule here was added for a specific field
+# report; the reasoning lives in the test that pins it, in
+# src/tests/test_net_name_resolve.py, where it cannot drift unnoticed.
 
 import json
 import logging
@@ -127,15 +134,13 @@ def get_configfile_interfaces() -> dict:
 
 
 def get_pending_hwid_nodes() -> dict:
-    """Interface nodes that exist under interfaces/{ethernet,wireless} in
-    config.boot but have no 'hw-id' leaf - e.g. the documented "NIC
-    replaced" remediation (`delete interfaces ethernet eth1 hw-id`)
-    intentionally leaves the node (and its other settings, like address)
-    in place, expecting the SAME node to receive a fresh hw-id. These
-    names have no known MAC yet - that is the point - so they cannot be
-    folded into get_configfile_interfaces()'s MAC-keyed dict; they are
-    surfaced here, grouped by type, so main() can try to match them to
-    this boot's unconfigured hardware (see match_pending_nodes()).
+    """{'ethernet': names, 'wireless': names} for config.boot nodes with
+    no 'hw-id' leaf - the "NIC replaced" remediation deletes only the
+    hw-id, keeping the node and its address for the same port to reclaim.
+
+    They have no known MAC by definition, so they cannot go in
+    get_configfile_interfaces()' MAC-keyed dict; match_pending_nodes()
+    tries to pair them with hardware instead.
     """
     pending = {'ethernet': set(), 'wireless': set()}
 
@@ -154,13 +159,21 @@ def get_pending_hwid_nodes() -> dict:
     return pending
 
 
+def pending_names(pending: dict) -> set:
+    """Every pending node name, both types together."""
+    if not pending:
+        return set()
+    return pending.get('ethernet', set()) | pending.get('wireless', set())
+
+
 def get_permanent_mac(ifname: str, sys_class_net: str = '/sys/class/net') -> str:
     """Best-effort permanent hardware address of an interface.
 
-    Falls back to the interface's current address if the driver does not
-    support reporting a permanent address separately (ethtool -P).
+    Falls back to the interface's current address when the driver cannot
+    report a permanent one (ethtool -P).
 
-    sys_class_net is overridable for testing against a fake sysfs tree.
+    sys_class_net redirects the sysfs fallback only; the ethtool branch
+    always queries the real host.
     """
     code, out = rc_cmd(f'ethtool -P {ifname}')
     if code == 0:
@@ -175,15 +188,12 @@ def get_permanent_mac(ifname: str, sys_class_net: str = '/sys/class/net') -> str
 
 
 def discover_physical_interfaces(sys_class_net: str = '/sys/class/net') -> dict:
-    """Return {kernel_name: mac} for every interface backed by a real bus
-    device - excludes lo, bridges, bonds, VLANs, veth, tunnels, etc.
+    """{kernel_name: mac} for interfaces backed by a real bus device -
+    excludes lo, bridges, bonds, VLANs, veth, tunnels and the like.
 
-    Also excludes interfaces enslaved to another netdev (master symlink
-    present), which covers Azure VF datapath interfaces bound under their
-    synthetic parent. Those are acceleration children, not independent
-    primary interfaces, and must not be candidates for hw-id naming.
-
-    sys_class_net is overridable for testing against a fake sysfs tree.
+    Also excludes anything enslaved to another netdev (master symlink),
+    which covers Azure VF datapath interfaces: acceleration children of
+    their synthetic parent, never hw-id naming candidates.  T8329
     """
     interfaces = {}
     net_dir = Path(sys_class_net)
@@ -224,9 +234,9 @@ def wait_for_hardware(configured_macs: set, timeout: float = HARDWARE_WAIT_TIMEO
 def wait_for_settle(initial: dict, timeout: float = HARDWARE_SETTLE_TIMEOUT,
                      poll: float = HARDWARE_WAIT_POLL,
                      stable_polls: int = HARDWARE_SETTLE_STABLE_POLLS) -> dict:
-    """Poll until discover_physical_interfaces() returns the same snapshot
-    stable_polls times in a row, or until timeout. Used before bootstrap-
-    naming hardware that has no configured hw-id to wait for by MAC.
+    """Poll until discover_physical_interfaces() repeats stable_polls
+    times, or timeout. Stands in for "hardware stopped appearing" when
+    there is no specific MAC to wait for.
     """
     deadline = time.monotonic() + timeout
     current = initial
@@ -240,78 +250,98 @@ def wait_for_settle(initial: dict, timeout: float = HARDWARE_SETTLE_TIMEOUT,
 
 
 def is_wireless_interface(name: str, sys_class_net: str = '/sys/class/net') -> bool:
-    """Race-free wireless check: existence of the phy80211 symlink, not the
-    interface's current (possibly still cosmetic/pre-bootstrap) name.
+    """Wireless check by phy80211 symlink, never by name - the name may
+    still be a provisional one at this point.
     """
     return (Path(sys_class_net) / name / 'phy80211').exists()
 
 
-PCI_BDF_RE = re.compile(r'^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$')
+PCI_BDF_RE = re.compile(r'^([0-9a-f]{4}):([0-9a-f]{2}):([0-9a-f]{2})\.([0-9a-f])$')
 
 # No real hop-count can reach this - reserves it as a sort-last sentinel
-# for interfaces whose bus topology can't be determined (USB NICs, or a
-# device symlink that doesn't exist/resolve).
+# for interfaces whose bus topology can't be determined (a device symlink
+# that doesn't exist/resolve, or a bus with no PCI ancestor at all).
 PCIE_DISTANCE_UNKNOWN = 999
 
+# Every field at its maximum, so it sorts after any real address. It must
+# not be the empty tuple: that would sort FIRST.
+PCIE_ADDRESS_UNKNOWN = ((0xffff, 0xff, 0xff, 0xf),)
 
-def pcie_distance(name: str, sys_class_net: str = '/sys/class/net') -> int:
-    """Approximate PCIe bus distance from the root complex - counts PCI
-    domain:bus:device.function segments (e.g. 0000:00:1f.6) in the fully
-    resolved sysfs path of the interface's 'device' symlink. Non-PCI hops
-    (virtioN, usbN, the net/<ifname> tail, ...) simply don't match and are
-    skipped, so virtio's device->virtioN->real-PCI-parent indirection
-    needs no special-casing. Multi-function siblings at the same slot
-    contribute exactly one matching segment each, so they are not
-    double-counted relative to their shared depth.
 
-    Returns PCIE_DISTANCE_UNKNOWN (sorts after every real hop-count) if
-    the 'device' symlink is missing/unresolvable, or the resolved path
-    has no PCI BDF segment at all (e.g. a USB NIC).
+def _device_bdfs(name: str, sys_class_net: str = '/sys/class/net') -> list:
+    """Ordered (domain, bus, device, function) tuples for every PCI segment
+    on the interface's resolved 'device' symlink, root complex first.
+    Non-PCI hops (virtioN, usbN, ...) don't match and are skipped, so
+    virtio's device->virtioN->PCI-parent indirection needs no special
+    case; multi-function siblings differ only in the last function field.
+
+    Returns an empty list if the symlink is missing/unresolvable or the
+    resolved path has no PCI BDF segment at all. pcie_distance() and
+    pcie_address() both derive from this, so they cannot disagree.
     """
     device_link = Path(sys_class_net) / name / 'device'
     try:
         resolved = device_link.resolve(strict=True)
     except (OSError, RuntimeError):
-        return PCIE_DISTANCE_UNKNOWN
+        return []
 
-    hops = sum(1 for part in resolved.parts if PCI_BDF_RE.match(part))
-    return hops if hops > 0 else PCIE_DISTANCE_UNKNOWN
-
-
-def find_available(names: set, prefix: str) -> str:
-    """Find the lowest free index for a given interface name prefix"""
-    index_list = []
-    for name in names:
-        if not name.startswith(prefix):
-            continue
-        suffix = name[len(prefix):]
-        if suffix.isdigit():
-            index_list.append(int(suffix))
-
-    if not index_list:
-        return f'{prefix}0'
-
-    index_list.sort()
-    # find 'holes' in list, if any
-    missing = sorted(set(range(index_list[0], index_list[-1])) - set(index_list))
-    if missing:
-        return f'{prefix}{missing[0]}'
-
-    return f'{prefix}{index_list[-1] + 1}'
+    bdfs = []
+    for part in resolved.parts:
+        m = PCI_BDF_RE.match(part)
+        if m:
+            bdfs.append(tuple(int(g, 16) for g in m.groups()))
+    return bdfs
 
 
-def find_next_available(names: set, prefix: str, floor: int = 0) -> str:
-    """Find the lowest free index for a prefix, scanning up from floor.
+def pcie_distance(name: str, sys_class_net: str = '/sys/class/net') -> int:
+    """Number of PCI segments on the interface's resolved sysfs path, i.e.
+    hop depth from the root complex. See _device_bdfs().
 
-    Unlike find_available(), this always starts the scan at floor (0 by
-    default) rather than at the lowest index already present in `names` -
-    used for bootstrap naming, where a gap must be backfillable even when
-    it sits below every other index currently in `names` (e.g. `names`
-    contains only 'eth5' and 'eth9', but 'eth0'..'eth4' and 'eth6'..'eth8'
-    are genuinely free). A slot only stays unavailable here because it is
-    explicitly present in `names` - the caller decides what belongs there
-    (configured hw-id targets, pending nodes, ...), not this function.
+    PCIE_DISTANCE_UNKNOWN (sorts last) when the path has no PCI segment at
+    all - rarer than it looks, since a USB NIC still resolves through its
+    xHCI controller and reports an ordinary depth.
     """
+    return len(_device_bdfs(name, sys_class_net)) or PCIE_DISTANCE_UNKNOWN
+
+
+def pcie_address(name: str, sys_class_net: str = '/sys/class/net') -> tuple:
+    """The interface's PCI path as a tuple of BDF tuples, see
+    _device_bdfs(). A bus ADDRESS rather than a depth, so it separates two
+    devices at the same depth - the usual case in a VM, where the
+    hypervisor allocates a slot per NIC in attach order.
+
+    PCIE_ADDRESS_UNKNOWN (sorts last) when there is no PCI segment.
+    """
+    return tuple(_device_bdfs(name, sys_class_net)) or PCIE_ADDRESS_UNKNOWN
+
+
+def canonical_sort_key(mac: str, name: str) -> tuple:
+    """The single hardware order this script names by. Both
+    compute_bootstrap_plan() and match_pending_nodes() use it; if they
+    disagreed, one would contradict the other's names.
+
+    Distance leads so an onboard NIC does not sort after add-in cards.
+    Within a distance the PCI address decides, giving real slot order
+    rather than MAC magnitude, which says nothing about wiring. MAC is the
+    last-resort tie-break and the only guaranteed-unique part, so the
+    order is total.  T3871
+    """
+    return (pcie_distance(name), pcie_address(name), mac)
+
+
+def find_available(names: set, prefix: str, floor: int = None) -> str:
+    """Lowest free '<prefix><n>' not in `names`, scanning up from `floor`.
+
+    floor=None starts at the lowest index already present, so an existing
+    block of names is only ever extended or hole-filled. Bootstrap naming
+    passes floor=0 instead, because a slot below every present index is
+    still genuinely free and must be reusable.
+    """
+    if floor is None:
+        indexes = [int(name[len(prefix):]) for name in names
+                   if name.startswith(prefix) and name[len(prefix):].isdigit()]
+        floor = min(indexes, default=0)
+
     n = floor
     while f'{prefix}{n}' in names:
         n += 1
@@ -319,9 +349,8 @@ def find_next_available(names: set, prefix: str, floor: int = 0) -> str:
 
 
 def compute_rename_plan(configured: dict, current: dict, pending: dict = None) -> dict:
-    """Build {from_name: to_name} for every interface that needs to move to
-    its CLI hw-id name. Also relocates any interface that currently squats
-    on a name owned by a different hw-id, so the rightful owner can take it.
+    """{from_name: to_name} moving every interface to its configured hw-id
+    name, evicting whatever squats on one so the owner can take it.
     """
     plan = {}
     current_by_mac = {mac: name for name, mac in current.items()}
@@ -333,18 +362,11 @@ def compute_rename_plan(configured: dict, current: dict, pending: dict = None) -
             plan[source] = target
 
     unchanged = set(current) - set(plan)
-    # every configured target is reserved, even one whose hw-id hasn't
-    # shown up yet this boot (missing/faulty/slow driver) - a squatter must
-    # never be relocated onto a name that hardware still owns, or it would
-    # just need relocating again the moment that hardware actually appears.
-    # A pending (hw-id-less but still-configured) node name is reserved the
-    # same way: it may be about to be reclaimed by the exact NIC that just
-    # vacated it (see match_pending_nodes()), and even when it isn't, its
-    # other settings (address, description, ...) are still live in
-    # config.boot and must not be handed to an unrelated squatter.
-    reserved = set(configured.values())
-    if pending:
-        reserved |= pending.get('ethernet', set()) | pending.get('wireless', set())
+    # every configured target is reserved even if its hardware is absent
+    # this boot, or a squatter moved there would need moving again the
+    # moment it appears. Pending names likewise: their address and
+    # description are live and must not go to an unrelated squatter.
+    reserved = set(configured.values()) | pending_names(pending)
 
     for name, mac in current.items():
         if name in plan:
@@ -360,146 +382,157 @@ def compute_rename_plan(configured: dict, current: dict, pending: dict = None) -
     return plan
 
 
-def unmatched_candidates(configured: dict, current: dict, existing_plan: dict) -> list:
-    """Physical interfaces this boot with no configured hw-id - the pool
-    both ordinary bootstrap naming and pending-node reclaim matching draw
-    from. This deliberately INCLUDES squatters compute_rename_plan() is
-    already evicting from a configured target name: excluding them here
-    let their mac skip match_pending_nodes() entirely, so an unconfigured
-    NIC that happened to be squatting on someone else's hw-id slot could
-    silently get a permanent, possibly-ambiguous hw-id via ordinary
-    bootstrap naming instead of being reclaimed or held back like any
-    other unconfigured candidate. Their eviction destination from
-    existing_plan still stands as the fallback - match_pending_nodes()
-    (via main()'s reclaim loop) or compute_bootstrap_plan() only override
-    it, they never leave a squatter un-evicted.
+def unmatched_candidates(configured: dict, current: dict) -> list:
+    """[(mac, name)] for physical interfaces with no configured hw-id -
+    the pool both bootstrap naming and pending-node matching draw from.
+
+    Deliberately includes squatters already being evicted from a
+    configured name: hiding them here would let one collect a permanent
+    hw-id without ever facing the ambiguity checks.  T3871
     """
     return [(mac, name) for name, mac in current.items()
             if mac not in configured]
 
 
-def match_pending_nodes(pending: dict, candidates: list) -> dict:
-    """Match this boot's unconfigured candidates to pending (hw-id-less)
-    config nodes, one type (ethernet/wireless) at a time. Conservative by
-    design: only matches when there is EXACTLY ONE pending node and
-    EXACTLY ONE candidate of that type this boot - any other cardinality
-    is left alone rather than guessed.
+def node_name_order(name: str) -> tuple:
+    """Numeric, not lexical, name order - 'eth2' before 'eth10'. A name
+    with no trailing digits has no position and sorts last.
+    """
+    m = re.search(r'(\d+)$', name)
+    return (0, int(m.group(1)), name) if m else (1, 0, name)
 
-    A pending node still carries its OTHER settings (address,
-    description, ...) - a wrong guess would silently apply one physical
-    port's configuration to a DIFFERENT port. Confirmed in the field: on
-    a real, already-provisioned box (whose hw-id came from historical
-    probe-order rescan, not from any PCIe/MAC sort), a second, completely
-    unrelated candidate freed in the same boot - e.g. a different
-    interface's config being fully deleted - is enough for a naive
-    ascending-sort fill to swap the two, binding a configured node's
-    address to the wrong wire. There is no way to tell, from MAC and
-    PCIe position alone, which candidate is genuinely the pending node's
-    own hardware once its hw-id is gone; leaving the node unresolved and
-    reported is safer than guessing. A candidate that isn't reclaimed
-    here is not otherwise held back - it still proceeds to ordinary
-    bootstrap naming (see compute_bootstrap_plan()) and gets its own
-    fresh, settings-free name instead.
 
-    Returns {mac: node_name} for every unambiguous match this boot.
+def match_pending_nodes(pending: dict, candidates: list,
+                         rules: dict = None) -> dict:
+    """Pair this boot's unconfigured candidates with pending (hw-id-less)
+    config nodes, one type at a time. The first rule that applies wins;
+    if neither does, nothing of that type is matched:
+
+      1. exact cover - as many candidates of this type as pending nodes
+      2. name cover  - exactly as many candidates carrying a pending node
+                       name as there are pending nodes
+
+    Both pair the same way: nodes by index, hardware by
+    canonical_sort_key(). Rule 1 must stay first - a current name only
+    SELECTS candidates, it never decides which node one gets, because
+    src/udev/vyos_net_name hands out provisional names in probe order
+    without reading config.boot.
+
+    Both rules are cardinality-strict: a wrong pairing moves one port's
+    address and description onto another port, so ambiguity is logged and
+    left pending rather than guessed. Anything that had a permutation to
+    get wrong is warned about.
+
+    Fills rules['topology'|'name'] with the nodes each rule resolved.
+    Returns {mac: node_name}. See TestMatchPendingNodes for the field
+    reports behind each rule.  T3871
     """
     grouped = {'ethernet': [], 'wireless': []}
     for mac, name in candidates:
         group = 'wireless' if is_wireless_interface(name) else 'ethernet'
         grouped[group].append((mac, name))
 
+    if rules is not None:
+        rules.setdefault('topology', set())
+        rules.setdefault('name', set())
+
     matched = {}
+
+    def pair(intf_type, nodes, hardware, rule):
+        targets = sorted(nodes, key=node_name_order)
+        hardware = sorted(hardware, key=lambda c: canonical_sort_key(*c))
+        for target, (mac, _name) in zip(targets, hardware):
+            matched[mac] = target
+
+        # one node and one candidate selected by name leave no permutation
+        # to get wrong, but the selection itself was still a guess - only
+        # a lone exact cover is free of both, and only it goes unreported
+        if rule == 'name' or len(targets) > 1:
+            if rules is not None:
+                rules[rule] |= set(targets)
+            pairs = ', '.join(
+                f"{target} <- {mac} (pci {pcie_address(name)}, now '{name}')"
+                for target, (mac, name) in zip(targets, hardware)
+            )
+            how = ('carry the pending node names this boot'
+                   if rule == 'name' else
+                   f"exactly cover this boot's unconfigured {intf_type} "
+                   'hardware')
+            logger.warning(
+                f'{len(targets)} pending {intf_type} node(s) - the '
+                f'candidates that {how} were paired with them in PCI slot '
+                f'order: {pairs} - verify this matches how the ports are '
+                'actually wired'
+            )
+
     for intf_type, nodes in pending.items():
         if not nodes:
             continue
         cands = grouped.get(intf_type, [])
-        if len(nodes) == 1 and len(cands) == 1:
-            (mac, _name) = cands[0]
-            (target,) = nodes
-            matched[mac] = target
-        else:
-            cand_desc = ', '.join(f"'{name}' ({mac})" for mac, name in cands) or 'none'
-            logger.warning(
-                f'{len(nodes)} pending {intf_type} node(s) '
-                f"({', '.join(sorted(nodes))}) and {len(cands)} unconfigured "
-                f'{intf_type} candidate(s) this boot ({cand_desc}) - not '
-                'unambiguous, leaving pending rather than guessing'
-            )
+
+        if cands and len(nodes) == len(cands):
+            pair(intf_type, nodes, cands, 'topology')
+            continue
+
+        by_name = [(mac, name) for mac, name in cands if name in nodes]
+        if by_name and len(by_name) == len(nodes):
+            pair(intf_type, nodes, by_name, 'name')
+            continue
+
+        cand_desc = ', '.join(f"'{name}' ({mac})" for mac, name in cands) or 'none'
+        logger.warning(
+            f'{len(nodes)} pending {intf_type} node(s) '
+            f"({', '.join(sorted(nodes, key=node_name_order))}) and "
+            f'{len(cands)} unconfigured {intf_type} candidate(s) this '
+            f'boot ({cand_desc}), of which {len(by_name)} carry a pending '
+            'node name - neither an exact cover nor a name cover, leaving '
+            'pending rather than guessing'
+        )
 
     return matched
 
 
 def compute_bootstrap_plan(configured: dict, current: dict, existing_plan: dict,
                             pending: dict = None,
-                            reclaimed_macs: frozenset = frozenset()) -> dict:
-    """Build {from_name: to_name} for physical interfaces that have no
-    configured hw-id at all, assigning them a canonical name within their
-    type group (ethernet/wireless) ordered by PCIe distance from the root
-    complex first and MAC address as a tie-break, instead of leaving them
-    at whatever name the racy udev-time fast path produced. Ordering by
-    topology rather than raw MAC magnitude means an onboard/directly
-    CPU-attached NIC isn't sorted after add-in cards just because its MAC
-    happens to be numerically higher. This is what makes a box's very
-    first boot - before any hw-id exists - just as deterministic as every
-    boot after hw-id is written (PCIe wiring and MAC are both static
-    hardware properties), since the name assigned here gets frozen into
-    config.boot by vyos-interface-rescan.py the same way a real hw-id
-    match would.
+                            reclaimed: dict = None) -> dict:
+    """{from_name: to_name} for hardware with no configured hw-id, named
+    in canonical_sort_key() order per type - so a first boot is as
+    deterministic as an hw-id boot, since vyos-interface-rescan.py freezes
+    these names into config.boot exactly as it would a real hw-id match.
 
-    existing_plan is the hw-id based plan already computed by
-    compute_rename_plan(): its RIGHTFUL-OWNER targets (an interface moving
-    to its own configured hw-id name) are reserved so a bootstrap name can
-    never collide with a configured one. A squatter compute_rename_plan()
-    is evicting from a configured target IS still bootstrap candidacy here
-    (see unmatched_candidates()) - its OWN eviction destination is only a
-    provisional fallback that this function is about to recompute for it
-    from scratch, so that value must not also count as "taken" (it would
-    needlessly block a lower slot this function might otherwise give it,
-    or another candidate, once real).
+    A name is off-limits only while something holds it: a configured hw-id
+    target, a pending node name, or a reclaim target. A plain numeric gap
+    left by deleting a whole node has no holder and is backfilled.
 
-    pending node names are reserved the same way a real hw-id target is -
-    a candidate main() could not unambiguously match to one via
-    match_pending_nodes() must never squat there instead, since that name
-    still carries the node's other settings (address, description, ...).
-    reclaimed_macs are candidates main() already matched to a pending
-    node - excluded here so this function never reassigns them elsewhere.
+    This pass may never fill a pending name - only match_pending_nodes()
+    may, and only under a rule that reports what it did.
 
-    A numeric slot is only ever off-limits here because something still
-    occupies or reserves it - a real hw-id target or a pending node. A gap
-    left by fully deleting an interface's config (hw-id and node both
-    gone, nothing in `pending` either) carries no such reservation and is
-    freely backfilled, exactly as bootstrap naming would treat it on a
-    system that never had any config for it at all - there is no
-    remaining signal in config.boot to tell those two cases apart, and
-    deleting the whole node is the admin's explicit way of saying so.
+    Squatters that existing_plan is evicting ARE candidates here, but
+    their provisional eviction target is deliberately not reserved; only
+    a rightful owner's target is.  T3871
     """
     plan = {}
-    candidates = unmatched_candidates(configured, current, existing_plan)
+    reclaimed = reclaimed or {}
+    candidates = unmatched_candidates(configured, current)
     candidates = [(mac, name) for mac, name in candidates
-                  if mac not in reclaimed_macs]
+                  if mac not in reclaimed]
     if not candidates:
         return plan
 
     candidate_names = {name for _, name in candidates}
-    # a plan entry whose source IS one of this function's own candidates
-    # is a squatter's provisional eviction fallback, about to be
-    # recomputed below - only a rightful-owner move's target is a real,
-    # authoritative reservation
+    # a plan entry sourced from one of our own candidates is a squatter's
+    # provisional eviction, recomputed below - not a real reservation
     rightful_movers = {src: target for src, target in existing_plan.items()
                         if src not in candidate_names}
-    # a rightful mover's CURRENT (source) name looks occupied right now,
-    # but safe_bulk_rename()'s two-phase scratch-name staging vacates it
-    # before any target name is actually claimed - so it must not count
-    # as taken here either.
-    reserved_pending = set()
-    if pending:
-        reserved_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
+    # a rightful mover's source name is vacated by safe_bulk_rename()'s
+    # scratch phase before any target is claimed, so it is not taken
     taken = (set(current) - candidate_names - set(rightful_movers)) \
-        | set(rightful_movers.values()) | reserved_pending
+        | set(rightful_movers.values()) | pending_names(pending) \
+        | set(reclaimed.values())
 
-    for mac, name in sorted(candidates, key=lambda c: (pcie_distance(c[1]), c[0])):
+    for mac, name in sorted(candidates, key=lambda c: canonical_sort_key(*c)):
         prefix = 'wlan' if is_wireless_interface(name) else 'eth'
-        new_name = find_next_available(taken, prefix)
+        new_name = find_available(taken, prefix, floor=0)
         taken.add(new_name)
         if new_name != name:
             plan[name] = new_name
@@ -525,12 +558,9 @@ def rename_interface(old: str, new: str) -> bool:
 
 
 def safe_bulk_rename(plan: dict) -> dict:
-    """Two-phase rename: stage every interface via a unique scratch name
-    (derived from its ifindex, which is always unique) before assigning
-    final names. This makes the whole batch collision-proof regardless of
-    permutations/cycles between current and target names - a straight
-    from->to rename can fail if the target name is still held by another
-    interface earlier/later in the same plan.
+    """Two-phase rename via per-ifindex scratch names, so any permutation
+    or cycle in the plan applies safely - a direct from->to rename fails
+    when the target is still held by another interface in the same batch.
     """
     if not plan:
         return {}
@@ -557,9 +587,9 @@ def safe_bulk_rename(plan: dict) -> dict:
 
 def sync_rescan_hints(current_state: dict, configured: dict,
                        stale_names: set = frozenset()) -> None:
-    """Leave a hint under vyos_udev_dir for every interface that has no
-    hw-id configured yet, so vyos-interface-rescan.py can auto-populate
-    config.boot. Remove stale/no-longer-hw-id-needed hints.
+    """Leave {name: mac} hints under vyos_udev_dir for interfaces with no
+    hw-id yet, so vyos-interface-rescan.py can populate config.boot; drop
+    hints that are stale or no longer needed.
     """
     try:
         Path(vyos_udev_dir).mkdir(parents=True, exist_ok=True)
@@ -584,19 +614,23 @@ def sync_rescan_hints(current_state: dict, configured: dict,
 
 def write_status(configured: dict, found: dict, missing: set, plan: dict,
                   pending: dict = None, reclaimed: dict = None,
-                  candidates: list = None) -> None:
-    """candidates is the full unmatched_candidates() list evaluated this
-    boot (before reclaim/bootstrap assignment) - surfaced here so a
-    pending node left unresolved for lack of hardware is self-diagnosable
-    from this one file: 'pending_unresolved' names what needed a match,
-    'unconfigured_candidates' names every physical interface that was in
-    the running for one, without needing a separate `ip -br link show` or
-    `show configuration commands` to reconstruct the same picture by hand.
+                  candidates: list = None, rules: dict = None) -> None:
+    """Write /run/vyos-net-name-resolve.json.
+
+    candidates is the full unmatched_candidates() list from this boot, so
+    a node left unresolved for lack of hardware is diagnosable from this
+    one file: 'pending_unresolved' says what needed a match,
+    'unconfigured_candidates' says what was in the running for one.
+
+    rules splits `reclaimed` by how each match was reached, so a guess
+    stays visible as one - see match_pending_nodes(). src/init/vyos-router
+    turns these keys into boot-time warnings.
     """
     pending = pending or {}
     reclaimed = reclaimed or {}
     candidates = candidates or []
-    all_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
+    rules = rules or {}
+    all_pending = pending_names(pending)
     status = {
         'configured': configured,
         'found': sorted(found.values()),
@@ -604,6 +638,8 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
         'renamed': plan,
         'pending_unresolved': sorted(all_pending - set(reclaimed.values())),
         'reclaimed': reclaimed,
+        'reclaimed_by_topology': sorted(rules.get('topology', ())),
+        'reclaimed_by_name': sorted(rules.get('name', ())),
         'unconfigured_candidates': {name: mac for mac, name in candidates},
     }
     try:
@@ -629,38 +665,27 @@ def main():
         logger.info('no hw-id configured yet')
         current, missing, plan = discover_physical_interfaces(), set(), {}
 
-    all_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
+    all_pending = pending_names(pending)
 
     reclaimed = {}
+    reclaim_rules = {}
     candidates = []
     if all_pending or any(mac not in configured for mac in current.values()):
-        # The `all_pending` half of this condition matters even when
-        # `current` (from wait_for_hardware() above, bounded only on
-        # already-CONFIGURED macs) shows nothing unconfigured yet: on a
-        # system with several different NIC vendors/drivers, the exact
-        # hardware a pending node needs can simply not have finished
-        # probing at this snapshot. Without this, wait_for_settle() below
-        # would never even run, giving that slower hardware zero extra
-        # time to appear before this boot gives up on the pending node.
+        # a pending node forces the settle wait even when nothing looks
+        # unconfigured yet - its hardware may still be probing
         current = wait_for_settle(current)
         if configured:
-            # a configured hw-id whose driver was too slow to show up
-            # within wait_for_hardware()'s timeout can still appear during
-            # the extra time wait_for_settle() just spent waiting for
-            # unconfigured hardware to stabilize - recompute against the
-            # settled snapshot so it still gets renamed (and drops out of
-            # `missing`) this boot instead of being silently skipped.
+            # slow hw-id hardware may have turned up during that wait
             missing = set(configured) - set(current.values())
             plan = compute_rename_plan(configured, current, pending)
 
-        # let a NIC that just lost its hw-id (the documented "delete
-        # hw-id to force regeneration" remediation) reclaim the exact
-        # node its other settings (address, description, ...) still live
-        # under, rather than bootstrap-naming it to a new bare node and
-        # orphaning that config - only when unambiguous, see
-        # match_pending_nodes()
-        candidates = unmatched_candidates(configured, current, plan)
-        reclaimed = match_pending_nodes(pending, candidates)
+        # let hardware reclaim the pending node whose address and
+        # description it should keep, rather than bootstrap-naming it to a
+        # bare node and orphaning that config. `rules` records which
+        # matches were guesses, all the way out to the boot console.
+        candidates = unmatched_candidates(configured, current)
+        reclaimed = match_pending_nodes(pending, candidates,
+                                         rules=reclaim_rules)
         candidate_by_mac = dict(candidates)
         for mac, target in reclaimed.items():
             name = candidate_by_mac[mac]
@@ -671,32 +696,28 @@ def main():
                 'this boot'
             )
 
-        # bootstrap-name whatever is left, deterministically by PCIe
-        # distance and MAC, instead of leaving it at its racy cosmetic
-        # udev-time name - this is what vyos-interface-rescan.py will
-        # freeze into config.boot. Pending node names stay reserved here
-        # (see compute_bootstrap_plan()) so an ambiguous leftover
-        # candidate can never squat on one and inherit its settings.
+        # name whatever is left in canonical order rather than leaving it
+        # on a racy udev-time name; unmatched pending names stay reserved
         plan.update(compute_bootstrap_plan(
             configured, current, plan, pending=pending,
-            reclaimed_macs=set(reclaimed)))
+            reclaimed=reclaimed))
 
+    applied = safe_bulk_rename(plan)
+
+    final_current = discover_physical_interfaces()
     for name in sorted(all_pending - set(reclaimed.values())):
         logger.warning(
             f"pending node '{name}' still has no hw-id after this boot's "
             'naming pass'
         )
 
-    applied = safe_bulk_rename(plan)
-
-    final_current = discover_physical_interfaces()
-    # configured is passed unmutated (not merged with `reclaimed`): the
-    # reclaimed mac still has no real hw-id in config.boot yet, so it must
-    # still get a rescan hint under its (now reclaimed) name, letting
-    # vyos-interface-rescan.py write the hw-id into the existing node.
+    # `configured` is deliberately not merged with `reclaimed`: that mac
+    # has no hw-id in config.boot yet and still needs a hint under its new
+    # name for vyos-interface-rescan.py to write one into the existing node
     sync_rescan_hints(final_current, configured, set(applied.keys()))
     write_status(configured, current, missing, applied,
-                 pending=pending, reclaimed=reclaimed, candidates=candidates)
+                 pending=pending, reclaimed=reclaimed, candidates=candidates,
+                 rules=reclaim_rules)
 
 
 if __name__ == '__main__':
