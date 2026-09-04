@@ -379,6 +379,21 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         bootfile = 'https://provisioning.example.com/'
         domain = 'phones.example.com'
 
+        # a class with options but no match condition at all is rejected
+        self.cli_set(client_class + ['option', 'domain-name', domain])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # a match node without "value" or "substring value" is rejected
+        self.cli_set(client_class + ['hostname'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['hostname'])
+        self.cli_delete(client_class + ['option', 'domain-name'])
+
         # value and substring are mutually exclusive
         self.cli_set(client_class + ['hostname', 'value', 'SEP0'])
         self.cli_set(client_class + ['hostname', 'substring', 'value', 'SEP0'])
