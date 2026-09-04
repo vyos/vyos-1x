@@ -300,6 +300,14 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         client_class = base_path + ['client-class', 'test']
 
+        # relay-agent-information without circuit-id or remote-id is rejected
+        self.cli_set(client_class + ['relay-agent-information'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(client_class + ['relay-agent-information'])
+
         # Test that invalid hex is rejected
         self.cli_set(
             client_class + ['relay-agent-information', 'circuit-id', '0xHELLOWORLD']
@@ -483,6 +491,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+        self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
 
         # a literal single quote would break out of the Kea string literal
         self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', "foo'bar"])

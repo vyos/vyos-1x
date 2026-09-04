@@ -556,6 +556,14 @@ def verify(dhcp):
             if 'relay_agent_information' in class_config:
                 relay_agent_information_config = class_config['relay_agent_information']
 
+                if not {'circuit_id', 'remote_id'} & set(
+                    relay_agent_information_config
+                ):
+                    raise ConfigError(
+                        f'Client class "{class_name}": "relay-agent-information" requires '
+                        f'"circuit-id" or "remote-id"'
+                    )
+
                 if 'circuit_id' in relay_agent_information_config:
                     circuit_id = relay_agent_information_config['circuit_id']
                     if not pattern.match(circuit_id):
