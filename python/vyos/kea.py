@@ -739,18 +739,23 @@ def _build_relay_hex_condition(sub_option_index, value):
     return _build_hex_condition(f'relay4[{sub_option_index}]', value)
 
 
+# characters with special meaning in Kea's (PCRE-like) match() regex syntax
+_KEA_REGEX_SPECIAL = re.compile(r'([.^$*+?()\[\]{}|\\])')
+
+
+def _build_contains_condition(kea_path, value):
+    # match() searches case-sensitively, so both sides are lower-cased;
+    # the option content is unknown at config-render time, so it has to be
+    # lower-cased by the expression itself via lcase()
+    pattern = _KEA_REGEX_SPECIAL.sub(r'\\\1', value.lower())
+    return f"match('.*{pattern}.*', lcase({kea_path}.hex))"
+
+
 def _build_option_match_condition(option_number, match_config):
     kea_path = f'option[{option_number}]'
 
     if 'substring' in match_config:
-        substring_config = match_config['substring']
-        offset = substring_config.get('offset', '0')
-        value_hex = _kea_hex_literal(substring_config['value'])
-        # length is expressed in bytes; a hex literal is '0x' + 2 hex digits per
-        # byte, rounded up since Kea itself pads an odd number of hex digits
-        # with a leading zero
-        length = str((len(value_hex) - 1) // 2)
-        return f'substring({kea_path}.hex, {offset}, {length}) == {value_hex}'
+        return _build_contains_condition(kea_path, match_config['substring']['value'])
 
     return _build_hex_condition(kea_path, match_config['value'])
 
