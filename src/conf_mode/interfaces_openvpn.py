@@ -139,7 +139,7 @@ def get_config(config=None):
 
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
-    if is_node_changed(conf, base + [ifname, 'enable-dco']):
+    if is_node_changed(conf, base + [ifname, 'offload']):
         openvpn.update({'restart_required': {}})
 
     # Detect changes that are limited to per-client CCD entries (T6478).
