@@ -23,6 +23,7 @@ from vyos.configdict import is_node_changed
 from vyos.configdict import leaf_node_changed
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_vlan_config
 from vyos import ConfigError
 from vyos.utils.assertion import assert_mac
 from vyos.utils.dict import dict_search
@@ -81,6 +82,13 @@ def get_config(config=None) -> dict:
     base = ['interfaces', 'vpp', 'bonding']
 
     ifname, config = get_interface_dict(conf, base)
+
+    # A VLAN sub-interface inherits the parent MTU when its own is unset; set it
+    # explicitly so a removed sub-interface MTU reverts to the parent instead of
+    # keeping its previous value.
+    if 'mtu' in config:
+        for vlan in config.get('vif', {}).values():
+            vlan.setdefault('mtu', config['mtu'])
 
     # Get pppoe-server interfaces
     config['pppoe_ifaces'] = conf.list_nodes(['service', 'pppoe-server', 'interface'])
@@ -238,6 +246,8 @@ def verify(config):
         verify_vpp_remove_interface(vif_iface, config.get('vpp'))
 
     verify_mtu_ipv6(config)
+    # Validate VLAN sub-interfaces, incl. MTU against the parent
+    verify_vlan_config(config)
 
 
 def generate(config):

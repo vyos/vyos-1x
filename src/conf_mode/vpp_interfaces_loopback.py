@@ -20,6 +20,7 @@ from vyos import ConfigError
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_vlan_config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.process import is_systemd_service_active
 
@@ -49,6 +50,13 @@ def get_config(config=None) -> dict:
     if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
+
+    # A VLAN sub-interface inherits the parent MTU when its own is unset; set it
+    # explicitly so a removed sub-interface MTU reverts to the parent instead of
+    # keeping its previous value.
+    if 'mtu' in config:
+        for vlan in config.get('vif', {}).values():
+            vlan.setdefault('mtu', config['mtu'])
 
     # Get 'vpp settings' config
     config['vpp_settings'] = conf.get_config_dict(
@@ -104,6 +112,9 @@ def verify(config):
     for vif_remove in config.get('vif_remove', []):
         vif_iface = f'{config["ifname"]}.{vif_remove}'
         verify_vpp_remove_interface(vif_iface, config['vpp'])
+
+    # Validate VLAN sub-interfaces, incl. MTU against the parent
+    verify_vlan_config(config)
 
     return None
 

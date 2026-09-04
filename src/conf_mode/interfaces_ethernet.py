@@ -42,6 +42,7 @@ from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import BondIf
+from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
@@ -385,6 +386,31 @@ def verify_vpp_remove_vif(ethernet: dict):
     for vlan in vlan_names:
         verify_vpp_remove_interface(vlan, vpp_config)
 
+def verify_vpp_mtu(ethernet: dict):
+    """Reject an MTU larger than the NIC can handle on a VPP-bound interface.
+
+    Otherwise, the kernel accepts the MTU while the VPP dataplane caps it at the
+    NIC limit, leaving the two out of sync (T9161).
+    """
+    ifname = ethernet['ifname']
+    if 'mtu' not in ethernet:
+        return
+    if dict_search(f'vpp.settings.interface.{ifname}', ethernet) is None:
+        return
+    if not is_systemd_service_running('vpp.service'):
+        return
+
+    max_mtu = VPPControl().get_iface_max_mtu(ifname)
+    if max_mtu is None:
+        return
+
+    mtu = int(ethernet['mtu'])
+    if mtu > max_mtu:
+        raise ConfigError(
+            f'Interface MTU {mtu} exceeds the maximum {max_mtu} '
+            'supported by the VPP dataplane'
+        )
+
 def verify(ethernet):
     verify_flowtable(ethernet)
     verify_vpp_remove_vif(ethernet)
@@ -408,6 +434,7 @@ def verify(ethernet):
         and dict_search(f'vpp.settings.interface.{ifname}', ethernet) is not None
     ):
         verify_vpp_mac_change_supported(ifname)
+    verify_vpp_mtu(ethernet)
     verify_coalesce(ethernet, ethtool)
 
     if 'is_bond_member' in ethernet:
@@ -491,14 +518,10 @@ def apply(ethernet):
                 vpp_api.disable_icmpv6_ra_punt(dhcp_ifname)
 
         # If the interface is managed by the VPP DPDK driver, synchronize runtime
-        # parameters between Linux and the corresponding VPP LCP interface
-        # Find LCP pair
-        lcp_pair = vpp_api.lcp_pair_find(vpp_name_hw=ifname)
-        # Sync MTU to VPP LCP pair interface
-        if lcp_pair:
-            lcp_name = lcp_pair.get('vpp_name_kernel')
-            mtu = e.get_mtu()
-            vpp_api.set_iface_mtu(lcp_name, mtu)
+        # parameters between Linux and the corresponding VPP LCP interfaces.
+        # Sync MTU to the VPP LCP taps for the parent and its VLAN
+        # sub-interfaces (linux-cp creates sub-interface taps with MTU 0).
+        sync_vpp_lcp_mtu(ethernet, vpp_api)
 
         sync_vpp_lcp_vrf_tables(ethernet, vpp_api)
 
@@ -512,6 +535,36 @@ def apply(ethernet):
         vpp_api.set_promisc(ifname, enable=needs_promisc)
 
     return None
+
+
+def sync_vpp_lcp_mtu(ethernet: dict, vpp_api: VPPControl) -> None:
+    """Sync each VPP interface's MTU to its dataplane sub-interface and LCP tap.
+
+    A VPP VLAN sub-interface keeps the parent MTU on the dataplane, and its
+    LCP tap is created with MTU 0. Neither matches the real kernel MTU (the
+    sub-interface's own if set, else the parent's). Read the kernel MTU and
+    set it on both, so the kernel, dataplane and tap agree. Q-in-Q (vif-c)
+    is skipped, because VPP does not support it (T9161).
+    """
+    ifnames = [ethernet['ifname']]
+    ifnames += [vlan_conf['ifname'] for vlan_conf in ethernet.get('vif', {}).values()]
+    ifnames += [vlan_conf['ifname'] for vlan_conf in ethernet.get('vif_s', {}).values()]
+
+    # Fetch all LCP pairs once and index by VPP (hardware) name; lcp_pair_find()
+    # dumps every pair on each call, so avoid calling it per interface.
+    lcp_tap_map = {
+        pair.get('vpp_name_hw'): pair.get('vpp_name_kernel')
+        for pair in vpp_api.lcp_pairs_list()
+    }
+    for iface in ifnames:
+        lcp_name = lcp_tap_map.get(iface)
+        if not lcp_name:
+            continue
+        mtu = Interface(iface).get_mtu()
+        # The dataplane sub-interface and the tap both need setting: the former
+        # otherwise keeps the parent-inherited MTU, the latter stays at 0.
+        vpp_api.set_iface_mtu(iface, mtu)
+        vpp_api.set_iface_mtu(lcp_name, mtu)
 
 
 def sync_vpp_lcp_vrf_tables(ethernet: dict, vpp_api: VPPControl) -> None:

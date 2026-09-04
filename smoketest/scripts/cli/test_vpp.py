@@ -183,9 +183,49 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         normalized_out = re.sub(r'\s+', ' ', out)
         self.assertIn(f'tap4096 2 up {mtu}/0/0/0', normalized_out)
 
+        # VLAN sub-interface's MTU must reach both the VPP dataplane
+        # sub-interface and its LCP tap
+        vlan = '10'
+        vlan_mtu = '1400'
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        self.assertRegex(normalized_out, rf'{interface}.{vlan} \d+ \S+ {mtu}/0/0/0')
+        self.assertRegex(normalized_out, rf'tap4096.{vlan} \d+ \S+ {mtu}/0/0/0')
+
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'mtu', vlan_mtu]
+        )
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        self.assertRegex(normalized_out, rf'{interface}.{vlan} \d+ \S+ {vlan_mtu}/0/0/0')
+        self.assertRegex(normalized_out, rf'tap4096.{vlan} \d+ \S+ {vlan_mtu}/0/0/0')
+
         # delete mtu settings
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
         self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
         self.cli_commit()
+
+        # An MTU larger than the NIC's maximum must be rejected at verify.
+        # The NIC maximum is driver-specific, so read it from VPP and set
+        # one above it. Skip when VPP does not report a maximum (a build without
+        # the 'max mtu' hardware-interface field cannot enforce the limit) or
+        # when it exceeds the CLI range, which has its own validation.
+        nic_max_mtu = VPPControl().get_iface_max_mtu(interface)
+        if nic_max_mtu is not None and nic_max_mtu < 16000:
+            over_mtu = nic_max_mtu + 1
+            self.cli_set(['interfaces', 'ethernet', interface, 'mtu', str(over_mtu)])
+            with self.assertRaisesRegex(
+                ConfigSessionError,
+                f'MTU {over_mtu} exceeds the maximum {nic_max_mtu}',
+            ):
+                self.cli_commit()
+            self.cli_discard()
 
         # A custom MAC address must reach the VPP dataplane, and removing it must
         # restore the hardware address (hw-id). Rejection of drivers that cannot
@@ -447,6 +487,43 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'Ethernet address {mac}', out)
         self.assertEqual(mac, Interface(interface_loopback).get_mac())
 
+        # MTU must reach the VPP dataplane for the loopback and its
+        # VLAN sub-interfaces. A vif without its own MTU inherits the parent's; a
+        # vif with an explicit MTU uses that.
+        mtu = '2500'
+        vif_mtu = '1400'
+
+        self.cli_set(loopback_path + [interface_loopback, 'mtu', mtu])
+        self.cli_set(loopback_path + [interface_loopback, 'vif', '10'])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # parent loopback and its lcp carries its configured MTU
+        self.assertRegex(normalized_out, rf'loop11 \d+ \S+ {mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097 \d+ \S+ {mtu}/')
+        # vif without its own MTU inherits the parent's (sub-interface and tap)
+        self.assertRegex(normalized_out, rf'loop11.10 \d+ \S+ {mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.10 \d+ \S+ {mtu}/')
+
+        # Set the vif MTU bigger than the parent's MTU.
+        # This must raise a ConfigError.
+        self.cli_set(
+            loopback_path
+            + [interface_loopback, 'vif', '10', 'mtu', str(int(mtu) + 100)]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(loopback_path + [interface_loopback, 'vif', '10', 'mtu', vif_mtu])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # vif with an explicit MTU uses it (sub-interface and tap)
+        self.assertRegex(normalized_out, rf'loop11.10 \d+ \S+ {vif_mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.10 \d+ \S+ {vif_mtu}/')
+
         # delete loopback interface
         self.cli_delete(loopback_path + [interface_loopback])
         self.cli_commit()
@@ -524,6 +601,27 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             r'BondEthernet23\s+\d+\s+up',
             "Interface BondEthernet23 is not in the expected state 'up'.",
         )
+
+        # MTU must be set on VLAN sub-interfaces and taps (vif inherits parent
+        # unless set).
+        mtu = '2500'
+        vif_mtu = '1400'
+        self.cli_set(bond_path + [interface_bond, 'mtu', mtu])
+        self.cli_set(bond_path + [interface_bond, 'vif', vlans[1], 'mtu', vif_mtu])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # parent bond carries its configured MTU
+        self.assertRegex(normalized_out, rf'BondEthernet23 \d+ \S+ {mtu}/')
+        # vif without its own MTU inherits the parent's (sub-interface and tap)
+        self.assertRegex(normalized_out, rf'BondEthernet23.{vlans[0]} \d+ \S+ {mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.123 \d+ \S+ {mtu}/')
+        # vif with an explicit MTU uses it (sub-interface and tap)
+        self.assertRegex(
+            normalized_out, rf'BondEthernet23.{vlans[1]} \d+ \S+ {vif_mtu}/'
+        )
+        self.assertRegex(normalized_out, rf'tap4097.456 \d+ \S+ {vif_mtu}/')
 
         # delete vpp interface vlan
         self.cli_delete(bond_path + [interface_bond, 'vif'])
