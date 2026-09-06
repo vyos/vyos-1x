@@ -23,10 +23,10 @@ if /usr/bin/systemctl -q is-active vyos-hostsd; then
         fi
 
         if [ $hostsd_changes ]; then
-            logmsg info "Applying changes via vyos-hostsd-client"
+            logmsg debug "Applying changes via vyos-hostsd-client"
             $hostsd_client --apply
         else
-            logmsg info "No changes to apply via vyos-hostsd-client"
+            logmsg debug "No changes to apply via vyos-hostsd-client"
         fi
     }
 fi
