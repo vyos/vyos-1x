@@ -1523,19 +1523,15 @@ class Interface(Control):
                 if native_vlan_id:
                     self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(native_vlan_id), 'pvid', 'untagged', 'master'])
 
-    def release_dhcp_lease(self) -> None:
+    def release_dhcp_lease(self) -> bool:
         """Send DHCPv4 RELEASE without racing systemd ExecStop / Restart=always.
-
-        `dhclient -r` with the unit pidfile kills the unit's client; systemd
-        then runs ExecStop (`dhclient -x`) which kills the releaser before
-        the packet leaves. That -x process continues as a client and
-        re-acquires. `systemctl stop` first runs dhclient-script STOP, which
-        removes the address, so a later -r logs Network is unreachable.
 
         Sequence: runtime-mask so Restart=always cannot start a replacement;
         SIGKILL the unit (no STOP script, address stays); dhclient -r with a
-        separate pidfile and the unit -cf/-lf; unmask and leave the unit
-        stopped.
+        separate pidfile and the unit -cf/-lf (capped so a silent server
+        cannot block conf_mode); unmask and leave the unit stopped.
+
+        Returns True if RELEASE was sent or there was no lease to send.
         """
         from vyos.utils.network import get_interface_vrf
         from vyos.utils.process import call
@@ -1549,29 +1545,62 @@ class Interface(Control):
         netns = self.config.get('netns')
 
         if not os.path.isfile(leases):
-            return
+            return True
 
         vrf = get_interface_vrf(interface)
         if vrf == 'default':
             vrf = None
 
+        released = False
         try:
-            rc_cmd(f'systemctl mask --runtime {systemd_service}', netns=netns)
+            rc_cmd(
+                ['systemctl', 'mask', '--runtime', systemd_service], netns=netns
+            )
             if is_systemd_service_active(systemd_service, netns=netns):
                 rc_cmd(
-                    f'systemctl kill --kill-whom=all -s SIGKILL {systemd_service}',
+                    [
+                        'systemctl',
+                        'kill',
+                        '--kill-whom=all',
+                        '-s',
+                        'SIGKILL',
+                        systemd_service,
+                    ],
                     netns=netns,
                 )
-            dhclient_r = (
-                f'/sbin/dhclient -4 -r -e CONTROLLED_STOP=yes -cf {conf} '
-                f'-pf {release_pid} -lf {leases} {interface}'
-            )
-            call(dhclient_r, vrf=vrf, netns=netns)
+            dhclient_r = [
+                '/sbin/dhclient',
+                '-4',
+                '-r',
+                '-e',
+                'CONTROLLED_STOP=yes',
+                '-cf',
+                conf,
+                '-pf',
+                release_pid,
+                '-lf',
+                leases,
+                interface,
+            ]
+            code = call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
+            released = code == 0
+        except Exception:
+            released = False
         finally:
-            rc_cmd(f'systemctl reset-failed {systemd_service}', netns=netns)
-            rc_cmd(f'systemctl unmask --runtime {systemd_service}', netns=netns)
             if os.path.isfile(release_pid):
-                os.remove(release_pid)
+                try:
+                    with open(release_pid) as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, 9)
+                except (ValueError, ProcessLookupError, OSError):
+                    pass
+                try:
+                    os.remove(release_pid)
+                except FileNotFoundError:
+                    pass
+            rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
+            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
+        return released
 
     def set_dhcp(self, enable: bool, vrf_changed: bool = False, release: bool = False):
         """
@@ -1625,8 +1654,9 @@ class Interface(Control):
                 return self._cmdl(['systemctl', 'restart', systemd_service])
         else:
             netns = self.config['netns'] if 'netns' in self.config else None
+            released = False
             if release:
-                self.release_dhcp_lease()
+                released = self.release_dhcp_lease()
             stop_systemd_unit(systemd_service, netns=netns)
 
             # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
@@ -1647,7 +1677,7 @@ class Interface(Control):
             # so the next start can INIT-REBOOT. Delete it only after an
             # explicit RELEASE.
             cleanup_files = [dhclient_config_file, systemd_override_file]
-            if release:
+            if released:
                 cleanup_files.append(dhclient_lease_file)
             for file in cleanup_files:
                 if os.path.isfile(file):
