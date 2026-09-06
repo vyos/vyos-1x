@@ -25,13 +25,20 @@
 # RFC3442 *default* gateways (net_length 0), not an empty set — option 121
 # and option 3 with the same gateway are one FRR entry, so treating
 # RFC3442 as empty deleted that default and the rfc3442 hook did not
-# re-add it (old==new). Do not mutate $new_routers.
+# re-add it (old==new). Do not mutate $new_routers. Truncated or unknown
+# option-121 encodings fail closed (same return 1 as 01-vyos-cleanup /
+# 02-vyos-dhcp-renew-rfc3442): skip stale-delete rather than treat a
+# partial parse as "no keepers". Empty output with status 0 is a valid
+# option 121 with no 0/0.
 #
 # 06-vyos-nodefaultroute sets VYOS_NO_DEFAULT_ROUTE. Skip stale-delete
 # entirely: a force-sent option 3 plus an operator static default via the
 # same nexthop must not be touched.
 #
 # Adds still use the enter-hook ip() wrapper so FRR gets tag/distance.
+# After a stale-gateway delete, re-check the kernel with /usr/sbin/ip: if
+# that default is still present, skip the replacement add (otherwise the
+# new nexthop ECMP-joins the leftover).
 
 RUN="yes"
 
@@ -58,49 +65,70 @@ _default_via_present() {
 }
 
 # Gateways of RFC3442 0.0.0.0/0 entries (option 121). Width table matches
-# 01-vyos-cleanup / 02-vyos-dhcp-renew-rfc3442.
+# 01-vyos-cleanup / 02-vyos-dhcp-renew-rfc3442. Truncated or unknown
+# encodings return 1; a valid list with no default returns 0 and no output.
 _rfc3442_default_gws() {
     set -- $1
     while [ $# -gt 0 ]; do
         net_length=$1
         case $net_length in
             32|31|30|29|28|27|26|25)
-                [ $# -ge 9 ] || return 0
+                if [ $# -lt 9 ]; then
+                    return 1
+                fi
                 shift 9
                 ;;
             24|23|22|21|20|19|18|17)
-                [ $# -ge 8 ] || return 0
+                if [ $# -lt 8 ]; then
+                    return 1
+                fi
                 shift 8
                 ;;
             16|15|14|13|12|11|10|9)
-                [ $# -ge 7 ] || return 0
+                if [ $# -lt 7 ]; then
+                    return 1
+                fi
                 shift 7
                 ;;
             8|7|6|5|4|3|2|1)
-                [ $# -ge 6 ] || return 0
+                if [ $# -lt 6 ]; then
+                    return 1
+                fi
                 shift 6
                 ;;
             0)
-                [ $# -ge 5 ] || return 0
+                if [ $# -lt 5 ]; then
+                    return 1
+                fi
                 echo "${2}.${3}.${4}.${5}"
                 shift 5
                 ;;
             *)
-                return 0
+                return 1
                 ;;
         esac
     done
 }
 
+rfc3442_parse_ok=1
 effective_new_routers="$new_routers"
 if [ -n "$new_rfc3442_classless_static_routes" ]; then
-    effective_new_routers=$(
-        _rfc3442_default_gws "$new_rfc3442_classless_static_routes" | tr '\n' ' '
-    )
+    # Capture status from the parser, not from `tr` in a pipeline.
+    if rfc3442_gws=$(_rfc3442_default_gws "$new_rfc3442_classless_static_routes"); then
+        effective_new_routers=$(printf '%s' "$rfc3442_gws" | tr '\n' ' ')
+        effective_new_routers=${effective_new_routers%" "}
+    else
+        rfc3442_parse_ok=
+        logmsg warn \
+            "RENEW/REBIND: malformed RFC3442 classless routes; skipping stale default cleanup"
+    fi
 fi
 
 # no-default-route: do not delete operator statics or force-sent option 3.
-if [ -z "$VYOS_NO_DEFAULT_ROUTE" ] &&
+# Malformed option 121: do not delete on a partial/empty keeper set.
+stale_still_present=
+if [ -n "$rfc3442_parse_ok" ] &&
+    [ -z "$VYOS_NO_DEFAULT_ROUTE" ] &&
     [ -n "$old_routers" ] &&
     [ "$old_routers" != "$effective_new_routers" ]; then
     if_metric="${IF_METRIC:-210}"
@@ -120,12 +148,26 @@ if [ -z "$VYOS_NO_DEFAULT_ROUTE" ] &&
             "RENEW/REBIND: removing stale default via ${router} dev ${interface} metric ${if_metric}"
         ip -4 route del default via "${router}" dev "${interface}" \
             metric "${if_metric}" >/dev/null 2>&1
+        # Wrapper exit is not a gate (vtysh "no ip route" fails if already
+        # gone). Kernel table is: leftover still present → do not add a
+        # replacement (ECMP over old+new).
+        if _default_via_present "${router}"; then
+            logmsg warn \
+                "RENEW/REBIND: stale default still present via ${router} dev ${interface}"
+            stale_still_present=1
+        fi
         if_metric=$((if_metric + 1))
     done
 fi
 
 # Honor RFC3442 / no-default-route / missing option 3: nothing to install.
 if [ -n "$new_rfc3442_classless_static_routes" ] || [ -z "$new_routers" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+if [ -n "$stale_still_present" ]; then
+    logmsg warn \
+        "RENEW/REBIND: skipping default reinstall; stale gateway still present"
     return 0 2>/dev/null || exit 0
 fi
 
