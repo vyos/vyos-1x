@@ -100,12 +100,26 @@ function iptovtysh () {
     logmsg debug "Converted vtysh command: \"$VTYSH_CMD\""
 }
 
+# Return the VRF option for a command, unless the caller already specified one.
+# 01-vyos-cleanup builds its "ip route del" with an explicit "vrf <name>", and
+# appending $VRF_OPTION on top of that produced "vrf red vrf red".
+function vrf_option () {
+    local arg
+    for arg in "$@" ; do
+        if [ "$arg" == "vrf" ] ; then
+            return 0
+        fi
+    done
+    echo "$VRF_OPTION"
+}
+
 # delete the same route from kernel before adding new one
 function delroute () {
-    logmsg debug "Checking if the route presented in kernel: $@ $VRF_OPTION"
-    if /usr/sbin/ip route show $@ $VRF_OPTION | grep -qx "$1 " ; then
-        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_OPTION\""
-        /usr/sbin/ip route del $@ $VRF_OPTION
+    local VRF_ARG=$(vrf_option "$@")
+    logmsg debug "Checking if the route presented in kernel: $@ $VRF_ARG"
+    if /usr/sbin/ip route show $@ $VRF_ARG | grep -qx "$1 " ; then
+        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_ARG\""
+        /usr/sbin/ip route del $@ $VRF_ARG
     fi
 }
 
@@ -155,7 +169,7 @@ function ip () {
         else
             # add ip route to kernel
             logmsg info "Modifying routes in kernel: \"/usr/sbin/ip $@\""
-            /usr/sbin/ip $@ $VRF_OPTION
+            /usr/sbin/ip $@ $(vrf_option "$@")
         fi
     fi
 }
