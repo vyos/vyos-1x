@@ -43375,8 +43375,8 @@ system {
         }
     }
     console {
-        device ttyS0 {
-            speed 115200
+        device @SERIAL_DEVICE@ {
+            speed @SERIAL_SPEED@
         }
     }
     host-name gb-glo-sg4ng1fw27-01

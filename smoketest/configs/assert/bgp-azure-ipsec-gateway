@@ -109,8 +109,8 @@ set system conntrack modules pptp
 set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
-set system console device ttyS0 kernel
-set system console device ttyS0 speed '115200'
+set system console device @SERIAL_DEVICE@ kernel
+set system console device @SERIAL_DEVICE@ speed '@SERIAL_SPEED@'
 set system domain-name 'vyos.net'
 set system flow-accounting netflow interface 'eth1'
 set system flow-accounting netflow interface 'vti31'

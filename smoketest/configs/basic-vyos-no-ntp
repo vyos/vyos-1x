@@ -97,8 +97,8 @@ system {
     }
     domain-name vyos.ci.net
     console {
-        device ttyS0 {
-            speed 115200
+        device @SERIAL_DEVICE@ {
+            speed @SERIAL_SPEED@
         }
     }
     host-name no-ntp

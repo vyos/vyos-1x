@@ -36,8 +36,8 @@ system {
         commit-revisions "200"
     }
     console {
-        device ttyS0 {
-            speed 115200
+        device @SERIAL_DEVICE@ {
+            speed @SERIAL_SPEED@
         }
     }
     domain-name "dev.vyos.net"
