@@ -452,7 +452,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         # substring matching is case-insensitive and matches anywhere in the
         # option contents, not just at a fixed offset
-        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', 'yealink'])
+        self.cli_set(
+            client_class + ['vendor-class-id', 'substring', 'value', 'yealink']
+        )
 
         self.cli_commit()
 
@@ -494,11 +496,13 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(client_class + ['vendor-class-id', 'substring', 'value'])
 
-        # a literal single quote would break out of the Kea string literal
-        self.cli_set(client_class + ['vendor-class-id', 'substring', 'value', "foo'bar"])
-
+        # a literal single quote would break out of the Kea string literal;
+        # VyOS's own value syntax already rejects it at "set" time, before
+        # our substring-specific check in verify() is ever reached
         with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
+            self.cli_set(
+                client_class + ['vendor-class-id', 'substring', 'value', "foo'bar"]
+            )
 
         self.verify_service_running()
 
