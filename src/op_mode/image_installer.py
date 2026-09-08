@@ -737,10 +737,7 @@ def image_fetch(image_path: str, vrf: str = None,
 
     # Latest version gets url from configured "system update-check url"
     if image_path == 'latest':
-        command = external_latest_image_url_script
-        if vrf:
-            command = f'ip vrf exec {vrf} {command}'
-        code, output = rc_cmd(command, env=environ)
+        code, output = rc_cmd(external_latest_image_url_script, vrf=vrf, env=environ)
         if code:
             print(output)
             exit(MSG_INFO_INSTALL_EXIT)
