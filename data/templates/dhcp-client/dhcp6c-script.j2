@@ -2,6 +2,34 @@
 # Update DNS information for DHCPv6 clients
 # should be used only if vyos-hostsd is running
 
+# This script is executed standalone by dhcp6c and can not source the dhclient
+# hook /etc/dhcp/dhclient-enter-hooks.d/01-vyos-logging, which is only pulled
+# into the dhclient-script shell. It therefore carries its own logmsg() - keep
+# the tag, the priorities and the debug flag file in sync with that file.
+LOG_TAG="dhclient-script-vyos"
+LOG_DEBUG_ENABLE="/tmp/vyos.dhclient.debug"
+
+logmsg () {
+    log_level=$1
+    shift
+
+    case ${log_level} in
+        debug)
+            # Do not even build the message when debugging is not requested
+            [ -f "${LOG_DEBUG_ENABLE}" ] || return 0
+            log_prio="daemon.debug" ;;
+        info)  log_prio="daemon.info" ;;
+        warn)  log_prio="daemon.warning" ;;
+        error) log_prio="daemon.err" ;;
+        *)
+            # Unknown level - do not lose the message, it was never a level
+            log_prio="daemon.info"
+            set -- "${log_level}" "$@" ;;
+    esac
+
+    /usr/bin/logger -e --id=$$ -p ${log_prio} -t ${LOG_TAG} "$@"
+}
+
 if /usr/bin/systemctl -q is-active vyos-hostsd; then
     hostsd_client="/usr/bin/vyos-hostsd-client"
     hostsd_changes=
@@ -23,9 +51,9 @@ if /usr/bin/systemctl -q is-active vyos-hostsd; then
     fi
 
     if [ $hostsd_changes ]; then
-        logmsg info "Applying changes via vyos-hostsd-client"
+        logmsg debug "Applying changes via vyos-hostsd-client"
         $hostsd_client --apply
     else
-        logmsg info "No changes to apply via vyos-hostsd-client"
+        logmsg debug "No changes to apply via vyos-hostsd-client"
     fi
 fi

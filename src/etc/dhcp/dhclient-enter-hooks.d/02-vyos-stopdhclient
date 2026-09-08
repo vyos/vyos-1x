@@ -17,7 +17,7 @@ if [ -z ${CONTROLLED_STOP} ] ; then
         dhclients_pids=(`ps --no-headers --format pid,args -C dhclient | awk "{ if(match(\\$0, /\s${interface}(\s|$)/) && !match(\\$0, /\s-6\s/)) printf(\"%s\n\", \\$1) }"`)
     fi
 
-    logmsg info "Current dhclient PID: $current_dhclient, Parent PID: $master_dhclient, IP version: $ipversion_arg, All dhclients for interface $interface: ${dhclients_pids[@]}"
+    logmsg debug "Current dhclient PID: $current_dhclient, Parent PID: $master_dhclient, IP version: $ipversion_arg, All dhclients for interface $interface: ${dhclients_pids[@]}"
     # stop all dhclients for current interface, except current one
     for dhclient in ${dhclients_pids[@]}; do
         if ([ $dhclient -ne $current_dhclient ] && [ $dhclient -ne $master_dhclient ]); then
