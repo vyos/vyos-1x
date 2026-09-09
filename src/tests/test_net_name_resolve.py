@@ -38,6 +38,23 @@ vyos_net_name = prepare_module(
     os.path.join(_here, '../udev/vyos_net_name'),
     'vyos_net_name')
 
+_container_patcher = None
+
+
+def setUpModule():
+    # main() deliberately short-circuits inside a container, and these tests
+    # are routinely run from one (the VyOS build container). Pin the detection
+    # off for the whole module so the naming pass under test actually runs -
+    # TestMainInContainer patches it back on locally where that is the point.
+    global _container_patcher
+    _container_patcher = mock.patch.object(
+        resolver, 'is_running_as_container', return_value=False)
+    _container_patcher.start()
+
+
+def tearDownModule():
+    _container_patcher.stop()
+
 
 class TestGetPendingHwidNodes(unittest.TestCase):
     """A node that exists under interfaces/{ethernet,wireless} but has no
@@ -1507,6 +1524,46 @@ class TestMainFirstBootBootstrap(unittest.TestCase):
         status = json.loads(resolver.status_file.read_text())
         self.assertEqual(status['pending_unresolved'], ['eth2'])
         self.assertEqual(status['reclaimed'], {})
+
+
+class TestMainInContainer(unittest.TestCase):
+    """A container owns no NIC: its interfaces are runtime-created veth
+    pairs with no backing bus device in sysfs and a host-assigned MAC that
+    changes on every start. The naming pass can therefore never resolve a
+    pending node there - it only spent both bounded hardware waits and then
+    told the user to bind an hw-id that would not survive a restart.
+    """
+
+    def setUp(self):
+        self.udev_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.udev_dir, ignore_errors=True)
+        self._orig_udev_dir = resolver.vyos_udev_dir
+        resolver.vyos_udev_dir = self.udev_dir
+        self.addCleanup(setattr, resolver, 'vyos_udev_dir', self._orig_udev_dir)
+
+        status_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, status_dir, ignore_errors=True)
+        self._orig_status_file = resolver.status_file
+        resolver.status_file = resolver.Path(status_dir) / 'status.json'
+        self.addCleanup(setattr, resolver, 'status_file', self._orig_status_file)
+
+    def test_naming_pass_is_skipped_entirely(self):
+        with mock.patch.object(resolver, 'is_running_as_container',
+                                return_value=True), \
+             mock.patch.object(resolver, 'get_configfile_interfaces') as configured, \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes') as pending, \
+             mock.patch.object(resolver, 'discover_physical_interfaces') as discover, \
+             mock.patch.object(resolver, 'run') as run:
+            resolver.main()
+
+        configured.assert_not_called()
+        pending.assert_not_called()
+        discover.assert_not_called()
+        run.assert_not_called()
+        # no status file means vyos-router's warn_missing_interface_hardware()
+        # stays silent instead of warning about an unbindable pending node
+        self.assertFalse(resolver.status_file.exists())
+        self.assertEqual(os.listdir(self.udev_dir), [])
 
 
 class TestWriteStatus(unittest.TestCase):
