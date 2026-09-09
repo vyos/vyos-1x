@@ -360,7 +360,8 @@ def compute_rename_plan(configured: dict, current: dict, pending: dict = None) -
     return plan
 
 
-def unmatched_candidates(configured: dict, current: dict, existing_plan: dict) -> list:
+def unmatched_candidates(configured: dict, current: dict, existing_plan: dict,
+                          pending: dict = None) -> list:
     """Physical interfaces this boot with no configured hw-id - the pool
     both ordinary bootstrap naming and pending-node reclaim matching draw
     from. This deliberately INCLUDES squatters compute_rename_plan() is
@@ -373,12 +374,28 @@ def unmatched_candidates(configured: dict, current: dict, existing_plan: dict) -
     existing_plan still stands as the fallback - match_pending_nodes()
     (via main()'s reclaim loop) or compute_bootstrap_plan() only override
     it, they never leave a squatter un-evicted.
+
+    The one exception is a candidate whose CURRENT name is a no-hw-id
+    configured node (an entry in `pending`): with no hw-id to identify the
+    NIC, that node is name-anchored, so the NIC sitting at the node's name
+    IS the configured interface. It is already correctly placed - not
+    unconfigured hardware - and must keep its name rather than be
+    bootstrap-renumbered. Treating it as a candidate is what pushed
+    no-hw-id interfaces from eth0/eth1 to eth2/eth3 on upgrade: the node
+    names were "reserved" as pending while the NICs that already sat on
+    them were handed fresh bootstrap slots. Such a node only needs its
+    hw-id frozen in by the later rescan hint, not a rename.
     """
+    pending_names = set()
+    if pending:
+        pending_names = (pending.get('ethernet', set()) |
+                         pending.get('wireless', set()))
     return [(mac, name) for name, mac in current.items()
-            if mac not in configured]
+            if mac not in configured and name not in pending_names]
 
 
-def match_pending_nodes(pending: dict, candidates: list) -> dict:
+def match_pending_nodes(pending: dict, candidates: list,
+                        exclude_names: set = frozenset()) -> dict:
     """Match this boot's unconfigured candidates to pending (hw-id-less)
     config nodes, one type (ethernet/wireless) at a time. Conservative by
     design: only matches when there is EXACTLY ONE pending node and
@@ -401,6 +418,11 @@ def match_pending_nodes(pending: dict, candidates: list) -> dict:
     bootstrap naming (see compute_bootstrap_plan()) and gets its own
     fresh, settings-free name instead.
 
+    exclude_names names pending nodes already satisfied in place this
+    boot (their NIC is sitting at the node's name) - they are dropped
+    from matching entirely so they neither consume a candidate nor count
+    toward the cardinality that would make a genuine match ambiguous.
+
     Returns {mac: node_name} for every unambiguous match this boot.
     """
     grouped = {'ethernet': [], 'wireless': []}
@@ -410,6 +432,9 @@ def match_pending_nodes(pending: dict, candidates: list) -> dict:
 
     matched = {}
     for intf_type, nodes in pending.items():
+        if not nodes:
+            continue
+        nodes = {n for n in nodes if n not in exclude_names}
         if not nodes:
             continue
         cands = grouped.get(intf_type, [])
@@ -474,7 +499,8 @@ def compute_bootstrap_plan(configured: dict, current: dict, existing_plan: dict,
     deleting the whole node is the admin's explicit way of saying so.
     """
     plan = {}
-    candidates = unmatched_candidates(configured, current, existing_plan)
+    candidates = unmatched_candidates(configured, current, existing_plan,
+                                      pending)
     candidates = [(mac, name) for mac, name in candidates
                   if mac not in reclaimed_macs]
     if not candidates:
@@ -584,7 +610,7 @@ def sync_rescan_hints(current_state: dict, configured: dict,
 
 def write_status(configured: dict, found: dict, missing: set, plan: dict,
                   pending: dict = None, reclaimed: dict = None,
-                  candidates: list = None) -> None:
+                  candidates: list = None, satisfied: set = frozenset()) -> None:
     """candidates is the full unmatched_candidates() list evaluated this
     boot (before reclaim/bootstrap assignment) - surfaced here so a
     pending node left unresolved for lack of hardware is self-diagnosable
@@ -596,13 +622,16 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
     pending = pending or {}
     reclaimed = reclaimed or {}
     candidates = candidates or []
+    satisfied = set(satisfied)
     all_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
     status = {
         'configured': configured,
         'found': sorted(found.values()),
         'missing': {mac: configured[mac] for mac in sorted(missing)},
         'renamed': plan,
-        'pending_unresolved': sorted(all_pending - set(reclaimed.values())),
+        'pending_unresolved': sorted(
+            all_pending - set(reclaimed.values()) - satisfied),
+        'satisfied': sorted(satisfied),
         'reclaimed': reclaimed,
         'unconfigured_candidates': {name: mac for mac, name in candidates},
     }
@@ -631,9 +660,20 @@ def main():
 
     all_pending = pending.get('ethernet', set()) | pending.get('wireless', set())
 
+    # A no-hw-id configured node whose NIC is already sitting at the node's
+    # name (the normal pre-hw-id steady state, e.g. `ethernet eth0 { address
+    # ... }` with no `hw-id` leaf) is satisfied: the NIC is name-anchored
+    # there, keeps its name, and only gets its hw-id frozen in by the later
+    # rescan hint. Such nodes must not be treated as unmet "pending" work -
+    # doing so both flagged them as unresolved (boot warning) and, worse,
+    # let the bootstrap pass renumber the NIC off the very name it is
+    # configured under (eth0/eth1 -> eth2/eth3).
+    satisfied_pending = {name for name in all_pending if current.get(name)}
+
     reclaimed = {}
     candidates = []
-    if all_pending or any(mac not in configured for mac in current.values()):
+    if (all_pending - satisfied_pending) or any(
+            mac not in configured for mac in current.values()):
         # The `all_pending` half of this condition matters even when
         # `current` (from wait_for_hardware() above, bounded only on
         # already-CONFIGURED macs) shows nothing unconfigured yet: on a
@@ -652,6 +692,12 @@ def main():
             # `missing`) this boot instead of being silently skipped.
             missing = set(configured) - set(current.values())
             plan = compute_rename_plan(configured, current, pending)
+        # the settled snapshot can differ from the early one the gate
+        # above was computed from (a NIC renamed by udev in between) -
+        # re-derive which pending nodes are satisfied in place from the
+        # settled view
+        satisfied_pending = {name for name in all_pending
+                             if current.get(name)}
 
         # let a NIC that just lost its hw-id (the documented "delete
         # hw-id to force regeneration" remediation) reclaim the exact
@@ -659,8 +705,12 @@ def main():
         # under, rather than bootstrap-naming it to a new bare node and
         # orphaning that config - only when unambiguous, see
         # match_pending_nodes()
-        candidates = unmatched_candidates(configured, current, plan)
-        reclaimed = match_pending_nodes(pending, candidates)
+        candidates = unmatched_candidates(configured, current, plan, pending)
+        # a pending node whose NIC already sits at its name needs no
+        # reclaim match - it is satisfied in place; matching it would only
+        # re-derive an identity rename
+        reclaimed = match_pending_nodes(pending, candidates,
+                                        exclude_names=satisfied_pending)
         candidate_by_mac = dict(candidates)
         for mac, target in reclaimed.items():
             name = candidate_by_mac[mac]
@@ -681,7 +731,8 @@ def main():
             configured, current, plan, pending=pending,
             reclaimed_macs=set(reclaimed)))
 
-    for name in sorted(all_pending - set(reclaimed.values())):
+    for name in sorted(all_pending - set(reclaimed.values())
+                       - satisfied_pending):
         logger.warning(
             f"pending node '{name}' still has no hw-id after this boot's "
             'naming pass'
@@ -696,7 +747,8 @@ def main():
     # vyos-interface-rescan.py write the hw-id into the existing node.
     sync_rescan_hints(final_current, configured, set(applied.keys()))
     write_status(configured, current, missing, applied,
-                 pending=pending, reclaimed=reclaimed, candidates=candidates)
+                 pending=pending, reclaimed=reclaimed, candidates=candidates,
+                 satisfied=satisfied_pending)
 
 
 if __name__ == '__main__':
