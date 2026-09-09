@@ -15,6 +15,8 @@
 from unittest import TestCase
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.dict import dict_to_key_paths
+from vyos.utils.dict import dict_to_paths_values
 
 data = {
     'string': 'fooo',
@@ -88,3 +90,31 @@ class TestDictSearch(TestCase):
         self.assertEqual(len(tmp), 2)
         tmp = list(dict_search_recursive(data, 'address'))
         self.assertEqual(len(tmp), 3)
+
+
+class TestDictToKeyPaths(TestCase):
+    def test_valueless_leaf_node(self):
+        # An empty dict is how get_config_dict() represents a valueless node -
+        # the path leading to it must still be reported
+        self.assertEqual(list(dict_to_key_paths({'disable': {}})),
+                         [['disable']])
+        self.assertEqual(dict_to_paths_values({'disable': {}}),
+                         {'disable': {}})
+
+    def test_nested_paths(self):
+        self.assertEqual(dict_to_paths_values(data['interfaces']['ethernet']['eth1']),
+                         {'address': ['192.0.2.9/29'],
+                          'description': 'Test456',
+                          'duplex': 'auto',
+                          'hw_id': '00:00:00:00:00:02',
+                          'speed': 'auto'})
+
+    def test_empty_dict_yields_no_paths(self):
+        # An unconfigured node is an empty dict at the TOP level, which is not
+        # a valueless leaf - it must not report a single zero-component path.
+        # It used to, and since callers join the components into a dotted
+        # option name, a bare ethernet interface (as found in a container,
+        # where no hw-id is deployed) looked like it had an option named ''
+        # configured, and could not be added to a bond
+        self.assertEqual(list(dict_to_key_paths({})), [])
+        self.assertEqual(dict_to_paths_values({}), {})
