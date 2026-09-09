@@ -3,15 +3,38 @@
 if grep -q -e '^overlay.*/filesystem.squashfs' /proc/mounts; then
 	# Live CD boot
 	exit 2
-	
-elif grep -q 'upperdir=/live/persistence/' /proc/mounts && egrep -q 'overlay / overlay ' /proc/mounts; then
+
+elif egrep -q 'overlay / overlay ' /proc/mounts; then
 	# union boot
-	
-	boot_device=`grep -o 'upperdir=/live/persistence/[^/]*/boot' /proc/mounts | cut -d / -f 4`
-	persist_path="/lib/live/mount/persistence/$boot_device"
-	
-	echo $persist_path
-	exit 0
+	#
+	# The root overlay's upper directory is <persistence>/boot/<image>/rw, but
+	# the location of <persistence> depends on the live-boot in use: Debian's
+	# live-boot mounts it below /run/live/persistence, optionally in a
+	# per-device sub-directory, while the retired VyOS live-boot fork used
+	# /live/persistence (reachable as /lib/live/mount/persistence once booted).
+	# Derive the root from the upperdir rather than matching one fixed layout.
+	upperdir=$(grep -E '^overlay / overlay ' /proc/mounts | head -n1 |
+		   tr ',' '\n' | sed -n 's/^upperdir=//p' | head -n1)
+
+	if [ -z "$upperdir" ]; then
+		exit 1
+	fi
+
+	# Strip the trailing /rw, the <image> and the boot component, then collapse
+	# the duplicate slashes the fork's trailing-slash paths introduced.
+	persist_path=$(dirname "$(dirname "$(dirname "$upperdir")")" | sed -e 's|//*|/|g')
+
+	# Prefer the derived path, falling back to the legacy mount points that
+	# live-boot's compatibility rbind still provides on Debian bookworm.
+	for candidate in "$persist_path" /lib/live/mount/persistence \
+					 /usr/lib/live/mount/persistence; do
+		if [ -d "$candidate/boot" ]; then
+			echo "$candidate"
+			exit 0
+		fi
+	done
+
+	exit 1
 else
 	# old style boot
 
