@@ -32,10 +32,18 @@ def get_config(config=None):
     base = ['protocols', 'static', 'arp']
     arp = conf.get_config_dict(base, get_first_key=True)
 
-    if 'interface' in arp:
-        for interface in arp['interface']:
-            tmp = node_changed(conf, base + ['interface', interface, 'address'], recursive=True)
-            if tmp: arp['interface'][interface].update({'address_old' : tmp})
+    # Collect both configured interfaces and interfaces removed in this commit
+    # (e.g. deleting the whole node), so their old ARP entries get cleaned up.
+    interfaces = set(arp.get('interface', {}))
+    interfaces.update(node_changed(conf, base + ['interface']))
+
+    for interface in interfaces:
+        tmp = node_changed(
+            conf, base + ['interface', interface, 'address'], recursive=True
+        )
+        if tmp:
+            arp.setdefault('interface', {}).setdefault(interface, {})
+            arp['interface'][interface].update({'address_old': tmp})
 
     return arp
 
