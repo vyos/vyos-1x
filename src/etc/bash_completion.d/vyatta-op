@@ -64,7 +64,9 @@ test ! -d "$vyatta_op_templates" && \
 
 case "$-" in
   *i*)
-    declare -r _vyatta_op_last_comp_init='>>>>>>LASTCOMP<<<<<<'
+    if ! declare -p _vyatta_op_last_comp_init &>/dev/null; then
+      declare -r _vyatta_op_last_comp_init='>>>>>>LASTCOMP<<<<<<'
+    fi
   ;;
 esac
 declare _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
