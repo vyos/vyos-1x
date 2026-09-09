@@ -829,8 +829,8 @@ set system conntrack modules pptp
 set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
-set system console device ttyS0 kernel
-set system console device ttyS0 speed '115200'
+set system console device @SERIAL_DEVICE@ kernel
+set system console device @SERIAL_DEVICE@ speed '@SERIAL_SPEED@'
 set system flow-accounting netflow interface 'eth0.4088'
 set system flow-accounting netflow interface 'eth0.4089'
 set system flow-accounting netflow engine-id '1'

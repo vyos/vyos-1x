@@ -17,3 +17,50 @@ RADIUS_PATH="/usr/share/vyos/radius-latest.tar"
 if [[ ! -f $RADIUS_PATH ]]; then
     skopeo copy --additional-tag "$RADIUS_TAG" "docker://$RADIUS_TAG" "docker-archive:/$RADIUS_PATH"
 fi
+
+# The serial console device and its speed are defined by the image flavor -
+# amd64 uses the 8250 UART at ttyS0 while arm64 systems expose the PL011 UART
+# as ttyAMA0. Implant the flavor specific values into the configuration test
+# data once, so the test runner does not need to patch them at runtime.
+CONFIGS_DIR="/usr/libexec/vyos/tests/configs"
+FLAVOR_FILE=$(python3 -c 'from vyos.flavor import flavor_file; print(flavor_file)')
+if [ ! -f "$FLAVOR_FILE" ]; then
+    echo "E: missing image flavor file $FLAVOR_FILE"
+    exit 1
+fi
+
+SERIAL_DEVICE=$(python3 -c 'from vyos.flavor import get_image_serial_console; console_type, console_num, _ = get_image_serial_console(); print(f"{console_type}{console_num}")')
+SERIAL_SPEED=$(python3 -c 'from vyos.flavor import get_image_serial_console; print(get_image_serial_console()[2])')
+# A partially populated flavor file yields a device without instance number
+# (e.g. "ttyS" if console_num is missing) which we must not implant
+case "$SERIAL_DEVICE" in
+    tty*[0-9]) ;;
+    *)
+        echo "E: image flavor $FLAVOR_FILE defines no valid serial console device: '$SERIAL_DEVICE'"
+        exit 1
+        ;;
+esac
+case "$SERIAL_SPEED" in
+    '' | *[!0-9]*)
+        echo "E: image flavor $FLAVOR_FILE defines no valid serial console speed: '$SERIAL_SPEED'"
+        exit 1
+        ;;
+esac
+
+if [ ! -d "$CONFIGS_DIR" ] || [ ! -r "$CONFIGS_DIR" ]; then
+    echo "E: missing or unreadable configuration test data in $CONFIGS_DIR"
+    exit 1
+fi
+
+# A missing placeholder means the test data is not what we expect - bail out
+# instead of reporting a substitution that never happened
+CONFIGS=$(grep -rl -e '@SERIAL_DEVICE@' -e '@SERIAL_SPEED@' "$CONFIGS_DIR") || true
+if [ -z "$CONFIGS" ]; then
+    echo "E: no serial console placeholder found in $CONFIGS_DIR"
+    exit 1
+fi
+
+echo "$CONFIGS" | xargs sed -i \
+    -e "s/@SERIAL_DEVICE@/$SERIAL_DEVICE/g" \
+    -e "s/@SERIAL_SPEED@/$SERIAL_SPEED/g"
+echo "I: Implanted serial console $SERIAL_DEVICE,$SERIAL_SPEED into $CONFIGS_DIR"
