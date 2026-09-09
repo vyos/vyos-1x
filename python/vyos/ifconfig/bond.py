@@ -481,7 +481,9 @@ class BondIf(Interface):
         # Add new interfaces to the bond first before removing no longer
         # required members - this is to ensure that in theory there is always an
         # active member link
-        is_first = True
+        # T7571: Kernel 6.6 assigns a synthetic MAC instead of the first
+        # member's - adopt it ourselves, but only on an empty bond
+        adopt_member_mac = not bond_members
         for interface in dict_search('member.interface', config, default=[]):
             # Only add interface to bond if it is not already a member
             if interface in bond_members:
@@ -493,15 +495,9 @@ class BondIf(Interface):
             # configured addresses, so we can safely flush any remaining ones.
             tmp_if.flush_addrs()
 
-            # T7571: This behavior changed from Linux Kernel 5.4 (used in VyOS 1.3)
-            # to Kernel 6.6 (starting with VyOS 1.4). Previously, the MAC address of
-            # the first member interface in a bond was adopted as the bond's default MAC.
-            # In newer versions, a synthetic MAC address is assigned instead.
-            #
-            # Re-assign first underlay MAC address to the bond
-            if is_first:
+            if adopt_member_mac:
                 self.set_mac(tmp_if.get_mac())
-                is_first = False
+                adopt_member_mac = False
 
             # Assign underlying interface to logical bond
             self.add_port(interface)
