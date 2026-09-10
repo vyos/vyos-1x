@@ -60,7 +60,6 @@ from vyos.utils.file import makedir
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
-from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
@@ -962,12 +961,11 @@ def apply(openvpn):
         if interface_exists(interface):
             VTunIf(interface).remove()
 
-    # dynamically load/unload DCO Kernel extension if requested
+    # dynamically load the DCO Kernel extension if requested. It is never
+    # unloaded: like vxlan, geneve or l2tpv3 we leave the module in place
     dco_module = 'ovpn'
     if 'module_load_dco' in openvpn:
         check_kmod(dco_module)
-    else:
-        unload_kmod(dco_module)
 
     # Now bail out early if interface is disabled or got deleted
     if 'deleted' in openvpn or 'disable' in openvpn:
