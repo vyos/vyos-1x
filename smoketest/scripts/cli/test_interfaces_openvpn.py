@@ -500,6 +500,40 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         # be running on the configuration this test started from
         self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
+    def test_openvpn_two_dco_interfaces(self):
+        # The script runs once per interface, so the first invocation must not
+        # take the Kernel module away while the second daemon still holds an
+        # "ovpn" device - rmmod returns EBUSY and the commit used to fail.
+        ifnames = ['vtun5030', 'vtun5031']
+
+        for ii, ifname in enumerate(ifnames):
+            path = base_path + [ifname]
+            self.cli_set(path + ['device-type', 'tun'])
+            self.cli_set(path + ['mode', 'server'])
+            self.cli_set(path + ['local-port', str(2001 + ii)])
+            self.cli_set(path + ['server', 'subnet', f'192.0.{30 + ii}.0/24'])
+            self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+            self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+            self.cli_set(path + ['offload', 'dco'])
+
+        self.cli_commit()
+
+        for ifname in ifnames:
+            self.assertTrue(
+                is_systemd_service_running(f'openvpn@{ifname}.service'),
+                f'openvpn@{ifname}.service is not running',
+            )
+
+        # both at once, so one daemon still holds the module when the other goes
+        for ifname in ifnames:
+            self.cli_delete(base_path + [ifname])
+        self.cli_commit()
+
+        for ifname in ifnames:
+            self.assertNotIn(ifname, interfaces())
+
     def test_openvpn_server_subnet_topology(self):
         # Create OpenVPN server interfaces using different client subnets.
         # Validate configuration afterwards.

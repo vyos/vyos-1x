@@ -60,7 +60,7 @@ from vyos.utils.file import makedir
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
-from vyos.utils.kernel import unload_kmod
+from vyos.utils.kernel import unload_module
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
@@ -967,7 +967,11 @@ def apply(openvpn):
     if 'module_load_dco' in openvpn:
         check_kmod(dco_module)
     else:
-        unload_kmod(dco_module)
+        # Interfaces are committed one at a time, so a daemon that has not been
+        # stopped yet can still hold an "ovpn" device and make rmmod fail with
+        # EBUSY. The last invocation gets to unload it, and a module left
+        # loaded is harmless - failing the commit is not.
+        unload_module(dco_module)
 
     # Now bail out early if interface is disabled or got deleted
     if 'deleted' in openvpn or 'disable' in openvpn:
