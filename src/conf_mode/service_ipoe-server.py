@@ -30,6 +30,7 @@ from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import verify_accel_ppp_authentication
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.base import Warning
 from vyos import ConfigError
 from vyos import airbag
 
@@ -109,6 +110,43 @@ def verify(ipoe):
     verify_accel_ppp_ip_pool(ipoe)
     verify_accel_ppp_name_servers(ipoe)
     verify_accel_ppp_wins_servers(ipoe)
+
+    # accel-ppp defaults "lease-time" to 600s and silently recalculates
+    # "renew-time"/"rebind-time" from it (and ignores a "max-lease-time"
+    # lower than it) instead of rejecting the configured value - warn so
+    # the effective behavior isn't a surprise.
+    lease_time = int(dict_search('lease_time', ipoe) or 600)
+    max_lease_time = dict_search('max_lease_time', ipoe)
+    renew_time = dict_search('renew_time', ipoe)
+    rebind_time = dict_search('rebind_time', ipoe)
+
+    if max_lease_time is not None and int(max_lease_time) < lease_time:
+        Warning(
+            f'"max-lease-time" ({max_lease_time}) is lower than "lease-time" '
+            f'({lease_time}) and will have no effect'
+        )
+
+    if renew_time is not None and int(renew_time) > lease_time:
+        Warning(
+            f'"renew-time" ({renew_time}) is greater than "lease-time" '
+            f'({lease_time}) and will be recalculated by accel-ppp'
+        )
+
+    if rebind_time is not None and int(rebind_time) > lease_time:
+        Warning(
+            f'"rebind-time" ({rebind_time}) is greater than "lease-time" '
+            f'({lease_time}) and will be recalculated by accel-ppp'
+        )
+
+    if (
+        renew_time is not None
+        and rebind_time is not None
+        and int(renew_time) > int(rebind_time)
+    ):
+        Warning(
+            f'"renew-time" ({renew_time}) is greater than "rebind-time" '
+            f'({rebind_time}) and will be recalculated by accel-ppp'
+        )
 
     return None
 
