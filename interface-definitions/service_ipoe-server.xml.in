@@ -241,10 +241,10 @@
           </leafNode>
           <leafNode name="max-lease-time">
             <properties>
-              <help>Maximum DHCP lease time that can be requested by the client (in seconds)</help>
+              <help>Server-side session expiry timer used if the DHCP lease is not renewed in time (in seconds)</help>
               <valueHelp>
                 <format>u32:1-2147483647</format>
-                <description>Maximum lease time in seconds</description>
+                <description>Session expiry timer in seconds</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-2147483647"/>
