@@ -21,15 +21,16 @@
 # that disappeared from $new_routers. Delete with the same per-router
 # metric 01-vyos-cleanup uses.
 #
-# RFC3442 classless routes: stock ignores option 3. Keepers are the
-# RFC3442 *default* gateways (net_length 0), not an empty set — option 121
-# and option 3 with the same gateway are one FRR entry, so treating
-# RFC3442 as empty deleted that default and the rfc3442 hook did not
-# re-add it (old==new). Do not mutate $new_routers. Truncated or unknown
-# option-121 encodings fail closed (same return 1 as 01-vyos-cleanup /
-# 02-vyos-dhcp-renew-rfc3442): skip stale-delete rather than treat a
-# partial parse as "no keepers". Empty output with status 0 is a valid
-# option 121 with no 0/0.
+# RFC3442 classless routes: stock ignores option 3, but VyOS BOUND still
+# installs the option-3 default (enter-hook wrapper). Keepers are the
+# union of RFC3442 *default* gateways (net_length 0) and $new_routers.
+# Treating RFC3442 as an empty option-3 set deleted that default:
+# prefix-only option 121 + option 3 lost 0/0 at the first renew, and an
+# FRR-touching commit can drop the RFC3442 0/0 and leave only option 3
+# — deleting that blackholes off-link traffic (alexk37). Do not mutate
+# $new_routers. Truncated or unknown option-121 encodings fail closed
+# (same return 1 as 01-vyos-cleanup / 02-vyos-dhcp-renew-rfc3442): skip
+# stale-delete rather than treat a partial parse as "no keepers".
 #
 # 06-vyos-nodefaultroute sets VYOS_NO_DEFAULT_ROUTE. Skip stale-delete
 # entirely: a force-sent option 3 plus an operator static default via the
@@ -111,12 +112,19 @@ _rfc3442_default_gws() {
 }
 
 rfc3442_parse_ok=1
+rfc3442_default_gws=""
 effective_new_routers="$new_routers"
 if [ -n "$new_rfc3442_classless_static_routes" ]; then
     # Capture status from the parser, not from `tr` in a pipeline.
     if rfc3442_gws=$(_rfc3442_default_gws "$new_rfc3442_classless_static_routes"); then
-        effective_new_routers=$(printf '%s' "$rfc3442_gws" | tr '\n' ' ')
-        effective_new_routers=${effective_new_routers%" "}
+        rfc3442_default_gws=$(printf '%s' "$rfc3442_gws" | tr '\n' ' ')
+        rfc3442_default_gws=${rfc3442_default_gws%" "}
+        # Prefix-only option 121: keep $new_routers (BOUND installed option 3).
+        # RFC3442 0/0 present: union with option 3 so a later FRR rewrite
+        # that leaves only the option-3 default is not deleted on renew.
+        if [ -n "$rfc3442_default_gws" ]; then
+            effective_new_routers="$rfc3442_default_gws $new_routers"
+        fi
     else
         rfc3442_parse_ok=
         logmsg warn \
@@ -160,8 +168,11 @@ if [ -n "$rfc3442_parse_ok" ] &&
     done
 fi
 
-# Honor RFC3442 / no-default-route / missing option 3: nothing to install.
-if [ -n "$new_rfc3442_classless_static_routes" ] || [ -z "$new_routers" ]; then
+# RFC3442 0/0: the rfc3442 hook owns that default. Prefix-only option 121
+# still uses option 3 (VyOS BOUND installs it). Parse failure: do not add.
+if [ -z "$rfc3442_parse_ok" ] ||
+    [ -n "$rfc3442_default_gws" ] ||
+    [ -z "$new_routers" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
