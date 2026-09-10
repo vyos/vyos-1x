@@ -311,7 +311,7 @@ def has_persistence() -> bool:
 
 def if_persistence(func):
     """Decorator to call function only if persistence storage is available.
-    Without it there is no writeable GRUB configuration to operate on"""
+    Without it there is no writable GRUB configuration to operate on"""
     @wraps(func)
     def wrapper(*args, **kwargs):
         if has_persistence():
