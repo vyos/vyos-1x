@@ -599,11 +599,12 @@ def generate_cmdline_for_kexec(options):
 
 
 def apply(options):
+    running_as_container = image.is_running_as_container()
     kexec_required, cmdline_new = generate_cmdline_for_kexec(options)
     # T9269: a container does not own the Kernel cmdline - it belongs to the
     # host system, thus neither kexec nor a reboot would apply anything and the
     # options always compare as changed
-    if image.is_running_as_container():
+    if running_as_container:
         kexec_required = False
     if kexec_required:
         if not boot_configuration_complete() and os.getenv('VYOS_CONFIGD'):
@@ -681,12 +682,16 @@ def apply(options):
         cmdl(['systemctl', 'disable', 'root-partition-auto-resize.service'])
 
     # Time format 12|24-hour
-    if 'time_format' in options:
+    # A container has no systemd-localed to talk to - localectl(1) fails with
+    # "Access denied" and would abort this script, so skip it entirely
+    if 'time_format' in options and not running_as_container:
         time_format = time_format_to_locale.get(options['time_format'])
         cmdl(['localectl', 'set-locale', f'LC_TIME={time_format}'])
 
-    # Reload UDEV, required for USB auto suspend
-    cmdl(['udevadm', 'control', '--reload-rules'])
+    # Reload UDEV, required for USB auto suspend - a container shares the
+    # host's udev(7) instance and has no systemd-udevd of its own
+    if not running_as_container:
+        cmdl(['udevadm', 'control', '--reload-rules'])
 
     # Enable/disable dynamic debugging for kernel modules
     modules = ['wireguard']

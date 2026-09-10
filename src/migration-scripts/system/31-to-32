@@ -39,8 +39,9 @@ def migrate(config: ConfigTree) -> None:
     vars_file: str = f'{root_dir}/{CFG_VYOS_VARS}'
     vars_current: dict[str, str] = vars_read(vars_file)
     # A system without persistent GRUB storage - like VyOS running inside a
-    # container - has no boot console we could detect
-    if not vars_current:
+    # container - has no boot console we could detect. Neither has one whose
+    # GRUB vars carry no console_type, e.g. a flavor that bakes no console data
+    if 'console_type' not in vars_current:
         return
 
     # Check if VyOS installation uses serial boot console

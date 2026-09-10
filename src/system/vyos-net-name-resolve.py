@@ -41,6 +41,7 @@ from sys import exit
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
 from vyos.migrate import ConfigMigrate
+from vyos.system.image import is_running_as_container
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 
@@ -613,6 +614,14 @@ def write_status(configured: dict, found: dict, missing: set, plan: dict,
 
 
 def main():
+    if is_running_as_container():
+        # A container has no NIC of its own - its interfaces are veth pairs
+        # created by the container runtime. They have no backing bus device in
+        # sysfs and their MAC is assigned by the host and regenerated on every
+        # start, so there is nothing to wait for and no hw-id worth binding.
+        logger.info('running inside a container - skipping hw-id naming pass')
+        return
+
     configured = get_configfile_interfaces()
     pending = get_pending_hwid_nodes()
 

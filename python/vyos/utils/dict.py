@@ -315,7 +315,12 @@ def dict_to_key_paths(d: dict) -> list:
     """
     def func(d, path):
         if isinstance(d, dict):
-            if not d:
+            # An empty dict is a valueless leaf node and yields the path that
+            # leads to it - but only if there is one. An empty dict at the top
+            # level means "no configuration at all", which must yield nothing
+            # instead of a single empty path: consumers join the components
+            # into a dotted option name, and '' is not an option
+            if not d and path:
                 yield path
             for k, v in d.items():
                 for r in func(v, path + [k]):
