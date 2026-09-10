@@ -338,6 +338,34 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         conf.read(self._config_file)
         self.assertEqual(conf['ipoe']['idle-timeout'], idle_timeout)
 
+    def test_ipoe_server_lease_time(self):
+        lease_time = '600'
+        max_lease_time = '700'
+        renew_time = '300'
+        rebind_time = '525'
+
+        self.basic_config()
+        self.cli_commit()
+
+        # Default: no lease-time options emitted
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        for option in ['lease-time', 'max-lease-time', 'renew-time', 'rebind-time']:
+            self.assertNotIn(option, conf['ipoe'])
+
+        self.set(['lease-time', lease_time])
+        self.set(['max-lease-time', max_lease_time])
+        self.set(['renew-time', renew_time])
+        self.set(['rebind-time', rebind_time])
+        self.cli_commit()
+
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        self.assertEqual(conf['ipoe']['lease-time'], lease_time)
+        self.assertEqual(conf['ipoe']['max-lease-time'], max_lease_time)
+        self.assertEqual(conf['ipoe']['renew-time'], renew_time)
+        self.assertEqual(conf['ipoe']['rebind-time'], rebind_time)
+
     @unittest.skip("PPP is not a part of IPoE")
     def test_accel_ppp_options(self):
         pass
