@@ -30,6 +30,11 @@ from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
+from vyos.pki import create_certificate
+from vyos.pki import create_certificate_request
+from vyos.pki import create_private_key
+from vyos.pki import encode_certificate
+from vyos.pki import encode_private_key
 from vyos.utils.network import get_interface_config
 from vyos.netlink.ovpn import get_ovpn_mode
 from vyos.netlink.ovpn import OVPN_MODE_MP
@@ -43,26 +48,7 @@ PROCESS_NAME = 'openvpn'
 
 base_path = ['interfaces', 'openvpn']
 
-cert_data = """
-MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIw
-WTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
-bWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIx
-MDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNV
-BAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlP
-UzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
-01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3
-QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8E
-BAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu
-+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3Lftz
-ngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93
-+dm/LDnp7C0=
-"""
 
-key_data = """
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
-2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
-u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
-"""
 
 dh_data = """
 MIIBCAKCAQEApzGAPcQlLJiOyfGZgl1qxNgufXkdpjG7lMaOrO4TGr1giFe3jIFO
@@ -100,6 +86,30 @@ def get_vrf(interface):
         tmp = tmp.replace('upper_', '')
         return tmp
 
+def generate_pki():
+    """A self-signed certificate that is its own CA, which is all "ovpn_test"
+    ever was. Generated per run so it cannot expire out from under the tests -
+    a hard coded one did, and only a test that completes a real handshake
+    would have noticed."""
+    subject = {
+        'country': 'GB',
+        'state': 'Some-State',
+        'locality': 'Some-City',
+        'organization': 'VyOS',
+        'common_name': 'VyOS Test',
+    }
+    key = create_private_key('ec', 256)
+    request = create_certificate_request(subject, key)
+    # is_ca gives it both CLIENT_AUTH and SERVER_AUTH, so one certificate
+    # serves either end of a tunnel
+    cert = create_certificate(request, request, key, valid_days=3650, is_ca=True)
+
+    def body(pem):
+        return ''.join(pem.strip().splitlines()[1:-1])
+
+    return body(encode_certificate(cert)), body(encode_private_key(key))
+
+
 class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -108,11 +118,26 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         cls.cli_set(cls, ['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
         cls.cli_set(cls, ['vrf', 'name', vrf_name, 'table', '12345'])
 
-        cls.cli_set(cls, ['pki', 'ca', 'ovpn_test', 'certificate', cert_data.replace('\n','')])
-        cls.cli_set(cls, ['pki', 'certificate', 'ovpn_test', 'certificate', cert_data.replace('\n','')])
-        cls.cli_set(cls, ['pki', 'certificate', 'ovpn_test', 'private', 'key', key_data.replace('\n','')])
-        cls.cli_set(cls, ['pki', 'dh', 'ovpn_test', 'parameters', dh_data.replace('\n','')])
-        cls.cli_set(cls, ['pki', 'openvpn', 'shared-secret', 'ovpn_test', 'key', ovpn_key_data.replace('\n','')])
+        cert_data, key_data = generate_pki()
+        cls.cli_set(cls, ['pki', 'ca', 'ovpn_test', 'certificate', cert_data])
+        cls.cli_set(cls, ['pki', 'certificate', 'ovpn_test', 'certificate', cert_data])
+        cls.cli_set(
+            cls, ['pki', 'certificate', 'ovpn_test', 'private', 'key', key_data]
+        )
+        cls.cli_set(
+            cls, ['pki', 'dh', 'ovpn_test', 'parameters', dh_data.replace('\n', '')]
+        )
+        cls.cli_set(
+            cls,
+            [
+                'pki',
+                'openvpn',
+                'shared-secret',
+                'ovpn_test',
+                'key',
+                ovpn_key_data.replace('\n', ''),
+            ],
+        )
 
     @classmethod
     def tearDownClass(cls):
