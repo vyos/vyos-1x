@@ -27,6 +27,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
+from vyos.utils.process import popen
 from vyos.utils.process import process_named_running
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
@@ -238,6 +239,116 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertDcoDataPath(interface, multipoint=False)
+
+    def test_openvpn_dco_peer_reaches_the_kernel(self):
+        # VyOS creates the "ovpn" device itself whenever the daemon cannot -
+        # a client whose server is not up yet never opens its tun, which is
+        # the very reason for pre-creating it. OpenVPN then has to adopt a
+        # device it did not make once the server appears, and only a peer in
+        # the Kernel proves it ended up with a usable one: the link kind, the
+        # operating mode and a running daemon all look exactly the same when
+        # the offload carries nothing at all.
+        server = 'vtun5100'
+        client = 'vtun5101'
+        port = '1195'
+
+        # the client first, with nothing listening - VyOS makes the device
+        path = base_path + [client]
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'client'])
+        self.cli_set(path + ['remote-host', '127.0.0.1'])
+        self.cli_set(path + ['remote-port', port])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(client, multipoint=False)
+
+        # now give it something to connect to
+        path = base_path + [server]
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', port])
+        self.cli_set(path + ['server', 'subnet', '10.99.0.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_set(path + ['keep-alive', 'interval', '1'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '2'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(server)
+
+        self.assertGreater(
+            self._peers(server),
+            0,
+            f'the Kernel holds no peer for {server}\n' f'{self._openvpn_log(server)}',
+        )
+        # the side that had to adopt a device VyOS made for it
+        self.assertGreater(
+            self._peers(client),
+            0,
+            f'{client} has no peer after adopting the device VyOS made\n'
+            f'probe: {getattr(self, "_peer_detail", "")}\n'
+            f'{self._ip_link(client)}\n{self._openvpn_log(client)}',
+        )
+
+        # A correct adoption costs the daemon nothing. Take the ifindex of the
+        # adopted device away and dco_new_peer() fails, the daemon exits, the
+        # device goes with it and systemd starts the whole thing again - the
+        # tunnel comes back, so only the restart counter tells the two apart.
+        restarts = cmdl(
+            [
+                'systemctl',
+                'show',
+                '-p',
+                'NRestarts',
+                '--value',
+                f'openvpn@{client}.service',
+            ]
+        ).strip()
+        self.assertEqual(
+            restarts,
+            '0',
+            f'{client} restarted {restarts} time(s) adopting its device\n'
+            f'{self._openvpn_log(client)}',
+        )
+
+    # OVPN_CMD_PEER_GET carries GENL_ADMIN_PERM, hence the detour through
+    # sudo. The probe swallows its own errors so a missing interface or a
+    # refused dump reads as "no peer" with the reason attached, instead of
+    # erroring out of the test with nothing to go on.
+    _peer_probe = (
+        'import sys\n'
+        'from vyos.netlink.ovpn import get_ovpn_peers\n'
+        'try:\n'
+        '    print(len(get_ovpn_peers(sys.argv[1])))\n'
+        'except Exception as e:\n'
+        '    print(f"0 {type(e).__name__}: {e}")\n'
+    )
+
+    def _peers(self, interface):
+        out = ''
+        for _ in range(30):
+            out = cmdl(['sudo', 'python3', '-c', self._peer_probe, interface]).strip()
+            if out.split()[0] != '0':
+                return int(out.split()[0])
+            sleep(1)
+        self._peer_detail = out
+        return 0
+
+    def _ip_link(self, interface):
+        out, _ = popen(f'sudo ip -d link show dev {interface}')
+        return f'--- ip -d link {interface}\n{out}'
+
+    def _openvpn_log(self, interface):
+        unit = f'openvpn@{interface}.service'
+        out = cmdl(['sudo', 'journalctl', '-u', unit, '-n', '25', '--no-pager'])
+        return f'--- {unit}\n{out}'
 
     def test_openvpn_client_dco_raw_option(self):
         # A raw option no longer keeps VyOS from creating the device: the
