@@ -1556,18 +1556,20 @@ class Interface(Control):
             rc_cmd(
                 ['systemctl', 'mask', '--runtime', systemd_service], netns=netns
             )
-            if is_systemd_service_active(systemd_service, netns=netns):
-                rc_cmd(
-                    [
-                        'systemctl',
-                        'kill',
-                        '--kill-whom=all',
-                        '-s',
-                        'SIGKILL',
-                        systemd_service,
-                    ],
-                    netns=netns,
-                )
+            # Mask first so Restart=always cannot replace the client. Kill
+            # even if ActiveState is still activating — Type=exec dhclient@
+            # can already have a live process that would race dhclient -r.
+            rc_cmd(
+                [
+                    'systemctl',
+                    'kill',
+                    '--kill-whom=all',
+                    '-s',
+                    'SIGKILL',
+                    systemd_service,
+                ],
+                netns=netns,
+            )
             dhclient_r = [
                 '/sbin/dhclient',
                 '-4',
