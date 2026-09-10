@@ -3,6 +3,7 @@
 #include <include/firewall/action-and-notrack.xml.i>
 #include <include/generic-description.xml.i>
 #include <include/firewall/dscp.xml.i>
+#include <include/firewall/flow-group-ipv6.xml.i>
 #include <include/firewall/fragment.xml.i>
 #include <include/generic-disable-node.xml.i>
 #include <include/firewall/icmpv6.xml.i>

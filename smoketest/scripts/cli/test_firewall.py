@@ -196,6 +196,141 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_flow_groups(self):
+        # IPv4 flow-group: source address + destination port concatenation
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'description', 'web flows'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'parameter', 'ipv4-source-address'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'parameter', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'office', 'description', 'office https'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'office', 'ipv4-source-address', '192.0.2.10'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'office', 'destination-port', '443'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'guest', 'ipv4-source-address', '198.51.100.10'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'guest', 'destination-port', '8443'])
+
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '10', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '10', 'flow-group', 'WEB'])
+
+        # IPv6 flow-group
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'WEB6', 'parameter', 'ipv6-source-address'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'WEB6', 'parameter', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'WEB6', 'match', 'office', 'ipv6-source-address', '2001:db8::10'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'WEB6', 'match', 'office', 'destination-port', '443'])
+
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '10', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '10', 'flow-group', 'WEB6'])
+
+        self.cli_commit()
+
+        nftables_conf = read_file('/run/nftables.conf')
+        self.assertIn('comment "web flows"', nftables_conf)
+        self.assertIn('192.0.2.10 . 443 comment "office https"', nftables_conf)
+
+        nftables_search_v4 = [
+            ['set FG4_WEB'],
+            ['typeof ip saddr . th dport'],
+            ['comment "web flows"'],
+            ['192.0.2.10 . 443', 'comment "office https"'],
+            ['198.51.100.10 . 8443'],
+            ['ip saddr . th dport @FG4_WEB', 'accept'],
+        ]
+        self.verify_nftables(nftables_search_v4, 'ip vyos_filter')
+
+        nftables_search_v6 = [
+            ['set FG6_WEB6'],
+            ['typeof ip6 saddr . th dport'],
+            ['2001:db8::10 . 443'],
+            ['ip6 saddr . th dport @FG6_WEB6', 'accept'],
+        ]
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
+
+        # DSCP + destination port
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'QOS', 'parameter', 'dscp'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'QOS', 'parameter', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'QOS', 'match', 'ef', 'dscp', '46'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'QOS', 'match', 'ef', 'destination-port', '5060'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '15', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '15', 'flow-group', 'QOS'])
+        self.cli_commit()
+
+        self.assertIn('46 . 5060', read_file('/run/nftables.conf'))
+        nftables_qos = [
+            ['set FG4_QOS'],
+            ['typeof ip dscp . th dport'],
+            ['ip dscp . th dport @FG4_QOS', 'accept'],
+        ]
+        self.verify_nftables(nftables_qos, 'ip vyos_filter')
+
+        # Connection mark + destination port
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'CMARK', 'parameter', 'connection-mark'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'CMARK', 'parameter', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'CMARK', 'match', '1', 'connection-mark', '100'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'CMARK', 'match', '1', 'destination-port', '22'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '16', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '16', 'flow-group', 'CMARK'])
+        self.cli_commit()
+
+        self.assertIn('100 . 22', read_file('/run/nftables.conf'))
+        nftables_cmark = [
+            ['set FG4_CMARK'],
+            ['typeof ct mark . th dport'],
+            ['ct mark . th dport @FG4_CMARK', 'accept'],
+        ]
+        self.verify_nftables(nftables_cmark, 'ip vyos_filter')
+
+        # Incomplete match must fail
+        self.cli_delete(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'guest', 'destination-port'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'WEB', 'match', 'guest', 'destination-port', '8443'])
+
+        # Key size over 64 bytes must fail
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'parameter', 'inbound-interface'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'parameter', 'outbound-interface'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'parameter', 'ipv6-source-address'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'parameter', 'ipv6-destination-address'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'parameter', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'match', '1', 'inbound-interface', 'eth0'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'match', '1', 'outbound-interface', 'eth1'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'match', '1', 'ipv6-source-address', '2001:db8::1'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'match', '1', 'ipv6-destination-address', '2001:db8::2'])
+        self.cli_set(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG', 'match', '1', 'destination-port', '80'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(['firewall', 'group', 'ipv6-flow-group', 'TOO_BIG'])
+
+        # ICMP type/code mapping: numeric type converted to name; invalid code rejected
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'ICMP', 'parameter', 'icmp-type'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'ICMP', 'parameter', 'icmp-code'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'ICMP', 'match', 'ping', 'icmp-type', '8'])
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'ICMP', 'match', 'ping', 'icmp-code', '0'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '20', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '20', 'flow-group', 'ICMP'])
+        self.cli_commit()
+
+        # Generated ruleset uses the symbolic ICMP type name
+        self.assertIn('echo-request . 0', read_file('/run/nftables.conf'))
+
+        # Default nft list maps icmp code 0 -> net-unreachable; use -n for numerics
+        nftables_icmp = [
+            ['set FG4_ICMP'],
+            ['typeof icmp type . icmp code'],
+            ['8 . 0'],
+            ['icmp type . icmp code @FG4_ICMP', 'accept'],
+        ]
+        self.verify_nftables(nftables_icmp, 'ip vyos_filter', args='-n')
+
+        # code 3 is invalid for echo-request
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'ICMP', 'match', 'ping', 'icmp-code', '3'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['firewall', 'group', 'ipv4-flow-group', 'ICMP', 'match', 'ping', 'icmp-code', '0'])
+
+        # Rule options must not overlap flow-group parameters
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '10', 'source', 'address', '192.0.2.1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(['firewall', 'ipv4', 'forward', 'filter', 'rule', '10', 'source'])
+
     def test_ipv4_basic_rules(self):
         name = 'smoketest'
         interface = 'eth0'

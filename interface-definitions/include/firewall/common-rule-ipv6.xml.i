@@ -1,6 +1,7 @@
 <!-- include start from firewall/common-rule-ipv6.xml.i -->
 #include <include/firewall/add-addr-to-group-ipv6.xml.i>
 #include <include/firewall/common-rule-inet.xml.i>
+#include <include/firewall/flow-group-ipv6.xml.i>
 #include <include/firewall/hop-limit.xml.i>
 #include <include/firewall/icmpv6.xml.i>
 #include <include/firewall/last-used.xml.i>

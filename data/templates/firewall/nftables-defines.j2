@@ -117,6 +117,44 @@
 {%         endfor %}
 {%     endif %}
 
+{%     if group.ipv4_flow_group is vyos_defined and not is_ipv6 and is_l3 %}
+{%         for group_name, group_conf in group.ipv4_flow_group.items() %}
+{%             if group_conf.parameter is vyos_defined %}
+    set FG4_{{ group_name }} {
+        typeof {{ group_conf.parameter | nft_flow_group_typeof('ipv4') }}
+        flags interval
+        counter
+{%                 if group_conf.description is vyos_defined %}
+        {{ group_conf.description | nft_flow_group_comment }}
+{%                 endif %}
+{%                 set fg_elements = group_conf | nft_flow_group_elements('ipv4') %}
+{%                 if fg_elements %}
+        elements = { {{ fg_elements }} }
+{%                 endif %}
+    }
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+{%     if group.ipv6_flow_group is vyos_defined and is_ipv6 and is_l3 %}
+{%         for group_name, group_conf in group.ipv6_flow_group.items() %}
+{%             if group_conf.parameter is vyos_defined %}
+    set FG6_{{ group_name }} {
+        typeof {{ group_conf.parameter | nft_flow_group_typeof('ipv6') }}
+        flags interval
+        counter
+{%                 if group_conf.description is vyos_defined %}
+        {{ group_conf.description | nft_flow_group_comment }}
+{%                 endif %}
+{%                 set fg_elements = group_conf | nft_flow_group_elements('ipv6') %}
+{%                 if fg_elements %}
+        elements = { {{ fg_elements }} }
+{%                 endif %}
+    }
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
 {%     if group.dynamic_group is vyos_defined %}
 {%         if group.dynamic_group.address_group is vyos_defined and not is_ipv6 and is_l3 %}
 {%             for group_name, group_conf in group.dynamic_group.address_group.items() %}

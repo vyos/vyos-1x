@@ -35,6 +35,7 @@ delete table ip vyos_filter
 {% endif %}
 table ip vyos_filter {
 {% if ipv4 is vyos_defined %}
+{%     set ipv4_flow_groups = group.ipv4_flow_group if group is vyos_defined and group.ipv4_flow_group is vyos_defined else none %}
 {%     if flowtable is vyos_defined %}
 {%         for name, flowtable_conf in flowtable.items() %}
 {{ offload_tmpl.flowtable(name, flowtable_conf) }}
@@ -51,7 +52,7 @@ table ip vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('FWD', prior, rule_id) }}
+        {{ rule_conf | nft_rule('FWD', prior, rule_id, flow_groups=ipv4_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['FWD_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -71,7 +72,7 @@ table ip vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('INP',prior, rule_id) }}
+        {{ rule_conf | nft_rule('INP', prior, rule_id, flow_groups=ipv4_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['INP_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -91,7 +92,7 @@ table ip vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('OUT', prior, rule_id) }}
+        {{ rule_conf | nft_rule('OUT', prior, rule_id, flow_groups=ipv4_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['OUT_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -108,7 +109,7 @@ table ip vyos_filter {
         type filter hook prerouting priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('PRE', prior, rule_id) }}
+        {{ rule_conf | nft_rule('PRE', prior, rule_id, flow_groups=ipv4_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['PRE_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -129,7 +130,7 @@ table ip vyos_filter {
     chain NAME_{{ name_text }} {
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('NAM', name_text, rule_id) }}
+        {{ rule_conf | nft_rule('NAM', name_text, rule_id, flow_groups=ipv4_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['NAM_' + name_text + '_' + rule_id] %}
 {%                     endif %}
@@ -223,6 +224,7 @@ delete table ip6 vyos_filter
 {% endif %}
 table ip6 vyos_filter {
 {% if ipv6 is vyos_defined %}
+{%     set ipv6_flow_groups = group.ipv6_flow_group if group is vyos_defined and group.ipv6_flow_group is vyos_defined else none %}
 {%     if flowtable is vyos_defined %}
 {%         for name, flowtable_conf in flowtable.items() %}
 {{ offload_tmpl.flowtable(name, flowtable_conf) }}
@@ -239,7 +241,7 @@ table ip6 vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('FWD', prior, rule_id, 'ip6') }}
+        {{ rule_conf | nft_rule('FWD', prior, rule_id, 'ip6', flow_groups=ipv6_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['FWD_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -259,7 +261,7 @@ table ip6 vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('INP', prior, rule_id, 'ip6') }}
+        {{ rule_conf | nft_rule('INP', prior, rule_id, 'ip6', flow_groups=ipv6_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['INP_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -279,7 +281,7 @@ table ip6 vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('OUT', prior, rule_id, 'ip6') }}
+        {{ rule_conf | nft_rule('OUT', prior, rule_id, 'ip6', flow_groups=ipv6_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['OUT_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -296,7 +298,7 @@ table ip6 vyos_filter {
         type filter hook prerouting priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('PRE', prior, rule_id, 'ip6') }}
+        {{ rule_conf | nft_rule('PRE', prior, rule_id, 'ip6', flow_groups=ipv6_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['PRE_' + prior + '_' + rule_id] %}
 {%                     endif %}
@@ -316,7 +318,7 @@ table ip6 vyos_filter {
     chain NAME6_{{ name_text }} {
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('NAM', name_text, rule_id, 'ip6') }}
+        {{ rule_conf | nft_rule('NAM', name_text, rule_id, 'ip6', flow_groups=ipv6_flow_groups) }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['NAM_' + name_text + '_' + rule_id] %}
 {%                     endif %}
