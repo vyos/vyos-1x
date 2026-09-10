@@ -231,11 +231,11 @@
             <properties>
               <help>DHCP lease time offered to the client (in seconds)</help>
               <valueHelp>
-                <format>u32:1-4294967295</format>
+                <format>u32:1-2147483647</format>
                 <description>Lease time in seconds</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
+                <validator name="numeric" argument="--range 1-2147483647"/>
               </constraint>
             </properties>
           </leafNode>
@@ -243,11 +243,11 @@
             <properties>
               <help>Maximum DHCP lease time that can be requested by the client (in seconds)</help>
               <valueHelp>
-                <format>u32:1-4294967295</format>
+                <format>u32:1-2147483647</format>
                 <description>Maximum lease time in seconds</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
+                <validator name="numeric" argument="--range 1-2147483647"/>
               </constraint>
             </properties>
           </leafNode>
@@ -255,11 +255,11 @@
             <properties>
               <help>DHCP lease renewal (T1) time (in seconds)</help>
               <valueHelp>
-                <format>u32:1-4294967295</format>
+                <format>u32:1-2147483647</format>
                 <description>Renewal time in seconds</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
+                <validator name="numeric" argument="--range 1-2147483647"/>
               </constraint>
             </properties>
           </leafNode>
@@ -267,11 +267,11 @@
             <properties>
               <help>DHCP lease rebinding (T2) time (in seconds)</help>
               <valueHelp>
-                <format>u32:1-4294967295</format>
+                <format>u32:1-2147483647</format>
                 <description>Rebinding time in seconds</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
+                <validator name="numeric" argument="--range 1-2147483647"/>
               </constraint>
             </properties>
           </leafNode>
