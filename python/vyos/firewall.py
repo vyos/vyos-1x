@@ -79,7 +79,7 @@ def fqdn_resolve(fqdn, ipv6=False):
     try:
         res = getaddrinfo(fqdn, None, AF_INET6 if ipv6 else AF_INET)
         return set(item[4][0] for item in res)
-    except:
+    except OSError:
         return None
 
 def find_nftables_rule(table, chain, rule_matches=[]):
@@ -165,11 +165,36 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         ether_type = ether_type_mapping.get(ether_type, ether_type)
         output.append(f'ether type {operator} {ether_type}')
 
+    if 'fib' in rule_conf:
+        lookup = rule_conf['fib']['lookup']
+        lookup_list = []
+
+        if 'source-address' in lookup:
+            lookup_list.append('saddr')
+        if 'destination-address' in lookup:
+            lookup_list.append('daddr')
+
+        lookup_output = ' . '.join(lookup_list)
+
+        match_conf = rule_conf['fib']['match']
+        match_output = ''
+
+        if 'route_type' in match_conf:
+            route_type = match_conf['route_type']
+            operator = ''
+            if route_type[0] == '!':
+                operator = '!= '
+                route_type = route_type[1:]
+            match_output = f'type {operator}{route_type}'
+
+        output.append(f'fib {lookup_output} {match_output}')
+
     for side in ['destination', 'source']:
         if side in rule_conf:
             prefix = side[0]
             side_conf = rule_conf[side]
             address_mask = side_conf.get('address_mask', None)
+            mac_address_mask = side_conf.get('mac_address_mask', None)
 
             if 'address' in side_conf:
                 suffix = side_conf['address']
@@ -219,7 +244,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 geoip_prefix = 'CC' if country_code else 'ASN'
                 operator = ''
                 hook_name = ''
-                if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
+                if dict_search_args(side_conf, 'geoip', 'inverse_match') is not None:
                     operator = '!='
                 if hook == 'FWD':
                     hook_name = 'forward'
@@ -230,17 +255,23 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if hook == 'PRE':
                     hook_name = 'prerouting'
                 if hook == 'NAM':
-                    hook_name = f'name'
+                    hook_name = 'name'
                 # for policy
                 if hook == 'route' or hook == 'route6':
                     hook_name = hook
                 output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_{geoip_prefix}{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
 
             if 'mac_address' in side_conf:
-                suffix = side_conf["mac_address"]
-                if suffix[0] == '!':
-                    suffix = f'!= {suffix[1:]}'
-                output.append(f'ether {prefix}addr {suffix}')
+                suffix = side_conf['mac_address']
+                operator = ''
+                exclude = suffix[0] == '!'
+                if exclude:
+                    operator = '!= '
+                    suffix = suffix[1:]
+                if mac_address_mask:
+                    operator = '!=' if exclude else '=='
+                    operator = f'& {mac_address_mask} {operator} '
+                output.append(f'ether {prefix}addr {operator}{suffix}')
 
             if 'port' in side_conf:
                 proto = rule_conf['protocol']
@@ -409,7 +440,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
 
     if 'packet_type' in rule_conf:
-        output.append(f'pkttype ' + rule_conf['packet_type'])
+        output.append('pkttype ' + rule_conf['packet_type'])
 
     if 'dscp' in rule_conf:
         dscp_str = ','.join(rule_conf['dscp'])
@@ -550,7 +581,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     output.append(f'snaplen {log_snaplen}')
 
     if 'last_used' in rule_conf:
-        output.append(f'last')
+        output.append('last')
 
     output.append('counter')
 

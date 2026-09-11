@@ -134,6 +134,42 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             state = Interface(remove_member).get_admin_state()
             self.assertEqual('up', state)
 
+    def test_bonding_append_member(self):
+        # T9269: appending a member to a bond that already has one must not
+        # disturb the existing member. leaf_node_changed() used to report the
+        # already configured member as removed, because a multi node holding a
+        # single value renders as a plain string and only becomes a list once
+        # it holds several values - so the bond released it again right after
+        # adding the new one. The bond MAC must not move to the new member
+        # either, that only happens while the bond has no member at all.
+        if len(self._members) < 2:
+            self.skipTest('not enough member interfaces available')
+
+        first, second = self._members[0], self._members[1]
+
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'member', 'interface', first])
+        self.cli_commit()
+
+        bond_macs = {}
+        for interface in self._interfaces:
+            slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
+            self.assertEqual(slaves, [first])
+            bond_macs[interface] = Interface(interface).get_mac()
+
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'member', 'interface', second])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
+            # the pre-existing member must still be enslaved and up
+            self.assertIn(first, slaves)
+            self.assertIn(second, slaves)
+            self.assertEqual(Interface(first).get_admin_state(), 'up')
+            # appending a member must not change the bond's own MAC address
+            self.assertEqual(Interface(interface).get_mac(), bond_macs[interface])
+
     def test_bonding_min_links(self):
         # configure member interfaces
         min_links = len(self._interfaces)
@@ -366,7 +402,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     def test_bonding_member_mtu(self):
         # This Smoketest only works on our CI platform where we force the NIC
         # to virtio and an MTU of only 1500 bytes max
-        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under VyOS CI/CD QEMU environment!')
 
         for interface in self._interfaces:

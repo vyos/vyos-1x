@@ -3,18 +3,39 @@ LOG_ENABLE="yes"
 LOG_STDERR="no"
 LOG_TAG="dhclient-script-vyos"
 
+# Tracing the individual steps of a lease event is only of interest while
+# debugging - it is silenced unless this flag file exists. Keep in sync with
+# "dhclient_debug_enable" in python/vyos/defaults.py, the file is created by
+# src/init/vyos-router when "vyos-debug" is present on the kernel command line.
+LOG_DEBUG_ENABLE="/tmp/vyos.dhclient.debug"
+
 function logmsg () {
     # log message to journal
-    case $1 in
+    local LOG_PRIO
+    local LOG_LEVEL=$1
+    shift
+
+    case ${LOG_LEVEL} in
+        debug)
+            # Do not even build the message when debugging is not requested
+            if [ ! -f "${LOG_DEBUG_ENABLE}" ] ; then
+                return 0
+            fi
+            LOG_PRIO="daemon.debug" ;;
+        info)  LOG_PRIO="daemon.info" ;;
+        warn)  LOG_PRIO="daemon.warning" ;;
         error) LOG_PRIO="daemon.err" ;;
-        info) LOG_PRIO="daemon.info" ;;
+        *)
+            # Unknown level - do not lose the message, it was never a level
+            LOG_PRIO="daemon.info"
+            set -- "${LOG_LEVEL}" "$@" ;;
     esac
 
     if [ "${LOG_ENABLE}" == "yes" ] ; then
         if [ "${LOG_STDERR}" == "yes" ] ; then
-            /usr/bin/logger -e --id=$$ -s -p ${LOG_PRIO} -t ${LOG_TAG} "${@:2}"
+            /usr/bin/logger -e --id=$$ -s -p ${LOG_PRIO} -t ${LOG_TAG} "$@"
         else
-            /usr/bin/logger -e --id=$$ -p ${LOG_PRIO} -t ${LOG_TAG} "${@:2}"
+            /usr/bin/logger -e --id=$$ -p ${LOG_PRIO} -t ${LOG_TAG} "$@"
         fi
     fi
 }

@@ -25,6 +25,7 @@ from vyos.netlink import timestamp
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_750
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import is_addr_assigned
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos import ConfigError
@@ -49,7 +50,8 @@ def get_config(config=None):
     ntp['user'] = user_group
 
     tmp = is_node_changed(conf, base + ['vrf'])
-    if tmp: ntp.update({'restart_required': {}})
+    if tmp:
+        ntp.update({'restart_required': {}})
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrieved.
@@ -81,6 +83,22 @@ def verify(ntp):
                 raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{interface}" '\
                                   f'does not belong to this VRF!')
 
+    if 'source_interface' in ntp:
+        # If outgoing NTP client requests should be bound to a given
+        # interface (device), ensure it exists
+        source_interface = ntp['source_interface']
+        verify_interface_exists(ntp, source_interface)
+
+        # If we run in a VRF, our source interface must belong to this VRF, too
+        if 'vrf' in ntp:
+            tmp = get_interface_config(source_interface)
+            vrf_name = ntp['vrf']
+            if 'master' not in tmp or tmp['master'] != vrf_name:
+                raise ConfigError(
+                    f'NTP runs in VRF "{vrf_name}" - "{source_interface}" '
+                    f'does not belong to this VRF!'
+                )
+
     if 'listen_address' in ntp:
         ipv4_addresses = 0
         ipv6_addresses = 0
@@ -90,9 +108,35 @@ def verify(ntp):
             else:
                 ipv6_addresses += 1
         if ipv4_addresses > 1:
-            raise ConfigError(f'NTP Only admits one ipv4 value for listen-address parameter ')
+            raise ConfigError(
+                'NTP Only admits one ipv4 value for listen-address parameter'
+            )
         if ipv6_addresses > 1:
-            raise ConfigError(f'NTP Only admits one ipv6 value for listen-address parameter ')
+            raise ConfigError(
+                'NTP Only admits one ipv6 value for listen-address parameter'
+            )
+
+    if 'source_address' in ntp:
+        ipv4_addresses = 0
+        ipv6_addresses = 0
+        vrf = ntp.get('vrf')
+        for address in ntp['source_address']:
+            if is_ipv4(address):
+                ipv4_addresses += 1
+            else:
+                ipv6_addresses += 1
+            if not is_addr_assigned(address, vrf):
+                raise ConfigError(
+                    f'NTP source-address "{address}" not assigned ' 'to any interface!'
+                )
+        if ipv4_addresses > 1:
+            raise ConfigError(
+                'NTP Only admits one ipv4 value for source-address parameter'
+            )
+        if ipv6_addresses > 1:
+            raise ConfigError(
+                'NTP Only admits one ipv6 value for source-address parameter'
+            )
 
     if 'server' in ntp:
         for host, server in ntp['server'].items():

@@ -19,7 +19,7 @@ VRF_OPTION=$(/usr/sbin/ip --json --detail link show ${interface} | jq -r '.[0] |
 _flush_dhcp_addrs() {
     local dev="${1:-$interface}"
 
-    logmsg info "Selectively flushing only dynamic (DHCP) addresses from ${dev}"
+    logmsg debug "Selectively flushing only dynamic (DHCP) addresses from ${dev}"
 
     local addrs
     addrs=$(/usr/sbin/ip -4 -j addr show dev "${dev}" 2>&1 | jq -r '
@@ -47,10 +47,10 @@ _flush_dhcp_addrs() {
 function frr_alive () {
     /usr/lib/frr/watchfrr.sh all_status
     if [ "$?" -eq "0" ] ; then
-        logmsg info "FRR status: running"
+        logmsg debug "FRR status: running"
         return 0
     else
-        logmsg info "FRR status: not running"
+        logmsg debug "FRR status: not running"
         return 1
     fi
 }
@@ -97,15 +97,29 @@ function iptovtysh () {
     if [ "$VTYSH_ACTION" == "del" ] ; then
         VTYSH_CMD="no $VTYSH_CMD"
     fi
-    logmsg info "Converted vtysh command: \"$VTYSH_CMD\""
+    logmsg debug "Converted vtysh command: \"$VTYSH_CMD\""
+}
+
+# Return the VRF option for a command, unless the caller already specified one.
+# 01-vyos-cleanup builds its "ip route del" with an explicit "vrf <name>", and
+# appending $VRF_OPTION on top of that produced "vrf red vrf red".
+function vrf_option () {
+    local arg
+    for arg in "$@" ; do
+        if [ "$arg" == "vrf" ] ; then
+            return 0
+        fi
+    done
+    echo "$VRF_OPTION"
 }
 
 # delete the same route from kernel before adding new one
 function delroute () {
-    logmsg info "Checking if the route presented in kernel: $@ $VRF_OPTION"
-    if /usr/sbin/ip route show $@ $VRF_OPTION | grep -qx "$1 " ; then
-        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_OPTION\""
-        /usr/sbin/ip route del $@ $VRF_OPTION
+    local VRF_ARG=$(vrf_option "$@")
+    logmsg debug "Checking if the route presented in kernel: $@ $VRF_ARG"
+    if /usr/sbin/ip route show $@ $VRF_ARG | grep -qx "$1 " ; then
+        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_ARG\""
+        /usr/sbin/ip route del $@ $VRF_ARG
     fi
 }
 
@@ -114,10 +128,10 @@ function vtysh_conf () {
     # perform 10 attempts with 1 second delay for retries
     for i in {1..10} ; do
         if vtysh  -c "conf t" -c "$1" ; then
-            logmsg info "Command was executed successfully via vtysh: \"$1\""
+            logmsg debug "Command was executed successfully via vtysh: \"$1\""
             return 0
         else
-            logmsg info "Failed to send command to vtysh, retrying in 1 second"
+            logmsg warn "Failed to send command to vtysh, retrying in 1 second"
             sleep 1
         fi
     done
@@ -130,7 +144,7 @@ function ip () {
     # Intercept: ip -4 addr flush dev <interface>
     # to preserve static addresses (only remove dynamic/DHCP addresses)
     if [ "$1" = "-4" ] && [ "$2" = "addr" ] && [ "$3" = "flush" ]; then
-        logmsg info "Intercepting 'ip -4 addr flush' to preserve static addresses"
+        logmsg debug "Intercepting 'ip -4 addr flush' to preserve static addresses"
         shift 3
         local dev=""
         while [ $# -gt 0 ]; do
@@ -143,19 +157,19 @@ function ip () {
 
     # pass command to system `ip` if this is not related to routes change
     if [ "$2" != "route" ] ; then
-        logmsg info "Passing command to /usr/sbin/ip: \"$@\""
+        logmsg debug "Passing command to /usr/sbin/ip: \"$@\""
         /usr/sbin/ip $@
     else
         # if we want to work with routes, try to use FRR first
         if frr_alive ; then
             delroute ${@:4}
             iptovtysh $@
-            logmsg info "Sending command to vtysh"
+            logmsg debug "Sending command to vtysh"
             vtysh_conf "$VTYSH_CMD"
         else
             # add ip route to kernel
             logmsg info "Modifying routes in kernel: \"/usr/sbin/ip $@\""
-            /usr/sbin/ip $@ $VRF_OPTION
+            /usr/sbin/ip $@ $(vrf_option "$@")
         fi
     fi
 }

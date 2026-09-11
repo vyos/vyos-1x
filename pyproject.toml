@@ -1,2 +1,5 @@
 [tool.black]
 skip-string-normalization = true
+
+[tool.pylint.typecheck]
+ignored-modules = ["vici"]

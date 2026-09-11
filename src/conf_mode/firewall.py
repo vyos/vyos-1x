@@ -106,6 +106,24 @@ def geoip_updated(conf):
     return any(any(dict_search_recursive(diff.get(section, {}), 'geoip'))
                for section in ('add', 'delete'))
 
+def generate_inet_proto_keymap(firewall):
+    """
+    Build a keymap of IP protocol numbers to protocol names from
+    `nft describe inet_proto`.
+
+    Returns:
+        dict[int, str]: Mapping of protocol number -> protocol name.
+    """
+    keymap = {}
+
+    for line in cmdl(['nft', 'describe', 'inet_proto']).splitlines():
+        match = re.match(r'^\s*([A-Za-z0-9_.-]+)\s+(\d+)\s*$', line)
+        if match:
+            name, number = match.groups()
+            keymap[number] = name
+
+    firewall['inet_proto_map'] = keymap
+
 def get_config(config=None):
     if config:
         conf = config
@@ -198,33 +216,37 @@ def verify_jump_target(firewall, hook, jump_target, family, recursive=False):
 
 def is_node_empty(rule_conf):
     is_empty_list = []
-    is_empty_list.append([
-                        ['add_address_to_group'],
-                        ['connection_status'],
-                        ['destination'],
-                        ['destination', 'group'],
-                        ['destination', 'geoip'],
-                        ['fragment'],
-                        ['gre'],
-                        ['gre', 'flags'],
-                        ['hop_limit'],
-                        ['icmp'],
-                        ['icmpv6'],
-                        ['inbound_interface'],
-                        ['ipsec'],
-                        ['limit'],
-                        ['log_options'],
-                        ['outbound_interface'],
-                        ['set'],
-                        ['source'],
-                        ['source', 'group'],
-                        ['source', 'geoip'],
-                        ['tcp'],
-                        ['tcp', 'flags'],
-                        ['time'],
-                        ['ttl'],
-                        ['vlan']
-                        ])
+    is_empty_list.append(
+        [
+            ['add_address_to_group'],
+            ['connection_status'],
+            ['destination'],
+            ['destination', 'group'],
+            ['destination', 'geoip'],
+            ['fib'],
+            ['fib', 'match'],
+            ['fragment'],
+            ['gre'],
+            ['gre', 'flags'],
+            ['hop_limit'],
+            ['icmp'],
+            ['icmpv6'],
+            ['inbound_interface'],
+            ['ipsec'],
+            ['limit'],
+            ['log_options'],
+            ['outbound_interface'],
+            ['set'],
+            ['source'],
+            ['source', 'group'],
+            ['source', 'geoip'],
+            ['tcp'],
+            ['tcp', 'flags'],
+            ['time'],
+            ['ttl'],
+            ['vlan'],
+        ]
+    )
 
     for node in is_empty_list[0]:
         if dict_search_args(rule_conf, *node) == {}:
@@ -260,6 +282,17 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
             raise ConfigError(f'{rule_num}Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
     elif 'offload_target' in rule_conf:
         Warning(f'{rule_num}offload-target is specified but action is not set to "offload"')
+
+    if 'protocol' in rule_conf:
+        if rule_conf['protocol'].isdigit():
+            if not dict_search('inet_proto_map', firewall):
+                generate_inet_proto_keymap(firewall)
+            rule_conf['protocol'] = dict_search(rule_conf['protocol'], firewall['inet_proto_map'], rule_conf['protocol'])
+
+        if rule_conf['protocol'] == 'icmp' and family == 'ipv6':
+            raise ConfigError(f'{rule_num}Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
+        if rule_conf['protocol'] == 'ipv6-icmp' and family == 'ipv4':
+            raise ConfigError(f'{rule_num}Cannot match IPv6 ICMP protocol on IPv4, use icmp')
 
     if rule_conf['action'] != 'synproxy' and 'synproxy' in rule_conf:
         raise ConfigError(f'{rule_num}"synproxy" option allowed only for action synproxy')
@@ -301,6 +334,16 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
     if 'fragment' in rule_conf:
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
             raise ConfigError(f'{rule_num}Cannot specify both "match-frag" and "match-non-frag"')
+
+    if 'fib' in rule_conf:
+        if 'lookup' not in rule_conf['fib']:
+            raise ConfigError(f'{rule_num}fib lookup must be defined')
+        if {'source-address', 'destination-address'} <= set(rule_conf['fib']['lookup']):
+            raise ConfigError(
+                f'{rule_num}fib lookup cannot specify both "source-address" and "destination-address"'
+            )
+        if 'match' not in rule_conf['fib']:
+            raise ConfigError(f'{rule_num}fib match must be defined')
 
     node_empty, node_name = is_node_empty(rule_conf)
     if node_empty:
@@ -364,12 +407,6 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
             if duplicates:
                 raise ConfigError(f'{rule_num}Cannot match a tcp flag as set and not set')
 
-    if 'protocol' in rule_conf:
-        if rule_conf['protocol'] == 'icmp' and family == 'ipv6':
-            raise ConfigError(f'{rule_num}Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
-        if rule_conf['protocol'] == 'ipv6-icmp' and family == 'ipv4':
-            raise ConfigError(f'{rule_num}Cannot match IPv6 ICMP protocol on IPv4, use icmp')
-
     for side in ['destination', 'source']:
         if side in rule_conf:
             side_conf = rule_conf[side]
@@ -380,6 +417,10 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
             if 'geoip' in side_conf:
                 if len({'asn', 'country_code'} & set(side_conf['geoip'])) > 1:
                     raise ConfigError(f'{rule_num}Only one of asn or country-code can be specified')
+
+            if 'mac_address_mask' in side_conf:
+                if 'mac_address' not in side_conf:
+                    raise ConfigError(f'{rule_num}mac-address must be defined when using mac-address-mask')
 
             if 'group' in side_conf:
                 if len({'address_group', 'network_group', 'domain_group', 'remote_group'} & set(side_conf['group'])) > 1:

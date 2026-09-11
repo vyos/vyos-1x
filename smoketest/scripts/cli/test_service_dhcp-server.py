@@ -44,6 +44,8 @@ router = inc_ip(subnet, 1)
 dns_1 = inc_ip(subnet, 2)
 dns_2 = inc_ip(subnet, 3)
 domain_name = 'vyos.net'
+ha_ipv6_local = '2001:db8:9166::1'
+ha_ipv6_remote = '2001:db8:9166::2'
 
 
 class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
@@ -56,6 +58,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         cidr_mask = subnet.split('/')[-1]
         cls.cli_set(
             cls, ['interfaces', 'dummy', interface, 'address', f'{router}/{cidr_mask}']
+        )
+        cls.cli_set(
+            cls, ['interfaces', 'dummy', interface, 'address', f'{ha_ipv6_local}/64']
         )
 
     @classmethod
@@ -1232,6 +1237,16 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
+        self.verify_service_running()
+
+        # Test the IPv6 case
+        self.cli_set(base_path + ['high-availability', 'source-address', ha_ipv6_local])
+        self.cli_set(base_path + ['high-availability', 'remote', ha_ipv6_remote])
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        self.assertIn(f'http://[{ha_ipv6_local}]:647/', config)
+        self.assertIn(f'http://[{ha_ipv6_remote}]:647/', config)
         self.verify_service_running()
 
     def test_dhcp_high_availability_standby(self):

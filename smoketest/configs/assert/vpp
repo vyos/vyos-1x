@@ -11,8 +11,8 @@ set interfaces ethernet eth3
 set interfaces ethernet eth4 description 'Bonding'
 set interfaces loopback lo
 set system config-management commit-revisions '100'
-set system console device ttyS0 kernel
-set system console device ttyS0 speed '115200'
+set system console device @SERIAL_DEVICE@ kernel
+set system console device @SERIAL_DEVICE@ speed '@SERIAL_SPEED@'
 set system host-name 'r16'
 set system login user vyos authentication encrypted-password '$6$rounds=656000$FZBlGpWsmSrV2Rvq$YPNAPtk4k6u99FAMxR6cw4DUPCgOomwCgRZRSO5rAoJK8RlMSCkVAFVF3ozL/3mZMfxcuCnwvd5HX6f9V5KzO.'
 set system name-server '203.0.113.1'
@@ -39,6 +39,7 @@ set interfaces vpp loopback vpplo12 description 'Loop12'
 set interfaces vpp vxlan vppvxlan10 remote '192.0.2.2'
 set interfaces vpp vxlan vppvxlan10 source-address '192.0.2.1'
 set interfaces vpp vxlan vppvxlan10 vni '10'
+set vpp settings allow-unsupported-nics
 set vpp settings interface eth1
 set vpp settings interface eth2
 set vpp settings interface eth3

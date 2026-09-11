@@ -228,6 +228,8 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
 
         # VRF + ICMP should use setpriv with net_raw capabilities
         self.cli_set(['vrf', 'name', vrf_name, 'table', '1111'])
+        # Move the listen interface into the VRF so the exporter can bind
+        self.cli_set(['interfaces', 'dummy', listen_if, 'vrf', vrf_name])
         self.cli_set(be_path + ['vrf', vrf_name])
         self.cli_set(
             be_path
@@ -242,7 +244,11 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
         self.assertIn('--inh-caps=+net_raw', file_content)
         self.assertNotIn('AmbientCapabilities=CAP_NET_RAW', file_content)
 
+        # Ensure the exporter actually started under setpriv in the VRF
+        self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
+
         # Cleanup VRF
+        self.cli_delete(['interfaces', 'dummy', listen_if, 'vrf'])
         self.cli_delete(['vrf', 'name', vrf_name])
 
 

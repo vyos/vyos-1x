@@ -26,6 +26,7 @@ import vyos.version
 import vyos.limericks
 
 from vyos.utils.boot import is_uefi_system
+from vyos.system.image import is_running_as_container
 from vyos.utils.system import get_secure_boot_state
 
 from jinja2 import Template
@@ -47,11 +48,13 @@ Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
 System type:      {{system_type}}
 Secure Boot:      {{secure_boot}}
+{%- if hardware_vendor is defined %}
 
 Hardware vendor:  {{hardware_vendor}}
 Hardware model:   {{hardware_model}}
 Hardware S/N:     {{hardware_serial}}
 Hardware UUID:    {{hardware_uuid}}
+{%- endif %}
 
 Copyright:        VyOS maintainers and contributors
 {%- if limerick %}
@@ -61,11 +64,16 @@ Copyright:        VyOS maintainers and contributors
 
 def _get_raw_data(funny=False):
     version_data = vyos.version.get_full_version_data()
-    version_data["secure_boot"] = "n/a (BIOS)"
-    if is_uefi_system():
-        version_data["secure_boot"] = "disabled"
-        if get_secure_boot_state():
-            version_data["secure_boot"] = "enabled"
+    # A container has no firmware of its own - it is not booted at all, thus
+    # neither the UEFI nor the BIOS wording applies
+    if is_running_as_container():
+        version_data["secure_boot"] = "n/a (container)"
+    else:
+        version_data["secure_boot"] = "n/a (BIOS)"
+        if is_uefi_system():
+            version_data["secure_boot"] = "disabled"
+            if get_secure_boot_state():
+                version_data["secure_boot"] = "enabled"
 
     if funny:
         version_data["limerick"] = vyos.limericks.get_random()

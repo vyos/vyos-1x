@@ -59,7 +59,7 @@ if __name__ == '__main__':
             url = jmespath.search('[0].url', remote_data)
             remote_version = jmespath.search('[0].version', remote_data)
             if local_version != remote_version and remote_version:
-                call(f'wall -n "Update available: {remote_version} \nUpdate URL: {url}"')
+                call(['wall', '-n', f"Update available: {remote_version} \nUpdate URL: {url}"])
                 # MOTD used in /run/motd.d/10-vyos-update
                 motd_file.parent.mkdir(exist_ok=True)
                 motd_file.write_text(f'---\n'

@@ -29,9 +29,13 @@ from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_nft_vrf_zone_mapping
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import interface_exists
+from subprocess import DEVNULL
+from subprocess import STDOUT
+
 from vyos.utils.process import cmdl
 from vyos.utils.system import sysctl_read
 from vyos.template import inc_ip
@@ -42,6 +46,42 @@ base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
 v4_protocols = ['any', 'babel', 'bgp', 'eigrp', 'isis', 'ospf', 'rip', 'static']
 v6_protocols = ['any', 'babel', 'bgp', 'isis', 'ospfv3', 'ripng', 'static']
+
+def dad_completed(interface: str) -> bool:
+    """
+    True once no address of the interface is tentative any more. An IPv6
+    address can not be used as a source until duplicate address detection
+    finished. "ip link show" carries no address at all, it has to be
+    "ip addr show".
+    """
+    tmp = loads(cmdl(['ip', '--json', 'addr', 'show', 'dev', interface]))
+    return not any(addr.get('tentative', False)
+                   for addr in tmp[0].get('addr_info', []))
+
+def ping_in_vrf(vrf: str, destination: str, message: str) -> None:
+    """
+    Ping from within a VRF and fail the test if nothing comes back. The
+    smoketests do not run as root, and popen() refuses its vrf= argument to an
+    unprivileged user, so the VRF is entered by way of sudo(8) instead.
+    """
+    cmdl(['ip', 'vrf', 'exec', vrf, 'ping', '-c', '3', '-W', '1', destination],
+         sudo=True, stderr=STDOUT, raising=AssertionError, message=message)
+
+def get_conntrack_entries() -> str:
+    """
+    Full conntrack table, used to verify the zone assignment and that a flow
+    actually got a reply (an unmatched flow is shown as [UNREPLIED])
+    """
+    return cmdl(['conntrack', '-L'], sudo=True, stderr=DEVNULL)
+
+def get_conntrack_insert_failed() -> int:
+    """
+    Sum of the per CPU conntrack insert_failed counters. Every conntrack entry
+    that can not be inserted - e.g. because its reply tuple is already taken -
+    increments this counter and the packet is dropped.
+    """
+    tmp = cmdl(['conntrack', '-S'], sudo=True)
+    return sum(int(count) for count in re.findall(r'insert_failed=(\d+)', tmp))
 
 class VRFTest(VyOSUnitTestSHIM.TestCase):
     _interfaces = []
@@ -64,14 +104,36 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # always forward to base class
         super().setUp()
 
+        # Interfaces a test created and which must go away before the VRFs they
+        # are enslaved to can be removed
+        self._cleanup_interfaces = []
+        self._cleanup_netns = []
+        # Configuration outside the vrf tree a test created. It has to go in the
+        # same commit that removes the VRFs, as it can reference both them and
+        # the interfaces enslaved to them
+        self._cleanup_paths = []
+
         # VRF strict_most is always enabled
         tmp = read_file('/proc/sys/net/vrf/strict_mode')
         self.assertEqual(tmp, '1')
 
     def tearDown(self):
+        # A VRF can not be removed while it still has member interfaces, so get
+        # rid of them first - also on the way out of a failed test
+        # An interface that was moved into a netns has to come back first -
+        # VyOS can not remove a veth pair with one end in another namespace
+        for netns, interface in self._cleanup_netns:
+            cmdl(['ip', 'netns', 'exec', netns, 'ip', 'link', 'set', interface,
+                  'netns', '1'], sudo=True, expect=[0, 1])
+            cmdl(['ip', 'netns', 'delete', netns], sudo=True, expect=[0, 1])
+        for path in self._cleanup_paths:
+            self.cli_delete(path)
+        for interface in self._cleanup_interfaces:
+            self.cli_delete(['interfaces', 'virtual-ethernet', interface])
         # delete all VRFs
         self.cli_delete(base_path)
         self.cli_commit()
+
         for vrf in vrfs:
             self.assertFalse(interface_exists(vrf))
         # always forward to base class
@@ -669,6 +731,14 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             # We need the commit inside the loop to trigger the bug in T6603
             self.cli_commit()
 
+        # Every VRF must be present in the conntrack interface map, using its
+        # routing table ID as conntrack zone
+        zone_map = {tmp['interface'] : tmp['vrf_tableid']
+                    for tmp in get_nft_vrf_zone_mapping()}
+        self.assertEqual(zone_map['randomVRF'], 1000)
+        for index, vrf in enumerate(vrfs):
+            self.assertEqual(zone_map[vrf], 8710 + index)
+
         check_paths = [
             ['nat'],
             ['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept']
@@ -689,7 +759,217 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             # ['vrf_zones_ct_in', 'vrf_zones_ct_out']
             self.assertEqual(num_rules, 2)
 
+            # T6097: the nat anchor the zoning relies on comes and goes with
+            # the zone rules - it is not worth its cost when nothing needs it
+            self.verify_nftables_chain_exists('inet vrf_zones_nat', 'anchor')
+
             self.cli_delete([path[0]])
+            self.cli_commit()
+
+            for chain, rule in nftables_rules.items():
+                self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=True)
+            self.verify_nftables_chain_exists('inet vrf_zones_nat', 'anchor',
+                                              inverse=True)
+
+    def test_vrf_conntrack_zone_veth(self):
+        # T6097: a veth pair connecting two VRFs must pass IPv4 and IPv6
+        # traffic while conntrack zoning is active. Both flows have their reply
+        # tuple in the default zone 0 (required by T3655), so they collide and
+        # only the NAT engine reallocating the clashing tuple keeps the second
+        # conntrack entry insertable. That requires a "type nat" chain to be
+        # registered - IPv6 used to have none, which is what broke it.
+        veth_left = 'veth60'
+        veth_right = 'veth61'
+        vrf_left = 'ct-left'
+        vrf_right = 'ct-right'
+        state_policy_path = ['firewall', 'global-options', 'state-policy',
+                             'established', 'action', 'accept']
+
+        interfaces = {
+            veth_left : {
+                'peer' : veth_right,
+                'vrf'  : vrf_left,
+                'table': '6097',
+                'addr' : ['100.64.97.1/30', '2001:db8:6097::1/64'],
+            },
+            veth_right : {
+                'peer' : veth_left,
+                'vrf'  : vrf_right,
+                'table': '6098',
+                'addr' : ['100.64.97.2/30', '2001:db8:6097::2/64'],
+            },
+        }
+
+        for interface, config in interfaces.items():
+            self._cleanup_interfaces.append(interface)
+            self.cli_set(base_path + ['name', config['vrf'], 'table', config['table']])
+            iface_path = ['interfaces', 'virtual-ethernet', interface]
+            self.cli_set(iface_path + ['peer-name', config['peer']])
+            self.cli_set(iface_path + ['vrf', config['vrf']])
+            for address in config['addr']:
+                self.cli_set(iface_path + ['address', address])
+
+        # Conntrack zoning is only installed once conntrack is actually
+        # required - a stateful firewall rule is enough to trigger it
+        self.cli_set(state_policy_path)
+        self._cleanup_paths.append(['firewall', 'global-options', 'state-policy'])
+        self.cli_commit()
+
+        # The reply tuple collision is only resolved while the nat anchor is
+        # there. Check it explicitly so a missing anchor is not mistaken for a
+        # conntrack zoning regression.
+        self.verify_nftables_chain_exists('inet vrf_zones_nat', 'anchor')
+
+        # Both the VRF devices and their member interfaces must be zoned
+        zone_map = {tmp['interface'] : tmp['vrf_tableid']
+                    for tmp in get_nft_vrf_zone_mapping()}
+        for interface, config in interfaces.items():
+            self.assertEqual(zone_map[interface], int(config['table']))
+            self.assertEqual(zone_map[config['vrf']], int(config['table']))
+
+        # Wait for IPv6 duplicate address detection to finish, otherwise the
+        # source address can not be used yet
+        for interface in interfaces:
+            self.assertTrue(wait_for(dad_completed, interface, timeout=10))
+
+        insert_failed = get_conntrack_insert_failed()
+        for destination in ['100.64.97.2', '2001:db8:6097::2']:
+            ping_in_vrf(vrf_left, destination, f'ping {destination} failed')
+
+        # No conntrack entry may have been rejected while doing so
+        self.assertEqual(insert_failed, get_conntrack_insert_failed())
+
+    def test_vrf_conntrack_route_leak(self):
+        # T3655: the default route is leaked from the default VRF into VRF red
+        # and blue and the traffic is NATed in the default VRF. The reply comes
+        # back in on the uplink, which carries no conntrack zone at all, so it
+        # can only be matched because the reply tuple was left in zone 0 - and
+        # it has to end up in the VRF the flow originated from.
+        #
+        # The peer of the uplink is put into a network namespace so it behaves
+        # like the remote host it stands in for. Terminating it on this box
+        # instead would track the very same flow a second time and produce a
+        # conntrack collision that does not exist in the topology under test.
+        netns = 'leakisp'
+        uplink = 'veth66'
+        server = 'veth67'
+        uplink_addr4 = '203.0.113.1/29'
+        uplink_addr6 = '2001:db8:113::1/64'
+        server_addr4 = '203.0.113.2/29'
+        server_addr6 = '2001:db8:113::2/64'
+        lans = {
+            'leakred'  : {'table' : '6099', 'gw_if' : 'veth62', 'cl_if' : 'veth63',
+                          'cl_vrf': 'leakcla', 'cl_table' : '6101',
+                          'gw4' : '192.0.2.1/29',  'cl4' : '192.0.2.2/29',
+                          'gw6' : '2001:db8:2::1/64', 'cl6' : '2001:db8:2::2/64',
+                          'net4': '192.0.2.0/29', 'net6' : '2001:db8:2::/64'},
+            'leakblue' : {'table' : '6100', 'gw_if' : 'veth64', 'cl_if' : 'veth65',
+                          'cl_vrf': 'leakclb', 'cl_table' : '6102',
+                          'gw4' : '192.0.2.9/29',  'cl4' : '192.0.2.10/29',
+                          'gw6' : '2001:db8:3::1/64', 'cl6' : '2001:db8:3::2/64',
+                          'net4': '192.0.2.8/29', 'net6' : '2001:db8:3::/64'},
+        }
+        interfaces = [uplink, server]
+
+        def veth(name, peer, addresses=None, vrf=None):
+            self._cleanup_interfaces.append(name)
+            path = ['interfaces', 'virtual-ethernet', name]
+            self.cli_set(path + ['peer-name', peer])
+            if vrf:
+                self.cli_set(path + ['vrf', vrf])
+            for address in addresses or []:
+                self.cli_set(path + ['address', address])
+
+        # The uplink is the "pppoe0" of T3655 and lives in the default VRF
+        veth(uplink, server, [uplink_addr4, uplink_addr6])
+        veth(server, uplink)
+
+        for gw_vrf, config in lans.items():
+            interfaces += [config['gw_if'], config['cl_if']]
+            self.cli_set(base_path + ['name', gw_vrf, 'table', config['table']])
+            self.cli_set(base_path + ['name', config['cl_vrf'], 'table',
+                                      config['cl_table']])
+            veth(config['gw_if'], config['cl_if'],
+                 [config['gw4'], config['gw6']], vrf=gw_vrf)
+            veth(config['cl_if'], config['gw_if'],
+                 [config['cl4'], config['cl6']], vrf=config['cl_vrf'])
+
+            # Leak the default route out of the VRF into the default VRF ...
+            gw_static = base_path + ['name', gw_vrf, 'protocols', 'static']
+            self.cli_set(gw_static + ['route', '0.0.0.0/0', 'interface', uplink,
+                                      'vrf', 'default'])
+            self.cli_set(gw_static + ['route6', '::/0', 'interface', uplink,
+                                      'vrf', 'default'])
+            # ... and leak the LAN prefixes back, so the reply can be routed
+            # into the VRF it belongs to once conntrack un-NATed it
+            self.cli_set(['protocols', 'static', 'route', config['net4'],
+                          'interface', config['gw_if'], 'vrf', gw_vrf])
+            self.cli_set(['protocols', 'static', 'route6', config['net6'],
+                          'interface', config['gw_if'], 'vrf', gw_vrf])
+            self._cleanup_paths.append(['protocols', 'static', 'route',
+                                        config['net4']])
+            self._cleanup_paths.append(['protocols', 'static', 'route6',
+                                        config['net6']])
+            # Client default route points at its gateway
+            cl_static = base_path + ['name', config['cl_vrf'], 'protocols',
+                                     'static']
+            self.cli_set(cl_static + ['route', '0.0.0.0/0', 'next-hop',
+                                      config['gw4'].split('/')[0]])
+            self.cli_set(cl_static + ['route6', '::/0', 'next-hop',
+                                      config['gw6'].split('/')[0]])
+
+        # NAT happens in the default VRF, on the uplink. This also enables the
+        # conntrack zoning, conntrack_required() lists 'nat'
+        self.cli_set(['nat', 'source', 'rule', '100', 'outbound-interface',
+                      'name', uplink])
+        self.cli_set(['nat', 'source', 'rule', '100', 'translation', 'address',
+                      'masquerade'])
+        self._cleanup_paths.append(['nat', 'source', 'rule', '100'])
+        self.cli_commit()
+
+        # The far end stands in for a remote host, so it has to live in its own
+        # network namespace - terminating the flow on this box would track it a
+        # second time and produce a conntrack collision the real topology does
+        # not have. VyOS can not build a veth pair straddling a namespace
+        # (it would create one pair on each side), so move the peer over here.
+        self._cleanup_netns.append((netns, server))
+        cmdl(['ip', 'netns', 'add', netns], sudo=True)
+        cmdl(['ip', 'link', 'set', server, 'netns', netns], sudo=True)
+        in_netns = ['ip', 'netns', 'exec', netns]
+        cmdl(in_netns + ['ip', 'link', 'set', server, 'up'], sudo=True)
+        cmdl(in_netns + ['ip', 'addr', 'add', server_addr4, 'dev', server],
+             sudo=True)
+        cmdl(in_netns + ['ip', 'addr', 'add', server_addr6, 'dev', server,
+                         'nodad'], sudo=True)
+        # IPv6 is not NATed, so the far end needs a route back per LAN
+        for config in lans.values():
+            cmdl(in_netns + ['ip', '-6', 'route', 'add', config['net6'], 'via',
+                             uplink_addr6.split('/')[0]], sudo=True)
+
+        for interface in interfaces:
+            if interface == server:
+                continue
+            self.assertTrue(wait_for(dad_completed, interface, timeout=10))
+
+        insert_failed = get_conntrack_insert_failed()
+        for gw_vrf, config in lans.items():
+            for destination in [server_addr4.split('/')[0],
+                                server_addr6.split('/')[0]]:
+                ping_in_vrf(config['cl_vrf'], destination,
+                            f'{config["cl_vrf"]} -> {destination} failed, '
+                            f'leaked via {gw_vrf}')
+
+            # The flow is tracked in the zone of the VRF it entered, and it must
+            # have seen a reply - an unmatched reply shows up as [UNREPLIED]
+            zone = f'zone-orig={config["table"]}'
+            conntrack = get_conntrack_entries()
+            self.assertIn(zone, conntrack)
+            for line in conntrack.splitlines():
+                if zone in line:
+                    self.assertNotIn('[UNREPLIED]', line)
+
+        # Leaking must not cost us a single conntrack entry
+        self.assertEqual(insert_failed, get_conntrack_insert_failed())
 
     def test_vrf_policy_based_route(self):
         vrf_name = 'test-pbr_123'

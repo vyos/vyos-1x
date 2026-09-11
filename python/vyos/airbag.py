@@ -78,8 +78,13 @@ def bug_report(dtype, value, trace):
         note = 'noteworthy:\n'
         note += '\n'.join(list(_noteworthy))
 
+    hardware = ''
+    if 'hardware_vendor' in information:
+        hardware = HARDWARE.format(**information)
+
     information.update({
         'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'hardware': hardware,
         'trace': trace,
         'instructions': INSTRUCTIONS,
         'note': note,
@@ -141,14 +146,17 @@ Build commit ID:  {build_git}
 Architecture:     {system_arch}
 Boot via:         {boot_via}
 System type:      {system_type}
+{hardware}
+{trace}
+{note}
+"""
 
+# Optional section of FAULT - a container has no hardware of its own
+HARDWARE = """
 Hardware vendor:  {hardware_vendor}
 Hardware model:   {hardware_model}
 Hardware S/N:     {hardware_serial}
 Hardware UUID:    {hardware_uuid}
-
-{trace}
-{note}
 """
 
 INTRO = """\

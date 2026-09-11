@@ -16,23 +16,35 @@
 # Serial
 
 from vyos.configtree import ConfigTree
+from vyos.flavor import get_image_serial_console
 from vyos.system import disk
 from vyos.system.grub import CFG_VYOS_VARS
 from vyos.system.grub import vars_read
 
-serial_console = 'ttyS0'
 base = ['system', 'console']
 
 def migrate(config: ConfigTree) -> None:
     if not config.exists(base):
         return
 
+    # The serial console device is defined by the image flavor - amd64 uses the
+    # 8250 UART at ttyS0 while arm64 systems expose the PL011 UART as ttyAMA0
+    console_type, console_num, _ = get_image_serial_console()
+    if not console_type:
+        # image flavor carries no serial console data, assume 8250 UART
+        console_type, console_num = 'ttyS', '0'
+    serial_console = f'{console_type}{console_num}'
+
     root_dir = disk.find_persistence()
     vars_file: str = f'{root_dir}/{CFG_VYOS_VARS}'
     vars_current: dict[str, str] = vars_read(vars_file)
+    # A system without persistent GRUB storage - like VyOS running inside a
+    # container - has no boot console we could detect. Neither has one whose
+    # GRUB vars carry no console_type, e.g. a flavor that bakes no console data
+    if 'console_type' not in vars_current:
+        return
+
     # Check if VyOS installation uses serial boot console
-    if vars_current['console_type'] == 'ttyS':
-        # In the past we only supported ttyS0 as boot console, that's why we
-        # can hardcode it ...
+    if vars_current['console_type'] == console_type:
         if config.exists(base + ['device', serial_console]):
             config.set(base + ['device', serial_console, 'kernel'])

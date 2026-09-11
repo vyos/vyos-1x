@@ -40,6 +40,7 @@ password = 'paSS_@4ord'
 ttl = '300'
 interface = 'eth0'
 
+
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -64,9 +65,11 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     # IPv4 standard DDNS service configuration
     def test_01_dyndns_service_standard(self):
-        services = {'cloudflare': {'protocol': 'cloudflare'},
-                    'freedns': {'protocol': 'freedns', 'username': username},
-                    'zoneedit': {'protocol': 'zoneedit1', 'username': username}}
+        services = {
+            'cloudflare': {'protocol': 'cloudflare'},
+            'freedns': {'protocol': 'freedns', 'username': username},
+            'zoneedit': {'protocol': 'zoneedit1', 'username': username},
+        }
 
         for svc, details in services.items():
             self.cli_set(name_path + [svc, 'address', 'interface', interface])
@@ -102,7 +105,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
             self.assertIn(f'usev4=ifv4', ddclient_conf)
             self.assertIn(f'ifv4={interface}', ddclient_conf)
-            self.assertIn(f'password=\'{password}\'', ddclient_conf)
+            self.assertIn(f"password='{password}'", ddclient_conf)
 
             # Check default interval of 300 seconds
             systemd_override = read_file(DDCLIENT_SYSTEMD_UNIT)
@@ -152,7 +155,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'protocol={proto}', ddclient_conf)
         self.assertIn(f'server={server}', ddclient_conf)
         self.assertIn(f'login={username}', ddclient_conf)
-        self.assertIn(f'password=\'{password}\'', ddclient_conf)
+        self.assertIn(f"password='{password}'", ddclient_conf)
         self.assertIn(f'min-interval={wait_time}', ddclient_conf)
         self.assertIn(f'max-interval={expiry_time_good}', ddclient_conf)
 
@@ -162,9 +165,11 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     # IPv4+IPv6 dual DDNS service configuration
     def test_03_dyndns_service_dual_stack(self):
-        services = {'cloudflare': {'protocol': 'cloudflare', 'zone': zone},
-                    'freedns': {'protocol': 'freedns', 'username': username},
-                    'google': {'protocol': 'googledomains', 'username': username}}
+        services = {
+            'cloudflare': {'protocol': 'cloudflare', 'zone': zone},
+            'freedns': {'protocol': 'freedns', 'username': username},
+            'changeip': {'protocol': 'changeip', 'username': username},
+        }
         ip_version = 'both'
 
         for name, details in services.items():
@@ -174,7 +179,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             for opt, value in details.items():
                 self.cli_set(name_path + [name, opt, value])
 
-            # Dual stack is supported by 'cloudflare' and 'freedns' but not 'googledomains'
+            # Dual stack is supported by 'cloudflare' and 'freedns' but not 'changeip'
             # exception is raised for unsupported ones
             self.cli_set(name_path + [name, 'ip-version', ip_version])
             if details['protocol'] not in ['cloudflare', 'freedns']:
@@ -189,13 +194,15 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
             if details['protocol'] not in ['cloudflare', 'freedns']:
                 self.assertIn(f'usev4=ifv4', ddclient_conf)
+                self.assertNotIn(f'usev6=ifv6', ddclient_conf)
                 self.assertIn(f'ifv4={interface}', ddclient_conf)
+                self.assertNotIn(f'ifv6={interface}', ddclient_conf)
             else:
                 self.assertIn(f'usev4=ifv4', ddclient_conf)
                 self.assertIn(f'usev6=ifv6', ddclient_conf)
                 self.assertIn(f'ifv4={interface}', ddclient_conf)
                 self.assertIn(f'ifv6={interface}', ddclient_conf)
-            self.assertIn(f'password=\'{password}\'', ddclient_conf)
+            self.assertIn(f"password='{password}'", ddclient_conf)
 
             for opt in details.keys():
                 if opt == 'username':
@@ -204,6 +211,9 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
                 else:
                     tmp = details[opt]
                     self.assertIn(f'{opt}={tmp}', ddclient_conf)
+
+            # cleanup for next iteration
+            self.cli_delete(name_path + [name])
 
     def test_04_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
@@ -220,18 +230,21 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(svc_path + ['key', key_file.name])
             self.cli_set(svc_path + ['ttl', ttl])
             self.cli_set(svc_path + ['host-name', hostname])
+            self.cli_set(svc_path + ['ip-version', 'both'])
 
             # commit changes
             self.cli_commit()
 
             # Check some generating config parameters
             ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
-            self.assertIn(f'use=if', ddclient_conf)
-            self.assertIn(f'if={interface}', ddclient_conf)
+            self.assertIn(f'usev4=ifv4', ddclient_conf)
+            self.assertIn(f'usev6=ifv6', ddclient_conf)
+            self.assertIn(f'ifv4={interface}', ddclient_conf)
+            self.assertIn(f'ifv6={interface}', ddclient_conf)
             self.assertIn(f'protocol={proto}', ddclient_conf)
             self.assertIn(f'server={server}', ddclient_conf)
             self.assertIn(f'zone={zone}', ddclient_conf)
-            self.assertIn(f'password=\'{key_file.name}\'', ddclient_conf)
+            self.assertIn(f"password='{key_file.name}'", ddclient_conf)
             self.assertIn(f'ttl={ttl}', ddclient_conf)
 
     def test_05_dyndns_hostname(self):
@@ -256,7 +269,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'protocol={proto}', ddclient_conf)
             self.assertIn(f'server={server}', ddclient_conf)
             self.assertIn(f'login={username}', ddclient_conf)
-            self.assertIn(f'password=\'{password}\'', ddclient_conf)
+            self.assertIn(f"password='{password}'", ddclient_conf)
             self.assertIn(f'{name}', ddclient_conf)
 
     def test_06_dyndns_web_options(self):
@@ -294,10 +307,10 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
         self.assertIn(f'usev4=webv4', ddclient_conf)
         self.assertIn(f'webv4={web_url}', ddclient_conf)
-        self.assertIn(f'webv4-skip=\'{web_skip}\'', ddclient_conf)
+        self.assertIn(f"webv4-skip='{web_skip}'", ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
         self.assertIn(f'zone={zone}', ddclient_conf)
-        self.assertIn(f'password=\'{password}\'', ddclient_conf)
+        self.assertIn(f"password='{password}'", ddclient_conf)
         self.assertIn(f'{hostname}', ddclient_conf)
 
     def test_07_dyndns_dynamic_interface(self):
@@ -326,7 +339,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'protocol={proto}', ddclient_conf)
         self.assertIn(f'server={server}', ddclient_conf)
         self.assertIn(f'login={username}', ddclient_conf)
-        self.assertIn(f'password=\'{password}\'', ddclient_conf)
+        self.assertIn(f"password='{password}'", ddclient_conf)
         self.assertIn(f'{hostname}', ddclient_conf)
 
     def test_08_dyndns_vrf(self):
@@ -350,9 +363,12 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for process in VRF
         systemd_override = read_file(DDCLIENT_SYSTEMD_UNIT)
-        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient ' \
-                      f'--file {DDCLIENT_CONF} --cache {DDCLIENT_CONF.replace("conf", "cache")} ' \
-                      f'--foreground --daemon {default_interval}', systemd_override)
+        self.assertIn(
+            f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient '
+            f'--file {DDCLIENT_CONF} --cache {DDCLIENT_CONF.replace("conf", "cache")} '
+            f'--foreground --daemon {default_interval}',
+            systemd_override,
+        )
 
         # Check for process in VRF
         proc = cmdl(['ip', 'vrf', 'pids', vrf_name])
@@ -360,6 +376,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Cleanup VRF
         self.cli_delete(['vrf', 'name', vrf_name])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

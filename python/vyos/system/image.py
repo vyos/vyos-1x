@@ -22,6 +22,7 @@ from json import loads
 
 from vyos.defaults import directories
 from vyos.system import disk, grub
+from vyos.utils.kernel import get_kernel_boot_arg
 
 # Define variables
 GRUB_DIR_MAIN: str = '/boot/grub'
@@ -29,8 +30,12 @@ GRUB_DIR_VYOS: str = f'{GRUB_DIR_MAIN}/grub.cfg.d'
 CFG_VYOS_VARS: str = f'{GRUB_DIR_VYOS}/20-vyos-defaults-autoload.cfg'
 GRUB_DIR_VYOS_VERS: str = f'{GRUB_DIR_VYOS}/vyos-versions'
 # prepare regexes
-REGEX_KERNEL_CMDLINE: str = r'^BOOT_IMAGE=/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
-REGEX_SYSTEM_CFG_VER: str = r'(\r\n|\r|\n)SYSTEM_CFG_VER\s*=\s*(?P<cfg_ver>\d+)(\r\n|\r|\n)'
+REGEX_KERNEL_CMDLINE: str = (
+    r'^/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
+)
+REGEX_SYSTEM_CFG_VER: str = (
+    r'(\r\n|\r|\n)SYSTEM_CFG_VER\s*=\s*(?P<cfg_ver>\d+)(\r\n|\r|\n)'
+)
 
 
 # structures definitions
@@ -197,8 +202,8 @@ def get_running_image() -> str:
     """
     running_image: str = ''
     regex_filter = re_compile(REGEX_KERNEL_CMDLINE)
-    cmdline: str = Path('/proc/cmdline').read_text()
-    running_image_result = regex_filter.match(cmdline)
+    cmdline_arg: str = get_kernel_boot_arg('BOOT_IMAGE') or ''
+    running_image_result = regex_filter.match(cmdline_arg)
     if running_image_result:
         running_image: str = running_image_result.groupdict().get(
             'image_version', '')
@@ -259,8 +264,8 @@ def is_live_boot() -> bool:
         bool: True if the system currently booted in live mode
     """
     regex_filter = re_compile(REGEX_KERNEL_CMDLINE)
-    cmdline: str = Path('/proc/cmdline').read_text()
-    running_image_result = regex_filter.match(cmdline)
+    cmdline_arg: str = get_kernel_boot_arg('BOOT_IMAGE') or ''
+    running_image_result = regex_filter.match(cmdline_arg)
     if running_image_result:
         boot_type: str = running_image_result.groupdict().get('boot_type', '')
         if boot_type == 'boot':
@@ -278,6 +283,49 @@ def if_not_live_boot(func):
     return wrapper
 
 def is_running_as_container() -> bool:
-    if Path('/.dockerenv').exists():
+    """Detect if the system is running inside a container
+
+    Returns:
+        bool: True if running as container (Docker, Podman, LXC, ...)
+    """
+    # Docker and Podman drop a marker file into the container root
+    if Path('/.dockerenv').exists() or Path('/run/.containerenv').exists():
         return True
+    # systemd sets container= in the environment of PID 1 for all container
+    # types it knows about - this is only readable by root
+    try:
+        environ = Path('/proc/1/environ').read_bytes().decode(errors='ignore')
+        if 'container=' in environ:
+            return True
+    except (OSError, PermissionError):
+        pass
     return False
+
+def has_persistence() -> bool:
+    """Detect if a persistence storage partition is mounted
+
+    Returns:
+        bool: True if the persistence partition is available
+    """
+    return bool(disk.find_persistence())
+
+def if_persistence(func):
+    """Decorator to call function only if persistence storage is available.
+    Without it there is no writable GRUB configuration to operate on"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if has_persistence():
+            ret = func(*args, **kwargs)
+            return ret
+        return None
+    return wrapper
+
+def if_not_container(func):
+    """Decorator to call function only if not running inside a container"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not is_running_as_container():
+            ret = func(*args, **kwargs)
+            return ret
+        return None
+    return wrapper

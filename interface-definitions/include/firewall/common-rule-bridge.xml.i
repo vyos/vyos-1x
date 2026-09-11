@@ -27,6 +27,7 @@
   </properties>
   <children>
     #include <include/firewall/mac-address.xml.i>
+    #include <include/firewall/mac-address-mask.xml.i>
     #include <include/firewall/address-inet.xml.i>
     #include <include/firewall/address-mask-inet.xml.i>
     #include <include/firewall/port.xml.i>
@@ -47,6 +48,7 @@
   </properties>
   <children>
     #include <include/firewall/mac-address.xml.i>
+    #include <include/firewall/mac-address-mask.xml.i>
     #include <include/firewall/address-inet.xml.i>
     #include <include/firewall/address-mask-inet.xml.i>
     #include <include/firewall/port.xml.i>

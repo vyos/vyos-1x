@@ -21,8 +21,6 @@ from typing import Union
 
 from vyos.configtree import ConfigTree
 from vyos.utils.boot import boot_configuration_complete
-from vyos.vyconf_session import VyconfSession
-from vyos.vyconf_session import VyconfSessionError
 from vyos.defaults import directories
 from vyos.xml_ref import is_tag
 from vyos.xml_ref import is_leaf
@@ -332,6 +330,13 @@ class ConfigSourceVyconfSession(ConfigSource):
             pid = os.environ.get('SESSION_PID', '')
             self.pid = int(pid) if pid else os.getppid()
 
+        # Imported here rather than at module scope: vyos.vyconf_session pulls
+        # in vyos.proto.vyconf_client and with it google.protobuf, which every
+        # consumer of vyos.config would otherwise pay for on import even when
+        # the vyconf backend is not in use.
+        from vyos.vyconf_session import VyconfSession
+        from vyos.vyconf_session import VyconfSessionError
+
         self._vyconf_session = VyconfSession(pid=self.pid)
         try:
             out = self._vyconf_session.get_config()
@@ -366,6 +371,8 @@ class ConfigSourceVyconfSession(ConfigSource):
         Returns:
             True if the config session has uncommitted changes, False otherwise.
         """
+        from vyos.vyconf_session import VyconfSessionError
+
         try:
             return self._vyconf_session.session_changed()
         except VyconfSessionError:

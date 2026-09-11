@@ -278,12 +278,9 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
         # A source-interface that names a VRF is not an interface and must be
         # rejected
-        self.cli_set(
-            base_path
-            + ['netflow', 'server', '198.51.100.9', 'source-interface', vrf_name]
-        )
         with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
+            self.cli_set(base_path + ['netflow', 'server', '198.51.100.9',
+                                      'source-interface', vrf_name])
         self.cli_delete(base_path + ['netflow', 'server', '198.51.100.9'])
 
         self.cli_delete(['interfaces', 'dummy', dummy_if])

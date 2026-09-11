@@ -12,10 +12,10 @@ Sync {
     UDP {
 {%         if listen_address is vyos_defined %}
 {%             for address in listen_address %}
-        IPv4_address {{ address }}
+        {{ 'IPv4_address' if address | is_ipv4 else 'IPv6_address' }} {{ address }}
 {%             endfor %}
 {%         endif %}
-        IPv4_Destination_Address {{ iface_config.peer }}
+        {{ 'IPv4_Destination_Address' if iface_config.peer | is_ipv4 else 'IPv6_Destination_Address' }} {{ iface_config.peer }}
         Port {{ iface_config.port if iface_config.port is vyos_defined else '3780' }}
         Interface {{ iface }}
         SndSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
@@ -24,10 +24,14 @@ Sync {
     }
 {%     else %}
     Multicast {
-{%         set ip_address = iface | get_ipv4 %}
+{%         if mcast_group | is_ipv6 %}
+        IPv6_address {{ mcast_group }}
+{%         else %}
+{%             set ip_address = iface | get_ipv4 %}
         IPv4_address {{ mcast_group }}
-        Group {{ iface_config.port if iface_config.port is vyos_defined else '3780' }}
         IPv4_interface {{ ip_address[0] | ip_from_cidr }}
+{%         endif %}
+        Group {{ iface_config.port if iface_config.port is vyos_defined else '3780' }}
         Interface {{ iface }}
         SndSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
         RcvSocketBuffer {{ sync_queue_size | int *1024 *1024 }}

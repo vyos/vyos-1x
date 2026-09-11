@@ -27,11 +27,13 @@ from threading import Lock
 from typing import Union
 from typing import Callable
 from typing import TYPE_CHECKING
+from typing import Optional
 
 from fastapi import Depends
 from fastapi import Query
 from fastapi import Request
 from fastapi import Response
+from fastapi import Header
 from fastapi import HTTPException
 from fastapi import APIRouter
 from fastapi import BackgroundTasks
@@ -74,8 +76,12 @@ from .models import RebootModel
 from .models import ResetModel
 from .models import RenewModel
 from .models import ImportPkiModel
+from .models import PingModel
 from .models import PoweroffModel
 from .models import TracerouteModel
+from .libs.token_auth import generate_token
+from .libs.token_auth import verify_oidc_token
+from .libs.token_auth import verify_token
 
 
 if TYPE_CHECKING:
@@ -96,9 +102,33 @@ def check_auth(key_list, key):
     return key_id
 
 
-def auth_required(data: ApiModel):
+def auth_required(
+    data: ApiModel,
+    x_api_key: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+    x_client_verify: Optional[str] = Header(None),
+):
     session = SessionState()
-    key = data.key
+    # mTLS: client certificate verified by nginx against configured CA
+    if x_client_verify == 'SUCCESS':
+        session.id = 'mtls-client'
+        return
+
+    if authorization:
+        scheme, _, token = authorization.partition(' ')
+        if scheme.lower() == 'bearer' and token:
+            key_id = verify_token(token)
+            if key_id:
+                session.id = key_id
+                return
+            # Try OIDC token validation
+            oidc_sub = verify_oidc_token(token)
+            if oidc_sub:
+                session.id = f'oidc:{oidc_sub}'
+                return
+            raise HTTPException(status_code=401, detail='Invalid or expired token')
+
+    key = data.key or x_api_key
     api_keys = session.keys
     key_id = check_auth(api_keys, key)
     if not key_id:
@@ -181,6 +211,14 @@ class MultipartRequest(Request):
                 LOG.debug('processing form data')
                 for k, v in form_data.multi_items():
                     forms[k] = v
+                if endpoint == '/token':
+                    if 'key' not in forms:
+                        self.form_err = (401, 'Valid API key is required')
+                        return self._body
+                    merge = {'key': forms['key']}
+                    new_body = json.dumps(merge).encode()
+                    self._body = new_body
+                    return self._body
 
                 if 'data' not in forms:
                     self.form_err = (422, 'Non-empty data field is required')
@@ -218,6 +256,7 @@ class MultipartRequest(Request):
                         '/container-image',
                         '/image',
                         '/configure-section',
+                        '/ping',
                         '/traceroute',
                     ):
                         if 'path' not in c:
@@ -959,17 +998,19 @@ def poweroff_op(data: PoweroffModel):
     return success(res)
 
 
-@router.post('/traceroute')
-def traceroute_op(data: TracerouteModel):
+@router.post('/ping')
+def ping_op(data: PingModel):
     state = SessionState()
     session = state.session
 
     op = data.op
     host = data.host
+    count = data.count
+    vrf = data.vrf
 
     try:
-        if op == 'traceroute':
-            res = session.traceroute(host)
+        if op == 'ping':
+            res = session.ping(host, count, vrf)
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
@@ -980,6 +1021,38 @@ def traceroute_op(data: TracerouteModel):
 
     return success(res)
 
+
+@router.post('/traceroute')
+def traceroute_op(data: TracerouteModel):
+    state = SessionState()
+    session = state.session
+
+    op = data.op
+    host = data.host
+    vrf = data.vrf
+
+    try:
+        if op == 'traceroute':
+            res = session.traceroute(host, vrf)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception:
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occurred. Check the logs for details.')
+
+    return success(res)
+
+
+@router.post('/token')
+def token_op(data: ApiModel, x_api_key: Optional[str] = Header(None)):
+    session = SessionState()
+    key = data.key or x_api_key
+    key_id = check_auth(session.keys, key)
+    if not key_id:
+        raise HTTPException(status_code=401, detail='Valid API key is required')
+    return success(generate_token(key_id))
 
 def rest_init(app: 'FastAPI'):
     if all(r in app.routes for r in router.routes):

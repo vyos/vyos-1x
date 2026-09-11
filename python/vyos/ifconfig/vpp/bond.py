@@ -35,6 +35,7 @@ class VPPBondInterface(Interface, VPPInterface):
         self.mode = config.get('mode')
         self.load_balance = config.get('hash_policy')
         self.mac = config.get('mac')
+        self.vlan_members = config.get('vlan_members')
 
     def _create(self):
         pass
@@ -76,26 +77,30 @@ class VPPBondInterface(Interface, VPPInterface):
         """Add member to Bond interface
         Example:
             from vyos.ifconfig.vpp import VPPBondInterface
-            a = VPPBondInterface(ifname='vppbond0', config)
+            a = VPPBondInterface('vppbond0', config)
             a.add_member(interface='eth0')
         """
-        member_if_index = self.vpp.get_sw_if_index(interface)
         self.vpp.api.bond_add_member(
-            bond_sw_if_index=self.index, sw_if_index=member_if_index
+            bond_sw_if_index=self.index,
+            sw_if_index=self.vpp.get_sw_if_index(interface),
         )
-        self.vpp.api.sw_interface_set_promisc(
-            sw_if_index=member_if_index, promisc_on=True
-        )
+        self.vpp.set_promisc(interface, enable=True)
 
     def detach_member(self, interface):
         """Detach member from Bond interface
         Example:
             from vyos.ifconfig.vpp import VPPBondInterface
-            a = VPPBondInterface(ifname='vppbond0')
+            config = {'vlan_members': []}
+            a = VPPBondInterface('vppbond0', config)
             a.detach_member(interface='eth0')
         """
-        member_if_index = self.vpp.get_sw_if_index(interface)
-        self.vpp.api.bond_detach_member(sw_if_index=member_if_index)
+        self.vpp.api.bond_detach_member(
+            sw_if_index=self.vpp.get_sw_if_index(interface),
+        )
+        # Keep promiscuous mode if the interface still requires it for its
+        # own VLAN (vif/vif-s) sub-interfaces
+        if interface not in self.vlan_members:
+            self.vpp.set_promisc(interface, enable=False)
 
     def get_members(self):
         members = []

@@ -16,9 +16,6 @@
 import functools
 import os
 
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
-from jinja2 import ChainableUndefined
 from vyos.defaults import directories
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import makedir
@@ -41,6 +38,13 @@ _CLEVER_FUNCTIONS = {}
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
 def _get_environment(location=None):
+    # Imported here rather than at module scope: most importers of this module
+    # want only the pure-Python predicates (is_ipv4, is_ipv6, ...) and never
+    # render a template, so they should not pay for jinja2. This function is
+    # lru_cache'd, so the import happens at most once per process.
+    from jinja2 import Environment
+    from jinja2 import FileSystemLoader
+    from jinja2 import ChainableUndefined
     from os import getenv
 
     if location is None:
@@ -427,6 +431,14 @@ def get_dhcp_router(interface):
 
     Returns None if no router is found, returns the IP address as string if
     a router is found.
+
+    The file read here is not the dhclient lease database (dhclient_<if>.leases)
+    but the per event dump written by
+    /etc/dhcp/dhclient-exit-hooks.d/03-vyos-dhclient-hook. It is intentionally
+    not removed when the DHCP client is stopped - the RELEASE/STOP event
+    rewrites it with an empty "new_routers", which is the signal that no router
+    is available. The file name is keyed on the interface only, a VRF assignment
+    does not change it.
     """
     lease_file = directories['isc_dhclient_dir'] + f'/dhclient_{interface}.lease'
     if not os.path.exists(lease_file):
@@ -908,18 +920,19 @@ def kea_high_availability_json(config):
         'max-ack-delay': 5000,
         'max-unacked-clients': 10,
         'peers': [
-        {
-            'name': os.uname()[1],
-            'url': f'http://{source_addr}:647/',
-            'role': peer1_role,
-            'auto-failover': True
-        },
-        {
-            'name': config['name'],
-            'url': f'http://{remote_addr}:647/',
-            'role': peer2_role,
-            'auto-failover': True
-        }]
+            {
+                'name': os.uname()[1],
+                'url': f'http://{bracketize_ipv6(source_addr)}:647/',
+                'role': peer1_role,
+                'auto-failover': True,
+            },
+            {
+                'name': config['name'],
+                'url': f'http://{bracketize_ipv6(remote_addr)}:647/',
+                'role': peer2_role,
+                'auto-failover': True,
+            },
+        ],
     }
 
     if 'ca_cert_file' in config:

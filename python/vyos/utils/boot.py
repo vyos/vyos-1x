@@ -15,6 +15,7 @@
 
 import os
 
+
 def boot_configuration_complete() -> bool:
     """ Check if the boot config loader has completed
     """

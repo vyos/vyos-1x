@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -23,10 +22,16 @@ from vyos.configsession import ConfigSessionError
 from vyos.system import disk
 from vyos.system.grub import CFG_VYOS_VARS
 from vyos.system.grub import vars_read
+from vyos.utils.cpu import get_cpu_arch
 from vyos.xml_ref import default_value
 
 base_path = ['system', 'console']
-serial_console = 'ttyS0'
+# The serial console device is platform dependent. On amd64 this is the 8250
+# UART at ttyS0, while arm64 systems use the PL011 UART exposed as ttyAMA0.
+# A device that does not exist is not a TTY and thus never becomes the Kernel
+# boot console - so we must test with the device of the running platform.
+serial_console = 'ttyAMA0' if get_cpu_arch() == 'arm64' else 'ttyS0'
+console_type = serial_console[:-1]
 default_speed = default_value(base_path + ['device', serial_console, 'speed'])
 
 def get_grub_vars() -> dict:
@@ -52,15 +57,15 @@ class TestSystemConsole(VyOSUnitTestSHIM.TestCase):
         super().tearDown()
 
     def test_multiple_kernel_consoles(self):
-        self.cli_set(base_path + ['device', 'ttyS1', 'kernel'])
-        self.cli_set(base_path + ['device', 'ttyS2', 'kernel'])
+        self.cli_set(base_path + ['device', f'{console_type}1', 'kernel'])
+        self.cli_set(base_path + ['device', f'{console_type}2', 'kernel'])
 
         # Only one console can have 'kernel'
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
     def test_fbcon_and_serial_con_switch(self):
-        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under VyOS CI/CD QEMU environment!')
 
         grub_vars = get_grub_vars()
@@ -72,8 +77,8 @@ class TestSystemConsole(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         grub_vars = get_grub_vars()
-        # We moved the Kernel boot console to ttyS0
-        self.assertEqual(grub_vars['console_type'], serial_console[:-1])
+        # We moved the Kernel boot console to the platform serial device
+        self.assertEqual(grub_vars['console_type'], console_type)
         self.assertEqual(grub_vars['console_num'], serial_console[-1])
         self.assertEqual(grub_vars['console_speed'], default_speed)
 

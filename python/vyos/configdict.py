@@ -133,8 +133,13 @@ def leaf_node_changed(conf, path):
             return True
         if old is None:
             return []
+        # A multi node holding a single value is a plain string in the JSON
+        # rendering of the config tree, and only becomes a list once it holds
+        # several values. Normalize before diffing, else appending a value to a
+        # single-valued multi node reports the already configured value as gone
+        # just because its representation changed from string to list
         if isinstance(old, str):
-            return [old]
+            old = [old]
         if isinstance(old, list):
             if isinstance(new, str):
                 new = [new]

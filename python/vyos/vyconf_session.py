@@ -31,7 +31,6 @@ from vyos.proto.vyconf_proto import Errnum
 from vyos.utils.commit import acquire_commit_lock_file
 from vyos.utils.commit import release_commit_lock_file
 from vyos.utils.commit import call_commit_hooks
-from vyos.remote import get_config_file
 
 
 class VyconfSessionError(Exception):
@@ -246,6 +245,11 @@ class VyconfSession:
         self, file_name: str, migrate: bool = False, cached: bool = False
     ) -> tuple[str, int]:
         # pylint: disable=consider-using-with
+        # Imported here rather than at module scope: vyos.remote pulls in
+        # paramiko and requests, which every consumer of vyos.config would
+        # otherwise pay for on import.
+        from vyos.remote import get_config_file
+
         file_path = tempfile.NamedTemporaryFile(delete=False).name
         err = get_config_file(file_name, file_path)
         if err:
@@ -275,6 +279,11 @@ class VyconfSession:
         self, file_name: str, migrate: bool = False, destructive: bool = False
     ) -> tuple[str, int]:
         # pylint: disable=consider-using-with
+        # Imported here rather than at module scope: vyos.remote pulls in
+        # paramiko and requests, which every consumer of vyos.config would
+        # otherwise pay for on import.
+        from vyos.remote import get_config_file
+
         file_path = tempfile.NamedTemporaryFile(delete=False).name
         err = get_config_file(file_name, file_path)
         if err:

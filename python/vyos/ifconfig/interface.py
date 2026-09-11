@@ -16,7 +16,6 @@
 import os
 import re
 import json
-import jmespath
 
 from copy import deepcopy
 from glob import glob
@@ -26,17 +25,11 @@ from ipaddress import IPv6Interface
 from netifaces import ifaddresses # pylint: disable = no-name-in-module
 from socket import AF_INET
 from socket import AF_INET6
-from netaddr import EUI
-from netaddr import mac_unix_expanded
 
 from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
 from vyos.defaults import directories
-from vyos.pki import find_chain
-from vyos.pki import encode_certificate
-from vyos.pki import load_certificate
-from vyos.pki import wrap_private_key
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.template import render
@@ -68,6 +61,18 @@ from vyos.ifconfig import Section
 
 link_local_prefix = 'fe80::/64'
 
+def _jmes_search(expression, data):
+    """jmespath.search with a deferred import.
+
+    The lookups below live in lambdas evaluated at call time, so importing
+    jmespath at module scope would put it on the vyos.ifconfig import path for
+    no reason.
+    """
+    import jmespath
+
+    return jmespath.search(expression, data)
+
+
 class Interface(Control):
     # This is the class which will be used to create
     # self.operational, it allows subclasses, such as
@@ -92,39 +97,39 @@ class Interface(Control):
     _command_get = {
         'admin_state': {
             'shellcmd': 'ip -json link show dev {ifname}',
-            'format': lambda j: 'up' if 'UP' in jmespath.search('[*].flags | [0]', json.loads(j)) else 'down',
+            'format': lambda j: 'up' if 'UP' in _jmes_search('[*].flags | [0]', json.loads(j)) else 'down',
         },
         'alias': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].ifalias | [0]', json.loads(j)) or '',
+            'format': lambda j: _jmes_search('[*].ifalias | [0]', json.loads(j)) or '',
         },
         'ifindex': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].ifindex | [0]', json.loads(j)) or '',
+            'format': lambda j: _jmes_search('[*].ifindex | [0]', json.loads(j)) or '',
         },
         'mac': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].address | [0]', json.loads(j)),
+            'format': lambda j: _jmes_search('[*].address | [0]', json.loads(j)),
         },
         'min_mtu': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].min_mtu | [0]', json.loads(j)),
+            'format': lambda j: _jmes_search('[*].min_mtu | [0]', json.loads(j)),
         },
         'max_mtu': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].max_mtu | [0]', json.loads(j)),
+            'format': lambda j: _jmes_search('[*].max_mtu | [0]', json.loads(j)),
         },
         'mtu': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].mtu | [0]', json.loads(j)),
+            'format': lambda j: _jmes_search('[*].mtu | [0]', json.loads(j)),
         },
         'oper_state': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].operstate | [0]', json.loads(j)),
+            'format': lambda j: _jmes_search('[*].operstate | [0]', json.loads(j)),
         },
         'vrf': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[?linkinfo.info_slave_kind == `vrf`].master | [0]', json.loads(j)),
+            'format': lambda j: _jmes_search('[?linkinfo.info_slave_kind == `vrf`].master | [0]', json.loads(j)),
         },
     }
 
@@ -552,6 +557,11 @@ class Interface(Control):
         sha.update(cpu_id.encode())
         sha.update(first_mac.encode())
         sha.update(self.ifname.encode())
+        # Imported here rather than at module scope: netaddr is only needed
+        # by this one method.
+        from netaddr import EUI
+        from netaddr import mac_unix_expanded
+
         # take the most significant 48 bits from the SHA256 string
         tmp = sha.hexdigest()[:12]
         # Convert pseudo random string into EUI format which now represents a
@@ -1709,13 +1719,22 @@ class Interface(Control):
 
     def set_eapol(self) -> None:
         """ Take care about EAPoL supplicant daemon """
-
         # XXX: wpa_supplicant works on the source interface
         cfg_dir = '/run/wpa_supplicant'
         wpa_supplicant_conf = f'{cfg_dir}/{self.ifname}.conf'
         eapol_action='stop'
 
         if 'eapol' in self.config:
+            # Imported here rather than at module scope: vyos.pki imports the
+            # whole cryptography stack, which every consumer of vyos.ifconfig
+            # would otherwise pay for on import. set_eapol() itself runs on
+            # every ethernet/bond update, so keep it inside this guard too.
+            # vyos/config.py and vyos/configverify.py defer vyos.pki the same way.
+            from vyos.pki import find_chain
+            from vyos.pki import encode_certificate
+            from vyos.pki import load_certificate
+            from vyos.pki import wrap_private_key
+
             # The default is a fallback to hw_id which is not present for any interface
             # other then an ethernet interface. Thus we emulate hw_id by reading back the
             # Kernel assigned MAC address

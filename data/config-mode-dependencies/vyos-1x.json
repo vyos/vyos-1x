@@ -146,5 +146,8 @@
     },
     "system_sflow": {
         "vpp_sflow": ["vpp_sflow"]
+    },
+    "service_monitoring_prometheus": {
+        "frr_exporter": ["service_monitoring_telegraf"]
     }
 }

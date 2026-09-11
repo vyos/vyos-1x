@@ -34,6 +34,7 @@ dependency_dir = os.path.join(directories['data'],
                               'config-mode-dependencies')
 
 dependency_list: list[typing.Callable] = []
+dependency_list_initial: list[typing.Callable] = []
 
 DEBUG = False
 
@@ -181,6 +182,15 @@ def called_as_dependent() -> bool:
             return True
     return False
 
+
+def parent_called_as_dependent() -> bool:
+    st = stack()[2:]
+    for f in st:
+        if f.filename == __file__:
+            return True
+    return False
+
+
 def graph_from_dependency_dict(d: dict) -> dict:
     g = {}
     for k in list(d):
@@ -214,3 +224,58 @@ def check_dependency_graph(dependency_dir: str = dependency_dir,
             d = dict_merge(json.load(f), d)
 
     return is_acyclic(d)
+
+
+def def_closure_initial(
+    target: str, config: 'Config', tagnode: typing.Optional[str] = None
+) -> typing.Callable:
+    def func_impl():
+        if tagnode is not None:
+            os.environ['VYOS_TAGNODE_VALUE'] = tagnode
+        run_config_mode_script(target, config)
+
+    tag_ext = f'_{tagnode}' if tagnode is not None else ''
+    func_impl.__name__ = f'{target}{tag_ext}'
+
+    return func_impl
+
+
+def set_dependents_initial(
+    target: str, config: 'Config', tagnode: typing.Optional[str] = None
+):
+    if parent_called_as_dependent():
+        return
+
+    k = caller_name()
+    lst = dependency_list_initial
+
+    func = def_closure(target, config, tagnode)
+    append_uniq(lst, func)
+
+    debug_print(
+        f'set_dependents_initial: caller {k}, current dependents {names_of(lst)}'
+    )
+
+
+def call_dependents_initial():
+    # pylint: disable=global-statement
+    global dependency_list_initial
+
+    if parent_called_as_dependent():
+        return
+
+    k = caller_name()
+    lst = dependency_list_initial
+    debug_print(
+        f'call_dependents_initial: caller {k}, remaining dependents {names_of(lst)}'
+    )
+
+    while lst:
+        f = lst.pop(0)
+        debug_print(f'calling: {f.__name__}')
+        try:
+            f()
+        except ConfigError as e:
+            s = f'dependent {f.__name__}: {str(e)}'
+            dependency_list_initial = []
+            raise ConfigError(s) from e

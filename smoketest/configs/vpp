@@ -28,8 +28,8 @@ system {
         commit-revisions "100"
     }
     console {
-        device ttyS0 {
-            speed "115200"
+        device @SERIAL_DEVICE@ {
+            speed "@SERIAL_SPEED@"
         }
     }
     host-name "r16"
@@ -111,6 +111,7 @@ vpp {
         }
     }
     settings {
+        allow-unsupported-nics
         interface eth1 {
             driver "dpdk"
         }

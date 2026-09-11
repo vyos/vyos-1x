@@ -18,6 +18,8 @@ from vyos.system import grub
 from vyos.system import image
 from vyos.system import compat
 
+@image.if_not_container
+@image.if_persistence
 @compat.grub_cfg_update
 def set_serial_console(console_type: str, console_num: str,
                        console_speed: str, root_dir: str = '') -> None:
@@ -34,6 +36,8 @@ def set_serial_console(console_type: str, console_num: str,
     grub.set_serial_console(console_type, console_num, console_speed, root_dir)
 
 @image.if_not_live_boot
+@image.if_not_container
+@image.if_persistence
 def update_serial_console(console_type: str, console_num: str,
                           console_speed: str, root_dir: str = '') -> None:
     """Update console_speed if different from current value"""
@@ -53,6 +57,8 @@ def update_serial_console(console_type: str, console_num: str,
        console_speed != console_speed_current:
         set_serial_console(console_type, console_num, console_speed, root_dir)
 
+@image.if_not_container
+@image.if_persistence
 @compat.grub_cfg_update
 def set_kernel_cmdline_options(cmdline_options: str, version: str = '',
                                root_dir: str = '') -> None:
@@ -66,6 +72,8 @@ def set_kernel_cmdline_options(cmdline_options: str, version: str = '',
     grub.set_kernel_cmdline_options(cmdline_options, version, root_dir)
 
 @image.if_not_live_boot
+@image.if_not_container
+@image.if_persistence
 def update_kernel_cmdline_options(cmdline_options: str,
                                   root_dir: str = '',
                                   version = image.get_running_image()) -> None:

@@ -29,7 +29,6 @@ from vyos.utils.process import process_named_running
 
 base_path = ['container']
 PROCESS_NAME = 'conmon'
-PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
 
 busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
@@ -68,10 +67,14 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertIsNone(process_named_running(PROCESS_NAME))
 
         # Ensure systemd units are removed
-        units = glob.glob('/run/systemd/system/vyos-container-*')
+        units = glob.glob('/run/containers/systemd/vyos*')
         self.assertEqual(units, [])
         # always forward to base class
         super().tearDown()
+
+    def is_running(self, name):
+        command = ['systemctl', 'show', f'vyos-container-{name}', '--property=ActiveState', '--value']
+        return cmdl(command).strip() == 'active'
 
     def test_basic(self):
         cont_name = 'c1'
@@ -87,15 +90,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'sysctl', 'parameter',
                                   'kernel.msgmax', 'value', '4096'])
         self.cli_set(base_path + ['name', cont_name, 'log-driver', 'journald'])
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-cgroups'])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
         # commit changes
         self.cli_commit()
 
-        pid = 0
-        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
-            pid = int(f.read())
-
-        # Check for running process
-        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+        self.assertTrue(self.is_running(cont_name))
 
         # verify
         tmp = cmdl(['podman', 'exec', '-it', cont_name, 'sysctl', 'kernel.msgmax'], sudo=True)
@@ -104,12 +104,19 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         l = cmd_to_json(['container', 'inspect', cont_name])
         self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
         self.assertEqual(l['Config']['Healthcheck']['Test'], ['NONE'])
+        self.assertEqual(l['HostConfig']['CgroupMode'], 'host')
+
+        # cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address'])
+        self.cli_delete(['protocols', 'static'])
+        self.cli_delete(['system', 'name-server'])
 
     def test_healthcheck(self):
         cont_name = 'health-test'
 
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
 
         self.cli_set(base_path + ['name', cont_name, 'health-check', 'command', 'true'])
         self.cli_set(base_path + ['name', cont_name, 'health-check', 'interval', '10'])
@@ -133,6 +140,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
 
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
         for name_server in name_servers:
             self.cli_set(base_path + ['name', cont_name, 'name-server', name_server])
         self.cli_set(
@@ -166,15 +174,11 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'cpu-quota', '1.25'])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
 
         self.cli_commit()
 
-        pid = 0
-        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
-            pid = int(f.read())
-
-        # Check for running process
-        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+        self.assertTrue(self.is_running(cont_name))
 
     def test_network_types(self):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '100'])
@@ -200,6 +204,11 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', 'bridge2', 'prefix', '10.0.2.0/24'])
 
         self.cli_commit()
+
+        # Force-start the network quadlets, as not mapped to containers
+        for network in ['macvlan1', 'macvlan2', 'macvlan3', 'bridge1', 'bridge2']:
+            systemd_unit = f'vyos-{network}-network.service'
+            cmdl(['systemctl', 'start', systemd_unit], sudo=True)
 
         n = cmd_to_json(['network', 'inspect', 'macvlan1'])
         self.assertEqual(n['driver'], 'macvlan')
@@ -234,6 +243,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.2.0/24')
         self.assertEqual(n['subnets'][0]['gateway'], '10.0.2.1')
 
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vif'])
+
     def test_user_defined_mac(self):
         # Bridge Network
         self.cli_set(base_path + ['network', 'bridge1', 'prefix', '10.0.1.0/24'])
@@ -242,10 +254,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', "test1", 'image', busybox_image])
         self.cli_set(base_path + ['name', "test1", 'network', 'bridge1', 'address', '10.0.1.11'])
         self.cli_set(base_path + ['name', "test1", 'network', 'bridge1', 'mac', '02:00:00:00:00:01'])
+        self.cli_set(base_path + ['name', "test1", 'stop-timeout', '1'])
 
         self.cli_set(base_path + ['name', "test2", 'image', busybox_image])
         self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'address', '10.0.1.12'])
         self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'mac', '02:00:00:00:00:02'])
+        self.cli_set(base_path + ['name', "test2", 'stop-timeout', '1'])
         self.cli_commit()
 
         n = cmd_to_json(['container', 'inspect', 'test1'])
@@ -267,18 +281,17 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
         self.cli_set(base_path + ['name', name_1, 'image', busybox_image])
         self.cli_set(base_path + ['name', name_1, 'network', net_name, 'address', str(ip_interface(prefix).ip + 2)])
+        self.cli_set(base_path + ['name', name_1, 'stop-timeout', '1'])
         self.cli_set(base_path + ['name', name_2, 'image', busybox_image])
         self.cli_set(base_path + ['name', name_2, 'network', net_name, 'address', str(ip_interface(prefix).ip + 3)])
+        self.cli_set(base_path + ['name', name_2, 'stop-timeout', '1'])
         self.cli_commit()
 
         # Both containers run a "conmon" process at once, so checking by
         # process name alone can't distinguish which container it belongs
         # to - verify each container's own recorded PID is still alive
         for name in (name_1, name_2):
-            pid = 0
-            with open(PROCESS_PIDFILE.format(name)) as f:
-                pid = int(f.read())
-            self.assertTrue(os.path.exists(f'/proc/{pid}'))
+            self.assertTrue(self.is_running(name))
 
     def test_colliding_host_interface_names(self):
         # T7736: the host-side veth name is "veth-<name[:5]>-<hash[:4]>" for
@@ -296,8 +309,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
         self.cli_set(base_path + ['name', name_1, 'image', busybox_image])
         self.cli_set(base_path + ['name', name_1, 'network', net_name, 'address', str(ip_interface(prefix).ip + 2)])
+        self.cli_set(base_path + ['name', name_1, 'stop-timeout', '1'])
         self.cli_set(base_path + ['name', name_2, 'image', busybox_image])
         self.cli_set(base_path + ['name', name_2, 'network', net_name, 'address', str(ip_interface(prefix).ip + 3)])
+        self.cli_set(base_path + ['name', name_2, 'stop-timeout', '1'])
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
@@ -315,6 +330,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         for ii in range(1, 6):
             name = f'{base_name}-{ii}'
             self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
             self.cli_set(
                 base_path
                 + [
@@ -361,6 +377,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         for ii in range(1, 6):
             name = f'{base_name}-{ii}'
             self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
             self.cli_set(
                 base_path
                 + [
@@ -409,6 +426,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         for ii in range(1, 6):
             name = f'{base_name}-{ii}'
             self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
             self.cli_set(
                 base_path
                 + [
@@ -475,6 +493,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         name = f'{base_name}-2'
         self.cli_set(base_path + ['name', name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
         self.cli_set(
             base_path
             + [
@@ -501,6 +520,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         name = f'{base_name}-2'
         self.cli_set(base_path + ['name', name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
         self.cli_set(
             base_path
             + [
@@ -525,6 +545,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'gid', gid])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
 
         # verify() - GID can only be set if UID is set
         with self.assertRaises(ConfigSessionError):
@@ -547,6 +568,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             name = f'{base_name}-{ii}'
             self.cli_set(base_path + ['name', name, 'image', busybox_image])
             self.cli_set(base_path + ['name', name, 'allow-host-networks'])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
 
         self.cli_commit()
 
@@ -572,6 +594,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'network', net_name])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
         self.cli_set(base_path + ['network', net_name, 'prefix', '192.168.0.0/24'])
         self.cli_set(base_path + ['network', net_name, 'vrf', vrf_name])
 

@@ -18,7 +18,6 @@ import os
 from time import time
 from datetime import datetime
 from functools import reduce
-from tabulate import tabulate
 
 from vyos.ifconfig import Control
 
@@ -168,6 +167,8 @@ class Operational(Control):
         for rtx in self._stats_dir:
             tabs.append([f'{rtx.upper()}:', ] + [_ for _ in self._stat_names[rtx]])
             tabs.append(['', ] + [stats[_] for _ in self._stats_dir[rtx]])
+
+        from tabulate import tabulate
 
         s = tabulate(
             tabs,

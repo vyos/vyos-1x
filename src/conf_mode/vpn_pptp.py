@@ -35,6 +35,17 @@ airbag.enable()
 
 pptp_conf = '/run/accel-pppd/pptp.conf'
 pptp_chap_secrets = '/run/accel-pppd/pptp.chap-secrets'
+iid_secret_min_len = 16
+iid_secret_max_len = 128
+
+
+def _is_safe_ascii_secret(value):
+    # Restrict to ASCII printable non-whitespace characters.
+    return value.isascii() and all(ch.isprintable() and not ch.isspace() for ch in value)
+
+
+def _is_valid_iid_secret(value):
+    return iid_secret_min_len <= len(value) <= iid_secret_max_len and _is_safe_ascii_secret(value)
 
 
 def get_config(config=None):
@@ -66,6 +77,17 @@ def verify(pptp):
     verify_accel_ppp_ip_pool(pptp)
     verify_accel_ppp_name_servers(pptp)
     verify_accel_ppp_wins_servers(pptp)
+
+    peer_id_mode = dict_search('ppp_options.ipv6_peer_interface_id', pptp)
+    peer_id_secret = dict_search('ppp_options.ipv6_peer_interface_id_secret', pptp)
+    if peer_id_mode == 'calling-sid':
+        if not peer_id_secret:
+            raise ConfigError('ppp-options ipv6-peer-interface-id calling-sid requires ipv6-peer-interface-id-secret')
+        if not _is_valid_iid_secret(peer_id_secret):
+            raise ConfigError(
+                f'ppp-options ipv6-peer-interface-id-secret must be {iid_secret_min_len} to '
+                f'{iid_secret_max_len} printable non-whitespace ASCII characters'
+            )
 
 
 def generate(pptp):

@@ -155,7 +155,7 @@
     <help>DHCP high availability configuration</help>
   </properties>
   <children>
-    #include <include/source-address-ipv4.xml.i>
+    #include <include/source-address-ipv4-ipv6.xml.i>
     <leafNode name="mode">
       <properties>
         <help>Configure high availability mode</help>
@@ -179,13 +179,17 @@
     </leafNode>
     <leafNode name="remote">
       <properties>
-        <help>IPv4 remote address used for connection</help>
+        <help>Remote address for high availability peer</help>
         <valueHelp>
           <format>ipv4</format>
           <description>IPv4 address of high availability peer</description>
         </valueHelp>
+        <valueHelp>
+          <format>ipv6</format>
+          <description>IPv6 address of high availability peer</description>
+        </valueHelp>
         <constraint>
-          <validator name="ipv4-address"/>
+          <validator name="ip-address"/>
         </constraint>
       </properties>
     </leafNode>

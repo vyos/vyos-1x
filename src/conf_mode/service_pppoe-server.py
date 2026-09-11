@@ -41,6 +41,21 @@ airbag.enable()
 
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
+iid_secret_min_len = 16
+iid_secret_max_len = 128
+
+
+def _is_safe_ascii_secret(value):
+    # Restrict to ASCII printable non-whitespace characters.
+    return value.isascii() and all(
+        ch.isprintable() and not ch.isspace() for ch in value
+    )
+
+
+def _is_valid_iid_secret(value):
+    return iid_secret_min_len <= len(
+        value
+    ) <= iid_secret_max_len and _is_safe_ascii_secret(value)
 
 
 def base_ifname(ifname):
@@ -49,14 +64,16 @@ def base_ifname(ifname):
 
 
 def convert_pado_delay(pado_delay):
-    new_pado_delay = {'delays_without_sessions': [],
-                      'delays_with_sessions': []}
+    new_pado_delay = {'delays_without_sessions': [], 'delays_with_sessions': []}
     for delay, sessions in pado_delay.items():
         if not sessions:
             new_pado_delay['delays_without_sessions'].append(delay)
         else:
-            new_pado_delay['delays_with_sessions'].append((delay, int(sessions['sessions'])))
+            new_pado_delay['delays_with_sessions'].append(
+                (delay, int(sessions['sessions']))
+            )
     return new_pado_delay
+
 
 def get_config(config=None):
     if config:
@@ -101,7 +118,9 @@ def get_config(config=None):
 
     if dict_search('client_ip_pool', pppoe):
         # Multiple named pools require ordered values T5099
-        pppoe['ordered_named_pools'] = get_pools_in_order(dict_search('client_ip_pool', pppoe))
+        pppoe['ordered_named_pools'] = get_pools_in_order(
+            dict_search('client_ip_pool', pppoe)
+        )
 
     if dict_search('pado_delay', pppoe):
         pado_delay = dict_search('pado_delay', pppoe)
@@ -127,6 +146,10 @@ def get_config(config=None):
         is_node_changed(conf, base + ['authentication', 'radius']),
         is_node_changed(conf, base + ['authentication', 'mode']),
         is_node_changed(conf, base + ['authentication', 'protocols']),
+        # IPv6 peer IID mode/secret affect negotiated session state.
+        # Restart is required to force existing sessions to re-negotiate.
+        is_node_changed(conf, base + ['ppp-options', 'ipv6-peer-interface-id']),
+        is_node_changed(conf, base + ['ppp-options', 'ipv6-peer-interface-id-secret']),
         any(
             base_ifname(iface) in all_changed_vpp_ifaces
             for iface in pppoe.get('interface', {})
@@ -136,6 +159,7 @@ def get_config(config=None):
         pppoe.update({'restart_required': {}})
     pppoe['server_type'] = 'pppoe'
     return pppoe
+
 
 def verify_pado_delay(pppoe):
     if 'pado_delay' in pppoe:
@@ -156,7 +180,9 @@ def verify_pado_delay(pppoe):
         if 'disable' in [delay[0] for delay in pado_delay['delays_with_sessions']]:
             # need to sort delays by sessions to verify if there is no delay
             # for sessions after disabling
-            sorted_pado_delay = sorted(pado_delay['delays_with_sessions'], key=lambda k_v: k_v[1])
+            sorted_pado_delay = sorted(
+                pado_delay['delays_with_sessions'], key=lambda k_v: k_v[1]
+            )
             last_delay = sorted_pado_delay[-1]
 
             if last_delay[0] != 'disable':
@@ -164,6 +190,7 @@ def verify_pado_delay(pppoe):
                     f'Cannot add pado-delay after disabled sessions, but '
                     f'"pado-delay {last_delay[0]} sessions {last_delay[1]}" was set'
                 )
+
 
 def verify(pppoe):
     if 'remove' in pppoe:
@@ -174,6 +201,19 @@ def verify(pppoe):
     verify_accel_ppp_name_servers(pppoe)
     verify_accel_ppp_wins_servers(pppoe)
     verify_pado_delay(pppoe)
+
+    peer_id_mode = dict_search('ppp_options.ipv6_peer_interface_id', pppoe)
+    peer_id_secret = dict_search('ppp_options.ipv6_peer_interface_id_secret', pppoe)
+    if peer_id_mode == 'calling-sid':
+        if not peer_id_secret:
+            raise ConfigError(
+                'ppp-options ipv6-peer-interface-id calling-sid requires ipv6-peer-interface-id-secret'
+            )
+        if not _is_valid_iid_secret(peer_id_secret):
+            raise ConfigError(
+                f'ppp-options ipv6-peer-interface-id-secret must be {iid_secret_min_len} to '
+                f'{iid_secret_max_len} printable non-whitespace ASCII characters'
+            )
 
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')
@@ -208,8 +248,12 @@ def generate(pppoe):
     render(pppoe_conf, 'accel-ppp/pppoe.config.j2', pppoe)
 
     if dict_search('authentication.mode', pppoe) == 'local':
-        render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.config_dict.j2',
-               pppoe, permission=0o640)
+        render(
+            pppoe_chap_secrets,
+            'accel-ppp/chap-secrets.config_dict.j2',
+            pppoe,
+            permission=0o640,
+        )
     return None
 
 

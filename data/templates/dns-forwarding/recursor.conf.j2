@@ -49,6 +49,11 @@ dnssec={{ dnssec }}
 dns64-prefix={{ dns64_prefix }}
 {% endif %}
 
+{% if recursion_exclude_address is vyos_defined %}
+# dont-query
+dont-query+={{ recursion_exclude_address | join(',') }}
+{% endif %}
+
 {% if exclude_throttle_address is vyos_defined %}
 # dont-throttle-netmasks
 dont-throttle-netmasks={{ exclude_throttle_address | join(',') }}
@@ -79,4 +84,3 @@ ecs-ipv4-bits={{ options.ecs_ipv4_bits }}
 {% if options.edns_subnet_allow_list is vyos_defined %}
 edns-subnet-allow-list={{ options.edns_subnet_allow_list | join(',') }}
 {% endif %}
-

@@ -26,6 +26,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.asymmetric import dsa
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import ed448
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -390,6 +392,14 @@ def verify_certificate(cert, ca_cert):
                 cert.signature,
                 cert.tbs_certificate_bytes,
                 signature_algorithm=ec.ECDSA(cert.signature_hash_algorithm))
+        elif isinstance(ca_public_key, ed25519.Ed25519PublicKey):
+            ca_public_key.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes)
+        elif isinstance(ca_public_key, ed448.Ed448PublicKey):
+            ca_public_key.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes)
         else:
             return False # We cannot verify it
         return True
@@ -419,6 +429,14 @@ def verify_crl(crl, ca_cert):
                 crl.signature,
                 crl.tbs_certlist_bytes,
                 signature_algorithm=ec.ECDSA(crl.signature_hash_algorithm))
+        elif isinstance(ca_public_key, ed25519.Ed25519PublicKey):
+            ca_public_key.verify(
+                crl.signature,
+                crl.tbs_certlist_bytes)
+        elif isinstance(ca_public_key, ed448.Ed448PublicKey):
+            ca_public_key.verify(
+                crl.signature,
+                crl.tbs_certlist_bytes)
         else:
             return False # We cannot verify it
         return True

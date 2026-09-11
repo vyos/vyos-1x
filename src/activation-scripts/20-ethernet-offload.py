@@ -63,6 +63,15 @@ def activate(config: ConfigTree):
         elif enabled and not fixed:
             config.set(base + [ifname, 'offload', 'lro'])
 
+        # If RX is enabled by the Kernel - we reflect this on the CLI. If RX is
+        # enabled via CLI but not supported by the NIC - we remove it from the CLI
+        configured = config.exists(base + [ifname, 'offload', 'rx'])
+        enabled, fixed = eth.get_rx_checksumming()
+        if configured and fixed:
+            config.delete(base + [ifname, 'offload', 'rx'])
+        elif enabled and not fixed:
+            config.set(base + [ifname, 'offload', 'rx'])
+
         # If SG is enabled by the Kernel - we reflect this on the CLI. If SG is
         # enabled via CLI but not supported by the NIC - we remove it from the CLI
         configured = config.exists(base + [ifname, 'offload', 'sg'])

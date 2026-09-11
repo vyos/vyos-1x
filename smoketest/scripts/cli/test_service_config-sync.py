@@ -94,6 +94,8 @@ class TestConfigSyncWithHTTPS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'dummy', 'dum0', 'address', '192.0.2.1/32'])
         self.cli_commit()
 
+        time.sleep(2)
+
         # candidate change
         self.cli_set(['interfaces', 'dummy', 'dum0', 'address', '192.0.2.2/32'])
 

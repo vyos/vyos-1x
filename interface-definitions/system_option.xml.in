@@ -413,6 +413,44 @@
                #include <include/source-interface.xml.i>
              </children>
            </node>
+           <node name="kdump">
+             <properties>
+               <help>Kernel crash dump (kdump) settings</help>
+             </properties>
+             <children>
+               <leafNode name="memory">
+                 <properties>
+                   <help>Amount of memory to reserve for the kernel crash dump</help>
+                   <valueHelp>
+                     <format>auto</format>
+                     <description>Automatically determine memory reservation</description>
+                   </valueHelp>
+                   <valueHelp>
+                     <format>u32:128-1048576</format>
+                     <description>Memory size in megabytes</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>(auto)</regex>
+                     <validator name="numeric" argument="--range 128-1048576"/>
+                   </constraint>
+                 </properties>
+                 <defaultValue>auto</defaultValue>
+               </leafNode>
+               <leafNode name="dump-path">
+                 <properties>
+                   <help>Local directory to store kernel crash dumps</help>
+                   <valueHelp>
+                     <format>txt</format>
+                     <description>Absolute path to crash dump directory</description>
+                   </valueHelp>
+                   <constraint>
+                     <validator name="file-path" argument="--strict --directory --parent-dir /"/>
+                   </constraint>
+                 </properties>
+                 <defaultValue>/var/crash</defaultValue>
+               </leafNode>
+             </children>
+           </node>
            <leafNode name="startup-beep">
              <properties>
                <help>plays sound via system speaker when you can login</help>

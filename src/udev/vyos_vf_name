@@ -1,0 +1,88 @@
+#!/bin/sh
+# vyos_vf_name - pick a non-colliding VF interface name.
+# Called by udev rules for VF devices that still have plain ethN names.
+#
+# Written as a POSIX shell script so it works in both initramfs (no Python3)
+# and the normal rootfs udev context.
+#
+# Usage: vyos_vf_name <current_ifname>
+# Prints the target vf_ethN name to stdout.
+
+set -e
+
+if [ -z "$1" ]; then
+    exit 1
+fi
+
+IFNAME="$1"
+LOCK_DIR="/run/udev"
+LOCK_PATH="${LOCK_DIR}/vyos_vf_name.lock"
+
+# Already normalized - return as-is.
+case "$IFNAME" in
+    vf_*)
+        echo "$IFNAME"
+        exit 0
+        ;;
+esac
+
+mkdir -p "$LOCK_DIR"
+
+# Acquire a lock to avoid race conditions when multiple VF devices are being
+# renamed concurrently.
+LOCK_ACQUIRED=0
+I=0
+while [ "$I" -lt 200 ]; do
+    if mkdir "$LOCK_PATH" 2>/dev/null; then
+        LOCK_ACQUIRED=1
+        break
+    fi
+    I=$((I + 1))
+    sleep 0.01
+done
+
+[ "$LOCK_ACQUIRED" -eq 1 ] || exit 1
+
+cleanup() {
+    rmdir "$LOCK_PATH" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+# Preferred: preserve the original ethN index when vf_ethN is not yet taken.
+case "$IFNAME" in
+    eth*)
+        PREFERRED="${IFNAME#eth}"
+        # Validate it is a pure integer.
+        case "$PREFERRED" in
+            *[!0-9]*)
+                ;;
+            *)
+                if ! [ -d "/sys/class/net/vf_eth${PREFERRED}" ]; then
+                    echo "vf_eth${PREFERRED}"
+                    exit 0
+                fi
+                ;;
+        esac
+        ;;
+esac
+
+# Fallback: allocate just above the highest ethN synthetic index present to
+# avoid collisions.
+MAX=-1
+for D in /sys/class/net/eth*; do
+    [ -d "$D" ] || continue
+    N="${D##*/eth}"
+    # Skip if not a pure integer (e.g. no match expands to literal path).
+    case "$N" in *[!0-9]*) continue;; esac
+    [ "$N" -gt "$MAX" ] && MAX="$N"
+done
+
+IDX=$((MAX + 1))
+[ "$IDX" -lt 0 ] && IDX=0
+
+# Skip any indices already occupied by existing vf_ethN interfaces.
+while [ -d "/sys/class/net/vf_eth${IDX}" ]; do
+    IDX=$((IDX + 1))
+done
+
+echo "vf_eth${IDX}"

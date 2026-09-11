@@ -113,6 +113,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="rx">
+                <properties>
+                  <help>Enable Receive Checksum Offload</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="rfs">
                 <properties>
                   <help>Enable Receive Flow Steering</help>

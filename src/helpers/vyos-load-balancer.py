@@ -72,7 +72,14 @@ def health_check(ifname, conf, state, test_defaults):
                 return False
         elif check_type == 'user-defined':
             script = test_conf['test_script']
-            rc = run(script)
+            env = os.environ.copy()
+            env.update(
+                {
+                    'WLB_INTERFACE_NAME': ifname,
+                    'WLB_SCRIPT_IFACE': ifname,
+                }
+            )
+            rc = run(script, env=env)
             if rc != 0:
                 return False
 

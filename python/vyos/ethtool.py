@@ -19,8 +19,6 @@ import contextlib
 from json import loads
 from vyos.utils.network import interface_exists
 from vyos.utils.process import popen
-from vyos.netlink import coalesce
-from vyos.netlink import timestamp
 
 # These drivers do not support using ethtool to change the speed, duplex, or
 # flow control settings
@@ -127,6 +125,12 @@ class Ethtool:
         if not bool(err):
             self._channels = out.lower()
 
+        # Imported here rather than at module scope: vyos.netlink.* imports
+        # pyroute2, which is by far the largest single cost on the vyos.ifconfig
+        # import path. Only code that actually constructs an Ethtool needs it.
+        from vyos.netlink import coalesce
+        from vyos.netlink import timestamp
+
         # Get information about NIC coalesce settings
         with contextlib.suppress(coalesce.CoalesceError, coalesce.GeneralNetlinkError):
             self._coalesce = coalesce.get_coalesce(ifname)
@@ -158,6 +162,9 @@ class Ethtool:
             active = bool(self._features[feature]['active'])
             fixed = bool(self._features[feature]['fixed'])
         return active, fixed
+
+    def get_rx_checksumming(self):
+        return self._get_generic('rx-checksumming')
 
     def get_generic_receive_offload(self):
         return self._get_generic('generic-receive-offload')
@@ -217,6 +224,8 @@ class Ethtool:
 
     def check_flow_control(self):
         """ Check if the NIC supports flow-control """
+        if self.get_driver_name() in _drivers_without_speed_duplex_flow:
+            return False
         return bool(self._flow_control)
 
     def get_flow_control(self):
