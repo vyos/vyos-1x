@@ -165,6 +165,30 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         ether_type = ether_type_mapping.get(ether_type, ether_type)
         output.append(f'ether type {operator} {ether_type}')
 
+    if 'fib' in rule_conf:
+        lookup = rule_conf['fib']['lookup']
+        lookup_list = []
+
+        if 'source-address' in lookup:
+            lookup_list.append('saddr')
+        if 'destination-address' in lookup:
+            lookup_list.append('daddr')
+
+        lookup_output = ' . '.join(lookup_list)
+
+        match_conf = rule_conf['fib']['match']
+        match_output = ''
+
+        if 'route_type' in match_conf:
+            route_type = match_conf['route_type']
+            operator = ''
+            if route_type[0] == '!':
+                operator = '!= '
+                route_type = route_type[1:]
+            match_output = f'type {operator}{route_type}'
+
+        output.append(f'fib {lookup_output} {match_output}')
+
     for side in ['destination', 'source']:
         if side in rule_conf:
             prefix = side[0]
