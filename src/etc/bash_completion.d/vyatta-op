@@ -3,20 +3,20 @@
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # This code was originally developed by Vyatta, Inc.
 # Portions created by Vyatta are Copyright (C) 2006, 2007 Vyatta, Inc.
 # All Rights Reserved.
-# 
+#
 # Author: Tom Grennan
 # Date: 2007
 # Description: setup bash completion for Vyatta operational commands
-# 
+#
 # **** End License ****
 
 test -z "$_vyatta_less_options" && \
@@ -45,10 +45,10 @@ _vyatta_op_do_key_bindings ()
   shopt -u nullglob
   case "$-" in
     *i*)
-      bind '"?": possible-completions' 
-      bind 'set show-all-if-ambiguous on' 
+      bind '"?": possible-completions'
+      bind 'set show-all-if-ambiguous on'
       bind_cmds=$(grep '^bind .* # vyatta key binding$' $HOME/.bashrc)
-      eval $bind_cmds 
+      eval $bind_cmds
     ;;
   esac
   eval $nullglob_save
@@ -64,7 +64,9 @@ test ! -d "$vyatta_op_templates" && \
 
 case "$-" in
   *i*)
-    declare -r _vyatta_op_last_comp_init='>>>>>>LASTCOMP<<<<<<'
+    if ! declare -p _vyatta_op_last_comp_init &>/dev/null; then
+      declare -r _vyatta_op_last_comp_init='>>>>>>LASTCOMP<<<<<<'
+    fi
   ;;
 esac
 declare _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
@@ -261,18 +263,18 @@ _vyatta_op_set_completions ()
           completions+=( ${allowed[i]} )
         elif [[ $_vyatta_op_node_path == $vyatta_op_templates ]];then
           continue
-        else 
+        else
           completions+=( ${allowed[i]} )
         fi
       fi
     done
-    
+
     # Prefix filter the non empty completions
     if [ -n "$cur" ]; then
       _vyatta_op_completions=()
-      get_prefix_filtered_list "$cur" completions _vyatta_op_completions 
+      get_prefix_filtered_list "$cur" completions _vyatta_op_completions
       _vyatta_op_completions=($( printf "%s\n" ${_vyatta_op_completions[@]} | sort -u ))
-    else 
+    else
       _vyatta_op_completions=($( printf "%s\n" ${completions[@]} | sort -u ))
     fi
     #shopt -s nullglob
@@ -294,7 +296,7 @@ _vyatta_op_invalid_completion ()
 {
       local tpath=$vyatta_op_templates
       local -a args
-      local i=1 
+      local i=1
       for arg in "${COMP_WORDS[@]}"; do
         arg=( $(_vyatta_op_conv_node_path $tpath $arg) )  # expand the arguments
         # output proper error message based on the above expansion
@@ -308,16 +310,16 @@ _vyatta_op_invalid_completion ()
         elif [[ "${arg[1]}" == "invalid" ]]; then
           echo -ne "\n\n  Invalid command: ${args[@]} [$arg]"
           break
-        fi  
+        fi
 
         if [ -f "$tpath/$arg/node.def" ] ; then
             tpath+=/$arg
         elif [ -f $tpath/node.tag/node.def ] ; then
             tpath+=/node.tag
         else
-            echo -ne "\n\n  Invalid command: ${args[@]} [$arg]" >&2 
+            echo -ne "\n\n  Invalid command: ${args[@]} [$arg]" >&2
             break
-        fi  
+        fi
         args[$i]=$arg
         let "i+=1"
         if [ $[${#COMP_WORDS[@]}+1] -eq $i ];then
@@ -366,7 +368,7 @@ _vyatta_op_expand ()
     fi
 
     # this needs to be done on every completion even if it is the 'same' comp.
-    # The cursor can be at different places in the string. 
+    # The cursor can be at different places in the string.
     # this will lead to unexpected cases if setting the node path isn't attempted
     # each time.
     if ! _vyatta_op_set_node_path ; then
@@ -376,11 +378,11 @@ _vyatta_op_expand ()
       eval "$restore_shopts"
       return 1
     fi
-    
+
     if [ "${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}" != "$_vyatta_op_last_comp" ] ; then
         _vyatta_set_comptype
         case $_vyatta_comptype in
-          'imagefiles') 
+          'imagefiles')
               _has_comptype=1
               _vyatta_image_file_complete
           ;;
@@ -429,22 +431,22 @@ _vyatta_op_expand ()
       echo -e "Current comp: '${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}'\n"
     fi
 
-    # This is non obvious... 
+    # This is non obvious...
     # To have completion continue to work when working with words that aren't the last word,
     # we have to set nospace at the beginning of this script and then append the spaces here.
-    if [ ${#COMPREPLY[@]} -eq 1 ] && 
+    if [ ${#COMPREPLY[@]} -eq 1 ] &&
        [[ $_has_comptype -ne 1 ]]; then
        COMPREPLY=( "${COMPREPLY[0]} " )
     fi
     # if there are no completions then handle invalid commands
     if [ ${#_vyatta_op_noncompletions[@]} -eq 0 ] &&
        [ ${#_vyatta_op_completions[@]} -eq 0 ]; then
-          _vyatta_op_invalid_completion 
+          _vyatta_op_invalid_completion
           COMPREPLY=( "" " " )
           _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
     elif [ ${#COMPREPLY[@]} -eq 0 ] &&
          [ -n "$current_prefix" ]; then
-          _vyatta_op_invalid_completion 
+          _vyatta_op_invalid_completion
           COMPREPLY=( "" " " )
           _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
     # Stop completions from getting stuck
@@ -457,7 +459,7 @@ _vyatta_op_expand ()
          [[ "${COMPREPLY[0]}" =~ "$current_prefix" ]]; then
           _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
     # if there are no completions then always show the non-comps
-    elif [ "${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}" == "$_vyatta_op_last_comp" ] || 
+    elif [ "${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}" == "$_vyatta_op_last_comp" ] ||
          [ ${#_vyatta_op_completions[@]} -eq 0 ] ||
          [ -z "$cur" ]; then
           _vyatta_op_help "$current_prefix" \
@@ -598,7 +600,7 @@ _vyatta_pipe_completion ()
 }
 
 # comptype
-_vyatta_set_comptype () 
+_vyatta_set_comptype ()
 {
   local comptype
   unset _vyatta_comptype
