@@ -323,6 +323,12 @@
                       <help>Stats settings</help>
                     </properties>
                     <children>
+                      <leafNode name="per-node-counters">
+                        <properties>
+                          <help>Enable per-node counters within the statistics segment</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
                       <leafNode name="size">
                         <properties>
                           <help>Size of stats segment</help>
