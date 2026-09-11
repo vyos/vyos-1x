@@ -117,7 +117,7 @@
                         <properties>
                           <help>Show DHCP server leases sorted by the specified key</help>
                           <completionHelp>
-                            <list>client_id end hostname ip mac pool remaining start state</list>
+                            <list>client-id end hostname ip mac pool remaining start state</list>
                           </completionHelp>
                         </properties>
                         <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet --vrf '' --origin $6 --sort $8</command>
