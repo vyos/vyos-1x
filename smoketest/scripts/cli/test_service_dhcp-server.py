@@ -349,6 +349,12 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.check_client_class_in_config()
 
+        # A disabled class is skipped by the renderer and never reaches Kea,
+        # so it must not be required to carry a match condition (T9267)
+        self.cli_set(client_class[:-1] + ['parked', 'disable'])
+        self.cli_commit()
+        self.cli_delete(client_class[:-1] + ['parked'])
+
     def check_client_class_in_config(self):
         config = read_file(KEA4_CONF)
         obj = loads(config)
