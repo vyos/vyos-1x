@@ -230,6 +230,52 @@ class TestTechSupportArchive(VyOSUnitTestSHIM.TestCase):
         if archive_path.exists():
             call(f'sudo rm -f {archive_path}')
 
+    def test_run_archive_excludes_mount_points(self):
+        # live-boot mounts the boot medium and the persistence partition below
+        # /run/live/{medium,persistence,rootfs,overlay} - archiving those would
+        # pull in every installed image and fill up /tmp. Daemon configuration
+        # rendered into /run must still be archived.
+        run = pathlib.Path('/run')
+        nested_mounts = sorted(
+            {
+                str(mount).lstrip('/')
+                for mount in (
+                    pathlib.Path(line.split()[4])
+                    for line in pathlib.Path('/proc/self/mountinfo')
+                    .read_text()
+                    .splitlines()
+                )
+                # only directory mounts are pruned, file bind mounts such as
+                # /run/netns/<name> are still archived
+                if run in mount.parents and mount.is_dir()
+            }
+        )
+
+        output = self.op_mode(base_path)
+
+        archive_path = self._extract_archive_path(output)
+        self.assertPathExists(archive_path)
+
+        prefix = self._extract_archive_inner_path_prefix(archive_path)
+        self.assertExpectedArcPaths(
+            archive_path,
+            [
+                f'{prefix}/run.tar.gz::run',
+                f'{prefix}/run.tar.gz::run/frr/daemons',
+            ],
+        )
+        self.assertNotExpectedArcPaths(
+            archive_path,
+            [f'{prefix}/run.tar.gz::{mount}' for mount in nested_mounts]
+            + [
+                f'{prefix}/run.tar.gz::run/live/{directory}'
+                for directory in ('medium', 'persistence', 'rootfs', 'overlay')
+            ],
+        )
+
+        if archive_path.exists():
+            call(f'sudo rm -f {archive_path}')
+
     def test_custom_archive_path(self):
         output = self.op_mode(base_path + [str(testdir / 'foo')])
 
