@@ -544,6 +544,12 @@ def verify(dhcp):
         pattern = re.compile(r'^(?:0x[0-9A-Fa-f]+|(?!0x).+)$')
 
         for class_name, class_config in dhcp['client_class'].items():
+            if 'disable' in class_config:
+                # Disabled classes are skipped by the renderer (see
+                # vyos.template.kea_client_class_json()) and never reach
+                # Kea, so their match conditions are not required to be valid.
+                continue
+
             if not any(
                 k in class_config
                 for k in ('relay_agent_information', 'hostname', 'vendor_class_id')
