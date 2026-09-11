@@ -140,6 +140,15 @@
   server = "unixgram:///run/telegraf/telegraf_syslog.sock"
   best_effort = true
   syslog_standard = "RFC3164"
+{% if frr_metrics is vyos_defined %}
+### Local FRR exporter relay (T9260) ###
+[[inputs.prometheus]]
+  ## Local Prometheus frr-exporter endpoint, relayed through Telegraf
+  urls = ["http://{{ frr_metrics.address | bracketize_ipv6 }}:{{ frr_metrics.port }}/metrics"]
+  metric_version = {{ frr_metrics.metric_version }}
+  name_override = "frr"
+### End local FRR exporter relay ###
+{% endif %}
 {% if influxdb is vyos_defined %}
 [[inputs.exec]]
   commands = [
