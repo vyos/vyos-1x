@@ -569,9 +569,7 @@ def verify(firewall):
                             if 'jump' not in priority_conf['default_action']:
                                 raise ConfigError('default-jump-target defined, but default-action jump needed and it is not defined')
                             if priority_conf['default_jump_target'] == priority:
-                                raise ConfigError(
-                                    'Loop detected on default-jump-target.'
-                                )
+                                raise ConfigError(f'Loop detected on default-jump-target.')
                             if target not in dict_search_args(firewall[family], 'name'):
                                 raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
                         if 'rule' in priority_conf:
@@ -607,9 +605,7 @@ def verify(firewall):
                     for iface in zone_conf['member']['interface']:
 
                         if iface in zone_interfaces:
-                            raise ConfigError(
-                                'Interfaces cannot be assigned to multiple zones'
-                            )
+                            raise ConfigError(f'Interfaces cannot be assigned to multiple zones')
 
                         iface_vrf = get_interface_vrf(iface)
                         if iface_vrf != 'default':
@@ -619,9 +615,7 @@ def verify(firewall):
                 if 'vrf' in zone_conf['member']:
                     for vrf in zone_conf['member']['vrf']:
                         if vrf in zone_vrf:
-                            raise ConfigError(
-                                'VRF cannot be assigned to multiple zones'
-                            )
+                            raise ConfigError(f'VRF cannot be assigned to multiple zones')
                         zone_vrf.append(vrf)
 
             if 'vrf_interfaces' in zone_conf:
