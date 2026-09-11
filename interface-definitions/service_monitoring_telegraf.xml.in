@@ -33,6 +33,75 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <node name="agent">
+                <properties>
+                  <help>Telegraf agent configuration</help>
+                </properties>
+                <children>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>Default data collection interval</help>
+                      <valueHelp>
+                        <format>duration</format>
+                        <description>Collection interval</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[1-9][0-9]*(ns|us|µs|ms|s|m|h)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Valid time units are ns, us (or µs), ms, s, m, h. e.g. 60s or 15m</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>15s</defaultValue>
+                  </leafNode>
+                  <leafNode name="collection-jitter">
+                    <properties>
+                      <help>Collection jitter</help>
+                      <valueHelp>
+                        <format>duration</format>
+                        <description>Collection jitter</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[0-9]+(ns|us|µs|ms|s|m|h)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Valid time units are ns, us (or µs), ms, s, m, h. e.g. 60s or 15m</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>5s</defaultValue>
+                  </leafNode>
+                  <leafNode name="flush-interval">
+                    <properties>
+                      <help>Flush interval</help>
+                      <valueHelp>
+                        <format>duration</format>
+                        <description>Flush interval</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[1-9][0-9]*(ns|us|µs|ms|s|m|h)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Valid time units are ns, us (or µs), ms, s, m, h. e.g. 60s or 15m</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>15s</defaultValue>
+                  </leafNode>
+                  <leafNode name="flush-jitter">
+                    <properties>
+                      <help>Flush jitter</help>
+                      <valueHelp>
+                        <format>duration</format>
+                        <description>Flush jitter</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[0-9]+(ns|us|µs|ms|s|m|h)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Valid time units are ns, us (or µs), ms, s, m, h. e.g. 60s or 15m</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>0s</defaultValue>
+                  </leafNode>
+                  <leafNode name="debug">
+                    <properties>
+                      <help>Enable Telegraf debug logging</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="influxdb">
                 <properties>
                   <help>Output plugin InfluxDB</help>
