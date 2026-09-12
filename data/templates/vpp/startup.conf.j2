@@ -178,6 +178,9 @@ dpdk {
 {%     endif %}
 {% endfor %}
     uio-bind-force
+{% if no_multi_seg is vyos_defined %}
+    no-multi-seg
+{% endif %}
 }
 
 {% if ipsec_acceleration is vyos_defined %}
