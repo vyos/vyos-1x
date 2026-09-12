@@ -32,7 +32,6 @@ from vyos.configdep import call_dependents
 from vyos.configverify import verify_vrf
 from vyos.defaults import SSH_DSA_DEPRECATION_WARNING
 from vyos.template import render
-from vyos.template import is_ipv4
 from vyos.utils.auth import DEFAULT_PASSWORD
 from vyos.utils.auth import EPasswdStrength
 from vyos.utils.auth import evaluate_strength
@@ -214,21 +213,12 @@ def verify(login):
 
         verify_vrf(login['radius'])
 
-        if addresses := dict_search('radius.source_address', login):
-            ipv4_count = 0
-            ipv6_count = 0
-            radius_vrf = dict_search('radius.vrf', login)
-            for address in addresses:
-                if is_ipv4(address): ipv4_count += 1
-                else:                ipv6_count += 1
-
-                if not is_addr_assigned(address, vrf=radius_vrf):
-                    Warning(f'Specified RADIUS source-address "{address}" is not assigned!')
-
-            if ipv4_count > 1:
-                raise ConfigError('Only one IPv4 source-address can be set!')
-            if ipv6_count > 1:
-                raise ConfigError('Only one IPv6 source-address can be set!')
+        radius_vrf = dict_search('radius.vrf', login)
+        for node in ['source_address', 'source_address6']:
+            address = dict_search(f'radius.{node}', login)
+            if address and not is_addr_assigned(address, vrf=radius_vrf):
+                tmp = node.replace('_', '-')
+                Warning(f'Specified RADIUS {tmp} "{address}" is not assigned!')
 
     if 'tacacs' in login:
         tacacs_servers_count: int = 0

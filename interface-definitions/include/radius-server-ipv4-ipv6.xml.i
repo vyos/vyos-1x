@@ -25,7 +25,8 @@
         #include <include/radius-server-auth-port.xml.i>
       </children>
     </tagNode>
-    #include <include/source-address-ipv4-ipv6-multi.xml.i>
+    #include <include/source-address-ipv4.xml.i>
+    #include <include/source-address6.xml.i>
     <leafNode name="security-mode">
       <properties>
         <help>Security mode for RADIUS authentication</help>
