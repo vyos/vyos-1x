@@ -791,6 +791,34 @@ def apply(config):
                             config['persist_config'][iface]['dev_id'],
                             override_drivers[k_module],
                         )
+                    elif original_driver not in not_pci_drv:
+                        # T9305
+                        # VPP's own EAL (vlib_pci_bind_to_uio) does not bind a
+                        # PCI device to vfio-pci itself when IOMMU is active; it
+                        # only logs "Skipping PCI device ...: device is bound to
+                        # IOMMU group and vfio-pci driver is not loaded" and
+                        # leaves the device unclaimed, so no DPDK interface is
+                        # ever created and the later lcp_pair_add() crashes with
+                        # AttributeError (get_sw_if_index returns None/0).
+                        # override_drivers only covers hv_netvsc; "normal" PCI
+                        # NICs (ixgbe, i40e, virtio, ...) going the mandatory
+                        # dpdk/vfio-pci path (now that XDP is gone, T8202) need
+                        # the same explicit rebind. Skip if already vfio-pci.
+                        dev_id = config['persist_config'][iface]['dev_id']
+                        try:
+                            current_drv = (
+                                Path(f'/sys/bus/pci/devices/{dev_id}/driver')
+                                .resolve()
+                                .name
+                            )
+                        except FileNotFoundError:
+                            current_drv = None
+                        if current_drv != 'vfio-pci':
+                            control_host.override_driver(
+                                config['persist_config'][iface]['bus_id'],
+                                dev_id,
+                                'vfio-pci',
+                            )
 
         call('systemctl daemon-reload')
         call(f'systemctl restart {service_name}.service')
