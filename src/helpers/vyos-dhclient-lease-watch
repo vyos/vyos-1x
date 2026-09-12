@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# Restart dhclient@<iface> when a unicast RENEW has been overdue long enough
+# that the client is likely stuck talking to a dead DHCP server (lease still
+# valid locally, renew time long past, no successful lease rewrite).
+#
+# Production: ISP session loss while the modem link stayed up left dhclient in
+# unicast-RENEW for the remainder of a multi-hour lease (T9108 / T9085 sibling).
+# See also T9085 (RENEW success without reinstalling a missing default).
+
+import glob
+import os
+import re
+import subprocess
+import syslog
+import time
+from datetime import datetime, timezone
+
+DHCLIENT_DIR = '/run/dhclient'
+# Wait this long after the ISC "renew" time before declaring RENEW stuck.
+GRACE_SECS = 900  # 15 minutes
+# Do not thrash the client more often than this per interface.
+COOLDOWN_SECS = 1800  # 30 minutes
+STATE_DIR = '/run/vyos-dhclient-lease-watch'
+
+# ISC dhclient default db-time-format: UTC civil time
+# "renew 2 2026/07/21 05:22:11;"
+_TS = re.compile(
+    r'(renew|rebind|expire)\s+\d+\s+'
+    r'(\d{4})/(\d{2})/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\s*;'
+)
+
+
+def _parse_ts(year, month, day, hour, minute, second) -> float:
+    # ISC default lease format is UTC (db-time-format default).
+    return datetime(
+        int(year), int(month), int(day),
+        int(hour), int(minute), int(second),
+        tzinfo=timezone.utc,
+    ).timestamp()
+
+
+def _last_lease_block(text: str) -> str:
+    idx = text.rfind('lease {')
+    return text[idx:] if idx >= 0 else ''
+
+
+def _lease_times(block: str):
+    renew_ts = expire_ts = None
+    for m in _TS.finditer(block):
+        kind = m.group(1)
+        ts = _parse_ts(*m.groups()[1:])
+        if kind == 'renew':
+            renew_ts = ts
+        elif kind == 'expire':
+            expire_ts = ts
+    return renew_ts, expire_ts
+
+
+def _service_active(unit: str) -> bool:
+    r = subprocess.run(
+        ['systemctl', 'is-active', unit],
+        capture_output=True,
+        text=True,
+    )
+    return r.stdout.strip() == 'active'
+
+
+def _restart(iface: str) -> bool:
+    """Restart dhclient@iface. Return True if systemctl succeeded."""
+    unit = f'dhclient@{iface}.service'
+    syslog.syslog(
+        syslog.LOG_WARNING,
+        f'{unit}: DHCPv4 RENEW overdue (likely stuck unicast RENEW); '
+        f'restarting client to force rediscovery',
+    )
+    r = subprocess.run(['systemctl', 'restart', unit], check=False)
+    if r.returncode != 0:
+        syslog.syslog(
+            syslog.LOG_ERR,
+            f'{unit}: restart failed (rc={r.returncode}); will retry next cycle',
+        )
+        return False
+    return True
+
+
+def main() -> int:
+    syslog.openlog('vyos-dhclient-lease-watch', syslog.LOG_PID, syslog.LOG_DAEMON)
+    os.makedirs(STATE_DIR, exist_ok=True)
+    now = time.time()
+
+    for conf in sorted(glob.glob(f'{DHCLIENT_DIR}/dhclient_*.conf')):
+        base = os.path.basename(conf)
+        # dhclient_eth0.conf -> eth0
+        if not base.startswith('dhclient_') or not base.endswith('.conf'):
+            continue
+        iface = base[len('dhclient_') : -len('.conf')]
+        # v4 dhclient only — IPv6 uses dhcp6c@<iface>, not a *v6 filename.
+        if not iface:
+            continue
+
+        unit = f'dhclient@{iface}.service'
+        if not _service_active(unit):
+            continue
+
+        leases_path = f'{DHCLIENT_DIR}/dhclient_{iface}.leases'
+        if not os.path.isfile(leases_path):
+            continue
+
+        try:
+            with open(leases_path, encoding='utf-8', errors='replace') as f:
+                text = f.read()
+        except OSError as e:
+            syslog.syslog(syslog.LOG_ERR, f'{leases_path}: {e}')
+            continue
+
+        block = _last_lease_block(text)
+        renew_ts, expire_ts = _lease_times(block)
+        if renew_ts is None or expire_ts is None:
+            continue
+
+        # Still before T1 + grace: RENEW not expected to have completed yet.
+        if now < renew_ts + GRACE_SECS:
+            continue
+        # Past expire: client should already be in INIT/DISCOVER on its own.
+        if now >= expire_ts:
+            continue
+
+        state_file = os.path.join(STATE_DIR, f'{iface}.last_restart')
+        try:
+            if os.path.isfile(state_file):
+                with open(state_file, encoding='utf-8') as f:
+                    last = float(f.read().strip() or '0')
+                if now - last < COOLDOWN_SECS:
+                    continue
+        except (OSError, ValueError):
+            pass
+
+        # Record cooldown before restart. If the write fails, skip the
+        # restart: a successful restart with no marker would fire again
+        # on the next 5-minute tick and defeat COOLDOWN_SECS.
+        try:
+            with open(state_file, 'w', encoding='utf-8') as f:
+                f.write(str(now))
+        except OSError as e:
+            syslog.syslog(
+                syslog.LOG_ERR,
+                f'{state_file}: {e}; skipping restart (cannot honor cooldown)',
+            )
+            continue
+
+        if not _restart(iface):
+            # Release the slot so the next tick can retry.
+            try:
+                os.unlink(state_file)
+            except OSError:
+                pass
+            continue
+
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
