@@ -180,6 +180,50 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="minpoll">
+                <properties>
+                  <help>Set the minimum poll exponent for time between NTP polls.  Default is 6, for 2^6=64 seconds.</help>
+                  <valueHelp>
+                    <format>u32:0-24</format>
+                    <description>Poll exponent, in powers of 2 seconds.</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-24"/>
+                  </constraint>
+                </properties>
+                <defaultValue>6</defaultValue>
+              </leafNode>
+              <leafNode name="maxpoll">
+                <properties>
+                  <help>Set the maximum poll exponent for time between NTP polls.  Default is 10, for 2^10=1024 seconds.</help>
+                  <valueHelp>
+                    <format>u32:0-24</format>
+                    <description>Poll exponent, in powers of 2 seconds.</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-24"/>
+                  </constraint>
+                </properties>
+                <defaultValue>10</defaultValue>
+              </leafNode>
+              <leafNode name="presend">
+                <properties>
+                  <help>Presend an extra NTP packet before polling if more than 2^N seconds have elapsed since the last poll.</help>
+                  <valueHelp>
+                    <format>u32:0-10</format>
+                    <description>Time exponent, in powers of 2 seconds.</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-10"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="extfield-f323">
+                <properties>
+                  <help>Enable extension field F323 for this peer, increasing time resolution.</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
         </children>
