@@ -16,10 +16,12 @@
 
 import os
 import argparse
+import errno
 import glob
 import json
 from datetime import datetime
 from pathlib import Path
+from shutil import disk_usage
 from shutil import rmtree
 from socket import gethostname
 from sys import exit
@@ -27,6 +29,7 @@ from tarfile import open as tar_open
 
 from vyos.base import Warning
 from vyos.defaults import directories
+from vyos.utils.convert import bytes_to_human
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import call
 from vyos.utils.process import cmdl
@@ -40,8 +43,15 @@ ARCHIVE_PATTERN = '_tech-support-archive_'
 ARCHIVE_TMP_DIR_PATTERN = 'drops-debug_'
 DEFAULT_TMP_DIR = '/tmp'
 EXCLUDED_ARCHIVE_EXT = ('.iso', '.gz', '.tar', '.zip')
+# Nested mount points are not archived (see __make_tar_filter), except for
+# these small tmpfs which do hold information we need
+ARCHIVED_MOUNT_POINTS = ('/etc/cni/net.d',)
 
 vyos_op_scripts_dir = directories['op_mode']
+
+
+class TechSupportArchiveError(Exception):
+    pass
 
 
 def __rotate_logs(path: str, log_pattern:str):
@@ -81,27 +91,49 @@ def __generate_archived_files(location_path: str) -> None:
     cmdl(['journalctl', '--sync'])
     cmdl(['journalctl', '--flush'])
 
-    def __tar_filter(tarinfo):
-        # path inside tar, because we set arcname=... below
-        name = tarinfo.name
-        basename = os.path.basename(name)
+    def __make_tar_filter(root_path: str):
+        # tar_file.add() is always called with arcname=path.lstrip('/') below,
+        # thus a member name can be mapped back to its real path on disk
+        root_arcname = str(root_path).lstrip('/')
 
-        # /var/log: exclude /var/log/messages and /var/log/messages.*
-        if name.startswith('var/log/messages'):
-            if basename == 'messages' or basename.startswith('messages.'):
-                return None
+        def __tar_filter(tarinfo):
+            # path inside tar, because we set arcname=... below
+            name = tarinfo.name
+            basename = os.path.basename(name)
+            path = f'/{name}'
 
-        # /tmp, /home: exclude previous tech-support archives and temporary archive directories
-        if name.startswith(('tmp/', 'home/')):
-            if ARCHIVE_PATTERN in name or basename.startswith(ARCHIVE_TMP_DIR_PATTERN):
-                return None
+            # Do not descend into nested mount points: live-boot mounts the boot
+            # medium and the persistence partition below /run/live, so archiving
+            # /run would recurse into every installed image - squashfs and rw
+            # overlay alike - until the filesystem we write to is full.
+            #
+            # The archive root itself is exempt, as /run and /tmp are mount
+            # points, and so is /opt/vyatta/etc/config once the configuration is
+            # encrypted. Only directories are pruned, file bind mounts like
+            # /etc/machine-id or /run/netns/<name> are small and do carry
+            # information.
+            if tarinfo.isdir() and name != root_arcname:
+                if path not in ARCHIVED_MOUNT_POINTS and os.path.ismount(path):
+                    return None
 
-        # /home, /opt/vyatta/etc/config, /tmp: exclude general archives
-        if name.startswith(('home/', 'opt/vyatta/etc/config/', 'tmp/')):
-            if basename.lower().endswith(EXCLUDED_ARCHIVE_EXT):
-                return None
+            # /var/log: exclude /var/log/messages and /var/log/messages.*
+            if name.startswith('var/log/messages'):
+                if basename == 'messages' or basename.startswith('messages.'):
+                    return None
 
-        return tarinfo
+            # /tmp, /home: exclude previous tech-support archives and temporary archive directories
+            if name.startswith(('tmp/', 'home/')):
+                if ARCHIVE_PATTERN in name or basename.startswith(ARCHIVE_TMP_DIR_PATTERN):
+                    return None
+
+            # /home, /opt/vyatta/etc/config, /tmp: exclude general archives
+            if name.startswith(('home/', 'opt/vyatta/etc/config/', 'tmp/')):
+                if basename.lower().endswith(EXCLUDED_ARCHIVE_EXT):
+                    return None
+
+            return tarinfo
+
+        return __tar_filter
 
     # Dictionary archive_name:directory_to_archive
     archive_dict = {
@@ -144,12 +176,24 @@ def __generate_archived_files(location_path: str) -> None:
         arcname = str(path).lstrip('/')  # e.g. /etc -> 'etc'
 
         archive_file = f'{location_path}/{archive_name}.tar.gz'
-        with tar_open(name=archive_file, mode='x:gz') as tar_file:
-            try:
-                tar_file.add(path, arcname=arcname, filter=__tar_filter)
-            except (PermissionError, OSError) as e:
-                print(f'Unable to read `{path}` to archive files:', e)
-                continue  # skip paths we can't read
+        try:
+            # tar_open() belongs inside try: ENOSPC is also raised when the gzip
+            # stream is flushed while the file is closed
+            with tar_open(name=archive_file, mode='x:gz') as tar_file:
+                tar_file.add(path, arcname=arcname,
+                             filter=__make_tar_filter(path))
+        except OSError as e:  # PermissionError is an OSError, too
+            if e.errno == errno.ENOSPC:
+                # A truncated archive is useless and occupies the space needed
+                # for the remaining ones
+                Path(archive_file).unlink(missing_ok=True)
+                free = bytes_to_human(disk_usage(location_path).free)
+                raise TechSupportArchiveError(
+                    f'No space left on device while archiving `{path}` into '
+                    f'{location_path} ({free} available)'
+                ) from e
+            Warning(f'Unable to read `{path}` to archive files: {e}')
+            continue  # skip paths we can't read
 
 
 def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
