@@ -150,6 +150,10 @@ class KeepalivedFifo:
     def pipe_wait(self):
         logger.debug('Message reading start')
         self.pipe_read = os.open(self.pipe_path, os.O_RDONLY | os.O_NONBLOCK)
+        # keepalived may write more than we read in one call, and a read can
+        # land in the middle of a line. Hold the incomplete trailing line here
+        # and prepend it to the next read, so only whole lines are queued.
+        buffer = ''
         while self.stopme.is_set() is False:
             # sleep a bit to not produce 100% CPU load
             time.sleep(0.250)
@@ -157,11 +161,20 @@ class KeepalivedFifo:
                 # try to read a message from PIPE
                 message = os.read(self.pipe_read, 500)
                 if message:
-                    # split PIPE content by lines and put them into queue
-                    for line in message.decode().strip().splitlines():
-                        self.message_queue.put(line)
+                    buffer += message.decode()
+                    # split PIPE content by lines and put them into queue,
+                    # keeping the last (possibly incomplete) line for later
+                    lines = buffer.split('\n')
+                    buffer = lines.pop()
+                    queued = False
+                    for line in lines:
+                        line = line.strip()
+                        if line:
+                            self.message_queue.put(line)
+                            queued = True
                     # set new message flag to start processing
-                    self.message_event.set()
+                    if queued:
+                        self.message_event.set()
             except Exception as err:
                 # ignore the "Resource temporarily unavailable" error
                 if err.errno != 11:
