@@ -73,13 +73,21 @@ def _load_config_sync_settings() -> dict:
     key = secondary.get('key')
     port = int(secondary.get('port', 443))
     timeout = int(secondary.get('timeout')) if secondary.get('timeout') else None
+    # config-sync talks to a remote secondary over HTTPS. TLS verification is
+    # off by default because secondary nodes typically present a self-signed
+    # certificate; an operator can opt in (True, or a CA bundle path) once the
+    # runtime config exposes it. TODO: surface as a proper CLI knob
+    # (set service config-sync secondary verify-tls / ca-certificate).
+    verify_tls = secondary.get('verify_tls', False)
 
     if not address or not key:
         raise opmode.UnconfiguredObject(
             'Config-sync is not fully configured: missing secondary address/key'
         )
 
-    return dict(host=address, key=key, port=port, timeout=timeout)
+    return dict(
+        host=address, key=key, port=port, timeout=timeout, verify_tls=verify_tls
+    )
 
 
 class ConfigSyncDiffManager:
