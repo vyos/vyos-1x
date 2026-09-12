@@ -173,12 +173,29 @@ def verify_tunnel(config):
         if 'source_address' in config and is_ipv6(config['source_address']):
             raise ConfigError('Cannot use local IPv6 address is for mGRE tunnels')
 
-def verify_mirror_redirect(config):
+def is_interface_defined(interfaces_root, ifname) -> bool:
+    """
+    Check if an interface is defined below the CLI "interfaces" node passed as
+    dictionary regardless of whether it exists in the kernel yet
+
+    VLAN sub-interfaces are deliberately not resolved here as nothing would
+    install a tc(8) mirror filter towards them once they are created
+    """
+    from vyos.ifconfig import Section
+
+    return ifname in (interfaces_root or {}).get(Section.section(ifname), {})
+
+
+def verify_mirror_redirect(config, interfaces_root=None):
     """
     Common helper function used by interface implementations to perform
     recurring validation of mirror and redirect interface configuration via tc(8)
 
     It makes no sense to mirror traffic back at yourself!
+
+    interfaces_root: dictionary of the CLI "interfaces" tree. Only required
+    when config is a VLAN sub-interface dictionary which does not carry the
+    interfaces_root attribute of its parent interface dictionary.
     """
     if 'mirror' in config and 'redirect' in config:
         raise ConfigError('Mirror and redirect cannot be enabled at the same time!')
@@ -188,11 +205,18 @@ def verify_mirror_redirect(config):
         # limitation from the past
         raise ConfigError('Cannot use QoS together with mirror!')
 
+    if interfaces_root is None:
+        interfaces_root = getattr(config, 'interfaces_root', {})
+
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
-            if not interface_exists(mirror_interface):
-                raise ConfigError(f'Requested mirror interface "{mirror_interface}" '\
-                                   'does not exist!')
+            if not interface_exists(mirror_interface) and not is_interface_defined(
+                interfaces_root, mirror_interface
+            ):
+                raise ConfigError(
+                    f'Requested mirror interface "{mirror_interface}" '
+                    'does not exist!'
+                )
 
             if mirror_interface == config['ifname']:
                 raise ConfigError(f'Cannot mirror "{direction}" traffic back '\
@@ -387,6 +411,7 @@ def verify_vlan_config(config):
             raise ConfigError(f'Duplicate VLAN id "{duplicate[0]}" used for vif and vif-s interfaces!')
 
     parent_ifname = config['ifname']
+    interfaces_root = getattr(config, 'interfaces_root', {})
     # 802.1q VLANs
     for vlan_id in config.get('vif', {}):
         vlan = config['vif'][vlan_id]
@@ -395,7 +420,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
-        verify_mirror_redirect(vlan)
+        verify_mirror_redirect(vlan, interfaces_root)
         verify_mtu_parent(vlan, config)
         verify_mtu_ipv6(vlan)
 
@@ -407,7 +432,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(s_vlan)
         verify_address(s_vlan)
         verify_vrf(s_vlan)
-        verify_mirror_redirect(s_vlan)
+        verify_mirror_redirect(s_vlan, interfaces_root)
         verify_mtu_parent(s_vlan, config)
         verify_mtu_ipv6(s_vlan)
 
@@ -418,7 +443,7 @@ def verify_vlan_config(config):
             verify_dhcpv6(c_vlan)
             verify_address(c_vlan)
             verify_vrf(c_vlan)
-            verify_mirror_redirect(c_vlan)
+            verify_mirror_redirect(c_vlan, interfaces_root)
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
             verify_mtu_ipv6(c_vlan)
