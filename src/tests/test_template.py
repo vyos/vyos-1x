@@ -208,3 +208,68 @@ class TestVyOSTemplate(TestCase):
                          internal_ports['certbot_haproxy'])
         self.assertEqual(vyos.template.nft_accept_invalid('arp'),
                          'ct state invalid ether type arp counter accept')
+
+    def test_decode_rfc3442_routes(self):
+        # The destination descriptors from the table in RFC 3442, each paired
+        # with a router of 10.17.66.41. The leading descriptor of 0 is the
+        # default route, which is retrieved from the router option instead and
+        # is therefore not returned here.
+        encoded = (
+            '0 10 17 66 41 '
+            '8 10 10 17 66 41 '
+            '24 10 0 0 10 17 66 41 '
+            '16 10 17 10 17 66 41 '
+            '24 10 27 129 10 17 66 41 '
+            '25 10 229 0 128 10 17 66 41 '
+            '32 10 198 122 47 10 17 66 41'
+        )
+        self.assertEqual(
+            vyos.template._decode_rfc3442_routes(encoded),
+            [
+                ('10.0.0.0/8', '10.17.66.41'),
+                ('10.0.0.0/24', '10.17.66.41'),
+                ('10.17.0.0/16', '10.17.66.41'),
+                ('10.27.129.0/24', '10.17.66.41'),
+                ('10.229.0.128/25', '10.17.66.41'),
+                ('10.198.122.47/32', '10.17.66.41'),
+            ],
+        )
+
+    def test_decode_rfc3442_routes_on_link(self):
+        # An all zero router means the destination is reachable on-link, the
+        # route is then installed without a next hop
+        self.assertEqual(
+            vyos.template._decode_rfc3442_routes('24 172 16 0 0 0 0 0'),
+            [('172.16.0.0/24', '')],
+        )
+
+    def test_decode_rfc3442_routes_malformed(self):
+        # A malformed option is discarded as a whole
+        for encoded in [
+            '',
+            '24 192 168 42',
+            '33 1 2 3 4 5 6 7 8',
+            '24 192 168 42 192 168 0 250 vyos',
+            '24 192 168 300 192 168 0 250',
+        ]:
+            self.assertEqual(vyos.template._decode_rfc3442_routes(encoded), [])
+
+    def test_decode_rfc3442_routes_host_bits(self):
+        # A server may leave host bits set in the final octet of the
+        # destination descriptor. The prefix has to be masked, as FRR masks it
+        # when accepting the route and the two would otherwise never match.
+        self.assertEqual(
+            vyos.template._decode_rfc3442_routes('25 129 210 177 132 192 168 0 250'),
+            [('129.210.177.128/25', '192.168.0.250')],
+        )
+
+    def test_decode_rfc3442_routes_partial(self):
+        # A valid route followed by a truncated one discards the option in
+        # full, rather than keeping the part that parsed
+        encoded = '24 10 0 0 192 0 2 1 24 10 1'
+        self.assertEqual(vyos.template._decode_rfc3442_routes(encoded), [])
+
+    def test_decode_rfc3442_routes_default_only(self):
+        # An option carrying nothing but a default route yields no routes, the
+        # default is retrieved from the router option instead
+        self.assertEqual(vyos.template._decode_rfc3442_routes('0 10 17 66 41'), [])
