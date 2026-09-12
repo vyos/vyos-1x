@@ -535,6 +535,40 @@ class VPPControl:
         return self.__vpp_api_client.api.sw_interface_set_mtu(**api_call_args)
 
     @_Decorators.api_call
+    def get_iface_max_mtu(self, iface_name_vpp: str) -> int | None:
+        """Return the maximum L3 MTU an interface's NIC can accept.
+
+        Derived from the driver limits in 'show hardware-interfaces': 'max mtu'
+        (rte_eth_dev_info.max_mtu) plus 'driver frame overhead'. The NIC is owned
+        by the VPP dataplane, so only VPP knows its real limit - the kernel side
+        is an LCP tap that reports its own, much larger max MTU and does not
+        reflect the physical NIC.
+
+        Args:
+            iface_name_vpp (str): Name of an interface in VPP
+
+        Returns:
+            int | None: maximum L3 MTU or None
+        """
+        hw_info = self.cli_cmd(f'show hardware-interfaces {iface_name_vpp}').reply or ''
+        max_mtu = re.search(r'max mtu:\s*(\d+)', hw_info)
+        if not max_mtu:
+            return None
+
+        max_mtu = int(max_mtu.group(1))
+        overhead = re.search(r'driver frame overhead:\s*(\d+)', hw_info)
+        if not overhead:
+            # Without the driver frame overhead the L3 limit is unknown.
+            return None
+
+        # VPP programs the NIC with (L3 MTU + hi->frame_overhead -
+        # driver_frame_overhead); hi->frame_overhead for a DPDK Ethernet
+        # interface is Ethernet header (14) + two QinQ VLAN tags (8) = 22. So the
+        # largest settable L3 MTU is (max_mtu + driver_frame_overhead - 22).
+        l2_frame_overhead = 14 + 8
+        return max_mtu + int(overhead.group(1)) - l2_frame_overhead
+
+    @_Decorators.api_call
     def get_sw_if_dev_type(self, ifname: str) -> int | None:
         """Find interface device type by interface name in VPP
 
