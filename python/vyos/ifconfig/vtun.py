@@ -32,6 +32,29 @@ class VTunIf(Interface):
         established (client mode). The latter will only be brought up once the
         server can be reached, thus we might need to create this interface in
         advance for the service to be operational. """
+        # An offloaded data path lives in the "ovpn" Kernel module, and OpenVPN
+        # declines the offload when it finds a device of any other type. The
+        # operating mode is fixed at creation time, so it has to be set here.
+        if 'dco' in self.config.get('offload', {}):
+            # Imported here rather than at module scope: vyos.netlink.ovpn
+            # imports pyroute2, which every consumer of vyos.ifconfig would
+            # otherwise pay for on import.
+            from errno import EEXIST
+
+            from pyroute2.netlink.exceptions import NetlinkError
+
+            from vyos.netlink.ovpn import add_ovpn_interface
+
+            try:
+                return add_ovpn_interface(
+                    self.ifname, self.config.get('mode') == 'server'
+                )
+            except NetlinkError as e:
+                if e.code != EEXIST:
+                    raise
+                # interface created by OpenVPN daemon in the meantime ...
+                return None
+
         try:
             cmd = ['openvpn', '--mktun', '--dev-type', self.config['device_type'],
                    '--dev', self.ifname]
