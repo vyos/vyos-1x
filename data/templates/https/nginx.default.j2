@@ -62,10 +62,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 600;
         proxy_buffering off;
-{%     if certificates.mtls_ca_path is vyos_defined %}
         proxy_set_header X-Client-Verify $ssl_client_verify;
         proxy_set_header X-Client-DN $ssl_client_s_dn;
-{%     endif %}
 {% else %}
         return 503;
 {% endif %}
