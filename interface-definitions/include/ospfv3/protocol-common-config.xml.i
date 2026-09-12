@@ -188,20 +188,24 @@
       <properties>
         <help>Network type</help>
         <completionHelp>
-          <list>broadcast point-to-point</list>
+          <list>broadcast point-to-multipoint point-to-point</list>
         </completionHelp>
         <valueHelp>
           <format>broadcast</format>
           <description>Broadcast network type</description>
         </valueHelp>
         <valueHelp>
+          <format>point-to-multipoint</format>
+          <description>Point-to-multipoint network type</description>
+        </valueHelp>
+        <valueHelp>
           <format>point-to-point</format>
           <description>Point-to-point network type</description>
         </valueHelp>
         <constraint>
-          <regex>(broadcast|point-to-point)</regex>
+          <regex>(broadcast|point-to-multipoint|point-to-point)</regex>
         </constraint>
-        <constraintErrorMessage>Must be broadcast or point-to-point</constraintErrorMessage>
+        <constraintErrorMessage>Must be broadcast, point-to-multipoint or point-to-point</constraintErrorMessage>
       </properties>
     </leafNode>
     #include <include/isis/passive.xml.i>

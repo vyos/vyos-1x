@@ -340,5 +340,26 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         for router_id in router_ids:
             self.assertIn(f' graceful-restart helper enable {router_id}', frrconfig)
 
+
+    def test_ospfv3_10_network_type_point_to_multipoint(self):
+        interfaces = Section.interfaces('ethernet')
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'network', 'point-to-multipoint'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6', stop_section='^exit')
+        self.assertIn(f'router ospf6', frrconfig)
+
+        for interface in interfaces:
+            if_config = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
+            self.assertIn(f' ipv6 ospf6 network point-to-multipoint', if_config)
+
+        # Cleanup interfaces
+        self.cli_delete(base_path + ['interface'])
+        self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
