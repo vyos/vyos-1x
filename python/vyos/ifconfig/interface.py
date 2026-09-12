@@ -44,6 +44,7 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
 from vyos.utils.process import cmdl
+from vyos.utils.process import rc_cmd
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.network import is_intf_addr_assigned
@@ -1373,7 +1374,7 @@ class Interface(Control):
 
         # remove from interface
         if addr == 'dhcp':
-            self.set_dhcp(False)
+            self.set_dhcp(False, release=True)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(False)
         elif is_intf_addr_assigned(self.ifname, addr, netns=netns):
@@ -1393,8 +1394,8 @@ class Interface(Control):
 
         Will raise an exception on error.
         """
-        # stop DHCP(v6) if running
-        self.set_dhcp(False)
+        # stop DHCP(v6) if running; RELEASE the v4 lease (ExecStop is -x)
+        self.set_dhcp(False, release=True)
         self.set_dhcpv6(False)
 
         if not self.exists(self.ifname):
@@ -1522,9 +1523,95 @@ class Interface(Control):
                 if native_vlan_id:
                     self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(native_vlan_id), 'pvid', 'untagged', 'master'])
 
-    def set_dhcp(self, enable: bool, vrf_changed: bool=False):
+    def release_dhcp_lease(self) -> bool:
+        """Send DHCPv4 RELEASE without racing systemd ExecStop / Restart=always.
+
+        Sequence: runtime-mask so Restart=always cannot start a replacement;
+        SIGKILL the unit (no STOP script, address stays); dhclient -r with a
+        separate pidfile and the unit -cf/-lf (capped so a silent server
+        cannot block conf_mode); unmask and leave the unit stopped.
+
+        Returns True if RELEASE was sent or there was no lease to send.
+        """
+        from vyos.utils.network import get_interface_vrf
+        from vyos.utils.process import call
+
+        interface = self.ifname
+        systemd_service = f'dhclient@{interface}.service'
+        lease_dir = directories['isc_dhclient_dir']
+        conf = f'{lease_dir}/dhclient_{interface}.conf'
+        leases = f'{lease_dir}/dhclient_{interface}.leases'
+        release_pid = f'{lease_dir}/dhclient_{interface}.release.pid'
+        netns = self.config.get('netns')
+
+        if not os.path.isfile(leases):
+            return True
+
+        vrf = get_interface_vrf(interface)
+        if vrf == 'default':
+            vrf = None
+
+        released = False
+        try:
+            rc_cmd(
+                ['systemctl', 'mask', '--runtime', systemd_service], netns=netns
+            )
+            # Mask first so Restart=always cannot replace the client. Kill
+            # even if ActiveState is still activating — Type=exec dhclient@
+            # can already have a live process that would race dhclient -r.
+            rc_cmd(
+                [
+                    'systemctl',
+                    'kill',
+                    '--kill-whom=all',
+                    '-s',
+                    'SIGKILL',
+                    systemd_service,
+                ],
+                netns=netns,
+            )
+            dhclient_r = [
+                '/sbin/dhclient',
+                '-4',
+                '-r',
+                '-e',
+                'CONTROLLED_STOP=yes',
+                '-cf',
+                conf,
+                '-pf',
+                release_pid,
+                '-lf',
+                leases,
+                interface,
+            ]
+            code = call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
+            released = code == 0
+        except Exception:
+            released = False
+        finally:
+            if os.path.isfile(release_pid):
+                try:
+                    with open(release_pid) as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, 9)
+                except (ValueError, ProcessLookupError, OSError):
+                    pass
+                try:
+                    os.remove(release_pid)
+                except FileNotFoundError:
+                    pass
+            rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
+            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
+        return released
+
+    def set_dhcp(self, enable: bool, vrf_changed: bool = False, release: bool = False):
         """
         Enable/Disable DHCP client on a given interface.
+
+        release=True sends a DHCPv4 RELEASE before stopping. ExecStop is -x
+        (T9109) so restart/disable/HA seed keep INIT-REBOOT; callers that
+        tear the lease down (delete address dhcp, flush, VRF instance
+        delete, op-mode release) must pass release=True.
         """
         if enable not in [True, False]:
             raise ValueError()
@@ -1569,6 +1656,9 @@ class Interface(Control):
                 return self._cmdl(['systemctl', 'restart', systemd_service])
         else:
             netns = self.config['netns'] if 'netns' in self.config else None
+            released = False
+            if release:
+                released = self.release_dhcp_lease()
             stop_systemd_unit(systemd_service, netns=netns)
 
             # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
@@ -1585,8 +1675,13 @@ class Interface(Control):
                         prefixlen = address_dict['prefixlen']
                         self.del_addr(f'{address}/{prefixlen}')
 
-            # cleanup old config files
-            for file in [dhclient_config_file, systemd_override_file, dhclient_lease_file]:
+            # Keep the ISC lease DB on the stop-only path (VRF move, disable)
+            # so the next start can INIT-REBOOT. Delete it only after an
+            # explicit RELEASE.
+            cleanup_files = [dhclient_config_file, systemd_override_file]
+            if released:
+                cleanup_files.append(dhclient_lease_file)
+            for file in cleanup_files:
                 if os.path.isfile(file):
                     os.remove(file)
 
