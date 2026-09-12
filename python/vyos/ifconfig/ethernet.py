@@ -149,11 +149,12 @@ class EthernetIf(Interface):
 
         super().remove()
 
-    def set_flow_control(self, enable):
+    def set_flow_control(self, enable, warn=True):
         """
         Changes the pause parameters of the specified Ethernet device.
 
         @param enable: true -> enable pause frames, false -> disable pause frames
+        @param warn: display a warning if the driver does not support the change
 
         Example:
         >>> from vyos.ifconfig import EthernetIf
@@ -177,7 +178,7 @@ class EthernetIf(Interface):
             # to change this setting via sysfs
             cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
             output, code = self._popen(cmd)
-            if code:
+            if code and warn:
                 Warning(f'could not change "{ifname}" flow control setting!')
             return output
         return None
@@ -256,7 +257,22 @@ class EthernetIf(Interface):
                 'Warning: could not set speed/duplex settings: operation not permitted!'
             )
 
-    def set_gro(self, state):
+    def _set_offload(self, feature, name, state, enabled, fixed, warn):
+        """
+        Common helper for all ethtool offload features. Only alter the setting
+        if it differs from the current one - and if the driver has it pinned
+        (fixed) we can not change it at all. T9228: only tell the user about
+        the missing driver support if the CLI node was changed in this commit.
+        """
+        if enabled == state:
+            return False
+        if not fixed:
+            return self.set_interface(feature, 'on' if state else 'off')
+        if warn:
+            Warning(f'Adapter does not support changing {name} settings!')
+        return False
+
+    def set_gro(self, state, warn=True):
         """
         Enable Generic Receive Offload. State can be either True or False.
 
@@ -269,16 +285,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_generic_receive_offload()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('gro', 'on' if state else 'off')
-            else:
-                print(
-                    'Adapter does not support changing generic-receive-offload settings!'
-                )
-        return False
+        return self._set_offload(
+            'gro', 'generic-receive-offload', state, enabled, fixed, warn
+        )
 
-    def set_rx(self, state):
+    def set_rx(self, state, warn=True):
         """
         Enable/Disable Receive Checksum Offload.
         State can be either True or False.
@@ -287,14 +298,9 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_rx_checksumming()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('rx', 'on' if state else 'off')
-            else:
-                print('Adapter does not support changing rx-checksumming settings!')
-        return False
+        return self._set_offload('rx', 'rx-checksumming', state, enabled, fixed, warn)
 
-    def set_gso(self, state):
+    def set_gso(self, state, warn=True):
         """
         Enable Generic Segmentation offload. State can be either True or False.
         Example:
@@ -306,16 +312,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_generic_segmentation_offload()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('gso', 'on' if state else 'off')
-            else:
-                print(
-                    'Adapter does not support changing generic-segmentation-offload settings!'
-                )
-        return False
+        return self._set_offload(
+            'gso', 'generic-segmentation-offload', state, enabled, fixed, warn
+        )
 
-    def set_hw_tc_offload(self, state):
+    def set_hw_tc_offload(self, state, warn=True):
         """
         Enable hardware TC flow offload. State can be either True or False.
         Example:
@@ -327,14 +328,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_hw_tc_offload()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('hw-tc-offload', 'on' if state else 'off')
-            else:
-                print('Adapter does not support changing hw-tc-offload settings!')
-        return False
+        return self._set_offload(
+            'hw-tc-offload', 'hw-tc-offload', state, enabled, fixed, warn
+        )
 
-    def set_lro(self, state):
+    def set_lro(self, state, warn=True):
         """
         Enable Large Receive offload. State can be either True or False.
         Example:
@@ -346,14 +344,9 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_large_receive_offload()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('lro', 'on' if state else 'off')
-            else:
-                print(
-                    'Adapter does not support changing large-receive-offload settings!'
-                )
-        return False
+        return self._set_offload(
+            'lro', 'large-receive-offload', state, enabled, fixed, warn
+        )
 
     def set_rps(self, state):
         if not isinstance(state, bool):
@@ -412,7 +405,7 @@ class EthernetIf(Interface):
 
         return True
 
-    def set_sg(self, state):
+    def set_sg(self, state, warn=True):
         """
         Enable Scatter-Gather support. State can be either True or False.
 
@@ -425,14 +418,9 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_scatter_gather()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('sg', 'on' if state else 'off')
-            else:
-                print('Adapter does not support changing scatter-gather settings!')
-        return False
+        return self._set_offload('sg', 'scatter-gather', state, enabled, fixed, warn)
 
-    def set_tso(self, state):
+    def set_tso(self, state, warn=True):
         """
         Enable TCP segmentation offloading. State can be either True or False.
 
@@ -445,16 +433,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_tcp_segmentation_offload()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('tso', 'on' if state else 'off')
-            else:
-                print(
-                    'Adapter does not support changing tcp-segmentation-offload settings!'
-                )
-        return False
+        return self._set_offload(
+            'tso', 'tcp-segmentation-offload', state, enabled, fixed, warn
+        )
 
-    def set_ring_buffer(self, rx_tx, size):
+    def set_ring_buffer(self, rx_tx, size, warn=True):
         """
         Example:
         >>> from vyos.ifconfig import EthernetIf
@@ -472,11 +455,11 @@ class EthernetIf(Interface):
         # ethtool error codes:
         #  80 - value already set
         #  81 - does not possible to set value
-        if code and code != 80:
-            print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
+        if code and code != 80 and warn:
+            Warning(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
 
-    def set_interrupt_coalescing(self, params: dict):
+    def set_interrupt_coalescing(self, params: dict, warn=True):
         """
         Apply ethtool coalesce settings to an interface.
 
@@ -526,9 +509,11 @@ class EthernetIf(Interface):
         try:
             coalesce.set_coalesce(ifname, **params)
         except coalesce.CoalesceError as e:
-            print(f'interrupt coalescing error: {e}')
+            if warn:
+                Warning(f'interrupt coalescing error: {e}')
         except coalesce.GeneralNetlinkError as e:
-            print(f'netlink error: {e}')
+            if warn:
+                Warning(f'netlink error: {e}')
 
         return output
 
@@ -549,13 +534,14 @@ class EthernetIf(Interface):
             print(f'could not set "{rx_tx_comb}" channel for {ifname}')
         return output
 
-    def set_switchdev(self, enable):
+    def set_switchdev(self, enable, warn=True):
         ifname = self.config['ifname']
         addr, code = self._popen(
             f"ethtool -i {ifname} | grep bus-info | awk '{{print $2}}'"
         )
         if code != 0:
-            print(f'could not resolve PCIe address of {ifname}')
+            if warn:
+                Warning(f'could not resolve PCIe address of {ifname}')
             return
 
         enabled = False
@@ -569,8 +555,8 @@ class EthernetIf(Interface):
             output, code = self._popen(
                 f'/sbin/devlink dev eswitch set pci/{addr} mode switchdev'
             )
-            if code != 0:
-                print(f'{ifname} does not support switchdev mode')
+            if code != 0 and warn:
+                Warning(f'{ifname} does not support switchdev mode')
         elif not enable and enabled:
             self._cmdl(['/sbin/devlink', 'dev', 'eswitch', 'set', f'pci/{addr}', 'mode', 'legacy'])
 
@@ -580,21 +566,39 @@ class EthernetIf(Interface):
         interface setup code and provide a single point of entry when working
         on any interface."""
 
+        # T9228: Not all NIC drivers support changing all of the settings below.
+        # The configuration is always (re-)applied, but the warning about the
+        # missing driver support is only rendered if the individual CLI node was
+        # changed in this commit - and not on any unrelated change.
+        offload_changed = config.get('offload_changed', [])
+
         # disable ethernet flow control (pause frames)
         value = 'off' if 'disable_flow_control' in config else 'on'
-        self.set_flow_control(value)
+        self.set_flow_control(value, warn='flow_control_changed' in config)
 
         # GRO (generic receive offload)
-        self.set_gro(dict_search('offload.gro', config) is not None)
+        self.set_gro(
+            dict_search('offload.gro', config) is not None,
+            warn='gro' in offload_changed,
+        )
 
         # GSO (generic segmentation offload)
-        self.set_gso(dict_search('offload.gso', config) is not None)
+        self.set_gso(
+            dict_search('offload.gso', config) is not None,
+            warn='gso' in offload_changed,
+        )
 
         # GSO (generic segmentation offload)
-        self.set_hw_tc_offload(dict_search('offload.hw_tc_offload', config) is not None)
+        self.set_hw_tc_offload(
+            dict_search('offload.hw_tc_offload', config) is not None,
+            warn='hw_tc_offload' in offload_changed,
+        )
 
         # LRO (large receive offload)
-        self.set_lro(dict_search('offload.lro', config) is not None)
+        self.set_lro(
+            dict_search('offload.lro', config) is not None,
+            warn='lro' in offload_changed,
+        )
 
         # RPS - Receive Packet Steering
         self.set_rps(dict_search('offload.rps', config) is not None)
@@ -603,13 +607,20 @@ class EthernetIf(Interface):
         self.set_rfs(dict_search('offload.rfs', config) is not None)
 
         # RX (receive checksum offload)
-        self.set_rx(dict_search('offload.rx', config) is not None)
+        self.set_rx(
+            dict_search('offload.rx', config) is not None, warn='rx' in offload_changed
+        )
 
         # scatter-gather option
-        self.set_sg(dict_search('offload.sg', config) is not None)
+        self.set_sg(
+            dict_search('offload.sg', config) is not None, warn='sg' in offload_changed
+        )
 
         # TSO (TCP segmentation offloading)
-        self.set_tso(dict_search('offload.tso', config) is not None)
+        self.set_tso(
+            dict_search('offload.tso', config) is not None,
+            warn='tso' in offload_changed,
+        )
 
         # Set physical interface speed and duplex
         if 'speed_duplex_changed' in config:
@@ -621,13 +632,15 @@ class EthernetIf(Interface):
         # Set interface ring buffer
         if 'ring_buffer' in config:
             for rx_tx, size in config['ring_buffer'].items():
-                self.set_ring_buffer(rx_tx, size)
+                self.set_ring_buffer(rx_tx, size, warn='ring_buffer_changed' in config)
 
         # Set coalesce settings for the interface
         if 'interrupt_coalescing' in config:
-            self.set_interrupt_coalescing(config['interrupt_coalescing'])
+            self.set_interrupt_coalescing(
+                config['interrupt_coalescing'], warn='coalesce_changed' in config
+            )
 
-        self.set_switchdev('switchdev' in config)
+        self.set_switchdev('switchdev' in config, warn='switchdev_changed' in config)
 
         # call base class last
         super().update(config)
