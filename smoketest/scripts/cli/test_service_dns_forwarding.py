@@ -354,6 +354,20 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('edns-subnet-allow-list')
         self.assertEqual(tmp, ','.join(options))
 
+    def test_security_status_poll_domain(self):
+        # commit changes - the periodic security status poll must be
+        # disabled (empty) by default, see T9175
+        self.cli_commit()
+        tmp = get_config_value('security-poll-suffix')
+        self.assertEqual(tmp, '')
+
+        # explicitly configuring a domain must enable and use it
+        domain = 'secpoll.powerdns.com'
+        self.cli_set(base_path + ['options', 'security-status-poll-domain', domain])
+        self.cli_commit()
+        tmp = get_config_value('security-poll-suffix')
+        self.assertEqual(tmp, domain)
+
     def test_multiple_ns_records(self):
         test_zone = 'example.com'
         self.cli_set(base_path + ['authoritative-domain', test_zone, 'records', 'ns', 'test', 'target', f'ns1.{test_zone}'])
