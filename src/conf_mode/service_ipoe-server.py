@@ -120,29 +120,25 @@ def verify(ipoe):
     renew_time = dict_search('renew_time', ipoe)
     rebind_time = dict_search('rebind_time', ipoe)
 
-    if max_lease_time is not None and int(max_lease_time) < lease_time:
+    if max_lease_time and int(max_lease_time) < lease_time:
         Warning(
             f'"max-lease-time" ({max_lease_time}) is lower than "lease-time" '
             f'({lease_time}) and will have no effect'
         )
 
-    if renew_time is not None and int(renew_time) > lease_time:
+    if renew_time and int(renew_time) > lease_time:
         Warning(
             f'"renew-time" ({renew_time}) is greater than "lease-time" '
             f'({lease_time}) and will be recalculated by accel-ppp'
         )
 
-    if rebind_time is not None and int(rebind_time) > lease_time:
+    if rebind_time and int(rebind_time) > lease_time:
         Warning(
             f'"rebind-time" ({rebind_time}) is greater than "lease-time" '
             f'({lease_time}) and will be recalculated by accel-ppp'
         )
 
-    if (
-        renew_time is not None
-        and rebind_time is not None
-        and int(renew_time) > int(rebind_time)
-    ):
+    if renew_time and rebind_time and int(renew_time) > int(rebind_time):
         Warning(
             f'"renew-time" ({renew_time}) is greater than "rebind-time" '
             f'({rebind_time}) and will be recalculated by accel-ppp'
