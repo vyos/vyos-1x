@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
+from vyos.utils.dict import dict_search
 
 @Interface.register
 class VTunIf(Interface):
@@ -32,6 +33,14 @@ class VTunIf(Interface):
         established (client mode). The latter will only be brought up once the
         server can be reached, thus we might need to create this interface in
         advance for the service to be operational. """
+
+        # A Data-Channel-Offload (DCO) interface is not a TUN/TAP device but of
+        # link type "ovpn", created by the Kernel module via netlink. Claiming
+        # the name with a persistent TUN device here makes the Kernel reject the
+        # DCO interface with EEXIST - OpenVPN then runs without offload.
+        if dict_search('offload.dco', self.config) is not None:
+            return None
+
         try:
             cmd = ['openvpn', '--mktun', '--dev-type', self.config['device_type'],
                    '--dev', self.ifname]

@@ -27,8 +27,10 @@ from ipaddress import IPv6Network
 from ipaddress import summarize_address_range
 from secrets import SystemRandom
 from shutil import rmtree
+from time import sleep
 
 from vyos.base import DeprecationWarning
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
@@ -208,6 +210,10 @@ def verify_data_ciphers_fallback(openvpn):
     if openvpn['mode'] != 'site-to-site':
         if dict_search('encryption.data_ciphers_fallback', openvpn):
             raise ConfigError('Cipher fallback is valid only in site-to-site mode')
+
+# Seconds to wait in apply() for the DCO interface to be created by the Kernel
+dco_wait_server = 20
+dco_wait_client = 5
 
 def verify_pki(openvpn):
     pki = openvpn['pki']
@@ -858,6 +864,29 @@ def apply(openvpn):
         if 'restart_required' in openvpn:
             action = 'restart'
         call(f'systemctl {action} openvpn@{interface}.service')
+
+    # A DCO interface is of link type "ovpn" and is created by the Kernel module
+    # on behalf of the OpenVPN process - it cannot be pre-created via _create().
+    # Wait for it to appear, as VTunIf.update() below operates on a live device.
+    #
+    # Server and site-to-site mode create the interface during daemon startup,
+    # client mode only after the TLS handshake succeeded - which never happens
+    # if the peer is unreachable. Waiting longer does not make the interface
+    # appear any sooner, so the client grace period is kept short.
+    if dict_search('offload.dco', openvpn) != None:
+        timeout = dco_wait_server if openvpn['mode'] in ['server', 'site-to-site'] \
+                  else dco_wait_client
+
+        while timeout > 0 and not interface_exists(interface):
+            sleep(0.250)
+            timeout -= 0.250
+
+        if not interface_exists(interface):
+            Warning(f'OpenVPN interface "{interface}" was not created by the data '\
+                    f'channel offload Kernel module - interface options like MTU, '\
+                    f'VRF or description cannot be applied!')
+            call_dependents()
+            return None
 
     o = VTunIf(**openvpn)
     o.update(openvpn)
