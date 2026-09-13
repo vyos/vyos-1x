@@ -211,9 +211,48 @@ def verify_data_ciphers_fallback(openvpn):
         if dict_search('encryption.data_ciphers_fallback', openvpn):
             raise ConfigError('Cipher fallback is valid only in site-to-site mode')
 
+# DCO offloads AEAD ciphers only - anything else is processed in userspace and
+# makes OpenVPN silently fall back to the userspace datapath.
+dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+
 # Seconds to wait in apply() for the DCO interface to be created by the Kernel
 dco_wait_server = 20
 dco_wait_client = 5
+
+def verify_dco(openvpn):
+    """ Reject options OpenVPN cannot offload. OpenVPN does not fail on these,
+    it drops back to the userspace datapath and only logs a note - so without
+    this check "offload dco" appears to be applied while it never takes effect. """
+    if dict_search('offload.dco', openvpn) == None:
+        return None
+
+    if openvpn['device_type'] == 'tap':
+        raise ConfigError('Data channel offload requires "device-type tun"')
+
+    if 'use_lzo_compression' in openvpn:
+        raise ConfigError('Data channel offload cannot be used with compression')
+
+    if 'shared_secret_key' in openvpn:
+        raise ConfigError('Data channel offload cannot be used with "shared-secret-key"')
+
+    tmp = dict_search('encryption.cipher', openvpn)
+    if tmp and tmp not in dco_ciphers:
+        raise ConfigError(f'Data channel offload cannot be used with "encryption cipher {tmp}"')
+
+    tmp = dict_search('encryption.data_ciphers_fallback', openvpn)
+    if tmp and tmp not in dco_ciphers:
+        raise ConfigError(f'Data channel offload cannot be used with "encryption ' \
+                          f'data-ciphers-fallback {tmp}"')
+
+    tmp = dict_search('encryption.data_ciphers', openvpn)
+    if tmp:
+        if not any(cipher in dco_ciphers for cipher in tmp):
+            raise ConfigError('Data channel offload requires at least one AEAD ' \
+                              'cipher in "encryption data-ciphers"')
+        for cipher in tmp:
+            if cipher not in dco_ciphers:
+                Warning(f'Cipher "{cipher}" is not supported by data channel ' \
+                        f'offload and will not be negotiated!')
 
 def verify_pki(openvpn):
     pki = openvpn['pki']
@@ -668,6 +707,7 @@ def verify(openvpn):
     verify_mirror_redirect(openvpn)
 
     verify_data_ciphers_fallback(openvpn)
+    verify_dco(openvpn)
 
     return None
 
