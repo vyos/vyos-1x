@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from glob import glob
@@ -27,6 +28,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
+from vyos.utils.kernel import is_module_loaded
 from vyos.template import address_from_cidr
 from vyos.template import inc_ip
 from vyos.template import last_host_address
@@ -84,6 +86,14 @@ interface = ''
 remote_host = ''
 vrf_name = 'orange'
 dummy_if = 'dum1301'
+
+def get_openvpn_version():
+    """ OpenVPN 2.6 only talks to the out-of-tree "ovpn-dco-v2" Kernel module,
+    the in-tree "ovpn" module requires OpenVPN 2.7 or above """
+    # openvpn(8) exits with a non zero return code on --version
+    tmp = cmdl(['openvpn', '--version'], expect=[0, 1])
+    tmp = re.match(r'OpenVPN (\d+)\.(\d+)', tmp)
+    return tuple(int(c) for c in tmp.groups())
 
 def get_vrf(interface):
     for upper in glob(f'/sys/class/net/{interface}/upper*'):
@@ -927,6 +937,114 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
+
+    def test_openvpn_dco_verify(self):
+        # T8147: "offload dco" is only supported by a subset of the OpenVPN
+        # options - anything else makes OpenVPN silently fall back to the
+        # userspace datapath, so verify() must reject it upfront.
+        interface = 'vtun5030'
+        path = base_path + [interface]
+        subnet = '10.20.30.0/24'
+
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['server', 'subnet', subnet])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+
+        # check validate() - DCO is a tun only datapath
+        self.cli_set(path + ['device-type', 'tap'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(path + ['device-type', 'tun'])
+
+        # check validate() - DCO cannot be combined with compression
+        self.cli_set(path + ['use-lzo-compression'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(path + ['use-lzo-compression'])
+
+        # check validate() - DCO only supports AEAD ciphers
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256'])
+        self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_delete(path + ['encryption', 'data-ciphers', 'aes256'])
+
+        # commit must pass now
+        self.cli_commit()
+
+    def test_openvpn_dco(self):
+        # T8147: verify the "ovpn" Kernel module is actually used once
+        # "offload dco" is set - and not used when it is not.
+        interface = 'vtun5040'
+        path = base_path + [interface]
+        subnet = '10.20.30.0/24'
+
+        self.cli_set(path + ['device-type', 'tun'])
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '5'])
+        self.cli_set(path + ['keep-alive', 'interval', '5'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['server', 'subnet', subnet])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'aes256gcm'])
+        self.cli_commit()
+
+        # DCO not requested - it must be explicitly disabled and the Kernel
+        # module must not be loaded
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('disable-dco', config)
+        self.assertFalse(is_module_loaded('ovpn'))
+        self.assertIn(interface, interfaces())
+
+        pid = process_named_running(PROCESS_NAME, timeout=10)
+        self.assertIsNotNone(pid)
+
+        # Now enable DCO on the very same interface. The data channel backend is
+        # only evaluated while the daemon initialises, thus this must fully
+        # restart the service - a SIGHUP as sent by "systemctl reload-or-restart"
+        # keeps the PID and would leave the tunnel without offload.
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertNotIn('disable-dco', config)
+        self.assertTrue(is_module_loaded('ovpn'))
+        self.assertIn(interface, interfaces())
+
+        tmp = process_named_running(PROCESS_NAME, timeout=10)
+        self.assertIsNotNone(tmp)
+        self.assertNotEqual(pid, tmp)
+        pid = tmp
+
+        # The interface must no longer be a TUN/TAP device but of type "ovpn".
+        # T9308: the in-tree Kernel module registers the Generic Netlink family
+        # "ovpn", which OpenVPN only knows about since 2.7 - older releases look
+        # for the out-of-tree "ovpn-dco-v2" family, do not find it and open a
+        # plain TUN device instead. Only assert this once userspace can offload.
+        if get_openvpn_version() >= (2, 7):
+            tmp = cmdl(['ip', '--detail', 'link', 'show', 'dev', interface])
+            self.assertIn('ovpn', tmp)
+            self.assertNotIn('tun ', tmp)
+
+        # Disabling DCO again must unload the Kernel module and - for the very
+        # same reason as above - restart the daemon instead of reloading it
+        self.cli_delete(path + ['offload'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('disable-dco', config)
+        self.assertFalse(is_module_loaded('ovpn'))
+        self.assertIn(interface, interfaces())
+
+        tmp = process_named_running(PROCESS_NAME, timeout=10)
+        self.assertIsNotNone(tmp)
+        self.assertNotEqual(pid, tmp)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
