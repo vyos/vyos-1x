@@ -24,6 +24,7 @@ from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import interface_exists
 from vyos.utils.file import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.TestCase):
@@ -133,6 +134,47 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             remove_member = self._members[0]
             state = Interface(remove_member).get_admin_state()
             self.assertEqual('up', state)
+
+    def test_bonding_bare_member_node_released(self):
+        # T3871: a member whose ethernet node exists but carries nothing at
+        # all - a plain "set interfaces ethernet eth1" and no more - is still
+        # a configured interface, not an empty one. When it is released from
+        # the bond it must be brought back up, not torn down as though the
+        # operator had deleted it.
+        member = self._members[0]
+        self.cli_set(['interfaces', 'ethernet', member])
+
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.cli_delete(
+                self._base_path + [interface, 'member', 'interface', member])
+        self.cli_commit()
+
+        self.assertEqual(Interface(member).get_admin_state(), 'up')
+
+    def test_bonding_delete_and_readd_member(self):
+        # T3871: deleting a member's whole ethernet node while it is enslaved,
+        # then re-adding it, must leave the port present and usable - the
+        # hardware never went anywhere.
+        member = self._members[0]
+
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+        self.cli_commit()
+
+        self.cli_delete(['interfaces', 'ethernet', member])
+        self.cli_commit()
+        self.assertTrue(interface_exists(member),
+                        f'{member} disappeared after its configuration was deleted')
+
+        self.cli_set(['interfaces', 'ethernet', member, 'description', 'readded'])
+        self.cli_commit()
+        self.assertEqual(read_file(f'/sys/class/net/{member}/ifalias'), 'readded')
 
     def test_bonding_append_member(self):
         # T9269: appending a member to a bond that already has one must not
