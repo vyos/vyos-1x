@@ -106,7 +106,17 @@ class KeepalivedFifo:
     # process message from pipe
     def pipe_process(self):
         logger.debug('Message processing start')
-        regex_notify = re.compile(r'^(?P<type>\w+) "(?P<name>[\w-]+)" (?P<state>\w+) (?P<priority>\d+)$', re.MULTILINE)
+        # The name is whatever the CLI accepted as a VRRP group/sync-group
+        # name, framed by keepalived between literal double quotes - e.g.
+        # INSTANCE "cluster:11" MASTER 100. The CLI does not restrict that
+        # name to \w and -: colons are a common naming convention and are
+        # accepted without complaint (T9256). Matching on the delimiter
+        # itself, rather than trying to enumerate the accepted character
+        # set, is what actually tracks what the CLI allows.
+        regex_notify = re.compile(
+            r'^(?P<type>\w+) "(?P<name>[^"]+)" (?P<state>\w+) (?P<priority>\d+)$',
+            re.MULTILINE,
+        )
         while self.stopme.is_set() is False:
             # wait for a new message event from pipe_wait
             self.message_event.wait()
