@@ -393,6 +393,20 @@ class Interface(Control):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
+        # T7813: VLAN sub-interfaces must be de-configured before this interface
+        # is torn down, otherwise a running DHCP client can neither talk to the
+        # server nor return its lease. Deleting an interface implicitly deletes
+        # all its VLAN children in the Kernel, thus start with the deepest
+        # interface (vif-c) and work the way up to the vif interfaces.
+        for vlan in sorted(
+            Section.sub_interfaces(self.ifname), key=lambda x: x.count('.'), reverse=True
+        ):
+            # A previous iteration may have already removed this interface as a
+            # side effect - do not re-create it when instantiating Interface()
+            if not Interface.exists(vlan):
+                continue
+            Interface(vlan).remove()
+
         # Stop WPA supplicant if EAPoL was in use
         netns = self.config['netns'] if 'netns' in self.config else None
         stop_systemd_unit(f'wpa_supplicant-wired@{self.ifname}', netns=netns)
