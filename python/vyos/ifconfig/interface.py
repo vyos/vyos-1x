@@ -1567,28 +1567,32 @@ class Interface(Control):
 
         released = False
         try:
-            rc_cmd(['systemctl', 'mask', '--runtime', systemd_service], netns=netns)
-            # Mask first so Restart=always cannot replace the client. Kill
-            # even if ActiveState is still activating — Type=exec dhclient@
-            # can already have a live process that would race dhclient -r.
-            rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
-                    systemd_service], netns=netns)
-            dhclient_r = [
-                '/sbin/dhclient',
-                '-4',
-                '-r',
-                '-e',
-                'CONTROLLED_STOP=yes',
-                '-cf',
-                conf,
-                '-pf',
-                release_pid,
-                '-lf',
-                leases,
-                interface,
-            ]
-            code = call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
-            released = code == 0
+            mask_code, _ = rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
+                                  netns=netns)
+            if mask_code == 0:
+                # Mask first so Restart=always cannot replace the client. Kill
+                # even if ActiveState is still activating — Type=exec dhclient@
+                # can already have a live process that would race dhclient -r.
+                # Kill exit is not a gate: systemctl kill fails when already
+                # inactive.
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
+                dhclient_r = [
+                    '/sbin/dhclient',
+                    '-4',
+                    '-r',
+                    '-e',
+                    'CONTROLLED_STOP=yes',
+                    '-cf',
+                    conf,
+                    '-pf',
+                    release_pid,
+                    '-lf',
+                    leases,
+                    interface,
+                ]
+                code = call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
+                released = code == 0
         except Exception:
             released = False
         finally:
