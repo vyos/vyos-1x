@@ -19,6 +19,7 @@ from glob import glob
 
 from vyos.base import Warning
 from vyos.ethtool import Ethtool
+from vyos.ifconfig.ifname_store import permanent_mac
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
@@ -83,6 +84,9 @@ class EthernetIf(Interface):
         },
     }
 
+    # T5862: clamped against the adapter maximum wherever it is used
+    DEFAULT_MTU = '1500'
+
     @staticmethod
     def get_bond_member_allowed_options() -> list:
         """
@@ -122,14 +126,22 @@ class EthernetIf(Interface):
         self.ethtool = Ethtool(ifname)
 
     def _create(self):
+        # we cannot create this interface as it is managed by the Kernel
         pass
 
     def remove(self):
         """
-        Remove interface from config. Removing the interface deconfigures all
-        assigned IP addresses.
+        Return the interface to the state the Kernel gave it.
+
+        An ethernet interface is owned by the Kernel and - like 'lo' - can not
+        be removed, so deleting its configuration means resetting the port
+        rather than tearing it down: addresses flushed, MTU and hardware
+        address back to the Kernel default and the link left up. Leaving it
+        admin-down stranded a port with nothing left to bring it back, a
+        released bond member included.
+
         Example:
-        >>> from vyos.ifconfig import WWANIf
+        >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
         >>> i.remove()
         """
@@ -140,10 +152,18 @@ class EthernetIf(Interface):
         # and thus survives this call.
         super().remove()
 
-        if self.exists(self.ifname):
-            # interface is placed in A/D state when removed from config! It
-            # will remain visible for the operating system.
-            self.set_admin_state('down')
+        if not self.exists(self.ifname):
+            return
+
+        # undo what the configuration changed about the hardware itself
+        mac = permanent_mac(self.ifname)
+        if mac:
+            self.set_mac(mac)
+
+        mtu = min(int(EthernetIf.DEFAULT_MTU), int(self.get_max_mtu()))
+        self.set_mtu(str(mtu))
+
+        self.set_admin_state('up')
 
     def set_flow_control(self, enable, warn=True):
         """
