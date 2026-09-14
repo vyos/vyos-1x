@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T3871: interface names are no longer derived from 'hw-id'. Carry the existing
+# bindings over to the mapping store - anchored to the slot the MAC sits in, so
+# nothing is renamed - then drop the node. Hardware which is not present is
+# skipped: the configuration may well originate from another machine.
+
+from vyos.configtree import ConfigTree
+from vyos.ifconfig.ifname_store import discover_devices
+from vyos.ifconfig.ifname_store import load_store
+from vyos.ifconfig.ifname_store import save_store
+from vyos.ifconfig.ifname_store import sync_link_files
+
+bases = (['interfaces', 'ethernet'], ['interfaces', 'wireless'])
+
+
+def migrate(config: ConfigTree) -> None:
+    bindings = {}
+    for base in bases:
+        if not config.exists(base):
+            continue
+        for intf in config.list_nodes(base):
+            path = base + [intf, 'hw-id']
+            if config.exists(path):
+                bindings[intf] = config.return_value(path).lower()
+                config.delete(path)
+
+    if not bindings:
+        return
+
+    devices = {device['mac']: device for device in discover_devices()}
+    store = load_store()
+    entries = store['interfaces']
+    added = False
+
+    taken = set(entries.values())
+
+    for name, hwid in bindings.items():
+        device = devices.get(hwid)
+        if device is None or not device['key']:
+            continue
+        # an entry already in the store is authoritative, and a slot already
+        # spoken for must not gain a second name - only one of them could
+        # ever be filled
+        if name in entries or device['key'] in taken:
+            continue
+        entries[name] = device['key']
+        taken.add(device['key'])
+        added = True
+
+    if added and save_store(store):
+        try:
+            sync_link_files(store)
+        except OSError:
+            pass
