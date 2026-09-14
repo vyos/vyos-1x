@@ -21,15 +21,46 @@ import logging
 import unittest
 
 from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.ethtool import Ethtool
+from vyos.ifconfig import Section
+from vyos.utils.process import call
 from vyos import ConfigError
 
 config_dir = '/usr/libexec/vyos/tests/configs'
 config_test_dir = f'{config_dir}/assert'
 save_config = '/tmp/vyos-configtest-save'
 
+# committing a configuration which does not list an offload option turns that
+# option off, and removing the interface does not put it back. As the expected
+# result only contains an option while the adapter still has it enabled, it
+# would otherwise depend on which testcases ran before.
+boot_offload = {}
+
+
+def read_offload() -> dict:
+    state = {}
+    for ifname in Section.interfaces('ethernet', vlan=False):
+        eth = Ethtool(ifname)
+        state[ifname] = {
+            'gro': eth.get_generic_receive_offload(),
+            'gso': eth.get_generic_segmentation_offload(),
+            'sg': eth.get_scatter_gather(),
+            'tso': eth.get_tcp_segmentation_offload(),
+        }
+    return state
+
+
+def restore_offload(state: dict) -> None:
+    for ifname, options in state.items():
+        tmp = ' '.join(f'{option} {"on" if on else "off"}'
+                       for option, (on, fixed) in options.items() if not fixed)
+        if tmp:
+            call(f'sudo ethtool --features {ifname} {tmp}')
+
 class DynamicClassBase(unittest.TestCase):
     def setUp(self):
         self._start_time = time.time()
+        restore_offload(boot_offload)
         self.session = ConfigSession(os.getpid())
         self.session.save_config(save_config)
 
@@ -72,6 +103,8 @@ if __name__ == '__main__':
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
                         format='%(message)s')
     log = logging.getLogger("TestConfigLog")
+
+    boot_offload = read_offload()
 
     start_time = time.time()
     log.info("Generating tests")
