@@ -175,13 +175,8 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
     def base_config(self):
         self.cli_set(base_path + ['service', haproxy_service_name, 'mode', 'http'])
-        self.cli_set(
-            base_path + ['service', haproxy_service_name, 'port', haproxy_service_port]
-        )
-        self.cli_set(
-            base_path
-            + ['service', haproxy_service_name, 'backend', haproxy_backend_name]
-        )
+        self.cli_set(base_path + ['service', haproxy_service_name, 'port', haproxy_service_port])
+        self.cli_set(base_path + ['service', haproxy_service_name, 'backend', haproxy_backend_name])
 
         self.cli_set(base_path + ['backend', haproxy_backend_name, 'mode', 'http'])
         self.cli_set(base_path + ['backend', haproxy_backend_name, 'server', haproxy_backend_name, 'address', '192.0.2.11'])
@@ -779,39 +774,25 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
         # Pre-test before service binds
         # Check port availability without address (default to 'any'), must yield true
-        self.assertTrue(
-            check_port_availability(port=int(haproxy_service_port), protocol='tcp')
-        )
+        self.assertTrue(check_port_availability(port=int(haproxy_service_port), protocol='tcp'))
 
         # Start without a specific listen-address (listen on 'any')
         self.base_config()
         self.cli_commit()
 
         # Check port availability without address (default to 'any'), must yield false
-        self.assertFalse(
-            check_port_availability(port=int(haproxy_service_port), protocol='tcp')
-        )
+        self.assertFalse(check_port_availability(port=int(haproxy_service_port), protocol='tcp'))
 
         # Set a addr_v4 listen-address
         self.cli_set(svc_laddr_base + [addr_v4])
         self.cli_commit()
 
         # Check port availability without address (default to 'any'), must yield false
-        self.assertFalse(
-            check_port_availability(port=int(haproxy_service_port), protocol='tcp')
-        )
+        self.assertFalse(check_port_availability(port=int(haproxy_service_port), protocol='tcp'))
         # Check port availability on addr_v4, must yield false
-        self.assertFalse(
-            check_port_availability(
-                address=addr_v4, port=int(haproxy_service_port), protocol='tcp'
-            )
-        )
+        self.assertFalse(check_port_availability(address=addr_v4, port=int(haproxy_service_port), protocol='tcp'))
         # Check port availability on addr_v6, must yield true
-        self.assertTrue(
-            check_port_availability(
-                address=addr_v6, port=int(haproxy_service_port), protocol='tcp'
-            )
-        )
+        self.assertTrue(check_port_availability(address=addr_v6, port=int(haproxy_service_port), protocol='tcp'))
 
         # Set a addr_v6 listen-address
         self.cli_delete(svc_laddr_base)
@@ -819,30 +800,18 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check port availability without address (default to 'any'), must yield false
-        self.assertFalse(
-            check_port_availability(port=int(haproxy_service_port), protocol='tcp')
-        )
+        self.assertFalse(check_port_availability(port=int(haproxy_service_port), protocol='tcp'))
         # Check port availability on addr_v4, must yield true
-        self.assertTrue(
-            check_port_availability(
-                address=addr_v4, port=int(haproxy_service_port), protocol='tcp'
-            )
-        )
+        self.assertTrue(check_port_availability(address=addr_v4, port=int(haproxy_service_port), protocol='tcp'))
         # Check port availability on addr_v6, must yield false
-        self.assertFalse(
-            check_port_availability(
-                address=addr_v6, port=int(haproxy_service_port), protocol='tcp'
-            )
-        )
+        self.assertFalse(check_port_availability(address=addr_v6, port=int(haproxy_service_port), protocol='tcp'))
 
         # Remove the specific listen-address
         self.cli_delete(svc_laddr_base)
         self.cli_commit()
 
         # Check port availability without address (default to 'any'), must yield false
-        self.assertFalse(
-            check_port_availability(port=int(haproxy_service_port), protocol='tcp')
-        )
+        self.assertFalse(check_port_availability(port=int(haproxy_service_port), protocol='tcp'))
 
 
 if __name__ == '__main__':

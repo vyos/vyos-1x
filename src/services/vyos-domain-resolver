@@ -31,7 +31,8 @@ from vyos.utils.convert import human_to_seconds
 from vyos.utils.dict import dict_search_args
 from vyos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
 from vyos.utils.file import makedir, chmod_775, write_file, read_file
-from vyos.utils.network import is_ipv4_address_or_range, is_ipv6_address_or_range
+from vyos.utils.network import is_ipv4_address_or_range
+from vyos.utils.network import is_ipv6_address_or_range
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.xml_ref import get_defaults

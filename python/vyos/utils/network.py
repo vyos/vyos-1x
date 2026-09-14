@@ -19,7 +19,6 @@ from json import loads
 from socket import AF_INET
 from socket import AF_INET6
 from vyos.utils.process import cmdl
-from vyos.utils.system import sysctl_read
 
 def _are_same_ip(one, two):
     from socket import inet_pton
@@ -478,6 +477,7 @@ def is_addr_assigned(
     from netifaces import interfaces # pylint: disable = no-name-in-module
     from vyos.utils.network import get_interface_config
     from vyos.utils.dict import dict_search
+    from vyos.utils.system import sysctl_read
 
     # Check if sysctl to allow nonlocal binds is set for given afi and caller allows nonlocal binds,
     # skip check accordingly
