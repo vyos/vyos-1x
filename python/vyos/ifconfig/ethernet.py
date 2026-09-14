@@ -19,7 +19,6 @@ from glob import glob
 
 from vyos.base import Warning
 from vyos.ethtool import Ethtool
-from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
@@ -136,18 +135,16 @@ class EthernetIf(Interface):
         >>> i.remove()
         """
 
-        # T7813: we do need to remove the VLAN subinterfaces first so we can
-        # properly stop the DHCP client and inform the DHCP server that we are
-        # returning the lease.
-        for vlan in Section.sub_interfaces(self.ifname):
-            Interface(vlan).remove()
+        # T7813: the base class removes all VLAN sub-interfaces and flushes the
+        # addresses of this interface - both require a link which is still up so
+        # a DHCP client can return its lease. A physical interface is "eternal"
+        # and thus survives this call.
+        super().remove()
 
         if self.exists(self.ifname):
             # interface is placed in A/D state when removed from config! It
             # will remain visible for the operating system.
             self.set_admin_state('down')
-
-        super().remove()
 
     def set_flow_control(self, enable, warn=True):
         """
