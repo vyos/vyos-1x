@@ -366,6 +366,50 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.assertEqual(conf['ipoe']['renew-time'], renew_time)
         self.assertEqual(conf['ipoe']['rebind-time'], rebind_time)
 
+    def test_ipoe_server_lease_time_override_warnings(self):
+        self.basic_config()
+
+        # accel-ppp fills in its own defaults for the timing options left
+        # unset, so "renew-time" on its own is already inconsistent: the
+        # default "rebind-time" (7/8 of the default 600s lease) is lower, and
+        # accel-ppp pulls the renewal back to 4/7 of it. Warnings are wrapped
+        # to 72 characters, so collapse the whitespace before matching.
+        self.set(['renew-time', '550'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"renew-time" (550) will be overridden by accel-ppp with 300, '
+            'derived from "lease-time" 600 and "rebind-time" 525',
+            out,
+        )
+        self.delete(['renew-time'])
+
+        # A "rebind-time" above the lease time is replaced by 7/8 of it
+        self.set(['lease-time', '600'])
+        self.set(['rebind-time', '700'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"rebind-time" (700) will be overridden by accel-ppp with 525, '
+            'derived from "lease-time" 600',
+            out,
+        )
+        self.delete(['rebind-time'])
+
+        # A "max-lease-time" below the lease time never takes effect
+        self.set(['max-lease-time', '500'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"max-lease-time" (500) is lower than "lease-time" (600) and '
+            'will have no effect',
+            out,
+        )
+        self.delete(['max-lease-time'])
+
+        # Timings accel-ppp accepts as-is are not reported
+        self.set(['renew-time', '300'])
+        self.set(['rebind-time', '525'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertNotIn('will be overridden', out)
+
     @unittest.skip("PPP is not a part of IPoE")
     def test_accel_ppp_options(self):
         pass
