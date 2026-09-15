@@ -71,7 +71,14 @@ class ReferenceTree:
         return bool(res)
 
     def get_owner(self, path):
-        return self.__lib.get_owner(self.__pointer, path.encode()).decode()
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        owner = self.__lib.get_owner(self.__pointer, path_str)
+        if not owner:
+            return None
+
+        return owner.decode()
 
     def get_multi_nodes(self, tag_value_placeholder='', as_tuple=False):
         import json
