@@ -116,6 +116,154 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(Interface(interface).get_admin_state(), 'up')
             ttl += 10
 
+    def test_vxlan_gbp(self):
+        interface = 'vxlan10'
+        path = self._base_path + [interface]
+        address = '192.0.2.1/24'
+        self.cli_set(path + ['vni', '10'])
+        self.cli_set(path + ['remote', '127.0.0.2'])
+        self.cli_set(path + ['address', address])
+        self.cli_set(path + ['mtu', '1450'])
+        self.cli_set(path + ['gbp'])
+        self.cli_commit()
+
+        options = get_interface_config(interface)
+        # iproute2 reports valueless flags as JSON null, so check presence.
+        self.assertIn('gbp', options['linkinfo']['info_data'])
+
+        # Reject incompatible extensions before changing the running tunnel.
+        self.cli_set(path + ['gpe'])
+        error = 'VXLAN-GBP and VXLAN-GPE cannot be used together'
+        with self.assertRaisesRegex(ConfigSessionError, error):
+            self.cli_commit()
+        current = get_interface_config(interface)
+        self.assertEqual(options['ifindex'], current['ifindex'])
+        self.assertEqual(options['linkinfo'], current['linkinfo'])
+        self.cli_discard()
+
+        # Removing and adding GBP must recreate the link and retain settings.
+        for enabled in [False, True]:
+            if enabled:
+                self.cli_set(path + ['gbp'])
+            else:
+                self.cli_delete(path + ['gbp'])
+            self.cli_commit()
+
+            current = get_interface_config(interface)
+            self.assertNotEqual(options['ifindex'], current['ifindex'])
+            self.assertEqual(enabled, 'gbp' in current['linkinfo']['info_data'])
+            self.assertEqual(10, current['linkinfo']['info_data']['id'])
+            self.assertEqual(1450, current['mtu'])
+            self.assertIn(address, Interface(interface).get_addr())
+            self.assertEqual('up', Interface(interface).get_admin_state())
+            options = current
+
+    def test_vxlan_gbp_shared_port(self):
+        first, second = 'vxlan10', 'vxlan20'
+        for interface, vni in [(first, '10'), (second, '20')]:
+            path = self._base_path + [interface]
+            self.cli_set(path + ['vni', vni])
+            self.cli_set(path + ['remote', '127.0.0.2'])
+        self.cli_set(self._base_path + [first, 'gbp'])
+        # ConfigError output is word-wrapped, so allow a line break here.
+        error = r'different "gbp"\s+setting'
+
+        # Omitted ports use 4789 and must participate in the check.
+        with self.assertRaisesRegex(ConfigSessionError, error):
+            self.cli_commit()
+        self.cli_set(self._base_path + [second, 'gbp'])
+        self.cli_commit()
+        for interface in [first, second]:
+            self.assertIn(
+                'gbp', get_interface_config(interface)['linkinfo']['info_data']
+            )
+
+        options = get_interface_config(second)
+        self.cli_delete(self._base_path + [second, 'gbp'])
+        with self.assertRaisesRegex(ConfigSessionError, error):
+            self.cli_commit()
+        current = get_interface_config(second)
+        self.assertEqual(options['ifindex'], current['ifindex'])
+
+        self.cli_set(self._base_path + [second, 'port', '55000'])
+        self.cli_commit()
+        current = get_interface_config(second)
+        self.assertNotIn('gbp', current['linkinfo']['info_data'])
+        for interface in [first, second]:
+            self.assertEqual('up', Interface(interface).get_admin_state())
+
+    def test_vxlan_gbp_separate_underlay_vrfs(self):
+        # The UDP socket binds to the VRF of the source interface, so tunnels
+        # whose source interfaces live in different VRFs never share a socket
+        # and may use the same port with different GBP settings.
+        first, second = 'vxlan10', 'vxlan20'
+        vrfs = {'eth1': 'red', 'eth2': 'blue'}
+        for vrf, table in [('red', '65010'), ('blue', '65020')]:
+            self.cli_set(['vrf', 'name', vrf, 'table', table])
+        for source, vrf in vrfs.items():
+            self.cli_set(['interfaces', 'ethernet', source, 'vrf', vrf])
+        for interface, vni, source in [(first, '10', 'eth1'), (second, '20', 'eth2')]:
+            path = self._base_path + [interface]
+            self.cli_set(path + ['vni', vni])
+            self.cli_set(path + ['remote', '127.0.0.2'])
+            self.cli_set(path + ['source-interface', source])
+            self.cli_set(path + ['mtu', '1450'])
+        self.cli_set(self._base_path + [first, 'gbp'])
+        self.cli_commit()
+
+        options = get_interface_config(second)
+        self.assertIn('gbp', get_interface_config(first)['linkinfo']['info_data'])
+        self.assertNotIn('gbp', options['linkinfo']['info_data'])
+        for interface in [first, second]:
+            self.assertEqual('up', Interface(interface).get_admin_state())
+
+        # ConfigError output is word-wrapped, so allow a line break here.
+        error = r'different "gbp"\s+setting'
+        # Source interfaces in the same VRF share the socket again.
+        self.cli_set(self._base_path + [second, 'source-interface', 'eth1'])
+        with self.assertRaisesRegex(ConfigSessionError, error):
+            self.cli_commit()
+        self.cli_discard()
+
+        # A socket that is not bound to a VRF conflicts with every VRF.
+        self.cli_delete(self._base_path + [second, 'source-interface'])
+        with self.assertRaisesRegex(ConfigSessionError, error):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Failed commits must not have touched the running tunnels.
+        current = get_interface_config(second)
+        self.assertEqual(options['ifindex'], current['ifindex'])
+        self.assertEqual(options['linkinfo'], current['linkinfo'])
+
+        for source in vrfs:
+            self.cli_delete(['interfaces', 'ethernet', source, 'vrf'])
+        for vrf in vrfs.values():
+            self.cli_delete(['vrf', 'name', vrf])
+        self.cli_commit()
+
+    def test_vxlan_gbp_separate_address_families(self):
+        for interface, remote in [('vxlan10', '127.0.0.2'), ('vxlan20', '::1')]:
+            path = self._base_path + [interface]
+            self.cli_set(path + ['vni', '10'])
+            self.cli_set(path + ['remote', remote])
+        self.cli_set(self._base_path + ['vxlan10', 'gbp'])
+        self.cli_commit()
+        for interface in ['vxlan10', 'vxlan20']:
+            self.assertEqual('up', Interface(interface).get_admin_state())
+
+    def test_vxlan_gbp_external(self):
+        interface = 'vxlan10'
+        path = self._base_path + [interface]
+        self.cli_set(path + ['parameters', 'external'])
+        self.cli_set(path + ['source-address', '192.0.2.1'])
+        self.cli_set(path + ['gbp'])
+        # External mode emits a warning but remains a valid configuration.
+        self.cli_commit()
+        options = get_interface_config(interface)['linkinfo']['info_data']
+        self.assertIn('gbp', options)
+        self.assertTrue(options['external'])
+        self.assertEqual('up', Interface(interface).get_admin_state())
 
     def test_vxlan_group_remote_error(self):
         intf = 'vxlan60'
