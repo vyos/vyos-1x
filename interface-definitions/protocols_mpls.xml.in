@@ -574,7 +574,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/generic-interface-multi.xml.i>
+          #include <include/dependent-error-generic-interface-multi.xml.i>
         </children>
       </node>
     </children>
