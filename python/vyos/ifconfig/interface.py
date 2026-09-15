@@ -41,6 +41,7 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import process_named_running
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
 from vyos.utils.process import cmdl
@@ -1543,7 +1544,9 @@ class Interface(Control):
         Sequence: runtime-mask so Restart=always cannot start a replacement;
         SIGKILL the unit (no STOP script, address stays); dhclient -r with a
         separate pidfile and the unit -cf/-lf (capped so a silent server
-        cannot block conf_mode); unmask and leave the unit stopped.
+        cannot block conf_mode); stop the unit while still masked, then
+        unmask. Unmask-before-stop lets Restart=always respawn a client
+        that smoketest tearDown still sees.
 
         Returns True if RELEASE was sent or there was no lease to send.
         """
@@ -1607,6 +1610,8 @@ class Interface(Control):
                     os.remove(release_pid)
                 except FileNotFoundError:
                     pass
+            # Stop while masked so Restart=always cannot respawn on unmask.
+            stop_systemd_unit(systemd_service, netns=netns)
             rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
             rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
         return released
@@ -1667,6 +1672,12 @@ class Interface(Control):
             if release:
                 released = self.release_dhcp_lease()
             stop_systemd_unit(systemd_service, netns=netns)
+            pid = process_named_running('dhclient', cmdline=self.ifname)
+            if pid:
+                try:
+                    os.kill(pid, 9)
+                except ProcessLookupError:
+                    pass
 
             # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
             # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
