@@ -190,14 +190,15 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         # Supply a VNI so the candidate reaches the GPE external-mode check.
         self.cli_delete(path + ['parameters', 'external'])
         self.cli_set(path + ['vni', '111'])
-        with self.assertRaisesRegex(ConfigSessionError,
-                'VXLAN-GPE is only supported when "external" CLI option is used.'):
+        with self.assertRaisesRegex(
+            ConfigSessionError,
+            'VXLAN-GPE is only supported when "external" CLI option is used.',
+        ):
             self.cli_commit()
 
         # A rejected candidate must not change or recreate the running tunnel.
         self.assertEqual(
-            running_config,
-            self.op_mode(['show', 'configuration', 'commands'])
+            running_config, self.op_mode(['show', 'configuration', 'commands'])
         )
         current = get_interface_config(interface)
         self.assertEqual(options['ifindex'], current['ifindex'])

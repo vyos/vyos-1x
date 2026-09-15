@@ -143,10 +143,10 @@ def verify(vxlan):
                                 f'CLI option is used and "vni-filter" is unset. '\
                                 f'Additional tunnels: {other_tunnels}')
 
-    if 'gpe' in vxlan and \
-            dict_search('parameters.external', vxlan) is None:
-        raise ConfigError(f'VXLAN-GPE is only supported when "external" '\
-                          f'CLI option is used.')
+    if 'gpe' in vxlan and dict_search('parameters.external', vxlan) is None:
+        raise ConfigError(
+            f'VXLAN-GPE is only supported when "external" ' f'CLI option is used.'
+        )
 
     if 'source_interface' in vxlan:
         # VXLAN adds at least an overhead of 50 byte - we need to check the
