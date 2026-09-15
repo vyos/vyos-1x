@@ -22,6 +22,14 @@ from subprocess import Popen, PIPE, TimeoutExpired
 
 timeout_minutes = 20 # 20 minutes per test should be enough?..
 timeout_seconds = timeout_minutes * 60
+
+# One test hitting the timeout may just be one slow test. Several in a row
+# means the system under test is no longer answering at all, and every
+# remaining test will sit out its own full timeout before reporting a result
+# that says nothing - a whole suite can burn hours that way. Stop instead,
+# and say which tests never got to run.
+max_consecutive_timeouts = 2
+
 tests = []
 
 for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
@@ -33,6 +41,8 @@ for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
             tests.append(test_file)
 
 fails = []
+skipped = []
+consecutive_timeouts = 0
 n = len(tests)
 for i, test_file in enumerate(tests):
     print(f'Running Testcase ({i+1}/{n}): {test_file}')
@@ -40,13 +50,21 @@ for i, test_file in enumerate(tests):
     try:
         (output, err) = process.communicate(timeout=timeout_seconds)
         exit_code = process.returncode
+        consecutive_timeouts = 0
     except TimeoutExpired:
         print(f'TIMEOUT ({timeout_minutes} minutes) expired - consider test failed!')
         exit_code = 1
+        consecutive_timeouts += 1
         process.kill()
     # We do not want an instant fail - other tests should be run, too
     if exit_code != 0:
         fails.append(test_file)
+
+    if consecutive_timeouts >= max_consecutive_timeouts:
+        skipped = tests[i + 1:]
+        print(f'ERROR: {consecutive_timeouts} tests timed out in a row - the '
+              'system under test is not responding, abandoning the run')
+        break
 
 if not len(fails):
     print(f'SUCCESS! All {n} tests passed.')
@@ -54,4 +72,7 @@ if not len(fails):
 
 print(f'ERROR: {len(fails)}/{n} tests failed:')
 print('* ' + '\n* '.join(fails))
+if skipped:
+    print(f'{len(skipped)}/{n} tests were never run:')
+    print('* ' + '\n* '.join(skipped))
 exit(1)
