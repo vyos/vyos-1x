@@ -182,6 +182,14 @@
         <zeroOrMore>
           <ref name="completionHelp"/>
         </zeroOrMore>
+        <zeroOrMore>
+          <element name="kind">
+            <text/>
+          </element>
+        </zeroOrMore>
+        <optional>
+          <ref name="dependency"/>
+        </optional>
         <optional>
           <!--
             "docs" is used to store documentation for a node in a structured format
@@ -365,5 +373,24 @@
         </zeroOrMore>
       </interleave>
     </element>
+  </define>
+  <define name="dependency">
+    <element name="dependency">
+      <interleave>
+        <ref name="kindAttr"/>
+        <ref name="alertAttr"/>
+      </interleave>
+    </element>
+  </define>
+  <define name="kindAttr">
+    <attribute name="kind"/>
+  </define>
+  <define name="alertAttr">
+    <attribute name="alert">
+      <choice>
+        <value>error</value>
+        <value>warning</value>
+      </choice>
+    </attribute>
   </define>
 </grammar>
