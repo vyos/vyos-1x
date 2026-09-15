@@ -19,7 +19,7 @@
 {% if peer_conf.childless is vyos_defined %}
         childless = {{ peer_conf.childless }}
 {% endif %}
-        proposals = {{ ike | get_esp_ike_cipher | join(',') }}
+        proposals = {{ ike | get_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
 {% if peer_conf.virtual_address is vyos_defined %}
         vips = {{ peer_conf.virtual_address | join(', ') }}
@@ -77,7 +77,7 @@
 {% if peer_conf.vti.bind is vyos_defined and peer_conf.tunnel is not vyos_defined %}
 {%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is vyos_defined else esp_group[ peer_conf.default_esp_group ] %}
             {{ name }}-vti {
-                esp_proposals = {{ vti_esp | get_esp_ike_cipher(ike) | join(',') }}
+                esp_proposals = {{ vti_esp | get_esp_cipher(ike) | join(',') }}
 {%     if vti_esp.life_bytes is vyos_defined %}
                 life_bytes = {{ vti_esp.life_bytes }}
 {%     endif %}
@@ -144,7 +144,7 @@
 {%         set remote_port = tunnel_conf.remote.port if tunnel_conf.remote.port is vyos_defined else '' %}
 {%         set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             {{ name }}-tunnel-{{ tunnel_id }} {
-                esp_proposals = {{ tunnel_esp | get_esp_ike_cipher(ike) | join(',') }}
+                esp_proposals = {{ tunnel_esp | get_esp_cipher(ike) | join(',') }}
 {%         if tunnel_esp.life_bytes is vyos_defined %}
                 life_bytes = {{ tunnel_esp.life_bytes }}
 {%         endif %}
