@@ -33,18 +33,20 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertFalse(vyos.utils.network.is_intf_addr_assigned('eth99', '192.0.2.1'))
 
     def test_is_intf_addr_assigned_rejects_invalid(self):
-        # T9207: a range used to raise ValueError out of the ipaddress module,
-        # and a range carrying a zone index was even reported as assigned
-        # because the "%" was split off before the range was ever noticed
-        for addr in ['192.0.2.1-192.0.2.2', '::1%lo-::2%lo', 'VyOS', '']:
-            with self.assertRaises(ValueError):
+        # T9207: a range used to raise ValueError out of the ipaddress module
+        for addr in ['192.0.2.1-192.0.2.2', 'VyOS', '']:
+            with self.assertRaises(ValueError) as e:
                 vyos.utils.network.is_intf_addr_assigned('lo', addr)
+            self.assertIn('not a valid IPv4 or IPv6 address', str(e.exception))
 
         # a zone index is rejected rather than stripped: it was never compared
-        # against ifname, so '::1%eth0' used to match ::1 sitting on lo
-        for addr in ['::1%lo', 'fe80::1%eth0']:
-            with self.assertRaises(ValueError):
+        # against ifname, so '::1%eth0' used to match ::1 sitting on lo. It is
+        # a caller-side mistake and reported as such, separately from an
+        # invalid address
+        for addr in ['::1%lo', 'fe80::1%eth0', '::1%lo-::2%lo']:
+            with self.assertRaises(ValueError) as e:
                 vyos.utils.network.is_intf_addr_assigned('lo', addr)
+            self.assertIn('carries a zone index', str(e.exception))
 
     def test_is_ipv6_link_local(self):
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('169.254.0.1'))

@@ -499,11 +499,16 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     from vyos.template import is_ip
     from ipaddress import ip_interface
 
-    # The ipaddress module accepts a zone index since Python 3.9, so is_ip()
-    # alone would let "fe80::1%eth0" pass. "ip --json address show" never
-    # reports one, so such a value could only ever match by ignoring the zone,
-    # which reported an address as assigned to the wrong interface.
-    if '%' in addr or not is_ip(addr):
+    # A zone index is a caller-side mistake, not bad operator input: the
+    # interface to check against is already an argument of this function. Keep
+    # it separate from the address check so the two are told apart. Note that
+    # is_ip() does not cover this - the ipaddress module accepts a zone index
+    # since Python 3.9, while "ip --json address show" never reports one, so
+    # such a value could only ever match by ignoring the zone, which reported
+    # an address as assigned to the wrong interface.
+    if '%' in addr:
+        raise ValueError(f'{addr} carries a zone index, pass the interface as "ifname"')
+    if not is_ip(addr):
         raise ValueError(f'{addr} is not a valid IPv4 or IPv6 address')
 
     # Pass the command as a list and let rc_cmd() enter the namespace, so
