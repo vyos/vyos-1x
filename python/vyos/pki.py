@@ -112,12 +112,10 @@ def encode_dh_parameters(dh_parameters):
 # EC Helper
 
 def get_elliptic_curve(size):
-    curve_func = None
     name = f'SECP{size}R1'
-    if hasattr(ec, name):
-        curve_func = getattr(ec, name)
-    else:
-        curve_func = ec.SECP256R1() # Default to SECP256R1
+    # getattr() must yield the class, not an instance - the caller below is the
+    # one that instantiates it
+    curve_func = getattr(ec, name, ec.SECP256R1)  # Default to SECP256R1
     return curve_func()
 
 # Creation functions
