@@ -24,6 +24,28 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertTrue(vyos.utils.network.is_addr_assigned('::1'))
         self.assertFalse(vyos.utils.network.is_addr_assigned('127.251.255.123'))
 
+    def test_is_intf_addr_assigned(self):
+        self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '127.0.0.1'))
+        self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '127.0.0.1/8'))
+        self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '::1'))
+        self.assertFalse(vyos.utils.network.is_intf_addr_assigned('lo', '192.0.2.1'))
+        # a non-existent interface simply has no addresses assigned
+        self.assertFalse(vyos.utils.network.is_intf_addr_assigned('eth99', '192.0.2.1'))
+
+    def test_is_intf_addr_assigned_rejects_invalid(self):
+        # T9207: a range used to raise ValueError out of the ipaddress module,
+        # and a range carrying a zone index was even reported as assigned
+        # because the "%" was split off before the range was ever noticed
+        for addr in ['192.0.2.1-192.0.2.2', '::1%lo-::2%lo', 'VyOS', '']:
+            with self.assertRaises(ValueError):
+                vyos.utils.network.is_intf_addr_assigned('lo', addr)
+
+        # a zone index is rejected rather than stripped: it was never compared
+        # against ifname, so '::1%eth0' used to match ::1 sitting on lo
+        for addr in ['::1%lo', 'fe80::1%eth0']:
+            with self.assertRaises(ValueError):
+                vyos.utils.network.is_intf_addr_assigned('lo', addr)
+
     def test_is_ipv6_link_local(self):
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('169.254.0.1'))
         self.assertTrue(vyos.utils.network.is_ipv6_link_local('fe80::'))

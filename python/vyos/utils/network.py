@@ -487,28 +487,40 @@ def is_addr_assigned(ip_address, vrf=None, return_ifname=False, include_vrf=Fals
 def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     """
     Verify if the given IPv4/IPv6 address is assigned to specific interface.
-    It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
+    It can check both a single IP address (e.g. 192.0.2.1) or an assigned CIDR
     address 192.0.2.1/24.
+
+    A zone index ("%interface" suffix) is rejected - the interface to check
+    against is this function's own argument.
     """
     import jmespath
 
     from vyos.utils.process import rc_cmd
+    from vyos.template import is_ip
     from ipaddress import ip_interface
 
-    netns_cmd = f'ip netns exec {netns}' if netns else ''
-    rc, out = rc_cmd(f'{netns_cmd} ip --json address show dev {ifname}')
-    if rc == 0:
-        json_out = loads(out)
-        addresses = jmespath.search("[].addr_info[].{family: family, address: local, prefixlen: prefixlen}", json_out)
-        for address_info in addresses:
-            address = address_info['address']
-            prefixlen = address_info['prefixlen']
-            # Remove the interface name if present in the given address
-            if '%' in addr:
-                addr = addr.split('%')[0]
-            interface = ip_interface(f"{address}/{prefixlen}")
-            if ip_interface(addr) == interface or address == addr:
-                return True
+    # The ipaddress module accepts a zone index since Python 3.9, so is_ip()
+    # alone would let "fe80::1%eth0" pass. "ip --json address show" never
+    # reports one, so such a value could only ever match by ignoring the zone,
+    # which reported an address as assigned to the wrong interface.
+    if '%' in addr or not is_ip(addr):
+        raise ValueError(f'{addr} is not a valid IPv4 or IPv6 address')
+
+    # Pass the command as a list and let rc_cmd() enter the namespace, so
+    # neither ifname nor netns reach a shell
+    rc, out = rc_cmd(['ip', '--json', 'address', 'show', 'dev', ifname], netns=netns)
+    if rc != 0:
+        return False
+
+    wanted = ip_interface(addr)
+    addresses = jmespath.search(
+        '[].addr_info[].{address: local, prefixlen: prefixlen}', loads(out)
+    )
+    for address_info in addresses or []:
+        address = address_info['address']
+        prefixlen = address_info['prefixlen']
+        if wanted == ip_interface(f'{address}/{prefixlen}') or address == addr:
+            return True
 
     return False
 
