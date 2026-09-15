@@ -406,9 +406,7 @@
       <format>txt</format>
       <description>Interface name</description>
     </valueHelp>
-    <constraint>
-      #include <include/constraint/interface-name.xml.i>
-    </constraint>
+    #include <include/constraint/dependent-error-interface-name.xml.i>
   </properties>
   <children>
     <leafNode name="area">
