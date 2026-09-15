@@ -826,6 +826,63 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_secrets_lines:
             self.assertRegex(swanctl_conf, fr'{line}')
 
+    def test_site_to_site_peer_unique(self):
+        # T8952: site-to-site peers had no way to set strongSwan's
+        # 'unique' connection policy on their own - it could only be
+        # driven by the global 'disable-uniqreqids' option. Verify the
+        # new per-peer 'unique' knob is rendered into swanctl.conf, and
+        # that an explicit per-peer override takes precedence over the global default.
+        local_address = '192.0.2.10'
+        vti = 'vti10'
+
+        self.cli_set(vti_path + [vti, 'address', '10.1.1.1/24'])
+
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        psk_base_path = base_path + ['authentication', 'psk', connection_name]
+        self.cli_set(psk_base_path + ['id', local_id])
+        self.cli_set(psk_base_path + ['id', remote_id])
+        self.cli_set(psk_base_path + ['id', peer_ip])
+        self.cli_set(psk_base_path + ['secret', secret])
+
+        # Site to site
+        peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
+        self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_base_path + ['connection-type', 'none'])
+        self.cli_set(peer_base_path + ['ike-group', ike_group])
+        self.cli_set(peer_base_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_base_path + ['local-address', local_address])
+        self.cli_set(peer_base_path + ['remote-address', peer_ip])
+
+        tunnel_base_path = peer_base_path + ['tunnel', '1']
+        self.cli_set(tunnel_base_path + ['local', 'prefix', '172.16.10.0/24'])
+        self.cli_set(tunnel_base_path + ['remote', 'prefix', '172.17.10.0/24'])
+
+        self.cli_set(peer_base_path + ['vti', 'bind', vti])
+        self.cli_set(peer_base_path + ['vti', 'esp-group', esp_group])
+
+        # Per-peer 'unique' should be rendered when no global override exists
+        self.cli_set(peer_base_path + ['unique', 'replace'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertIn('unique = replace', swanctl_conf)
+
+        # An explicit per-peer 'unique' must take precedence over the
+        # global 'disable-uniqreqids' default - a specific choice on the
+        # peer should not be silently overridden by the blanket option
+        self.cli_set(base_path + ['disable-uniqreqids'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertIn(f'unique = replace', swanctl_conf)
+        self.assertNotIn(f'unique = never', swanctl_conf)
+
+        # With the per-peer override removed, the global default applies again
+        self.cli_delete(peer_base_path + ['unique'])
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        self.assertIn(f'unique = never', swanctl_conf)
 
     def test_dmvpn(self):
         ike_lifetime = '3600'

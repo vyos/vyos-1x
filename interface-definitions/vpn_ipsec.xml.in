@@ -1013,29 +1013,7 @@
                       <multi/>
                     </properties>
                   </leafNode>
-                  <leafNode name="unique">
-                    <properties>
-                      <help>Connection uniqueness enforcement policy</help>
-                      <completionHelp>
-                        <list>never keep replace</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>never</format>
-                        <description>Never enforce connection uniqueness</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>keep</format>
-                        <description>Reject new connection attempts if the same user already has an active connection</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>replace</format>
-                        <description>Delete any existing connection if a new one for the same user gets established</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(never|keep|replace)</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/vpn-ipsec-unique.xml.i>
                 </children>
               </tagNode>
               <node name="dhcp">
@@ -1431,6 +1409,7 @@
                       </node>
                     </children>
                   </node>
+                  #include <include/vpn-ipsec-unique.xml.i>
                 </children>
               </tagNode>
             </children>
