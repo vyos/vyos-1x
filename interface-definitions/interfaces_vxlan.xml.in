@@ -19,6 +19,12 @@
           #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/generic-description.xml.i>
           #include <include/interface/disable.xml.i>
+          <leafNode name="gbp">
+            <properties>
+              <help>Enable Group Policy extension (VXLAN-GBP)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="gpe">
             <properties>
               <help>Enable Generic Protocol extension (VXLAN-GPE)</help>
