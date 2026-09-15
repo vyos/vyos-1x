@@ -171,6 +171,40 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertTrue(options['linkinfo']['info_data']['external'])
         self.assertEqual('vxlan',    options['linkinfo']['info_kind'])
 
+    def test_vxlan_gpe_external(self):
+        interface = 'vxlan0'
+        path = self._base_path + [interface]
+        self.cli_set(path + ['parameters', 'external'])
+        self.cli_set(path + ['source-address', '192.0.2.1'])
+        self.cli_set(path + ['gpe'])
+        self.cli_commit()
+
+        options = get_interface_config(interface)
+        self.assertEqual('vxlan', options['linkinfo']['info_kind'])
+        self.assertTrue(options['linkinfo']['info_data']['external'])
+        # iproute2 reports the enabled GPE flag as a JSON null value.
+        self.assertIn('gpe', options['linkinfo']['info_data'])
+        self.assertEqual(Interface(interface).get_admin_state(), 'up')
+        running_config = self.op_mode(['show', 'configuration', 'commands'])
+
+        # Supply a VNI so the candidate reaches the GPE external-mode check.
+        self.cli_delete(path + ['parameters', 'external'])
+        self.cli_set(path + ['vni', '111'])
+        with self.assertRaisesRegex(ConfigSessionError,
+                'VXLAN-GPE is only supported when "external" CLI option is used.'):
+            self.cli_commit()
+
+        # A rejected candidate must not change or recreate the running tunnel.
+        self.assertEqual(
+            running_config,
+            self.op_mode(['show', 'configuration', 'commands'])
+        )
+        current = get_interface_config(interface)
+        self.assertEqual(options['ifindex'], current['ifindex'])
+        self.assertEqual(options['linkinfo'], current['linkinfo'])
+        self.assertEqual(Interface(interface).get_admin_state(), 'up')
+        self.cli_discard()
+
     def test_vxlan_vlan_vni_mapping(self):
         bridge = 'br0'
         interface = 'vxlan0'
