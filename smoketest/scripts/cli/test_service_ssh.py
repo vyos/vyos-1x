@@ -29,6 +29,7 @@ from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
+from vyos.utils.network import get_vrf_pids
 from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'sshd'
@@ -253,8 +254,8 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-        self.assertIn(PROCESS_NAME, tmp)
+        vrf_procs = [name for _, name in get_vrf_pids(vrf)]
+        self.assertIn(PROCESS_NAME, vrf_procs)
 
     def test_ssh_vrf_multi(self):
         # Check if SSH service can be bound to multiple VRFs
@@ -276,8 +277,8 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
 
         # Check for process in VRF
         for vrf in vrfs:
-            tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-            self.assertIn(PROCESS_NAME, tmp)
+            vrf_procs = [name for _, name in get_vrf_pids(vrf)]
+            self.assertIn(PROCESS_NAME, vrf_procs)
 
     def test_ssh_login(self):
         # Perform SSH login and command execution with a predefined user. The
