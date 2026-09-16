@@ -13,3 +13,6 @@ iif = "iif"      # incoming interface
 
 # OpenSSL configuration file
 Widgits = "Widgits"      # organization name
+
+# systemd daemon names
+localed = "localed"      # systemd-localed(8), the locale daemon
