@@ -164,6 +164,26 @@ def get_config(config=None):
 
     return monitoring
 
+
+def duration_to_nanoseconds(value):
+    duration_multipliers_ns = {
+        'ns': 1,
+        'us': 1_000,
+        'µs': 1_000,
+        'ms': 1_000_000,
+        's': 1_000_000_000,
+        'm': 60_000_000_000,
+        'h': 3_600_000_000_000,
+    }
+
+    for unit, multiplier in duration_multipliers_ns.items():
+        if value.endswith(unit):
+            amount = int(value[: -len(unit)])
+            return amount * multiplier
+
+    raise ConfigError(f'Invalid duration: {value}')
+
+
 def verify(monitoring):
     # bail out early - looks like removal from running config
     if not monitoring:
@@ -176,6 +196,24 @@ def verify(monitoring):
         for tag, tag_config in monitoring['global_tag'].items():
             if 'value' not in tag_config:
                 raise ConfigError(f'Global tag "{tag}" has no value assigned!')
+
+    # Verify agent
+    max_agent_duration_ns = 9223372036854775807
+
+    if 'agent' in monitoring:
+        for option in (
+            'interval',
+            'collection_jitter',
+            'flush_interval',
+            'flush_jitter',
+        ):
+            if option not in monitoring['agent']:
+                continue
+
+            duration_ns = duration_to_nanoseconds(monitoring['agent'][option])
+
+            if duration_ns > max_agent_duration_ns:
+                raise ConfigError(f'{option.replace("_", "-")} value is too large')
 
     # Verify influxdb
     if 'influxdb' in monitoring:
