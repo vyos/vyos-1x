@@ -138,7 +138,7 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['system', 'option', 'kernel', 'quiet'])
 
         self.cli_set(['system', 'option', 'kernel', 'amd-pstate-driver', amd_pstate_mode])
-        cpu_vendor = get_cpus()[0]['vendor_id']
+        cpu_vendor = get_cpus()[0].get('vendor_id', 'unknown')
         if cpu_vendor != 'AuthenticAMD':
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
