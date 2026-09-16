@@ -135,6 +135,31 @@ def get_vrf_members(vrf: str) -> list:
         pass
     return interfaces
 
+def get_vrf_pids(vrf: str) -> list[tuple[int, str]]:
+    """
+    Get list of processes running inside a given VRF
+
+    "ip vrf pids <vrf>" prints one "<pid>  <name>" pair per line:
+      44425  dhclient
+
+    :param vrf: str
+    :return: list of (pid, process_name) tuples
+    """
+    processes = []
+    if not interface_exists(vrf):
+        return processes
+    try:
+        output = cmdl(['ip', 'vrf', 'pids', vrf])
+    except Exception:
+        return processes
+    for line in output.splitlines():
+        tmp = line.split(maxsplit=1)
+        # skip blank lines and any output not of the "<pid> <name>" form
+        if len(tmp) != 2 or not tmp[0].isdigit():
+            continue
+        processes.append((int(tmp[0]), tmp[1].strip()))
+    return processes
+
 def get_interface_vrf(interface):
     """ Returns VRF of given interface """
     from vyos.utils.dict import dict_search

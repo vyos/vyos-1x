@@ -36,6 +36,7 @@ from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_vrf
+from vyos.utils.network import get_vrf_pids
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import interface_exists
 from vyos.utils.network import is_intf_addr_assigned
@@ -54,6 +55,13 @@ dhcp6c_process_name = 'dhcp6c'
 # the expected state is reached, so a longer window only delays the failure
 # path.
 PROCESS_WAIT_TIMEOUT = 60
+
+# Re-checking which VRF a client already running sits in only has to outlast a
+# re-exec, which takes milliseconds - unlike waiting for the client to appear
+# at all. This check runs once per interface, so a long window here is
+# multiplied by the number of interfaces under test and can exhaust the
+# harness' per-testcase budget before reporting anything.
+VRF_PID_WAIT_TIMEOUT = 10
 
 MSG_TESTCASE_UNSUPPORTED = 'unsupported on interface family'
 
@@ -237,6 +245,27 @@ class BasicInterfaceTest:
             # always forward to base class
             super().tearDown()
 
+        def assert_process_in_vrf(self, process_name, interface, vrf_name):
+            """Assert the DHCP client for an interface runs inside a VRF.
+
+            The client re-executes itself at moments of its own choosing, so a
+            PID read a moment ago can already be gone by the time the VRF's
+            process list is read - the process is there, it simply has a new
+            PID. Resolving the PID and reading the list as one step, and
+            retrying, makes a restart cost a retry instead of a failure.
+            """
+            def running_in_vrf():
+                pid = process_named_running(process_name, cmdline=interface)
+                if not pid:
+                    return False
+                return any(p == pid for p, _ in get_vrf_pids(vrf_name))
+
+            found, _ = self.wait_for_result(running_in_vrf, True,
+                                            timeout=VRF_PID_WAIT_TIMEOUT)
+            self.assertTrue(found,
+                f'no {process_name} process for interface {interface} found '
+                f'in VRF {vrf_name}')
+
         def get_process_cmdline(self, process_name, interface, pid):
             # dhclient re-executes itself while daemonizing - the PID found
             # right after commit may already be gone when /proc is read.
@@ -362,8 +391,8 @@ class BasicInterfaceTest:
                 self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
                 # .. and the process must run inside the appropriate VRF
                 # instance
-                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
-                self.assertIn(str(dhclient_pid), vrf_pids)
+                self.assert_process_in_vrf(dhclient_process_name, interface,
+                                           vrf_name)
 
             # T5103: remove interface from VRF instance and move DHCP client
             # back to default VRF. This must restart the DHCP client process
@@ -388,8 +417,8 @@ class BasicInterfaceTest:
                 self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
                 # .. and the process must no longer run inside the VRF
                 # instance
-                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
-                self.assertNotIn(str(dhclient_pid), vrf_pids)
+                vrf_pids = [p for p, _ in get_vrf_pids(vrf_name)]
+                self.assertNotIn(dhclient_pid, vrf_pids)
 
             self.cli_delete(['vrf', 'name', vrf_name])
 
@@ -421,8 +450,8 @@ class BasicInterfaceTest:
                                             timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
-                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
-                self.assertIn(str(tmp), vrf_pids)
+                self.assert_process_in_vrf(dhcp6c_process_name, interface,
+                                           vrf_name)
 
             # T7135: remove interface from VRF instance and move DHCP client
             # back to default VRF. This must restart the DHCP client process
@@ -441,8 +470,8 @@ class BasicInterfaceTest:
                                             timeout=PROCESS_WAIT_TIMEOUT)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
-                vrf_pids = cmdl(['ip', 'vrf', 'pids', vrf_name])
-                self.assertNotIn(str(tmp), vrf_pids)
+                vrf_pids = [p for p, _ in get_vrf_pids(vrf_name)]
+                self.assertNotIn(tmp, vrf_pids)
 
 
             self.cli_delete(['vrf', 'name', vrf_name])
