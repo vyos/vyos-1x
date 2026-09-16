@@ -187,6 +187,7 @@ def get_config(config=None):
     for node in [['offload', 'dco'], ['mode'], ['device-type']]:
         if is_node_changed(conf, base + [ifname] + node):
             openvpn.update({'restart_required': {}})
+            break
 
     # Detect changes that are limited to per-client CCD entries (T6478).
     # OpenVPN reads client-config-dir files at connect time, so adding or
