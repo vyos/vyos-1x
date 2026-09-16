@@ -12,6 +12,7 @@
       "test_tpm_tests": true,
       "test_vpp": true,
       "test_vpp_runner": ["ubuntu-24.04"],
+      "test_ifname": true,
       "mirror_enabled": true
     },
     "circinus": {
@@ -27,6 +28,7 @@
       "test_vpp": true,
       "test_vpp_runner": ["self-hosted", "vpp"],
       "smoketests_runner": ["self-hosted", "smoketests"],
+      "test_ifname": false,
       "mirror_enabled": false
     },
     "sagitta": {
@@ -41,6 +43,7 @@
       "test_cli_command": "test-no-interfaces",
       "test_tpm_tests": false,
       "test_vpp": false,
+      "test_ifname": false,
       "mirror_enabled": false
     }
   }
