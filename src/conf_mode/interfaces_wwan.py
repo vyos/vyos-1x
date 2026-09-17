@@ -134,6 +134,10 @@ def generate(wwan):
     return None
 
 def apply(wwan):
+    """
+    Apply the CLI config: start/stop ModemManager as needed, (re)connect
+    or disconnect the modem via mmcli, and update the kernel interface.
+    """
     # ModemManager is required to dial WWAN connections - one instance is
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.
