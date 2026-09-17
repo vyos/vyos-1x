@@ -18,6 +18,7 @@ import argparse
 
 from sys import exit
 from vyos.configquery import ConfigTreeQuery
+from vyos.utils.network import get_wwan_modem_ports
 from vyos.utils.process import cmdl
 
 parser = argparse.ArgumentParser()
@@ -55,9 +56,17 @@ if __name__ == '__main__':
         print(f'Interface "{args.interface}" unconfigured!')
         exit(1)
 
-    # remove the WWAN prefix from the interface, required for the CDC interface
-    if_num = args.interface.replace('wwan','')
-    cdc = f'/dev/cdc-wdm{if_num}'
+    # Find the real QMI control port for this interface by asking
+    # ModemManager which modem actually owns it - the WWAN interface
+    # number and the cdc-wdm device number are independently enumerated
+    # and are not guaranteed to match on a box with more than one modem
+    # (T7487), so this can't be derived from the interface name alone.
+    _, ports = get_wwan_modem_ports(args.interface)
+    qmi_port = next((p.split(' ')[0] for p in ports if p.endswith('(qmi)')), None)
+    if qmi_port is None:
+        print(f'No QMI control port found for interface "{args.interface}"!')
+        exit(1)
+    cdc = f'/dev/{qmi_port}'
 
     if args.model:
         qmi_cmd(cdc, '--dms-get-model')

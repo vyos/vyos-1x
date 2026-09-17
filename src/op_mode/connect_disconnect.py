@@ -21,6 +21,7 @@ from psutil import process_iter
 
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
+from vyos.utils.network import get_wwan_modem
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import DEVNULL
 
@@ -75,7 +76,10 @@ def disconnect(interface):
         if not is_wwan_connected(interface):
             print(f'Interface {interface}: connection is already down')
         else:
-            modem = interface.lstrip('wwan')
+            modem = get_wwan_modem(interface)
+            if modem is None:
+                print(f'Interface {interface}: no modem found!')
+                return
             call(f'mmcli --modem {modem} --simple-disconnect', stdout=DEVNULL)
     else:
         print(f'Unknown interface {interface}, cannot disconnect. Aborting!')
