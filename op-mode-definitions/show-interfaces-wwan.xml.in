@@ -84,7 +84,7 @@
                     <properties>
                       <help>Show WWAN module detailed information summary</help>
                     </properties>
-                    <command>bash -c "if cli-shell-api existsActive interfaces wwan $4; then mmcli --modem ${4#wwan}; else echo \"Interface \"$4\" unconfigured!\"; fi"</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --detail</command>
                   </leafNode>
                   <leafNode name="log">
                     <properties>
