@@ -1032,15 +1032,16 @@ def kea_vendor_option_defs(config):
     return dumps(kea_parse_vendor_option_defs(config), indent=12)
 
 @register_filter('kea_shared_network_json')
-def kea_shared_network_json(shared_networks):
+def kea_shared_network_json(config):
     from vyos.kea import kea_parse_options
     from vyos.kea import kea_parse_subnet
     from vyos.kea import kea_parse_ddns_settings
     from json import dumps
     out = []
+    shared_networks = config.get('shared_network_name', {})
 
-    for name, config in shared_networks.items():
-        if 'disable' in config:
+    for name, network_config in shared_networks.items():
+        if 'disable' in network_config:
             continue
 
         network = {
@@ -1050,31 +1051,35 @@ def kea_shared_network_json(shared_networks):
             'user-context': {'enable-ping-check': False}
         }
 
-        if 'dynamic_dns_update' in config:
-            network.update(kea_parse_ddns_settings(config['dynamic_dns_update']))
+        if 'dynamic_dns_update' in network_config:
+            network.update(
+                kea_parse_ddns_settings(network_config['dynamic_dns_update'])
+            )
 
-        if 'option' in config:
-            network['option-data'] = kea_parse_options(config['option'])
+        if 'option' in network_config:
+            network['option-data'] = kea_parse_options(network_config['option'], config)
 
-            if 'bootfile_name' in config['option']:
-                network['boot-file-name'] = config['option']['bootfile_name']
+            if 'bootfile_name' in network_config['option']:
+                network['boot-file-name'] = network_config['option']['bootfile_name']
 
-            if 'bootfile_server' in config['option']:
-                network['next-server'] = config['option']['bootfile_server']
+            if 'bootfile_server' in network_config['option']:
+                network['next-server'] = network_config['option']['bootfile_server']
 
         subnet_ping_check = False
 
-        if 'subnet' in config:
-            for subnet, subnet_config in config['subnet'].items():
+        if 'subnet' in network_config:
+            for subnet, subnet_config in network_config['subnet'].items():
                 if 'disable' in subnet_config:
                     continue
 
                 if 'ping_check' in subnet_config:
                     subnet_ping_check = True
 
-                network['subnet4'].append(kea_parse_subnet(subnet, subnet_config))
+                network['subnet4'].append(
+                    kea_parse_subnet(subnet, subnet_config, config)
+                )
 
-        if 'ping_check' in config or subnet_ping_check:
+        if 'ping_check' in network_config or subnet_ping_check:
             network['user-context']['enable-ping-check'] = True
 
         out.append(network)

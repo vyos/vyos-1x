@@ -34,6 +34,7 @@
 {% if client_class is vyos_defined %}
         "client-classes": {{ client_class | kea_client_class_json }},
 {% endif %}
+{% set dhcp_config = {'shared_network_name': shared_network_name|default({}), 'custom_option': custom_option|default({})} %}
         "option-def": [
             {
                 "name": "wpad-url",
@@ -41,7 +42,7 @@
                 "type": "string"
             }
 {% if shared_network_name is vyos_defined %}
-{%     set vendor_option_defs = shared_network_name | kea_vendor_option_defs %}
+{%     set vendor_option_defs = dhcp_config | kea_vendor_option_defs %}
 {%     if vendor_option_defs != '[]' %}
             ,
 {{ vendor_option_defs[1:-1] }}
@@ -97,7 +98,7 @@
             }
         ],
 {% if shared_network_name is vyos_defined %}
-        "shared-networks": {{ shared_network_name | kea_shared_network_json }},
+        "shared-networks": {{ dhcp_config | kea_shared_network_json }},
 {% endif %}
         "loggers": [
             {

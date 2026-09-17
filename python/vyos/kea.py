@@ -108,8 +108,24 @@ def kea_test_config(process: str, config_path: str) -> tuple[bool, str]:
     return (False, find[1] if find else None)
 
 
-def kea_parse_options(config):
+def _custom_option_value(option_def, values):
+    values = values if isinstance(values, list) else [values]
+
+    if option_def['type'] == 'binary':
+        return {
+            'data': ''.join(
+                value.replace(':', '').removeprefix('0x') for value in values
+            ),
+            'csv-format': False,
+        }
+
+    return {'data': ', '.join(values)}
+
+
+def kea_parse_options(config, dhcp_config=None):
     options = []
+    dhcp_config = dhcp_config or {}
+    custom_option_defs = dhcp_config.get('custom_option', {})
 
     for node, option_name in kea4_options.items():
         if node not in config:
@@ -172,27 +188,32 @@ def kea_parse_options(config):
             }
         )
 
-    custom_options = dict_search_args(config, 'vendor_option', 'custom_option')
+    custom_options = config.get('custom_option', {})
     if custom_options:
+        for name, option in custom_options.items():
+            option_data = {'name': name}
+            option_data.update(
+                _custom_option_value(custom_option_defs[name], option['value'])
+            )
+            options.append(option_data)
+
+    vendor_options = config.get('vendor_option', {})
+    custom_vendor_options = {
+        name: option
+        for name, option in vendor_options.items()
+        if name != 'ubiquiti' and 'value' in option
+    }
+    if custom_vendor_options:
         if not any(
             option['name'] == 'vendor-encapsulated-options' for option in options
         ):
             options.append({'name': 'vendor-encapsulated-options'})
-        for name, option in custom_options.items():
-            data = option['data']
-            option_data = {
-                'name': name,
-                'data': ', '.join(data) if isinstance(data, list) else data,
-                'space': kea4_vendor_option_space,
-            }
 
-            if option['type'] == 'binary':
-                values = data if isinstance(data, list) else [data]
-                option_data['csv-format'] = False
-                option_data['data'] = ''.join(
-                    value.replace(':', '').removeprefix('0x') for value in values
-                )
-
+        for name, option in custom_vendor_options.items():
+            option_data = {'name': name, 'space': kea4_vendor_option_space}
+            option_data.update(
+                _custom_option_value(custom_option_defs[name], option['value'])
+            )
             options.append(option_data)
 
     return options
@@ -233,13 +254,17 @@ def _iter_dhcp4_option_configs(config):
                     yield host_config['option']
 
 
-def _find_custom_vendor_options(config):
+def _find_custom_option_values(config):
     for option_config in _iter_dhcp4_option_configs(config):
-        custom_options = dict_search_args(
-            option_config, 'vendor_option', 'custom_option'
-        )
+        custom_options = option_config.get('custom_option', {})
         if custom_options:
-            yield from custom_options.items()
+            for name, option in custom_options.items():
+                yield name, option, False
+
+        vendor_options = option_config.get('vendor_option', {})
+        for name, option in vendor_options.items():
+            if name != 'ubiquiti' and 'value' in option:
+                yield name, option, True
 
 
 def _find_unifi_vendor_options(config):
@@ -254,6 +279,29 @@ def _find_unifi_vendor_options(config):
 def kea_parse_vendor_option_defs(config):
     option_defs_by_name = {}
     option_defs_by_code = {}
+    custom_option_defs = config.get('custom_option', {})
+
+    def add_option_def(option_def):
+        name_key = (option_def.get('space'), option_def['name'])
+        code_key = (option_def.get('space'), option_def['code'])
+        if (
+            name_key in option_defs_by_name
+            and option_defs_by_name[name_key] != option_def
+        ):
+            raise ConfigError(
+                f'Conflicting DHCP custom option definition: {option_def["name"]}'
+            )
+
+        if (
+            code_key in option_defs_by_code
+            and option_defs_by_code[code_key] != option_def
+        ):
+            raise ConfigError(
+                f'Conflicting DHCP custom option definition: {option_def["name"]}'
+            )
+
+        option_defs_by_name[name_key] = option_def
+        option_defs_by_code[code_key] = option_def
 
     if any(_find_unifi_vendor_options(config)):
         option_def = {
@@ -262,70 +310,75 @@ def kea_parse_vendor_option_defs(config):
             'type': 'ipv4-address',
             'space': kea4_vendor_option_space,
         }
-        option_defs_by_name[option_def['name']] = option_def
-        option_defs_by_code[option_def['code']] = option_def
+        add_option_def(option_def)
 
-    for name, option in _find_custom_vendor_options(config):
+    for name, option, is_vendor in _find_custom_option_values(config):
+        definition = custom_option_defs[name]
         option_def = {
             'name': name,
-            'code': int(option['code']),
-            'type': option['type'],
-            'space': kea4_vendor_option_space,
+            'code': int(definition['code']),
+            'type': definition['type'],
         }
 
-        if 'array' in option:
+        if is_vendor:
+            option_def['space'] = kea4_vendor_option_space
+
+        if 'array' in definition:
             option_def['array'] = True
 
-        name_key = option_def['name']
-        code_key = option_def['code']
-        if (
-            name_key in option_defs_by_name
-            and option_defs_by_name[name_key] != option_def
-        ):
-            raise ConfigError(f'Conflicting DHCP vendor option definition: {name}')
-
-        if (
-            code_key in option_defs_by_code
-            and option_defs_by_code[code_key] != option_def
-        ):
-            raise ConfigError(f'Conflicting DHCP vendor option definition: {name}')
-
-        option_defs_by_name[name_key] = option_def
-        option_defs_by_code[code_key] = option_def
+        add_option_def(option_def)
 
     return list(option_defs_by_name.values())
 
 
-def verify_kea_vendor_options(config):
-    for name, option in _find_custom_vendor_options(config):
+def verify_kea_custom_options(config):
+    custom_option_defs = config.get('custom_option', {})
+
+    for name, option in custom_option_defs.items():
         missing_nodes = []
-        for node in ['code', 'data', 'type']:
+        for node in ['code', 'type']:
             if node not in option:
                 missing_nodes.append(node.replace('_', '-'))
 
         if missing_nodes:
             raise ConfigError(
-                f'DHCP vendor option "{name}" requires {" and ".join(missing_nodes)}'
+                f'DHCP custom option "{name}" requires {" and ".join(missing_nodes)}'
             )
 
-        data = option['data']
-        if isinstance(data, list) and len(data) > 1 and 'array' not in option:
+        if option['type'] == 'binary' and 'array' in option:
             raise ConfigError(
-                f'DHCP vendor option "{name}" has multiple data values but array is not enabled'
+                f'DHCP custom option "{name}" binary type cannot be an array'
             )
 
-        if option['type'] == 'binary':
-            values = data if isinstance(data, list) else [data]
+    for name, option, _ in _find_custom_option_values(config):
+        if name not in custom_option_defs:
+            raise ConfigError(f'DHCP custom option "{name}" is not defined')
+
+        option_def = custom_option_defs[name]
+        values = (
+            option['value'] if isinstance(option['value'], list) else [option['value']]
+        )
+        if (
+            len(values) > 1
+            and 'array' not in option_def
+            and option_def['type'] != 'binary'
+        ):
+            raise ConfigError(
+                f'DHCP custom option "{name}" has multiple values but array is not enabled'
+            )
+
+        if option_def['type'] == 'binary':
             for value in values:
                 hex_value = value.replace(':', '').removeprefix('0x')
                 if not re.fullmatch(r'([0-9a-fA-F]{2})+', hex_value):
                     raise ConfigError(
-                        f'DHCP vendor option "{name}" binary data must contain '
+                        f'DHCP custom option "{name}" binary data must contain '
                         'full hexadecimal octets'
                     )
 
 
-def kea_parse_subnet(subnet, config):
+def kea_parse_subnet(subnet, config, dhcp_config=None):
+    dhcp_config = dhcp_config or {}
     out = {
         'subnet': subnet,
         'id': int(config['subnet_id']),
@@ -333,7 +386,7 @@ def kea_parse_subnet(subnet, config):
     }
 
     if 'option' in config:
-        out['option-data'] = kea_parse_options(config['option'])
+        out['option-data'] = kea_parse_options(config['option'], dhcp_config)
 
         if 'bootfile_name' in config['option']:
             out['boot-file-name'] = config['option']['bootfile_name']
@@ -361,7 +414,9 @@ def kea_parse_subnet(subnet, config):
             pool = {'pool': f'{start} - {stop}'}
 
             if 'option' in range_config:
-                pool['option-data'] = kea_parse_options(range_config['option'])
+                pool['option-data'] = kea_parse_options(
+                    range_config['option'], dhcp_config
+                )
 
                 if 'bootfile_name' in range_config['option']:
                     pool['boot-file-name'] = range_config['option']['bootfile_name']
@@ -398,7 +453,9 @@ def kea_parse_subnet(subnet, config):
                 reservation['ip-address'] = host_config['ip_address']
 
             if 'option' in host_config:
-                reservation['option-data'] = kea_parse_options(host_config['option'])
+                reservation['option-data'] = kea_parse_options(
+                    host_config['option'], dhcp_config
+                )
 
                 if 'bootfile_name' in host_config['option']:
                     reservation['boot-file-name'] = host_config['option'][
