@@ -32,6 +32,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.dict import dict_search
+from vyos.utils.network import get_wwan_modem
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
 from vyos.utils.process import call
@@ -150,8 +151,13 @@ def apply(wwan):
             sleep(0.250)
 
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        # we only need the modem number. wwan0 -> 0, wwan1 -> 1
-        modem = wwan['ifname'].lstrip('wwan')
+        modem = get_wwan_modem(wwan['ifname'])
+        if modem is None:
+            # We cannot talk to a modem we can't find (yet) - bail out and
+            # wait for the next cronjob run, the same tolerance the
+            # w.exists() check below already has for hardware that isn't
+            # detected yet.
+            return None
         base_cmd = f'mmcli --modem {modem}'
         # Number of bearers is limited - always disconnect first
         call(f'{base_cmd} --simple-disconnect')
