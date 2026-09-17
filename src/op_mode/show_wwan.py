@@ -50,6 +50,18 @@ def qmi_cmd(device, command, silent=False):
         print('Command not supported by Modem')
         exit(1)
 
+def show_detail(interface):
+    """ Resolve the modem owning `interface` by real port ownership
+    (T7487 - the interface number alone is not a reliable modem index)
+    and print its full mmcli detail summary. Returns the exit status to
+    propagate: mmcli's own return code on success, or 1 if no owning
+    modem can currently be found. """
+    modem, _ = get_wwan_modem_ports(interface)
+    if modem is None:
+        print(f'No modem found for interface "{interface}"!')
+        return 1
+    return call(f'mmcli --modem {modem}')
+
 if __name__ == '__main__':
     args = parser.parse_args()
 
@@ -58,20 +70,15 @@ if __name__ == '__main__':
         print(f'Interface "{args.interface}" unconfigured!')
         exit(1)
 
-    # Resolve the modem that actually owns this interface by asking
-    # ModemManager directly, rather than deriving it from the interface
-    # name - the WWAN interface number, the ModemManager modem index, and
-    # the cdc-wdm device number are all independently enumerated and are
-    # not guaranteed to match on a box with more than one modem (T7487).
-    modem, ports = get_wwan_modem_ports(args.interface)
-
     if args.detail:
-        if modem is None:
-            print(f'No modem found for interface "{args.interface}"!')
-            exit(1)
-        call(f'mmcli --modem {modem}')
-        exit(0)
+        exit(show_detail(args.interface))
 
+    # Find the real QMI control port for this interface by asking
+    # ModemManager which modem actually owns it - the WWAN interface
+    # number and the cdc-wdm device number are independently enumerated
+    # and are not guaranteed to match on a box with more than one modem
+    # (T7487), so this can't be derived from the interface name alone.
+    _, ports = get_wwan_modem_ports(args.interface)
     qmi_port = next((p.split(' ')[0] for p in ports if p.endswith('(qmi)')), None)
     if qmi_port is None:
         print(f'No QMI control port found for interface "{args.interface}"!')
