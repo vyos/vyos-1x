@@ -153,14 +153,19 @@ def apply(wwan):
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
         modem = get_wwan_modem(wwan['ifname'])
         if modem is None:
-            # We cannot talk to a modem we can't find (yet) - bail out and
-            # wait for the next cronjob run, the same tolerance the
-            # w.exists() check below already has for hardware that isn't
-            # detected yet.
-            return None
-        base_cmd = f'mmcli --modem {modem}'
-        # Number of bearers is limited - always disconnect first
-        call(f'{base_cmd} --simple-disconnect')
+            # We cannot talk to a modem we can't find (yet). For a delete/disable,
+            # there's nothing to disconnect and the local cleanup below (removing
+            # the interface, stopping the cron helper/ModemManager, dependents)
+            # doesn't need the modem either, so let that still run. Otherwise bail
+            # out and wait for the next cronjob run, the same tolerance the
+            # w.exists() check below already has for hardware that isn't detected
+            # yet.
+            if 'deleted' not in wwan and 'disable' not in wwan:
+                return None
+        else:
+            base_cmd = f'mmcli --modem {modem}'
+            # Number of bearers is limited - always disconnect first
+            call(f'{base_cmd} --simple-disconnect')
 
     w = WWANIf(wwan['ifname'])
 
