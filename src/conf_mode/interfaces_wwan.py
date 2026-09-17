@@ -151,9 +151,26 @@ def apply(wwan):
             sleep(0.250)
 
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        modem = get_wwan_modem(wwan['ifname'])
+        # get_wwan_modem() can transiently come back empty even with
+        # ModemManager already active and this exact modem present a
+        # moment before or after - confirmed live, e.g. right after a
+        # disconnect/reconnect cycle, ModemManager briefly re-registering
+        # the modem on D-Bus. The "wait until a modem is detected" loop
+        # above only ever runs the one time ModemManager itself is first
+        # started, so it does not cover this - give this specific lookup
+        # its own short retry rather than treating a momentary gap the
+        # same as the modem genuinely not being there.
+        modem = None
+        counter = 40
+        while counter > 0:
+            modem = get_wwan_modem(wwan['ifname'])
+            if modem is not None:
+                break
+            counter -= 1
+            sleep(0.250)
+
         if modem is None:
-            # We cannot talk to a modem we can't find (yet). For a delete/disable,
+            # We cannot talk to a modem we can't find. For a delete/disable,
             # there's nothing to disconnect and the local cleanup below (removing
             # the interface, stopping the cron helper/ModemManager, dependents)
             # doesn't need the modem either, so let that still run. Otherwise bail
