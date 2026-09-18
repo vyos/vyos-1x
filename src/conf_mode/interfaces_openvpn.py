@@ -542,9 +542,8 @@ def verify(openvpn):
         failure_count = int(keep_alive['failure_count'])
         timeout = interval * failure_count
 
-        # A zero interval renders "keepalive 0 0", on which OpenVPN skips its
-        # own sanity checks - that is how a configuration turns keepalive off,
-        # so only an enabled one has to satisfy them
+        # A zero interval turns keepalive off and renders no directive at
+        # all, so only an enabled one has to satisfy them
         if interval > 0:
             # the timeout has to be at least twice the interval, which the CLI
             # ranges do not enforce
