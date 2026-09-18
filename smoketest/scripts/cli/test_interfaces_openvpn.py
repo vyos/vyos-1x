@@ -1301,6 +1301,34 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+    def test_openvpn_site2site_keepalive_off(self):
+        # site-to-site renders the keepalive as ping/ping-restart, so a zero
+        # interval has to leave both out - "ping 0" sends nothing while a
+        # "ping-restart" left behind keeps tearing an idle tunnel down
+        interface = 'vtun5001'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '192.0.2.1'])
+        self.cli_set(path + ['remote-address', '192.0.2.2'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+        self.cli_set(path + ['keep-alive', 'interval', '0'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertNotIn('ping', config)
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+
+        # an enabled keepalive still renders both directives
+        self.cli_set(path + ['keep-alive', 'interval', '10'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '60'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping 10', config)
+        self.assertIn('ping-restart 60', config)
+
     def test_site2site_data_ciphers_fallback(self):
         vtun_if = 'vtun2010'
         path = ['interfaces', 'openvpn', vtun_if]
