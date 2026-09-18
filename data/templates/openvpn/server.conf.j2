@@ -140,7 +140,7 @@ bind ipv6only
 {%     endif %}
 {%     if keep_alive.interval | int > 0 %}
 ping {{ keep_alive.interval }}
-ping-restart {{ keep_alive.failure_count }}
+ping-restart {{ keep_alive.interval | int * keep_alive.failure_count | int }}
 {%     endif %}
 
 {%     if device_type == 'tap' %}

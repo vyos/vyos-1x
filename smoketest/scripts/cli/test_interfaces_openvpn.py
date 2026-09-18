@@ -1320,14 +1320,29 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('ping', config)
         self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
-        # an enabled keepalive still renders both directives
+        # an enabled keepalive renders both, and the timeout is the interval
+        # times the number of failures it tolerates
         self.cli_set(path + ['keep-alive', 'interval', '10'])
         self.cli_set(path + ['keep-alive', 'failure-count', '60'])
         self.cli_commit()
 
         config = read_file(f'/run/openvpn/{interface}.conf')
         self.assertIn('ping 10', config)
-        self.assertIn('ping-restart 60', config)
+        self.assertIn('ping-restart 600', config)
+
+        # check validate() - OpenVPN caps ping-restart at 24 hours
+        self.cli_set(path + ['keep-alive', 'interval', '600'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '145'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+86400'):
+            self.cli_commit()
+
+        # 600 * 144 is exactly 24 hours, which OpenVPN still accepts
+        self.cli_set(path + ['keep-alive', 'failure-count', '144'])
+        self.cli_commit()
+
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 86400', config)
 
     def test_site2site_data_ciphers_fallback(self):
         vtun_if = 'vtun2010'
