@@ -1673,5 +1673,186 @@ class TestBootOrdering(unittest.TestCase):
         self.assertNotIn('WantedBy=', unit)
 
 
+class TestSatisfiedNoHwIdNodes(unittest.TestCase):
+    """Regression guard for the 2026.09 upgrade breakage: a config.boot
+    that configures `interfaces ethernet ethN { address ... }` WITHOUT a
+    hw-id leaf (the normal pre-hw-id steady state, no remediation
+    involved) must be left untouched when the NIC is already sitting at
+    the node's name. Before the fix such nodes were classified "pending"
+    while the NICs sitting on them were bootstrap-renumbered off to
+    fresh slots (eth0/eth1 -> eth2/eth3), leaving the running config
+    matching nothing and the box with no connectivity.
+    """
+
+    def setUp(self):
+        self.udev_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.udev_dir, ignore_errors=True)
+        self._orig_udev_dir = resolver.vyos_udev_dir
+        resolver.vyos_udev_dir = self.udev_dir
+        self.addCleanup(setattr, resolver, 'vyos_udev_dir', self._orig_udev_dir)
+
+        status_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, status_dir, ignore_errors=True)
+        self._orig_status_file = resolver.status_file
+        resolver.status_file = resolver.Path(status_dir) / 'status.json'
+        self.addCleanup(setattr, resolver, 'status_file', self._orig_status_file)
+
+    def test_satisfied_no_hwid_nodes_keep_their_names(self):
+        # regression for the 2026.09 upgrade breakage: config.boot has
+        # `ethernet eth0 { address ... }` / `ethernet eth1 { address ... }`
+        # with NO hw-id on either (the normal pre-hw-id steady state), and
+        # the cosmetic fast path already placed each NIC at its node's
+        # name. Before the fix, both nodes were classified "pending" while
+        # the NICs sitting on them were bootstrap-renumbered off to
+        # eth2/eth3 - the running config (still eth0/eth1) then matched
+        # nothing and the box lost connectivity. They must keep their
+        # names; only the rescan hint (written under eth0/eth1) is new, so
+        # the later vyos-interface-rescan.py run freezes the hw-id in
+        # place without a rename.
+        configured = {}
+        pending = {'ethernet': {'eth0', 'eth1'}, 'wireless': set()}
+        state = {'eth0': 'aa:aa:aa:aa:aa:00', 'eth1': 'bb:bb:bb:bb:bb:01'}
+
+        def fake_discover(*_a, **_kw):
+            return dict(state)
+
+        def fake_run(command, *_a, **_kw):
+            parts = command.split()
+            if 'name' in parts:
+                old = parts[parts.index('dev') + 1]
+                new = parts[parts.index('name') + 1]
+                if old in state:
+                    state[new] = state.pop(old)
+            return 0
+
+        with mock.patch.object(resolver, 'get_configfile_interfaces',
+                                return_value=configured), \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes',
+                                return_value=pending), \
+             mock.patch.object(resolver, 'discover_physical_interfaces',
+                                side_effect=fake_discover), \
+             mock.patch.object(resolver, 'is_wireless_interface',
+                                return_value=False), \
+             mock.patch.object(resolver, 'run', side_effect=fake_run), \
+             mock.patch('time.sleep'):
+            resolver.main()
+
+        # no rename at all - the NICs stayed at the names they were
+        # configured under
+        self.assertEqual(state, {
+            'eth0': 'aa:aa:aa:aa:aa:00', 'eth1': 'bb:bb:bb:bb:bb:01'})
+
+        # the rescan hints go under the (unchanged) names so the hw-id
+        # gets frozen into the EXISTING nodes
+        hints = set(os.listdir(self.udev_dir))
+        self.assertEqual(hints, {'eth0', 'eth1'})
+        with open(os.path.join(self.udev_dir, 'eth0')) as f:
+            self.assertEqual(f.read(), 'aa:aa:aa:aa:aa:00')
+        with open(os.path.join(self.udev_dir, 'eth1')) as f:
+            self.assertEqual(f.read(), 'bb:bb:bb:bb:bb:01')
+
+        status = json.loads(resolver.status_file.read_text())
+        self.assertEqual(status['renamed'], {})
+        self.assertEqual(status['pending_unresolved'], [])
+        self.assertEqual(status['satisfied'], ['eth0', 'eth1'])
+
+    def test_satisfied_node_and_unconfigured_extra_nic(self):
+        # same steady state, but a THIRD NIC (unconfigured, no node in
+        # config.boot at all) shows up racily named. The satisfied node
+        # must not drag its own NIC along, and must not make the extra
+        # NIC's assignment ambiguous or blocked: it bootstrap-names into
+        # the next free slot (eth2) while eth0/eth1 are untouched.
+        configured = {}
+        pending = {'ethernet': {'eth0'}, 'wireless': set()}
+        state = {
+            'eth0': 'aa:aa:aa:aa:aa:00',
+            'eth9': 'ff:ff:ff:ff:ff:99',  # brand-new, unconfigured NIC
+        }
+
+        def fake_discover(*_a, **_kw):
+            return dict(state)
+
+        def fake_run(command, *_a, **_kw):
+            parts = command.split()
+            if 'name' in parts:
+                old = parts[parts.index('dev') + 1]
+                new = parts[parts.index('name') + 1]
+                if old in state:
+                    state[new] = state.pop(old)
+            return 0
+
+        with mock.patch.object(resolver, 'get_configfile_interfaces',
+                                return_value=configured), \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes',
+                                return_value=pending), \
+             mock.patch.object(resolver, 'discover_physical_interfaces',
+                                side_effect=fake_discover), \
+             mock.patch.object(resolver, 'is_wireless_interface',
+                                return_value=False), \
+             mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(resolver, 'run', side_effect=fake_run), \
+             mock.patch('time.sleep'):
+            resolver.main()
+
+        # the extra NIC fills the lowest free slot - eth1 is unreserved
+        # (no hw-id, no node, no pending node on it), so it goes there;
+        # eth0 stays put and no slot is skipped past the gap
+        self.assertEqual(state.get('eth0'), 'aa:aa:aa:aa:aa:00')
+        self.assertEqual(state.get('eth1'), 'ff:ff:ff:ff:ff:99')
+        self.assertNotIn('eth2', state)
+        self.assertNotIn('eth9', state)
+
+        status = json.loads(resolver.status_file.read_text())
+        self.assertEqual(status['satisfied'], ['eth0'])
+        self.assertEqual(status['pending_unresolved'], [])
+
+    def test_satisfied_only_after_settle_when_udev_renames_late(self):
+        # the gate and satisfaction must be judged on the SETTLED
+        # snapshot: if udev still moves the NIC between the early
+        # snapshot and settle (exactly the multi-vendor race this code
+        # handles), a node whose NIC is NOT at its name once things have
+        # settled is genuinely unmet pending work, not satisfied.
+        configured = {'m0': 'eth2'}
+        pending = {'ethernet': {'eth0'}, 'wireless': set()}
+
+        def fake_discover(*_a, **_kw):
+            # early snapshot looks satisfied (mac0 at eth0); the settled
+            # one shows the NIC actually landed on eth1 (probe race)
+            return {'eth2': 'm0', 'eth1': 'mac0'}
+
+        state = {'eth2': 'm0', 'eth1': 'mac0'}
+
+        def fake_run(command, *_a, **_kw):
+            parts = command.split()
+            if 'name' in parts:
+                old = parts[parts.index('dev') + 1]
+                new = parts[parts.index('name') + 1]
+                if old in state:
+                    state[new] = state.pop(old)
+            return 0
+
+        with mock.patch.object(resolver, 'get_configfile_interfaces',
+                                return_value=configured), \
+             mock.patch.object(resolver, 'get_pending_hwid_nodes',
+                                return_value=pending), \
+             mock.patch.object(resolver, 'discover_physical_interfaces',
+                                side_effect=fake_discover), \
+             mock.patch.object(resolver, 'is_wireless_interface',
+                                return_value=False), \
+             mock.patch.object(resolver, 'pcie_distance', return_value=0), \
+             mock.patch.object(resolver, 'run', side_effect=fake_run), \
+             mock.patch('time.sleep'):
+            resolver.main()
+
+        # mac0 is the only candidate and eth0 the only unmet pending
+        # node - the unambiguous reclaim must still bind them
+        self.assertEqual(state.get('eth0'), 'mac0')
+
+        status = json.loads(resolver.status_file.read_text())
+        self.assertEqual(status['reclaimed'], {'mac0': 'eth0'})
+        self.assertEqual(status['satisfied'], [])
+        self.assertEqual(status['pending_unresolved'], [])
+
+
 if __name__ == '__main__':
     unittest.main()
