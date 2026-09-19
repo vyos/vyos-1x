@@ -132,9 +132,7 @@
       <format>txt</format>
       <description>Interface used for routing information exchange</description>
     </valueHelp>
-    <constraint>
-      #include <include/constraint/interface-name.xml.i>
-    </constraint>
+    #include <include/constraint/dependent-error-interface-name.xml.i>
   </properties>
   <children>
     <leafNode name="area">

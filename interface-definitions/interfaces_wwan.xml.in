@@ -17,6 +17,7 @@
             <format>wwanN</format>
             <description>Wireless Wide Area Network interface name</description>
           </valueHelp>
+          <kind>interface</kind>
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
