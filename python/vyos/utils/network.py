@@ -285,6 +285,54 @@ def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
             return True
     return False
 
+def get_wwan_modem_ports(interface):
+    """ Return (modem_index, ports) for the ModemManager modem that
+    actually owns the given kernel WWAN interface name, e.g. wwan0.
+
+    The kernel-assigned WWAN interface number and ModemManager's own
+    modem index are two independently enumerated values and are not
+    guaranteed to match - on a box with more than one modem, they can
+    enumerate in different orders, so modem index 0 does not
+    necessarily own wwan0 (T7487). Every prior caller assumed
+    interface.lstrip('wwan') was always the correct modem index, which
+    silently talks to the wrong modem whenever that assumption doesn't
+    hold.
+
+    ports is the raw list of "<name> (<type>)" strings from
+    modem.generic.ports (e.g. "wwan0 (net)", "cdc-wdm0 (qmi)"), useful
+    to callers that need a specific port by type rather than just the
+    modem index. Returns (None, []) if no currently-detected modem owns
+    this interface. """
+    from vyos.utils.dict import dict_search
+
+    if not interface.startswith('wwan'):
+        raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
+
+    try:
+        modem_list = loads(cmdl(['mmcli', '-L', '--output-json'])).get('modem-list', [])
+    except OSError:
+        return None, []
+
+    for modem_path in modem_list:
+        idx = modem_path.rsplit('/', 1)[-1]
+        try:
+            detail = loads(cmdl(['mmcli', '--modem', idx, '--output-json']))
+        except OSError:
+            continue
+        ports = dict_search('modem.generic.ports', detail) or []
+        if any(port.split(' ')[0] == interface for port in ports):
+            return idx, ports
+
+    return None, []
+
+def get_wwan_modem(interface):
+    """ Return just the ModemManager modem index owning the given WWAN
+    interface, or None if no modem currently owns it. See
+    get_wwan_modem_ports for why this can't just be derived from the
+    interface name itself. """
+    idx, _ = get_wwan_modem_ports(interface)
+    return idx
+
 def is_wwan_connected(interface):
     """ Determine if a given WWAN interface, e.g. wwan0 is connected to the
     carrier network or not """
@@ -299,7 +347,9 @@ def is_wwan_connected(interface):
     if not is_systemd_service_active('ModemManager.service'):
         return False
 
-    modem = interface.lstrip('wwan')
+    modem = get_wwan_modem(interface)
+    if modem is None:
+        return False
 
     try:
         tmp = cmdl(['mmcli', '--modem', modem, '--output-json'])

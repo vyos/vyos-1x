@@ -18,6 +18,8 @@ import argparse
 
 from sys import exit
 from vyos.configquery import ConfigTreeQuery
+from vyos.utils.network import get_wwan_modem_ports
+from vyos.utils.process import call
 from vyos.utils.process import cmdl
 
 parser = argparse.ArgumentParser()
@@ -30,6 +32,7 @@ parser.add_argument("--msisdn", help="Get module MSISDN", action="store_true")
 parser.add_argument("--sim", help="Get SIM card status", action="store_true")
 parser.add_argument("--signal", help="Get current RF signal info", action="store_true")
 parser.add_argument("--firmware", help="Get current RF signal info", action="store_true")
+parser.add_argument("--detail", help="Get detailed modem information summary", action="store_true")
 
 required = parser.add_argument_group('Required arguments')
 required.add_argument("--interface", help="WWAN interface name, e.g. wwan0", required=True)
@@ -47,6 +50,18 @@ def qmi_cmd(device, command, silent=False):
         print('Command not supported by Modem')
         exit(1)
 
+def show_detail(interface):
+    """ Resolve the modem owning `interface` by real port ownership
+    (T7487 - the interface number alone is not a reliable modem index)
+    and print its full mmcli detail summary. Returns the exit status to
+    propagate: mmcli's own return code on success, or 1 if no owning
+    modem can currently be found. """
+    modem, _ = get_wwan_modem_ports(interface)
+    if modem is None:
+        print(f'No modem found for interface "{interface}"!')
+        return 1
+    return call(f'mmcli --modem {modem}')
+
 if __name__ == '__main__':
     args = parser.parse_args()
 
@@ -55,9 +70,20 @@ if __name__ == '__main__':
         print(f'Interface "{args.interface}" unconfigured!')
         exit(1)
 
-    # remove the WWAN prefix from the interface, required for the CDC interface
-    if_num = args.interface.replace('wwan','')
-    cdc = f'/dev/cdc-wdm{if_num}'
+    if args.detail:
+        exit(show_detail(args.interface))
+
+    # Find the real QMI control port for this interface by asking
+    # ModemManager which modem actually owns it - the WWAN interface
+    # number and the cdc-wdm device number are independently enumerated
+    # and are not guaranteed to match on a box with more than one modem
+    # (T7487), so this can't be derived from the interface name alone.
+    _, ports = get_wwan_modem_ports(args.interface)
+    qmi_port = next((p.split(' ')[0] for p in ports if p.endswith('(qmi)')), None)
+    if qmi_port is None:
+        print(f'No QMI control port found for interface "{args.interface}"!')
+        exit(1)
+    cdc = f'/dev/{qmi_port}'
 
     if args.model:
         qmi_cmd(cdc, '--dms-get-model')
