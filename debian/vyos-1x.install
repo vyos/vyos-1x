@@ -43,4 +43,5 @@ usr/libexec/vyos/validate-value
 usr/libexec/vyos/vyconf
 usr/libexec/vyos/*.py
 usr/libexec/vyos/*.sh
+usr/libexec/vyos/vyos-dhclient-lease-watch
 usr/share
