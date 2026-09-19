@@ -16,6 +16,7 @@ import os
 import re
 import json
 import logging
+import threading
 
 from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
 from functools import lru_cache
@@ -99,6 +100,64 @@ _PROTOTYPES = {
 }
 
 
+# libvyosconfig is not safe for concurrent use: two threads inside it at once
+# (for example two from_string calls, or from_string racing destroy) corrupt the
+# shared parser state and crash the process. ctypes releases the GIL for the
+# duration of each foreign call, so threads in one Python process really do
+# enter the library concurrently; vyos-http-api does, running configure
+# operations in a threadpool while other requests are served on the event loop.
+#
+# Every entry point is therefore serialized on one process-wide lock. It is an
+# RLock because a call made while holding it can trigger garbage collection,
+# and ConfigTree.__del__ then calls destroy on the same thread.
+_LIB_LOCK = threading.RLock()
+
+# The library reports failures through a single global error buffer
+# (error_message in libvyosconfig/lib/bindings.ml), which each of the entry
+# points below resets on entry and sets on failure. The buffer is read right
+# after such a call, while the lock is still held, and kept per thread, so
+# get_error() returns the calling thread's own error rather than whatever
+# another thread's call left behind.
+_LIB_ERROR = threading.local()
+
+_ERROR_REPORTING = frozenset(
+    {
+        'copy_node',
+        'create_node',
+        'delete_node',
+        'delete_value',
+        'diff_compare',
+        'diff_show',
+        'diff_tree',
+        'from_string',
+        'mask_exclusive',
+        'mask_inclusive',
+        'read_internal',
+        'read_internal_string',
+        'read_internal_string_reference_tree',
+        'reference_tree_to_json',
+        'rename_node',
+        'set_add_value',
+        'set_leaf',
+        'set_replace_value',
+        'set_tag',
+        'set_valueless',
+        'subtree_from_partial',
+        'subtree_values_of_path',
+        'tree_merge',
+        'tree_union',
+        'validate_tree_filter',
+        'write_internal',
+        'write_internal_reference_tree',
+    }
+)
+
+# destroy can run from ConfigTree.__del__ between a failed call and the
+# caller's get_error(), so it must leave the captured error alone. Any other
+# call clears it, and get_error() then reads the buffer directly as before.
+_PRESERVES_ERROR = frozenset({'destroy'})
+
+
 class _Lib:
     """Lazily resolving, prototype-declaring wrapper around libvyosconfig.
 
@@ -107,6 +166,8 @@ class _Lib:
     Resolution stays lazy on purpose: not every build of the library exports
     every entry point, and the previous per-instance binding code only failed
     on symbols that were actually used.
+
+    Every call is made under _LIB_LOCK; see the comment above it.
     """
 
     # pylint: disable=too-few-public-methods
@@ -114,7 +175,7 @@ class _Lib:
     def __init__(self, libpath):
         self.__dict__['_lib'] = cdll.LoadLibrary(libpath)
 
-    def __getattr__(self, name):
+    def _raw(self, name):
         try:
             argtypes, restype = _PROTOTYPES[name]
         except KeyError:
@@ -125,8 +186,42 @@ class _Lib:
         func.argtypes = argtypes
         if restype is not None:
             func.restype = restype
-        setattr(self, name, func)
         return func
+
+    def __getattr__(self, name):
+        func = self._raw(name)
+        raw_get_error = self._raw('get_error')
+        reports_error = name in _ERROR_REPORTING
+        preserves_error = name in _PRESERVES_ERROR
+        # Bound locally so a wrapper reached from __del__ during interpreter
+        # shutdown does not depend on module globals still being set.
+        lock = _LIB_LOCK
+        error = _LIB_ERROR
+
+        if name == 'get_error':
+
+            def get_error():
+                msg = getattr(error, 'msg', None)
+                if msg is not None:
+                    return msg
+                with lock:
+                    return raw_get_error()
+
+            wrapper = get_error
+        else:
+
+            def wrapper(*args):
+                with lock:
+                    result = func(*args)
+                    if reports_error:
+                        error.msg = raw_get_error()
+                    elif not preserves_error:
+                        error.msg = None
+                return result
+
+        wrapper.__name__ = name
+        setattr(self, name, wrapper)
+        return wrapper
 
 
 @lru_cache(maxsize=None)
