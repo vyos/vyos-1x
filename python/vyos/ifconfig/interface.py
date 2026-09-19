@@ -1662,9 +1662,11 @@ class Interface(Control):
                 except FileNotFoundError:
                     pass
             rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
-            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
+            # Kill while still masked so Restart=always cannot start a
+            # replacement that would reacquire the lease (CodeRabbit).
             rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
                     systemd_service], netns=netns)
+            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
         return released
 
     def set_dhcp(self, enable: bool, vrf_changed: bool = False, release: bool = False):
