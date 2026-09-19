@@ -134,6 +134,10 @@ def generate(wwan):
     return None
 
 def apply(wwan):
+    """
+    Apply the CLI config: start/stop ModemManager as needed, (re)connect
+    or disconnect the modem via mmcli, and update the kernel interface.
+    """
     # ModemManager is required to dial WWAN connections - one instance is
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.
@@ -194,6 +198,22 @@ def apply(wwan):
         options = f'ip-type={ip_type},apn=' + wwan['apn']
         if 'authentication' in wwan:
             options += ',user={username},password={password}'.format(**wwan['authentication'])
+
+        # Some networks only ever admit a single combined IPv4+IPv6 PDN
+        # context per APN and reject a standalone IPv6 "Start Network"
+        # request outright (QMI CallEndReason ip-version-mismatch) once
+        # an IPv4 session already exists for that APN - confirmed against
+        # a real network this way. ModemManager's --simple-connect with
+        # ip-type=ipv4v6 opens two separate WDS sessions (one per family)
+        # rather than negotiating both together, which is what a normal
+        # UE attach does and why this is invisible on most other devices.
+        # Pre-negotiating the attach-time PDN type upfront avoids the
+        # rejection; the resulting bearer only sets up what the *next*
+        # --simple-connect is allowed to request and can't be connected
+        # directly, so a failure here isn't fatal - unsupported modems
+        # simply proceed to --simple-connect exactly as before.
+        if ip_type in ('ipv4v6', 'ipv6'):
+            call(f'{base_cmd} --3gpp-set-initial-eps-bearer-settings="{options}"', stdout=DEVNULL)
 
         command = f'{base_cmd} --simple-connect="{options}"'
         call(command, stdout=DEVNULL)
