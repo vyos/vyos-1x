@@ -30,6 +30,7 @@ from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
 from vyos.defaults import directories
+from vyos.ifconfig.ifname_store import permanent_mac
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.template import render
@@ -1749,9 +1750,8 @@ class Interface(Control):
             from vyos.pki import load_certificate
             from vyos.pki import wrap_private_key
 
-            # The default is a fallback to hw_id which is not present for any interface
-            # other then an ethernet interface. Thus we emulate hw_id by reading back the
-            # Kernel assigned MAC address
+            # T3871: the template keys the identity off a MAC, which is no
+            # longer a configuration node - read it off the device
             if 'hw_id' not in self.config:
                 self.config['hw_id'] = read_file(f'/sys/class/net/{self.ifname}/address')
             render(wpa_supplicant_conf, 'ethernet/wpa_supplicant.conf.j2', self.config)
@@ -1810,12 +1810,14 @@ class Interface(Control):
         # method to apply()?
         self.config = config
 
-        # Change interface MAC address - re-set to real hardware address (hw-id)
-        # if custom mac is removed. Skip if bond member.
+        # A custom MAC wins; removing it restores the hardware address, which
+        # T3871 reads off the device rather than from a configuration node.
+        # Guard on the backing bus device so this stays a no-op for bridges,
+        # tunnels and the like. Skip if bond member.
         if 'is_bond_member' not in config:
-            mac = config.get('hw_id')
-            if 'mac' in config:
-                mac = config.get('mac')
+            mac = config.get('mac')
+            if not mac and os.path.exists(f'/sys/class/net/{self.ifname}/device'):
+                mac = permanent_mac(self.ifname)
             if mac:
                 self.set_mac(mac)
 
