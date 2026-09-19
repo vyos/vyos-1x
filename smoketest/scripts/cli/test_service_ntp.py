@@ -21,7 +21,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
-from vyos.utils.network import get_vrf_pids
 from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'chronyd'
@@ -278,8 +277,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check for process in VRF
-        vrf_procs = [name for _, name in get_vrf_pids(vrf_name)]
-        self.assertIn(PROCESS_NAME, vrf_procs)
+        self.verify_process_in_vrf(PROCESS_NAME, vrf_name)
 
         self.cli_delete(['vrf', 'name', vrf_name])
 

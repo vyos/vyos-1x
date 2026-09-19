@@ -23,7 +23,6 @@ from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
-from vyos.utils.network import get_vrf_pids
 from vyos.xml_ref import default_value
 
 DDCLIENT_SYSTEMD_UNIT = '/run/systemd/system/ddclient.service.d/override.conf'
@@ -372,8 +371,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for process in VRF
-        vrf_procs = [name for _, name in get_vrf_pids(vrf_name)]
-        self.assertIn(DDCLIENT_PNAME, vrf_procs)
+        self.verify_process_in_vrf(DDCLIENT_PNAME, vrf_name)
 
         # Cleanup VRF
         self.cli_delete(['vrf', 'name', vrf_name])
