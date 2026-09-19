@@ -1419,16 +1419,16 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         config = read_file(f'/run/openvpn/{interface}.conf')
         self.assertIn('keepalive 600 43200', config)
 
-        # "interval 0" renders "keepalive 0 0" - OpenVPN skips its own checks
-        # on that and runs without keepalive, so it has to keep committing
-        # whatever the failure-count says
+        # "interval 0" turns keepalive off, which OpenVPN 2.7.6 no longer
+        # spells "keepalive 0 0", so the directive has to stay out of the
+        # file - the failure-count still commits whatever it says
         self.cli_set(path + ['keep-alive', 'interval', '0'])
         self.cli_set(path + ['keep-alive', 'failure-count', '1'])
         self.cli_commit()
 
         self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
         config = read_file(f'/run/openvpn/{interface}.conf')
-        self.assertIn('keepalive 0 0', config)
+        self.assertNotIn('keepalive', config)
 
     def test_openvpn_server_reject_unconfigured_clients(self):
         # T8998: reject-unconfigured-clients without server client entries
