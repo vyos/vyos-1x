@@ -41,9 +41,11 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import process_named_running
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
 from vyos.utils.process import cmdl
+from vyos.utils.process import rc_cmd
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.network import is_intf_addr_assigned
@@ -60,6 +62,31 @@ from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
 link_local_prefix = 'fe80::/64'
+
+def _isc_lease_fixed_address(path: str):
+    """Last fixed-address in an ISC dhclient lease file, or None."""
+    addr = None
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('fixed-address '):
+                    addr = line.split()[1].rstrip(';')
+    except OSError:
+        return None
+    return addr
+
+
+def _iface_admin_up(ifname, netns=None) -> bool:
+    code, out = rc_cmd(['ip', '-j', 'link', 'show', 'dev', ifname], netns=netns)
+    if code != 0 or not out:
+        return False
+    try:
+        data = json.loads(out)
+        return 'UP' in data[0].get('flags', [])
+    except (json.JSONDecodeError, IndexError, TypeError, KeyError):
+        return False
+
 
 def _jmes_search(expression, data):
     """jmespath.search with a deferred import.
@@ -1387,7 +1414,7 @@ class Interface(Control):
 
         # remove from interface
         if addr == 'dhcp':
-            self.set_dhcp(False)
+            self.set_dhcp(False, release=True)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(False)
         elif is_intf_addr_assigned(self.ifname, addr, netns=netns):
@@ -1407,8 +1434,8 @@ class Interface(Control):
 
         Will raise an exception on error.
         """
-        # stop DHCP(v6) if running
-        self.set_dhcp(False)
+        # stop DHCP(v6) if running; RELEASE the v4 lease (ExecStop is -x)
+        self.set_dhcp(False, release=True)
         self.set_dhcpv6(False)
 
         if not self.exists(self.ifname):
@@ -1536,9 +1563,120 @@ class Interface(Control):
                 if native_vlan_id:
                     self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(native_vlan_id), 'pvid', 'untagged', 'master'])
 
-    def set_dhcp(self, enable: bool, vrf_changed: bool=False):
+    def release_dhcp_lease(self) -> bool:
+        """Send DHCPv4 RELEASE without racing systemd ExecStop / Restart=always.
+
+        Sequence: runtime-mask so Restart=always cannot start a replacement;
+        SIGKILL the unit (no ExecStop — systemctl stop would run dhclient -x
+        and can block DefaultTimeoutStopSec after SIGKILL). dhclient -r with
+        a separate pidfile and the unit -cf/-lf (capped so a silent server
+        cannot block conf_mode). If disable already dropped the address or
+        admin-downed the iface, restore them for the unicast RELEASE, then
+        put them back. Unmask last.
+
+        Returns True if RELEASE was sent or there was no lease to send.
+        """
+        from vyos.utils.network import get_interface_vrf
+        from vyos.utils.process import call
+
+        interface = self.ifname
+        systemd_service = f'dhclient@{interface}.service'
+        lease_dir = directories['isc_dhclient_dir']
+        conf = f'{lease_dir}/dhclient_{interface}.conf'
+        leases = f'{lease_dir}/dhclient_{interface}.leases'
+        release_pid = f'{lease_dir}/dhclient_{interface}.release.pid'
+        netns = self.config.get('netns')
+
+        if not os.path.isfile(leases):
+            return True
+
+        vrf = get_interface_vrf(interface)
+        if vrf == 'default':
+            vrf = None
+
+        released = False
+        restored_link = False
+        restored_addr = None
+        try:
+            mask_code, _ = rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
+                                  netns=netns)
+            if mask_code == 0:
+                # Mask first so Restart=always cannot replace the client. Kill
+                # even if ActiveState is still activating — Type=exec dhclient@
+                # can already have a live process that would race dhclient -r.
+                # Kill exit is not a gate: systemctl kill fails when already
+                # inactive. Do not systemctl stop: ExecStop is dhclient -x and
+                # waits DefaultTimeoutStopSec after SIGKILL (smoketest hang).
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
+
+                lease_ip = _isc_lease_fixed_address(leases)
+                link_code, _ = rc_cmd(['ip', 'link', 'show', 'dev', interface],
+                                      netns=netns)
+                if link_code == 0:
+                    if not _iface_admin_up(interface, netns=netns):
+                        rc_cmd(['ip', 'link', 'set', 'dev', interface, 'up'],
+                               netns=netns)
+                        restored_link = True
+                    if (lease_ip and
+                            not is_intf_addr_assigned(interface, lease_ip,
+                                                      netns=netns)):
+                        rc_cmd(['ip', 'addr', 'add', f'{lease_ip}/32', 'dev',
+                                interface], netns=netns)
+                        restored_addr = lease_ip
+
+                dhclient_r = [
+                    '/sbin/dhclient',
+                    '-4',
+                    '-r',
+                    '-e',
+                    'CONTROLLED_STOP=yes',
+                    '-cf',
+                    conf,
+                    '-pf',
+                    release_pid,
+                    '-lf',
+                    leases,
+                    interface,
+                ]
+                code = call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
+                released = code == 0
+        except Exception:
+            released = False
+        finally:
+            if restored_addr:
+                rc_cmd(['ip', 'addr', 'del', f'{restored_addr}/32', 'dev',
+                        interface], netns=netns)
+            if restored_link:
+                rc_cmd(['ip', 'link', 'set', 'dev', interface, 'down'],
+                       netns=netns)
+            if os.path.isfile(release_pid):
+                try:
+                    with open(release_pid) as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, 9)
+                except (ValueError, ProcessLookupError, OSError):
+                    pass
+                try:
+                    os.remove(release_pid)
+                except FileNotFoundError:
+                    pass
+            rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
+            # Kill while still masked so Restart=always cannot start a
+            # replacement that would reacquire the lease (CodeRabbit).
+            rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                    systemd_service], netns=netns)
+            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
+        return released
+
+    def set_dhcp(self, enable: bool, vrf_changed: bool = False, release: bool = False):
         """
         Enable/Disable DHCP client on a given interface.
+
+        release=True sends a DHCPv4 RELEASE before stopping. ExecStop is -x
+        (T9109) so restart/disable/HA seed keep INIT-REBOOT; callers that
+        tear the lease down (delete address dhcp, flush, VRF instance
+        delete, op-mode release) must pass release=True.
         """
         if enable not in [True, False]:
             raise ValueError()
@@ -1583,7 +1721,20 @@ class Interface(Control):
                 return self._cmdl(['systemctl', 'restart', systemd_service])
         else:
             netns = self.config['netns'] if 'netns' in self.config else None
-            stop_systemd_unit(systemd_service, netns=netns)
+            released = False
+            if release:
+                released = self.release_dhcp_lease()
+            else:
+                # Stop-only: SIGKILL, not systemctl stop. ExecStop is dhclient
+                # -x and can block after a previous SIGKILL.
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
+            pid = process_named_running('dhclient', cmdline=self.ifname)
+            if pid:
+                try:
+                    os.kill(pid, 9)
+                except ProcessLookupError:
+                    pass
 
             # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
             # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
@@ -1599,8 +1750,13 @@ class Interface(Control):
                         prefixlen = address_dict['prefixlen']
                         self.del_addr(f'{address}/{prefixlen}')
 
-            # cleanup old config files
-            for file in [dhclient_config_file, systemd_override_file, dhclient_lease_file]:
+            # Keep the ISC lease DB on the stop-only path (VRF move, disable)
+            # so the next start can INIT-REBOOT. Delete it only after an
+            # explicit RELEASE.
+            cleanup_files = [dhclient_config_file, systemd_override_file]
+            if released:
+                cleanup_files.append(dhclient_lease_file)
+            for file in cleanup_files:
                 if os.path.isfile(file):
                     os.remove(file)
 
