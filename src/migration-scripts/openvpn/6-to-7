@@ -1,0 +1,55 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T9337: site-to-site rendered "ping-restart <failure-count>", so the count
+# landed as seconds while the server has always rendered interval *
+# failure-count. Now that both agree, a timeout OpenVPN refuses becomes
+# reachable - clamp it, or an upgrade would leave a configuration the router
+# can no longer commit at boot.
+
+from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'openvpn']
+
+# OpenVPN caps ping and ping-restart at 24 hours
+ping_timeout_max = 86400
+
+
+def _value(config: ConfigTree, path: list):
+    # return_value() raises on a missing path, and nodes carrying a CLI
+    # default are usually absent from a saved configuration
+    return config.return_value(path) if config.exists(path) else None
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    for interface in config.list_nodes(base):
+        path = base + [interface]
+        if _value(config, path + ['mode']) != 'site-to-site':
+            continue
+
+        # both nodes carry a CLI default, so they render even when absent
+        interval = int(_value(config, path + ['keep-alive', 'interval']) or 10)
+        count = int(_value(config, path + ['keep-alive', 'failure-count']) or 60)
+
+        # a zero interval turns keepalive off and renders nothing at all
+        if interval < 1:
+            continue
+
+        wanted = min(count, ping_timeout_max // interval)
+        if wanted != count:
+            config.set(path + ['keep-alive', 'failure-count'], value=str(wanted))

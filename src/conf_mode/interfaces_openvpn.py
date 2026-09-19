@@ -452,6 +452,20 @@ def verify(openvpn):
     # OpenVPN site-to-site - VERIFY
     #
     elif openvpn['mode'] == 'site-to-site':
+        # The rendered "ping-restart" timeout is interval * failure-count, and
+        # OpenVPN caps ping and ping-restart at 24 hours. Nothing doubles it
+        # here, unlike the "keepalive" the server renders, so the whole day is
+        # available.
+        keep_alive = openvpn['keep_alive']
+        interval = int(keep_alive['interval'])
+        timeout = interval * int(keep_alive['failure_count'])
+
+        # a zero interval turns keepalive off and renders no directive at all
+        if interval > 0 and timeout > 86400:
+            raise ConfigError(
+                f'Keepalive timeout of {timeout} seconds cannot exceed 86400'
+            )
+
         if 'ip_version' in openvpn and openvpn['ip_version'] == 'dual-stack':
             raise ConfigError('"ip-version dual-stack" is not supported in site-to-site mode')
 
