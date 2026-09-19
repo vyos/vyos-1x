@@ -227,6 +227,54 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="lease-time">
+            <properties>
+              <help>DHCP lease time offered to the client (in seconds)</help>
+              <valueHelp>
+                <format>u32:1-2147483647</format>
+                <description>Lease time in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-2147483647"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="max-lease-time">
+            <properties>
+              <help>Server-side session expiry timer used if the DHCP lease is not renewed in time (in seconds)</help>
+              <valueHelp>
+                <format>u32:1-2147483647</format>
+                <description>Session expiry timer in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-2147483647"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="renew-time">
+            <properties>
+              <help>DHCP lease renewal (T1) time (in seconds)</help>
+              <valueHelp>
+                <format>u32:1-2147483647</format>
+                <description>Renewal time in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-2147483647"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="rebind-time">
+            <properties>
+              <help>DHCP lease rebinding (T2) time (in seconds)</help>
+              <valueHelp>
+                <format>u32:1-2147483647</format>
+                <description>Rebinding time in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-2147483647"/>
+              </constraint>
+            </properties>
+          </leafNode>
           #include <include/accel-ppp/client-ip-pool.xml.i>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           #include <include/accel-ppp/default-pool.xml.i>
