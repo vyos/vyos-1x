@@ -323,6 +323,14 @@ def verify_dco(openvpn):
             if cipher is not None:
                 raise ConfigError(f'DCO does not support cipher "{cipher}"')
 
+
+def verify_shared_secret(pki: dict, interface: str, path: list, name: str):
+    if name not in (dict_search_args(pki, 'openvpn', 'shared_secret') or {}):
+        raise ConfigError(
+            f'Invalid "{path}" value "{name}" on OpenVPN interface {interface}'
+        )
+
+
 def verify_pki(openvpn):
     pki = openvpn['pki']
     interface = openvpn['ifname']
@@ -340,11 +348,7 @@ def verify_pki(openvpn):
         raise ConfigError('PKI is not configured')
 
     if shared_secret_key:
-        if not dict_search_args(pki, 'openvpn', 'shared_secret'):
-            raise ConfigError('There are no openvpn shared-secrets in PKI configuration')
-
-        if shared_secret_key not in pki['openvpn']['shared_secret']:
-            raise ConfigError(f'Invalid shared-secret on openvpn interface {interface}')
+        verify_shared_secret(pki, interface, 'shared-secret-key', shared_secret_key)
 
         # If PSK settings are correct, warn about its deprecation
         DeprecationWarning('OpenVPN shared-secret support will be removed in future '\
@@ -405,18 +409,11 @@ def verify_pki(openvpn):
             if dh_bits < 2048:
                 raise ConfigError(f'Minimum DH key-size is 2048 bits')
 
-
-        if 'auth_key' in tls or 'crypt_key' in tls:
-            if not dict_search_args(pki, 'openvpn', 'shared_secret'):
-                raise ConfigError('There are no openvpn shared-secrets in PKI configuration')
-
         if 'auth_key' in tls:
-            if tls['auth_key'] not in pki['openvpn']['shared_secret']:
-                raise ConfigError(f'Invalid auth-key on openvpn interface {interface}')
+            verify_shared_secret(pki, interface, 'tls auth-key', tls['auth_key'])
 
         if 'crypt_key' in tls:
-            if tls['crypt_key'] not in pki['openvpn']['shared_secret']:
-                raise ConfigError(f'Invalid crypt-key on openvpn interface {interface}')
+            verify_shared_secret(pki, interface, 'tls crypt-key', tls['crypt_key'])
 
 def verify(openvpn):
     if 'deleted' in openvpn:
