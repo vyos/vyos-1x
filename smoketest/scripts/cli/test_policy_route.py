@@ -368,19 +368,33 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'source', 'geoip', 'country-code', 'fr'])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'source', 'geoip', 'inverse-match'])
 
+        # T9332: source and destination geoip on the same rule must resolve to
+        # distinct sets rather than colliding on a shared name
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'action', 'drop'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'source', 'geoip', 'country-code', 'us'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'destination', 'geoip', 'country-code', 'cn'])
+        # T9332: same check on the route6 (ipv6) side
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'action', 'drop'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'source', 'geoip', 'country-code', 'us'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'destination', 'geoip', 'country-code', 'cn'])
+
         self.cli_commit()
 
         nftables_search = [
-            ['ip saddr @GEOIP_CC_route_smoketest_1', 'drop'],
-            ['ip saddr != @GEOIP_CC_route_smoketest_2', 'accept'],
+            ['ip saddr @GEOIP_CC_route_smoketest_1_s', 'drop'],
+            ['ip saddr != @GEOIP_CC_route_smoketest_2_s', 'accept'],
+            # T9332: distinct per-side sets, not a shared/collided name
+            ['ip daddr @GEOIP_CC_route_smoketest_3_d', 'ip saddr @GEOIP_CC_route_smoketest_3_s', 'drop'],
         ]
 
         # -t prevents 1000+ GeoIP elements being returned
         self.verify_nftables(nftables_search, 'ip vyos_mangle', args='-t')
 
         nftables_search = [
-            ['ip6 saddr @GEOIP_CC6_route6_smoketest6_1', 'drop'],
-            ['ip6 saddr != @GEOIP_CC6_route6_smoketest6_2', 'accept'],
+            ['ip6 saddr @GEOIP_CC6_route6_smoketest6_1_s', 'drop'],
+            ['ip6 saddr != @GEOIP_CC6_route6_smoketest6_2_s', 'accept'],
+            # T9332: distinct per-side sets, not a shared/collided name
+            ['ip6 daddr @GEOIP_CC6_route6_smoketest6_3_d', 'ip6 saddr @GEOIP_CC6_route6_smoketest6_3_s', 'drop'],
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_mangle', args='-t')
