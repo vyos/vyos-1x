@@ -1860,8 +1860,12 @@ class Interface(Control):
                 rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
                         systemd_service], netns=netns)
             try:
-                pid = process_named_running('dhclient', cmdline=self.ifname)
-                if pid:
+                # Exact cmdline match (eth0 is not eth0.100). Kill every
+                # remaining client, not only the first PID.
+                for _ in range(8):
+                    pid = process_named_running('dhclient', cmdline=self.ifname)
+                    if not pid:
+                        break
                     try:
                         os.kill(pid, 9)
                     except ProcessLookupError:
