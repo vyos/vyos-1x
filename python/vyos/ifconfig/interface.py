@@ -1643,6 +1643,7 @@ class Interface(Control):
         temp_lf = f'{lease_dir}/dhclient_{interface}.release.leases'
         netns = self.config.get('netns')
 
+        source_lease = None
         info = {}
         for path in (
             f'{lease_dir}/dhclient_{interface}.leases',
@@ -1651,6 +1652,7 @@ class Interface(Control):
             if os.path.isfile(path) and os.path.getsize(path) > 0:
                 info = _isc_lease_info(path)
                 if info.get('addr'):
+                    source_lease = path
                     break
         if not info.get('addr'):
             return True
@@ -1664,6 +1666,7 @@ class Interface(Control):
         restored_link = False
         restored_cidr = None
         restored_route = None
+        prev_route = None
         try:
             mask_code, _ = rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
                                   netns=netns)
@@ -1696,14 +1699,26 @@ class Interface(Control):
                                netns=netns)
                         restored_cidr = cidr
                     if server:
+                        code, out = rc_cmd(['ip', '-j', 'route', 'show',
+                                            f'{server}/32'], netns=netns)
+                        if code == 0 and out and out.strip() not in ('', '[]'):
+                            try:
+                                prev = json.loads(out)
+                                if prev:
+                                    prev_route = prev[0]
+                            except (json.JSONDecodeError, IndexError, TypeError):
+                                prev_route = None
                         if router:
-                            rc_cmd(['ip', 'route', 'replace', f'{server}/32',
-                                    'via', router, 'dev', interface],
-                                   netns=netns)
+                            rcode, _ = rc_cmd(
+                                ['ip', 'route', 'replace', f'{server}/32',
+                                 'via', router, 'dev', interface],
+                                netns=netns)
                         else:
-                            rc_cmd(['ip', 'route', 'replace', f'{server}/32',
-                                    'dev', interface], netns=netns)
-                        restored_route = server
+                            rcode, _ = rc_cmd(
+                                ['ip', 'route', 'replace', f'{server}/32',
+                                 'dev', interface], netns=netns)
+                        if rcode == 0:
+                            restored_route = server
 
                 dhclient_r = [
                     '/sbin/dhclient',
@@ -1728,8 +1743,16 @@ class Interface(Control):
             released = False
         finally:
             if restored_route:
-                rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
-                        interface], netns=netns)
+                if prev_route:
+                    args = ['ip', 'route', 'replace', f'{restored_route}/32']
+                    if prev_route.get('gateway'):
+                        args += ['via', prev_route['gateway']]
+                    if prev_route.get('dev'):
+                        args += ['dev', prev_route['dev']]
+                    rc_cmd(args, netns=netns)
+                else:
+                    rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
+                            interface], netns=netns)
             if restored_cidr:
                 rc_cmd(['ip', 'addr', 'del', restored_cidr, 'dev', interface],
                        netns=netns)
@@ -1751,6 +1774,11 @@ class Interface(Control):
                 os.remove(temp_lf)
             except FileNotFoundError:
                 pass
+            if released and source_lease:
+                try:
+                    os.remove(source_lease)
+                except FileNotFoundError:
+                    pass
             rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
             # Kill while still masked so Restart=always cannot start a
             # replacement that would reacquire the lease (CodeRabbit).
@@ -1815,8 +1843,11 @@ class Interface(Control):
             if release:
                 released = self.release_dhcp_lease()
             else:
-                # Stop-only: SIGKILL, not systemctl stop. ExecStop is dhclient
-                # -x and can block after a previous SIGKILL.
+                # Stop-only: mask then SIGKILL (not systemctl stop). ExecStop
+                # is dhclient -x and can block after SIGKILL. Mask so
+                # Restart=always cannot start a replacement.
+                rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
+                       netns=netns)
                 rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
                         systemd_service], netns=netns)
             pid = process_named_running('dhclient', cmdline=self.ifname)
@@ -1850,6 +1881,11 @@ class Interface(Control):
             for file in cleanup_files:
                 if os.path.isfile(file):
                     os.remove(file)
+            if not release:
+                rc_cmd(['systemctl', 'reset-failed', systemd_service],
+                       netns=netns)
+                rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service],
+                       netns=netns)
 
         return None
 
