@@ -218,15 +218,47 @@ def load_store(path: Path = None) -> dict:
             'hardware': hardware}
 
 
-def config_dir_is_mounted(path: Path = None) -> bool:
-    """Is the config directory the real one, or a bare rootfs overlay?
+def encrypted_config_volume() -> bool:
+    """Does this image keep its configuration on a LUKS volume?
 
-    A failed TPM/LUKS unlock does not stop the boot. Writing to the overlay
-    underneath would be masked once the real volume mounts, leaving two
-    stores which silently diverge.
+    Mirrors mount_encrypted_config() in src/init/vyos-router - a container
+    named after the running image, below the persistence path. Anything that
+    cannot be determined (no persistence, no version file, not a VyOS system
+    at all) means there is no volume waiting to be mounted over the config
+    directory.
+    """
+    try:
+        from vyos.system.image import get_running_image
+
+        code, out = rc_cmd('/opt/vyatta/sbin/vyos-persistpath')
+        if code != 0 or not out.strip():
+            return False
+        image = get_running_image()
+        return bool(image) and (Path(out.strip()) / 'luks' / image).is_file()
+    except Exception:
+        return False
+
+
+def config_dir_is_mounted(path: Path = None) -> bool:
+    """Will a store written here still be there on the next boot?
+
+    Only an encrypted configuration has a volume which may still be locked:
+    a failed TPM/LUKS unlock does not stop the boot, and writing to the
+    directory underneath would be masked once the real volume mounts,
+    leaving two stores which silently diverge. Everywhere else the directory
+    is already the persistent one.
+
+    Deliberately not keyed on '.vyatta_config'. That marker is an
+    install-time hint, written by an activation script which runs *after*
+    interface naming - so on the first boot of a pre-built image it does not
+    exist yet, no store is ever written, and the next boot names the
+    hardware from scratch. Removing a card then shifts every name below it
+    onto the wrong port (T3871).
     """
     path = path or store_path
-    return (path.parent / '.vyatta_config').exists()
+    if not encrypted_config_volume():
+        return True
+    return os.path.ismount(path.parent)
 
 
 def save_store(store: dict, path: Path = None) -> bool:
