@@ -521,6 +521,32 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         success = r.json()['data']['ShowVersion']['success']
         self.assertTrue(success)
 
+    def test_api_oidc_audience_required(self):
+        # Regression test for GHSA-8pg8-p637-q6ch: OIDC issuer configured
+        # without audience must be rejected at commit time. Without this
+        # check, verify_oidc_token() would silently disable aud claim
+        # validation, accepting any valid token from the trusted issuer
+        # regardless of which application it was actually issued for.
+        self.cli_set(
+            base_path
+            + [
+                'api',
+                'rest',
+                'authentication',
+                'oidc',
+                'issuer',
+                'https://idp.example.com',
+            ]
+        )
+        self.assertRaises(ConfigSessionError, self.cli_commit)
+
+        # Setting audience alongside issuer must allow the commit to succeed.
+        self.cli_set(
+            base_path
+            + ['api', 'rest', 'authentication', 'oidc', 'audience', 'vyos-rest-api']
+        )
+        self.cli_commit()
+
     @ignore_warning(InsecureRequestWarning)
     def test_api_add_delete(self):
         url = f'https://{address}/retrieve'

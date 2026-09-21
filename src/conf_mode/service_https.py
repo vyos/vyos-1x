@@ -121,6 +121,15 @@ def verify(https):
         if dict_search('api.rest.authentication.oidc.issuer', https) is None:
             raise ConfigError('OIDC issuer must be configured when jwks-url is set')
 
+    if dict_search('api.rest.authentication.oidc.issuer', https) is not None:
+        if dict_search('api.rest.authentication.oidc.audience', https) is None:
+            raise ConfigError(
+                'OIDC audience must be configured when issuer is set. '
+                'Without it, any valid token issued by the trusted issuer '
+                'for a different application would be accepted, granting '
+                'full API privileges to an unrelated token holder.'
+            )
+
     # Check if server port is already in use by a different application
     listen_address = ['0.0.0.0']
     port = int(https['port'])
