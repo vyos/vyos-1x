@@ -63,18 +63,74 @@ from vyos.ifconfig import Section
 
 link_local_prefix = 'fe80::/64'
 
-def _isc_lease_fixed_address(path: str):
-    """Last fixed-address in an ISC dhclient lease file, or None."""
-    addr = None
+def _mask_to_prefixlen(mask: str):
+    try:
+        from ipaddress import IPv4Network
+        return IPv4Network(f'0.0.0.0/{mask}').prefixlen
+    except ValueError:
+        return None
+
+
+def _isc_lease_info(path: str) -> dict:
+    """Lease addr/prefix/router/server from ISC `lease { }` or script env dump."""
+    info: dict = {}
     try:
         with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('fixed-address '):
-                    addr = line.split()[1].rstrip(';')
+            text = f.read()
     except OSError:
-        return None
-    return addr
+        return info
+    if 'lease {' in text:
+        body = text.split('lease {')[-1]
+        for line in body.splitlines():
+            line = line.strip().rstrip(';')
+            if line.startswith('fixed-address '):
+                info['addr'] = line.split()[1]
+            elif line.startswith('option subnet-mask '):
+                pfx = _mask_to_prefixlen(line.split()[2])
+                if pfx is not None:
+                    info['prefixlen'] = pfx
+            elif line.startswith('option routers '):
+                info['router'] = line.split()[2].split(',')[0]
+            elif line.startswith('option dhcp-server-identifier '):
+                info['server'] = line.split()[2]
+        return info
+    # VyOS dhclient-script env dump (reason='BOUND', new_ip_address=...)
+    kv = {}
+    for line in text.splitlines():
+        if '=' not in line:
+            continue
+        k, v = line.split('=', 1)
+        kv[k.strip()] = v.strip().strip('\'"')
+    if kv.get('new_ip_address'):
+        info['addr'] = kv['new_ip_address']
+    if kv.get('new_subnet_mask'):
+        pfx = _mask_to_prefixlen(kv['new_subnet_mask'])
+        if pfx is not None:
+            info['prefixlen'] = pfx
+    if kv.get('new_routers'):
+        info['router'] = kv['new_routers'].split()[0]
+    if kv.get('new_dhcp_server_identifier'):
+        info['server'] = kv['new_dhcp_server_identifier']
+    return info
+
+
+def _write_temp_isc_lease(path: str, info: dict, interface: str) -> None:
+    addr = info.get('addr')
+    if not addr:
+        raise ValueError('no lease address')
+    lines = ['lease {', f'  interface "{interface}";', f'  fixed-address {addr};']
+    pfx = info.get('prefixlen')
+    if pfx is not None:
+        from ipaddress import IPv4Network
+        mask = str(IPv4Network(f'0.0.0.0/{pfx}').netmask)
+        lines.append(f'  option subnet-mask {mask};')
+    if info.get('router'):
+        lines.append(f'  option routers {info["router"]};')
+    if info.get('server'):
+        lines.append(f'  option dhcp-server-identifier {info["server"]};')
+    lines.append('}')
+    with open(path, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
 
 
 def _iface_admin_up(ifname, netns=None) -> bool:
@@ -1569,12 +1625,12 @@ class Interface(Control):
         Sequence: runtime-mask so Restart=always cannot start a replacement;
         SIGKILL the unit (no ExecStop — systemctl stop would run dhclient -x
         and can block DefaultTimeoutStopSec after SIGKILL). dhclient -r with
-        a separate pidfile and the unit -cf/-lf (capped so a silent server
-        cannot block conf_mode). If disable already dropped the address or
-        admin-downed the iface, restore them for the unicast RELEASE, then
-        put them back. Unmask last.
+        -sf /bin/true so dhclient-script does not wait on the commit lock
+        (98-vyos-static-routes-dhclient-hook → configd). Restore the lease
+        address (subnet-mask prefix, not /32) and a host route to the DHCP
+        server so unicast RELEASE works after disable. Unmask last.
 
-        Returns True if RELEASE was sent or there was no lease to send.
+        Returns True if RELEASE was attempted or there was no lease to send.
         """
         from vyos.utils.network import get_interface_vrf
         from vyos.utils.process import call
@@ -1583,12 +1639,22 @@ class Interface(Control):
         systemd_service = f'dhclient@{interface}.service'
         lease_dir = directories['isc_dhclient_dir']
         conf = f'{lease_dir}/dhclient_{interface}.conf'
-        leases = f'{lease_dir}/dhclient_{interface}.leases'
         release_pid = f'{lease_dir}/dhclient_{interface}.release.pid'
+        temp_lf = f'{lease_dir}/dhclient_{interface}.release.leases'
         netns = self.config.get('netns')
 
-        if not os.path.isfile(leases):
+        info = {}
+        for path in (
+            f'{lease_dir}/dhclient_{interface}.leases',
+            f'{lease_dir}/dhclient_{interface}.lease',
+        ):
+            if os.path.isfile(path) and os.path.getsize(path) > 0:
+                info = _isc_lease_info(path)
+                if info.get('addr'):
+                    break
+        if not info.get('addr'):
             return True
+        _write_temp_isc_lease(temp_lf, info, interface)
 
         vrf = get_interface_vrf(interface)
         if vrf == 'default':
@@ -1596,7 +1662,8 @@ class Interface(Control):
 
         released = False
         restored_link = False
-        restored_addr = None
+        restored_cidr = None
+        restored_route = None
         try:
             mask_code, _ = rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
                                   netns=netns)
@@ -1610,7 +1677,10 @@ class Interface(Control):
                 rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
                         systemd_service], netns=netns)
 
-                lease_ip = _isc_lease_fixed_address(leases)
+                lease_ip = info.get('addr')
+                pfx = info.get('prefixlen', 32)
+                server = info.get('server')
+                router = info.get('router')
                 link_code, _ = rc_cmd(['ip', 'link', 'show', 'dev', interface],
                                       netns=netns)
                 if link_code == 0:
@@ -1621,14 +1691,26 @@ class Interface(Control):
                     if (lease_ip and
                             not is_intf_addr_assigned(interface, lease_ip,
                                                       netns=netns)):
-                        rc_cmd(['ip', 'addr', 'add', f'{lease_ip}/32', 'dev',
-                                interface], netns=netns)
-                        restored_addr = lease_ip
+                        cidr = f'{lease_ip}/{pfx}'
+                        rc_cmd(['ip', 'addr', 'add', cidr, 'dev', interface],
+                               netns=netns)
+                        restored_cidr = cidr
+                    if server:
+                        if router:
+                            rc_cmd(['ip', 'route', 'replace', f'{server}/32',
+                                    'via', router, 'dev', interface],
+                                   netns=netns)
+                        else:
+                            rc_cmd(['ip', 'route', 'replace', f'{server}/32',
+                                    'dev', interface], netns=netns)
+                        restored_route = server
 
                 dhclient_r = [
                     '/sbin/dhclient',
                     '-4',
                     '-r',
+                    '-sf',
+                    '/bin/true',
                     '-e',
                     'CONTROLLED_STOP=yes',
                     '-cf',
@@ -1636,17 +1718,21 @@ class Interface(Control):
                     '-pf',
                     release_pid,
                     '-lf',
-                    leases,
+                    temp_lf,
                     interface,
                 ]
-                code = call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
-                released = code == 0
+                # Hooks skipped; packet is sent. Timeout is only a hang cap.
+                call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
+                released = True
         except Exception:
             released = False
         finally:
-            if restored_addr:
-                rc_cmd(['ip', 'addr', 'del', f'{restored_addr}/32', 'dev',
+            if restored_route:
+                rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
                         interface], netns=netns)
+            if restored_cidr:
+                rc_cmd(['ip', 'addr', 'del', restored_cidr, 'dev', interface],
+                       netns=netns)
             if restored_link:
                 rc_cmd(['ip', 'link', 'set', 'dev', interface, 'down'],
                        netns=netns)
@@ -1661,6 +1747,10 @@ class Interface(Control):
                     os.remove(release_pid)
                 except FileNotFoundError:
                     pass
+            try:
+                os.remove(temp_lf)
+            except FileNotFoundError:
+                pass
             rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
             # Kill while still masked so Restart=always cannot start a
             # replacement that would reacquire the lease (CodeRabbit).
@@ -1756,6 +1846,7 @@ class Interface(Control):
             cleanup_files = [dhclient_config_file, systemd_override_file]
             if released:
                 cleanup_files.append(dhclient_lease_file)
+                cleanup_files.append(f'{config_base}_{self.ifname}.lease')
             for file in cleanup_files:
                 if os.path.isfile(file):
                     os.remove(file)
@@ -1999,6 +2090,9 @@ class Interface(Control):
         # always ensure DHCP client is stopped (when not configured explicitly)
         if 'dhcp' not in new_addr:
             self.del_addr('dhcp')
+        elif 'disable' in config:
+            # address dhcp still configured: stop-only so INIT-REBOOT works.
+            self.set_dhcp(False, release=False)
 
         # always ensure DHCPv6 client is stopped (when not configured as client
         # for IPv6 address or prefix delegation)
@@ -2044,6 +2138,8 @@ class Interface(Control):
 
         # Add this section after vrf T4331
         for addr in new_addr:
+            if addr == 'dhcp' and 'disable' in config:
+                continue
             self.add_addr(addr, vrf_changed=vrf_changed)
 
         # Configure MSS value for IPv4 TCP connections
