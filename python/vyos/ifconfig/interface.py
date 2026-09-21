@@ -41,6 +41,7 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import is_systemd_unit_live
 from vyos.utils.process import process_named_running
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
@@ -1699,8 +1700,11 @@ class Interface(Control):
                                netns=netns)
                         restored_cidr = cidr
                     if server:
+                        # Same VRF as dhclient -r so the host route is in
+                        # the table RELEASE will use.
                         code, out = rc_cmd(['ip', '-j', 'route', 'show',
-                                            f'{server}/32'], netns=netns)
+                                            f'{server}/32'],
+                                           vrf=vrf, netns=netns)
                         if code == 0 and out and out.strip() not in ('', '[]'):
                             try:
                                 prev = json.loads(out)
@@ -1712,11 +1716,12 @@ class Interface(Control):
                             rcode, _ = rc_cmd(
                                 ['ip', 'route', 'replace', f'{server}/32',
                                  'via', router, 'dev', interface],
-                                netns=netns)
+                                vrf=vrf, netns=netns)
                         else:
                             rcode, _ = rc_cmd(
                                 ['ip', 'route', 'replace', f'{server}/32',
-                                 'dev', interface], netns=netns)
+                                 'dev', interface],
+                                vrf=vrf, netns=netns)
                         if rcode == 0:
                             restored_route = server
 
@@ -1749,10 +1754,10 @@ class Interface(Control):
                         args += ['via', prev_route['gateway']]
                     if prev_route.get('dev'):
                         args += ['dev', prev_route['dev']]
-                    rc_cmd(args, netns=netns)
+                    rc_cmd(args, vrf=vrf, netns=netns)
                 else:
                     rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
-                            interface], netns=netns)
+                            interface], vrf=vrf, netns=netns)
             if restored_cidr:
                 rc_cmd(['ip', 'addr', 'del', restored_cidr, 'dev', interface],
                        netns=netns)
@@ -1774,11 +1779,15 @@ class Interface(Control):
                 os.remove(temp_lf)
             except FileNotFoundError:
                 pass
-            if released and source_lease:
-                try:
-                    os.remove(source_lease)
-                except FileNotFoundError:
-                    pass
+            if released:
+                for path in (
+                    f'{lease_dir}/dhclient_{interface}.leases',
+                    f'{lease_dir}/dhclient_{interface}.lease',
+                ):
+                    try:
+                        os.remove(path)
+                    except FileNotFoundError:
+                        pass
             rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
             # Kill while still masked so Restart=always cannot start a
             # replacement that would reacquire the lease (CodeRabbit).
@@ -1791,10 +1800,10 @@ class Interface(Control):
         """
         Enable/Disable DHCP client on a given interface.
 
-        release=True sends a DHCPv4 RELEASE before stopping. ExecStop is -x
-        (T9109) so restart/disable/HA seed keep INIT-REBOOT; callers that
-        tear the lease down (delete address dhcp, flush, VRF instance
-        delete, op-mode release) must pass release=True.
+        release=True asks ExecStop to DHCPRELEASE when the client is still
+        running. Restart, disable, and VRF move pass release=False so the
+        lease survives for INIT-REBOOT. Delete of address dhcp, flush, and
+        VRF instance delete pass release=True.
         """
         if enable not in [True, False]:
             raise ValueError()
@@ -1850,42 +1859,46 @@ class Interface(Control):
                        netns=netns)
                 rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
                         systemd_service], netns=netns)
-            pid = process_named_running('dhclient', cmdline=self.ifname)
-            if pid:
-                try:
-                    os.kill(pid, 9)
-                except ProcessLookupError:
-                    pass
+            try:
+                pid = process_named_running('dhclient', cmdline=self.ifname)
+                if pid:
+                    try:
+                        os.kill(pid, 9)
+                    except ProcessLookupError:
+                        pass
 
-            # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
-            # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
-            # 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 2: [{'addr': '192.0.2.103', 'netmask': '255.255.255.0',
-            #
-            # We will force removal of any dynamic IPv4 address from the interface
-            tmp = get_interface_address(self.ifname)
-            if tmp and 'addr_info' in tmp:
-                for address_dict in tmp['addr_info']:
-                    # Only remove dynamic assigned addresses
-                    if address_dict['family'] == 'inet' and 'dynamic' in address_dict:
-                        address = address_dict['local']
-                        prefixlen = address_dict['prefixlen']
-                        self.del_addr(f'{address}/{prefixlen}')
+                # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
+                # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
+                # 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 2: [{'addr': '192.0.2.103', 'netmask': '255.255.255.0',
+                #
+                # We will force removal of any dynamic IPv4 address from the interface
+                tmp = get_interface_address(self.ifname)
+                if tmp and 'addr_info' in tmp:
+                    for address_dict in tmp['addr_info']:
+                        # Only remove dynamic assigned addresses
+                        if address_dict['family'] == 'inet' and 'dynamic' in address_dict:
+                            address = address_dict['local']
+                            prefixlen = address_dict['prefixlen']
+                            self.del_addr(f'{address}/{prefixlen}')
 
-            # Keep the ISC lease DB on the stop-only path (VRF move, disable)
-            # so the next start can INIT-REBOOT. Delete it only after an
-            # explicit RELEASE.
-            cleanup_files = [dhclient_config_file, systemd_override_file]
-            if released:
-                cleanup_files.append(dhclient_lease_file)
-                cleanup_files.append(f'{config_base}_{self.ifname}.lease')
-            for file in cleanup_files:
-                if os.path.isfile(file):
-                    os.remove(file)
-            if not release:
-                rc_cmd(['systemctl', 'reset-failed', systemd_service],
-                       netns=netns)
-                rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service],
-                       netns=netns)
+                # Keep the ISC lease DB on the stop-only path (VRF move, disable)
+                # so the next start can INIT-REBOOT. Delete it only after an
+                # explicit RELEASE.
+                cleanup_files = [dhclient_config_file, systemd_override_file]
+                if released:
+                    cleanup_files.append(dhclient_lease_file)
+                    cleanup_files.append(f'{config_base}_{self.ifname}.lease')
+                for file in cleanup_files:
+                    if os.path.isfile(file):
+                        os.remove(file)
+            finally:
+                if not release:
+                    try:
+                        rc_cmd(['systemctl', 'reset-failed', systemd_service],
+                               netns=netns)
+                    finally:
+                        rc_cmd(['systemctl', 'unmask', '--runtime',
+                                systemd_service], netns=netns)
 
         return None
 
