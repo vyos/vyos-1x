@@ -149,7 +149,13 @@ def write_status(store: dict, devices: list, applied: dict, report: dict,
             if key in absent
         },
         'renamed': applied,
-        'matched': report.get('matched', {}),
+        # everything recognised from the store, however it was recognised
+        'matched': {**report.get('matched', {}),
+                    **report.get('moved', {}),
+                    **report.get('replaced', {})},
+        # the card was found in a different slot - certain, it is the same card
+        'moved': report.get('moved', {}),
+        # a different card took the slot - the one case that needs verifying
         'matched_by_path': report.get('replaced', {}),
         'new_hardware': report.get('bootstrapped', {}),
         'persisted': persisted,
