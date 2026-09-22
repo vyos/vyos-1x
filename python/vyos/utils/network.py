@@ -285,8 +285,9 @@ def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
             return True
     return False
 
+
 def get_wwan_modem_ports(interface):
-    """ Return (modem_index, ports) for the ModemManager modem that
+    """Return (modem_index, ports) for the ModemManager modem that
     actually owns the given kernel WWAN interface name, e.g. wwan0.
 
     The kernel-assigned WWAN interface number and ModemManager's own
@@ -302,7 +303,7 @@ def get_wwan_modem_ports(interface):
     modem.generic.ports (e.g. "wwan0 (net)", "cdc-wdm0 (qmi)"), useful
     to callers that need a specific port by type rather than just the
     modem index. Returns (None, []) if no currently-detected modem owns
-    this interface. """
+    this interface."""
     from vyos.utils.dict import dict_search
 
     if not interface.startswith('wwan'):
@@ -325,11 +326,12 @@ def get_wwan_modem_ports(interface):
 
     return None, []
 
+
 def get_wwan_modem(interface):
-    """ Return just the ModemManager modem index owning the given WWAN
+    """Return just the ModemManager modem index owning the given WWAN
     interface, or None if no modem currently owns it. See
     get_wwan_modem_ports for why this can't just be derived from the
-    interface name itself. """
+    interface name itself."""
     idx, _ = get_wwan_modem_ports(interface)
     return idx
 

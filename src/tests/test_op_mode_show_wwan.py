@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 import src.op_mode.show_wwan as show_wwan
 
+
 class TestShowWWANDetail(TestCase):
     # T7487: 'show interfaces wwan <if> detail' used to derive the modem
     # index straight from the interface name (mmcli --modem ${4#wwan}).
@@ -27,7 +28,9 @@ class TestShowWWANDetail(TestCase):
 
     @patch('src.op_mode.show_wwan.call')
     @patch('src.op_mode.show_wwan.get_wwan_modem_ports')
-    def test_show_detail_uses_resolved_modem_not_interface_number(self, mock_get_ports, mock_call):
+    def test_show_detail_uses_resolved_modem_not_interface_number(
+        self, mock_get_ports, mock_call
+    ):
         # Mismatched on purpose: interface 'wwan0' is owned by modem '7',
         # not modem '0' - a naive interface.lstrip('wwan') would call
         # mmcli against modem 0 instead.

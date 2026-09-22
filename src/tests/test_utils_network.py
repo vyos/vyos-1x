@@ -80,13 +80,23 @@ def _mock_mmcli(command, *args, **kwargs):
         '1': ['cdc-wdm2 (qmi)', 'ttyUSB0 (at)', 'wwan0 (net)'],
     }
     if command == ['mmcli', '-L', '--output-json']:
-        return json.dumps({'modem-list': [
-            '/org/freedesktop/ModemManager1/Modem/0',
-            '/org/freedesktop/ModemManager1/Modem/1',
-        ]})
-    if len(command) == 4 and command[0] == 'mmcli' and command[1] == '--modem' and command[3] == '--output-json':
+        return json.dumps(
+            {
+                'modem-list': [
+                    '/org/freedesktop/ModemManager1/Modem/0',
+                    '/org/freedesktop/ModemManager1/Modem/1',
+                ]
+            }
+        )
+    if (
+        len(command) == 4
+        and command[0] == 'mmcli'
+        and command[1] == '--modem'
+        and command[3] == '--output-json'
+    ):
         return json.dumps({'modem': {'generic': {'ports': modem_ports[command[2]]}}})
     raise AssertionError(f'unexpected command passed to cmdl(): {command}')
+
 
 class TestVyOSUtilsNetworkWWAN(TestCase):
     @patch('vyos.utils.network.cmdl', side_effect=_mock_mmcli)

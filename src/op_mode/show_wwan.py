@@ -31,8 +31,12 @@ parser.add_argument("--imsi", help="Get module IMSI", action="store_true")
 parser.add_argument("--msisdn", help="Get module MSISDN", action="store_true")
 parser.add_argument("--sim", help="Get SIM card status", action="store_true")
 parser.add_argument("--signal", help="Get current RF signal info", action="store_true")
-parser.add_argument("--firmware", help="Get current RF signal info", action="store_true")
-parser.add_argument("--detail", help="Get detailed modem information summary", action="store_true")
+parser.add_argument(
+    "--firmware", help="Get current RF signal info", action="store_true"
+)
+parser.add_argument(
+    "--detail", help="Get detailed modem information summary", action="store_true"
+)
 
 required = parser.add_argument_group('Required arguments')
 required.add_argument("--interface", help="WWAN interface name, e.g. wwan0", required=True)
@@ -50,17 +54,19 @@ def qmi_cmd(device, command, silent=False):
         print('Command not supported by Modem')
         exit(1)
 
+
 def show_detail(interface):
-    """ Resolve the modem owning `interface` by real port ownership
+    """Resolve the modem owning `interface` by real port ownership
     (T7487 - the interface number alone is not a reliable modem index)
     and print its full mmcli detail summary. Returns the exit status to
     propagate: mmcli's own return code on success, or 1 if no owning
-    modem can currently be found. """
+    modem can currently be found."""
     modem, _ = get_wwan_modem_ports(interface)
     if modem is None:
         print(f'No modem found for interface "{interface}"!')
         return 1
     return call(f'mmcli --modem {modem}')
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
