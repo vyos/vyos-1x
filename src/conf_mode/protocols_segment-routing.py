@@ -20,11 +20,9 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import list_diff
 from vyos.configverify import has_frr_protocol_in_dict
-from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import Section
 from vyos.utils.dict import dict_search
-from vyos.utils.process import is_systemd_service_running
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
@@ -111,8 +109,6 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
@@ -145,8 +141,6 @@ def apply(config_dict):
         else:
             sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_enabled'], '0')
 
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

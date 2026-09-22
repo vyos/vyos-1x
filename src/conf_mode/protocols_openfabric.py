@@ -20,8 +20,6 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import has_frr_protocol_in_dict
-from vyos.utils.process import is_systemd_service_running
-from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
 from vyos import airbag
@@ -90,13 +88,9 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

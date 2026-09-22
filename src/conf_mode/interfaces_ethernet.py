@@ -40,8 +40,6 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_eapol
 from vyos.ethtool import Ethtool
 from vyos.netlink import coalesce
-from vyos.frrender import FRRender
-from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import BondIf
 from vyos.utils.dict import dict_search
@@ -176,9 +174,6 @@ def get_config(config=None):
 
     tmp = is_node_changed(conf, base + [ifname, 'duplex'])
     if tmp: ethernet.update({'speed_duplex_changed': {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
 
     # T9228: Some NIC drivers do not support changing all settings we offer on
     # the CLI. The warning telling the user about the missing driver support is
@@ -469,13 +464,9 @@ def verify_ethernet(ethernet: dict, ethtool: Ethtool) -> None:
     return None
 
 def generate(ethernet):
-    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(ethernet['frr_dict'])
     return None
 
 def apply(ethernet):
-    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     ifname = ethernet['ifname']
     e = EthernetIf(ifname)
     if 'deleted' in ethernet:
