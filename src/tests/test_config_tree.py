@@ -22,6 +22,7 @@ import unittest
 from unittest import TestCase
 
 from vyos.configtree import ConfigTree
+from vyos.configtree import get_lib
 from vyos.referencetree import ReferenceTree
 from vyos.derivedtree import subtree_from_list_of_partial_paths
 
@@ -83,6 +84,82 @@ class TestInitialSetup(TestCase):
         t = threading.Thread(target=task)
         t.start()
         t.join()
+
+    def test_concurrent_parse_threads(self):
+        # libvyosconfig is not safe for concurrent entry; without the lock in
+        # vyos.configtree, parsing from several threads at once corrupts the
+        # parser state and crashes the process with SIGSEGV.
+        config_str = self.ct.to_string()
+        deadline = time.time() + 5
+
+        def task():
+            while time.time() < deadline:
+                ct = ConfigTree(config_str)
+                self.assertEqual(self.ct, ct)
+                del ct
+
+        threads = [threading.Thread(target=task) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    def test_parse_error_per_thread(self):
+        # The library reports errors through one global buffer. Each thread
+        # must see the error for its own failed call, not text left behind by
+        # another thread's call.
+        config_str = self.ct.to_string()
+        invalid_str = 'interfaces {\n    ethernet eth0 {\n        address \n'
+        deadline = time.time() + 5
+
+        def valid_task():
+            while time.time() < deadline:
+                ConfigTree(config_str)
+
+        def invalid_task():
+            while time.time() < deadline:
+                with self.assertRaisesRegex(ValueError, 'Syntax error'):
+                    ConfigTree(invalid_str)
+
+        threads = [
+            threading.Thread(target=valid_task),
+            threading.Thread(target=invalid_task),
+            threading.Thread(target=valid_task),
+            threading.Thread(target=invalid_task),
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    def test_parse_error_survives_destroy(self):
+        # ConfigTree.__del__ can call destroy between a failed call and the
+        # caller's get_error(); that must not replace the captured error.
+        config_str = self.ct.to_string().encode()
+        lib = get_lib()
+        deadline = time.time() + 5
+
+        def valid_task():
+            while time.time() < deadline:
+                ConfigTree(config_str.decode())
+
+        def error_task():
+            while time.time() < deadline:
+                tree = lib.from_string(config_str)
+                self.assertIsNotNone(tree)
+                self.assertIsNone(lib.from_string(b'interfaces {\n    address \n'))
+                lib.destroy(tree)
+                self.assertIn('Syntax error', lib.get_error().decode())
+
+        threads = [
+            threading.Thread(target=valid_task),
+            threading.Thread(target=error_task),
+            threading.Thread(target=valid_task),
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
 
 
 if __name__ == '__main__':
