@@ -32,6 +32,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.dict import dict_search
+from vyos.utils.misc import wait_for
 from vyos.utils.network import get_wwan_modem
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
@@ -161,13 +162,11 @@ def apply(wwan):
         # its own short retry rather than treating a momentary gap the
         # same as the modem genuinely not being there.
         modem = None
-        counter = 40
-        while counter > 0:
+        def _modem_found():
+            nonlocal modem
             modem = get_wwan_modem(wwan['ifname'])
-            if modem is not None:
-                break
-            counter -= 1
-            sleep(0.250)
+            return modem is not None
+        wait_for(_modem_found, interval=0.25, timeout=10)
 
         if modem is None:
             # We cannot talk to a modem we can't find. For a delete/disable,
