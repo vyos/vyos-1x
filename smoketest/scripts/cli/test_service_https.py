@@ -540,11 +540,46 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         )
         self.assertRaises(ConfigSessionError, self.cli_commit)
 
+        # An API key (or GraphQL token / mTLS) must also be configured,
+        # since verify() separately requires at least one authentication
+        # method once "api" is present -- OIDC alone was not (previously)
+        # recognized by that check, so without a key the second commit
+        # below would fail for an unrelated reason. See
+        # test_api_oidc_standalone_auth_allowed for the regression test
+        # covering that gap directly.
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', 'key'])
+
         # Setting audience alongside issuer must allow the commit to succeed.
         self.cli_set(
             base_path
             + ['api', 'rest', 'authentication', 'oidc', 'audience', 'vyos-rest-api']
         )
+        self.cli_commit()
+
+    def test_api_oidc_standalone_auth_allowed(self):
+        # Regression test: OIDC alone (issuer + audience, no API keys,
+        # no GraphQL token auth, no mTLS) must be sufficient to commit.
+        # verify()'s "at least one auth method" check previously only
+        # recognized API keys, GraphQL token auth, and mTLS -- OIDC was
+        # never added to it despite being introduced in the same PR
+        # that added mTLS to this same check, so an OIDC-only deployment
+        # was incorrectly rejected at commit time.
+        self.cli_set(
+            base_path
+            + [
+                'api',
+                'rest',
+                'authentication',
+                'oidc',
+                'issuer',
+                'https://idp.example.com',
+            ]
+        )
+        self.cli_set(
+            base_path
+            + ['api', 'rest', 'authentication', 'oidc', 'audience', 'vyos-rest-api']
+        )
+        # No API key configured at all -- this must succeed now.
         self.cli_commit()
 
     @ignore_warning(InsecureRequestWarning)
