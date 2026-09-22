@@ -41,7 +41,6 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
-from vyos.utils.process import is_systemd_unit_live
 from vyos.utils.process import process_named_running
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
