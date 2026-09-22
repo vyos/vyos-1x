@@ -829,12 +829,17 @@ def subtree_values_of_path(
     return list(map(tuple, lst))
 
 
-def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH):
+def reference_tree_to_json(
+    from_dir, to_file, internal_cache='', exclude_paths='[]', libpath=LIBPATH
+):
     # pylint: disable=raise-missing-from
     try:
         lib = get_lib(libpath)
         res = lib.reference_tree_to_json(
-            internal_cache.encode(), from_dir.encode(), to_file.encode()
+            internal_cache.encode(),
+            exclude_paths.encode(),
+            from_dir.encode(),
+            to_file.encode(),
         )
     except Exception as e:
         raise ConfigTreeError(e)
