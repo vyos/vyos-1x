@@ -467,7 +467,7 @@ def verify(config_dict):
                 # route-reflector-client verification has been moved to neighbor-only part
 
             # T5833 not all AFIs are supported for VRF
-            if 'vrf' in bgp and 'address_family' in peer_config:
+            if vrf and 'address_family' in peer_config:
                 unsupported_vrf_afi = {
                     'ipv4_flowspec',
                     'ipv6_flowspec',
