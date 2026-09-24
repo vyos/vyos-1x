@@ -30,6 +30,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
+from vyos.utils.wwan import clear_admin_disconnected
 from vyos.utils.wwan import connect_options
 from vyos.utils.wwan import modem_connect
 from vyos.utils.wwan import modem_disconnect
@@ -117,6 +118,11 @@ def generate(wwan):
     return None
 
 def apply(wwan):
+    # A commit re-asserts the configured state, so it also takes the interface
+    # out of the administratively disconnected state that op-mode "disconnect
+    # interface wwanN" put it in.
+    clear_admin_disconnected(wwan['ifname'])
+
     # ModemManager is required to dial WWAN connections - one instance is
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.

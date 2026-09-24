@@ -19,10 +19,13 @@ import argparse
 
 from psutil import process_iter
 
+from vyos.ifconfig import WWANIf
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.network import is_wwan_connected
-from vyos.utils.process import DEVNULL
+from vyos.utils.wwan import clear_admin_disconnected
+from vyos.utils.wwan import modem_disconnect
+from vyos.utils.wwan import set_admin_disconnected
 
 def check_ppp_interface(interface):
     if not os.path.isfile(f'/etc/ppp/peers/{interface}'):
@@ -52,6 +55,9 @@ def connect(interface):
             print(f'Interface {interface}: connecting...')
             call(f'systemctl restart ppp@{interface}.service')
     elif interface.startswith('wwan'):
+        # Take the interface out of the administratively disconnected state, so
+        # vyos-netlinkd re-dials it again should the session be lost later on
+        clear_admin_disconnected(interface)
         if is_wwan_connected(interface):
             print(f'Interface {interface}: already connected!')
         else:
@@ -72,11 +78,27 @@ def disconnect(interface):
             print(f'Interface {interface}: disconnecting...')
             call(f'systemctl stop ppp@{interface}.service')
     elif interface.startswith('wwan'):
+        # Keep the interface down until it is connected again. vyos-netlinkd
+        # re-dials every configured WWAN interface that lost its session, and
+        # would otherwise undo this disconnect on its next reconcile pass. The
+        # marker is set even when the session is already down, so a disconnect
+        # issued while the modem happens to be searching for a network is not
+        # silently ignored.
+        set_admin_disconnected(interface)
         if not is_wwan_connected(interface):
             print(f'Interface {interface}: connection is already down')
         else:
-            modem = interface.lstrip('wwan')
-            call(f'mmcli --modem {modem} --simple-disconnect', stdout=DEVNULL)
+            print(f'Interface {interface}: disconnecting...')
+            modem_disconnect(interface, quiet=True)
+
+        # Dropping the bearer does not touch the netdev - a cdc_mbim/qmi_wwan
+        # interface stays IFF_UP with carrier and an operstate of "unknown"
+        # once ModemManager is done, so it would keep reporting u/u and hold
+        # on to the address the DHCP client got for the session that just
+        # ended. Tear it down the same way conf_mode does for "disable".
+        w = WWANIf(interface)
+        if w.exists(interface):
+            w.remove()
     else:
         print(f'Unknown interface {interface}, cannot disconnect. Aborting!')
 
