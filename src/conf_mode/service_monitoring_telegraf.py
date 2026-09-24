@@ -26,6 +26,7 @@ from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
 from vyos.template import render
+from vyos.utils.convert import human_to_seconds
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
@@ -176,6 +177,26 @@ def verify(monitoring):
         for tag, tag_config in monitoring['global_tag'].items():
             if 'value' not in tag_config:
                 raise ConfigError(f'Global tag "{tag}" has no value assigned!')
+
+    # Verify agent
+    # Telegraf can handle up to 9223372036854775807ns
+    # Which is roughly 9223372036s
+    max_agent_duration_s = 9223372036
+
+    if 'agent' in monitoring:
+        for option in (
+            'interval',
+            'collection_jitter',
+            'flush_interval',
+            'flush_jitter',
+        ):
+            if option not in monitoring['agent']:
+                continue
+
+            duration_s = human_to_seconds(monitoring['agent'][option])
+
+            if duration_s > max_agent_duration_s:
+                raise ConfigError(f'{option.replace("_", "-")} value is too large')
 
     # Verify influxdb
     if 'influxdb' in monitoring:
