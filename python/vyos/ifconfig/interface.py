@@ -1747,7 +1747,12 @@ class Interface(Control):
                 if target:
                     rc_cmd(['ping', '-c', '1', '-W', '2', '-I', interface,
                             target], netns=netns)
-                call(dhclient_r, vrf=vrf, netns=netns, timeout=8)
+                from subprocess import TimeoutExpired
+                try:
+                    call(dhclient_r, vrf=vrf, netns=netns, timeout=8)
+                except TimeoutExpired:
+                    # Hang cap only. DHCPRELEASE may already be on the wire.
+                    pass
                 released = True
         except Exception:
             released = False
