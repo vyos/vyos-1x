@@ -35,10 +35,13 @@ from vyos.utils.process import is_systemd_service_active
 
 service_name = 'ModemManager.service'
 
-# Bounded wait for a modem to appear after ModemManager has been started. The
-# service being up is not enough - the modem is only dialable once it has been
-# probed and exported on the bus, which takes a moment longer.
-modem_wait_timeout = 25
+# Bounded wait for a modem to become dialable. Neither the service being up
+# nor the modem being listed is enough: it is exported on the bus as soon as
+# it is created and reports state 'unknown' until probing finishes, and a dial
+# in that window is refused. An HP lt4132 needed 33s of that, two 10s MBIM
+# timeouts of it, so the budget is generous - it is only ever spent on a modem
+# that is not answering.
+modem_wait_timeout = 60
 modem_wait_poll = 0.250
 
 # Markers for WWAN interfaces the operator has taken down with op-mode
@@ -55,25 +58,39 @@ def modem_index(ifname: str) -> str:
         raise ValueError(f'Specified interface "{ifname}" is not a WWAN interface')
     return ifname[len('wwan'):]
 
-def start_modem_manager() -> None:
+def modem_state(index: str) -> str:
+    """ ModemManager state of a modem, empty if it cannot be read yet """
+    try:
+        tmp = cmdl(['mmcli', '--output-keyvalue', '--modem', index])
+    except OSError:
+        # up but not yet answering on the bus, or no such modem
+        return ''
+
+    for line in tmp.splitlines():
+        key, _, value = line.partition(':')
+        if key.strip() == 'modem.generic.state':
+            return value.strip()
+    return ''
+
+def start_modem_manager(ifname: str) -> None:
     """ ModemManager is required to dial WWAN connections - a single instance
-    serves all modems. Start it if it is not running yet and wait until a modem
-    has been detected, so a dial that follows does not race the probing. """
-    if is_systemd_service_active(service_name):
-        return None
+    serves all modems. Start it if it is not running yet, then wait until the
+    modem behind ifname will accept a dial.
 
-    cmdl(['systemctl', 'start', service_name])
+    Waiting on the service, or on the modem merely being listed, is not
+    enough - both are true long before probing finishes, and dialling then
+    leaves the interface without a session until something re-dials it. """
+    if not is_systemd_service_active(service_name):
+        cmdl(['systemctl', 'start', service_name])
 
+    index = modem_index(ifname)
     counter = int(modem_wait_timeout / modem_wait_poll)
     while counter > 0:
         counter -= 1
-        try:
-            tmp = cmdl(['mmcli', '-L'])
-        except OSError:
-            # ModemManager is up but not yet answering on the bus - keep
-            # polling, this is expected for the first moments after start.
-            tmp = ''
-        if tmp and tmp != 'No modems were found':
+        # anything but 'unknown' means probing is done, including 'failed' -
+        # waiting out the budget would not improve that, and the dial reports
+        # it far better than a timeout here could
+        if modem_state(index) not in ('', 'unknown'):
             break
         sleep(modem_wait_poll)
 

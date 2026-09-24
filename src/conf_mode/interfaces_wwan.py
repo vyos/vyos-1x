@@ -126,7 +126,7 @@ def apply(wwan):
     # ModemManager is required to dial WWAN connections - one instance is
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.
-    start_modem_manager()
+    start_modem_manager(wwan['ifname'])
 
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
         # Number of bearers is limited - always disconnect first
