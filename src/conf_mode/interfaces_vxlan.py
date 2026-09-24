@@ -37,9 +37,12 @@ from vyos.ifconfig import VXLANIf
 from vyos.template import is_ipv6
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
+from vyos.xml_ref import default_value
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+base = ['interfaces', 'vxlan']
 
 def get_config(config=None):
     """
@@ -50,13 +53,12 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['interfaces', 'vxlan']
     ifname, vxlan = get_interface_dict(conf, base)
 
     # VXLAN interfaces are picky and require recreation if certain parameters
     # change. But a VXLAN interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
-    for cli_option in ['parameters', 'gpe', 'group', 'port', 'remote',
+    for cli_option in ['parameters', 'gbp', 'gpe', 'group', 'port', 'remote',
                        'source-address', 'source-interface', 'vni']:
         if is_node_changed(conf, base + [ifname, cli_option]):
             vxlan.update({'rebuild_required': {}})
@@ -95,6 +97,27 @@ def get_config(config=None):
         set_dependents('firewall', conf)
 
     return vxlan
+
+
+def vxlan_socket_families(config):
+    # External mode opens both IPv4 and IPv6 sockets.
+    if dict_search('parameters.external', config) is not None:
+        return {4, 6}
+    addresses = [config.get('source_address', ''), config.get('group', '')]
+    addresses.extend(config.get('remote', []))
+    if any(is_ipv6(address) for address in addresses if address):
+        return {6}
+    return {4}
+
+
+def vxlan_underlay_vrf(config):
+    # The socket binds to the source interface's VRF, not the overlay VRF.
+    # A source interface that does not exist yet cannot bind the socket.
+    source = config.get('source_interface')
+    if source and interface_exists(source):
+        return Interface(source).get_vrf() or ''
+    return ''
+
 
 def verify(vxlan):
     if 'deleted' in vxlan:
@@ -142,6 +165,42 @@ def verify(vxlan):
                 raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
                                 f'CLI option is used and "vni-filter" is unset. '\
                                 f'Additional tunnels: {other_tunnels}')
+
+    if 'gbp' in vxlan and 'gpe' in vxlan:
+        raise ConfigError('VXLAN-GBP and VXLAN-GPE cannot be used together')
+
+    if 'gbp' in vxlan and dict_search('parameters.external', vxlan) is not None:
+        Warning(
+            'In external mode VXLAN-GBP uses tunnel metadata instead of '
+            'the packet mark; firewall mark matching will not see the '
+            'received group policy ID.'
+        )
+
+    # Different GBP flags cannot share a socket. Separate address families or
+    # underlay VRFs can reuse a UDP port without sharing that socket.
+    families = vxlan_socket_families(vxlan)
+    default_port = default_value(base + ['vxlan0', 'port'])
+    for tunnel, tunnel_config in vxlan.get('other_tunnels', {}).items():
+        if (
+            ('gbp' in tunnel_config and 'gbp' in vxlan)
+            or ('gbp' not in tunnel_config and 'gbp' not in vxlan)
+        ):
+            continue
+        # other_tunnels carries no defaults; use the XML default port.
+        if tunnel_config.get('port', default_port) != vxlan['port']:
+            continue
+        if not families & vxlan_socket_families(tunnel_config):
+            continue
+        vrf = vxlan_underlay_vrf(vxlan)
+        other_vrf = vxlan_underlay_vrf(tunnel_config)
+        # An unbound socket also conflicts with sockets bound to a VRF.
+        if vrf and other_vrf and vrf != other_vrf:
+            continue
+        raise ConfigError(
+            f'VXLAN interface "{tunnel}" shares UDP port '
+            f'{vxlan["port"]} but has a different "gbp" setting; '
+            'use matching GBP settings or a different UDP port.'
+        )
 
     if 'gpe' in vxlan and dict_search('parameters.external', vxlan) is None:
         raise ConfigError(
