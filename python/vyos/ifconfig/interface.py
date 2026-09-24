@@ -747,7 +747,8 @@ class Interface(Control):
         if 'netns' in self.config:
             return False
 
-        tmp = self.get_vrf()
+        tmp = self.get_vrf() or ''
+        vrf = vrf or ''
         if tmp == vrf:
             return False
 
@@ -1699,8 +1700,9 @@ class Interface(Control):
                                netns=netns)
                         restored_cidr = cidr
                     if server:
-                        # Same VRF as dhclient -r so the host route is in
-                        # the table RELEASE will use.
+                        # Same VRF as dhclient -r. If a route already exists
+                        # (FRR static), do not replace it — restore would leave
+                        # an unowned proto boot copy (alexk37).
                         code, out = rc_cmd(['ip', '-j', 'route', 'show',
                                             f'{server}/32'],
                                            vrf=vrf, netns=netns)
@@ -1711,27 +1713,28 @@ class Interface(Control):
                                     prev_route = prev[0]
                             except (json.JSONDecodeError, IndexError, TypeError):
                                 prev_route = None
-                        if router:
-                            rcode, _ = rc_cmd(
-                                ['ip', 'route', 'replace', f'{server}/32',
-                                 'via', router, 'dev', interface],
-                                vrf=vrf, netns=netns)
-                        else:
-                            rcode, _ = rc_cmd(
-                                ['ip', 'route', 'replace', f'{server}/32',
-                                 'dev', interface],
-                                vrf=vrf, netns=netns)
-                        if rcode == 0:
-                            restored_route = server
+                        if prev_route is None:
+                            if router:
+                                rcode, _ = rc_cmd(
+                                    ['ip', 'route', 'replace', f'{server}/32',
+                                     'via', router, 'dev', interface],
+                                    vrf=vrf, netns=netns)
+                            else:
+                                rcode, _ = rc_cmd(
+                                    ['ip', 'route', 'replace', f'{server}/32',
+                                     'dev', interface],
+                                    vrf=vrf, netns=netns)
+                            if rcode == 0:
+                                restored_route = server
 
-                dhclient_r = [
-                    '/sbin/dhclient',
-                    '-4',
-                    '-r',
-                    '-sf',
-                    '/bin/true',
-                    '-e',
-                    'CONTROLLED_STOP=yes',
+                # Stock dhclient-script removes the address, default, and
+                # nameservers and runs user RELEASE hooks. Skip configd wait
+                # only when a commit already holds the lock (CONTROLLED_STOP).
+                from vyos.utils.commit import commit_in_progress
+                dhclient_r = ['/sbin/dhclient', '-4', '-r']
+                if commit_in_progress():
+                    dhclient_r += ['-e', 'CONTROLLED_STOP=yes']
+                dhclient_r += [
                     '-cf',
                     conf,
                     '-pf',
@@ -1740,23 +1743,18 @@ class Interface(Control):
                     temp_lf,
                     interface,
                 ]
-                # Hooks skipped; packet is sent. Timeout is only a hang cap.
-                call(dhclient_r, vrf=vrf, netns=netns, timeout=5)
+                target = router or server
+                if target:
+                    rc_cmd(['ping', '-c', '1', '-W', '2', '-I', interface,
+                            target], netns=netns)
+                call(dhclient_r, vrf=vrf, netns=netns, timeout=8)
                 released = True
         except Exception:
             released = False
         finally:
-            if restored_route:
-                if prev_route:
-                    args = ['ip', 'route', 'replace', f'{restored_route}/32']
-                    if prev_route.get('gateway'):
-                        args += ['via', prev_route['gateway']]
-                    if prev_route.get('dev'):
-                        args += ['dev', prev_route['dev']]
-                    rc_cmd(args, vrf=vrf, netns=netns)
-                else:
-                    rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
-                            interface], vrf=vrf, netns=netns)
+            if restored_route and prev_route is None:
+                rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
+                        interface], vrf=vrf, netns=netns)
             if restored_cidr:
                 rc_cmd(['ip', 'addr', 'del', restored_cidr, 'dev', interface],
                        netns=netns)
