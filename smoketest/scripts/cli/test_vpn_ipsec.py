@@ -2135,6 +2135,43 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertConfigLine(swanctl_conf, 'proposals = aes256-sha512-modp2048')
         self.assertIn('esp_proposals = aes256-sha512-modp2048-esn', swanctl_conf)
 
+    def test_vpp_ipsec_incompatible_algorithms(self):
+        # T9303: VPP IPsec acceleration must reject unsupported IKE/ESP algorithms.
+        # Commit must fail in verify() so VPP is never applied.
+        self.skip_process_check = True
+
+        try:
+            self.cli_set(['vpp', 'settings', 'ipsec-acceleration'])
+
+            self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+            self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+            self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
+            peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
+            self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+            self.cli_set(peer_base_path + ['authentication', 'local-id', local_id])
+            self.cli_set(peer_base_path + ['authentication', 'remote-id', remote_id])
+            self.cli_set(peer_base_path + ['ike-group', ike_group])
+            self.cli_set(peer_base_path + ['local-address', '192.0.2.10'])
+            self.cli_set(peer_base_path + ['remote-address', peer_ip])
+            self.cli_set(peer_base_path + ['tunnel', '1', 'esp-group', esp_group])
+            self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '10.10.1.0/24'])
+            self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'prefix', '12.10.2.0/24'])
+
+            # verify() - ESP 3des is not in the VPP allow-list
+            self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', '3des'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            # verify() - IKE serpent128 is not compatible with VPP
+            self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
+            self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'serpent128'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+        finally:
+            # Drop uncommitted VPP config so later tests do not apply it
+            self.cli_delete(['vpp'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
