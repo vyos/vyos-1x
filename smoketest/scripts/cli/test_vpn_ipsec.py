@@ -946,7 +946,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # Passing the 'unique = never' for StrongSwan's `connections.<conn>.unique` parameter
         self.cli_set(base_path + ['disable-uniqreqids'])
 
-        self.cli_commit()
+        # T9320: an explicit IKEv1 key-exchange must raise a deprecation warning
+        out = self.cli_commit()
+        self.assertIn(
+            f'DEPRECATION WARNING: IKE group "{ike_group}" uses deprecated IKEv1', out
+        )
 
         swanctl_conf = read_file(swanctl_file)
         self.assertConfigLine(swanctl_conf, 'proposals = aes256-sha1-prfsha1-modp1024')
@@ -995,7 +999,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(peer_base_path + ['vti', 'bind', vti])
         self.cli_set(peer_base_path + ['vti', 'esp-group', esp_group])
 
-        self.cli_commit()
+        # T9320: an in-use IKE group without a key-exchange still accepts
+        # incoming IKEv1 and must raise a deprecation warning
+        out = self.cli_commit()
+        self.assertIn(
+            f'DEPRECATION WARNING: IKE group "{ike_group}" has no key-exchange set\n'
+            'and will still accept incoming deprecated IKEv1 connections.',
+            out,
+        )
 
         swanctl_conf = read_file(swanctl_file)
         tmp = peer_ip.replace('.', '-')
