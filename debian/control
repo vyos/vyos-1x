@@ -171,7 +171,6 @@ Depends:
 # For "interfaces wwan"
   modemmanager,
   usb-modeswitch,
-  libqmi-utils,
 # End "interfaces wwan"
 # For "interfaces openvpn"
   openvpn (>= 2.7),
