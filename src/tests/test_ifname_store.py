@@ -280,6 +280,23 @@ class TestWwanNaming(unittest.TestCase):
             names = sorted(p.name for p in Path(d).iterdir())
         self.assertEqual(names, ['10-vyos-wwan0.link'])
 
+    def test_a_nic_in_the_modem_s_socket_does_not_take_its_name(self):
+        # the modem is gone and an ordinary USB NIC is in the port it used.
+        # The slot matches, but wwan0 is a name 'interfaces wwan' reads - give
+        # it to a NIC and the modem's configuration is applied to a card that
+        # cannot carry it. Leave the name reserved and name the NIC as a NIC.
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'wwan0': f'ID_NET_NAME_PATH={self.WWP}'},
+                 'hardware': {'wwan0': self.MODEM_MAC}}
+        nic = self._nic('eth0', self.WWP, 'aa:bb:cc:dd:ee:07')
+        _, new_store, report = resolve([nic], store)
+
+        self.assertEqual(report['replaced'], {})
+        self.assertEqual(new_store['hardware']['wwan0'], self.MODEM_MAC)
+        self.assertIn('eth0', new_store['interfaces'])
+        self.assertEqual(new_store['interfaces']['wwan0'],
+                          f'ID_NET_NAME_PATH={self.WWP}')
+
     def test_an_ordinary_port_on_the_usb_bus_is_not_a_modem(self):
         # the key alone cannot tell them apart - a device falling back to
         # ID_PATH reads usb-... whether it is a modem or not
