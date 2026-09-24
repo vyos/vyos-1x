@@ -215,6 +215,80 @@ class TestMovedHardware(unittest.TestCase):
         self.assertEqual(report['moved'], {})
 
 
+class TestWwanNaming(unittest.TestCase):
+    """A modem is addressed as wwanN by the CLI - 'interfaces wwan' looks at
+    nothing else. Naming it ethN like any other port left an HP lt4132 bound,
+    working and completely invisible on a DUT.
+    """
+
+    WWP = 'wwp0s20f0u2u4c3'
+    MODEM_MAC = 'b6:53:dd:66:c2:98'
+
+    def _modem(self, name='eth6'):
+        properties = {'ID_NET_NAME_PATH': self.WWP, 'ID_BUS': 'usb'}
+        return {'name': name, 'mac': self.MODEM_MAC, 'wireless': False,
+                'wwan': True, 'properties': properties,
+                'key': f'ID_NET_NAME_PATH={self.WWP}'}
+
+    def _nic(self, name='eth0', path='enp3s0', mac='00:f0:cb:fe:ba:99'):
+        properties = {'ID_NET_NAME_PATH': path, 'ID_BUS': 'pci'}
+        return {'name': name, 'mac': mac, 'wireless': False, 'wwan': False,
+                'properties': properties, 'key': f'ID_NET_NAME_PATH={path}'}
+
+    def test_a_modem_is_named_in_its_own_namespace(self):
+        _, store, _ = resolve([self._nic(), self._modem()], empty_store())
+        self.assertEqual(store['interfaces']['wwan0'],
+                          f'ID_NET_NAME_PATH={self.WWP}')
+        # and it must not have eaten an ethernet number on the way
+        self.assertEqual(store['interfaces']['eth0'],
+                          'ID_NET_NAME_PATH=enp3s0')
+        self.assertNotIn('eth1', store['interfaces'])
+
+    def test_the_link_file_names_the_type_the_device_is(self):
+        # a .link naming a type the device is not simply never applies
+        body = render_link('wwan0', f'ID_NET_NAME_PATH={self.WWP}')
+        self.assertIn('Type=wwan', body)
+        self.assertNotIn('Type=ether', body)
+
+    def test_a_modem_filed_under_an_ethernet_name_is_reclaimed(self):
+        # what an earlier version left on the DUT: the entry still matches the
+        # modem by path, so without dropping it the modem is captured again and
+        # stays invisible to 'interfaces wwan'
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'eth0': 'ID_NET_NAME_PATH=enp3s0',
+                                'eth6': f'ID_NET_NAME_PATH={self.WWP}'},
+                 'hardware': {'eth0': '00:f0:cb:fe:ba:99',
+                              'eth6': self.MODEM_MAC}}
+        plan, new_store, _ = resolve([self._nic(), self._modem()], store)
+
+        self.assertNotIn('eth6', new_store['interfaces'])
+        self.assertNotIn('eth6', new_store['hardware'])
+        self.assertEqual(new_store['interfaces']['wwan0'],
+                          f'ID_NET_NAME_PATH={self.WWP}')
+        self.assertEqual(plan, {'eth6': 'wwan0'})
+
+    def test_the_stale_link_file_goes_with_it(self):
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'eth6': f'ID_NET_NAME_PATH={self.WWP}'},
+                 'hardware': {'eth6': self.MODEM_MAC}}
+        _, new_store, _ = resolve([self._modem()], store)
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / '10-vyos-eth6.link').write_text('left over')
+            sync_link_files(new_store, Path(d))
+            names = sorted(p.name for p in Path(d).iterdir())
+        self.assertEqual(names, ['10-vyos-wwan0.link'])
+
+    def test_an_ordinary_port_on_the_usb_bus_is_not_a_modem(self):
+        # the key alone cannot tell them apart - a device falling back to
+        # ID_PATH reads usb-... whether it is a modem or not
+        usb_nic = self._nic('eth1', 'enp0s20f0u3', 'aa:bb:cc:dd:ee:01')
+        usb_nic['properties'] = {'ID_PATH': 'usb-0:2:1.0', 'ID_BUS': 'usb'}
+        usb_nic['key'] = 'ID_PATH=usb-0:2:1.0'
+        _, store, _ = resolve([usb_nic], empty_store())
+        self.assertIn('eth0', store['interfaces'])
+        self.assertNotIn('wwan0', store['interfaces'])
+
+
 class TestStoreIO(unittest.TestCase):
     @staticmethod
     def _config_dir(d):
