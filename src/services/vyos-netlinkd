@@ -21,12 +21,14 @@ import sys
 import syslog
 import signal
 import select
+import threading
 
 from pyroute2 import IPRoute # pylint: disable = no-name-in-module
 from pyroute2 import NetlinkError # pylint: disable = no-name-in-module
 from pyroute2.netlink.rtnl import RTMGRP_LINK
 from pyroute2.netlink.rtnl import RTMGRP_IPV4_IFADDR
 from pyroute2.netlink.rtnl import RTMGRP_IPV6_IFADDR
+from time import monotonic
 from time import sleep
 from typing import Optional
 
@@ -36,9 +38,14 @@ from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.commit import commit_in_progress2
 from vyos.utils.file import read_file
 from vyos.utils.dict import dict_search
+from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
+from vyos.utils.wwan import connect_options
+from vyos.utils.wwan import modem_connect
+from vyos.utils.wwan import modem_disconnect
+from vyos.utils.wwan import start_modem_manager
 
 def _load_conf_mode_qos():
     spec = importlib.util.spec_from_file_location(
@@ -65,6 +72,30 @@ _iface_prev_operstate: dict[str, str] = {}
 # live operstate so a transition that only happened inside the drain window
 # is not lost (T9086).
 _in_commit_skip = False
+
+# WWAN sessions are re-dialled from a periodic reconcile pass rather than from
+# netlink events. A modem that never connected in the first place produces no
+# edge at all, and a cdc_mbim/qmi_wwan netdev sits at operstate "unknown" while
+# it is up, so there is nothing to trigger on either way - only ModemManager
+# knows whether a session exists.
+WWAN_RECONCILE_INTERVAL = 30
+
+# Per-interface re-dial backoff. A modem with no SIM, no coverage or a wrong
+# APN would otherwise be re-dialled every reconcile pass forever.
+WWAN_BACKOFF_MIN = 30
+WWAN_BACKOFF_MAX = 900
+
+_wwan_next_attempt: dict[str, float] = {}
+_wwan_backoff: dict[str, int] = {}
+
+# Interfaces with a dial in flight. Dialling blocks for tens of seconds, so it
+# runs on a worker thread and must not be started twice for one interface.
+_wwan_dialing: set[str] = set()
+_wwan_lock = threading.Lock()
+
+# Legacy re-dial cron job, superseded by _reconcile_wwan(). Only present on a
+# system that ran an earlier version, where it was written at commit time.
+WWAN_LEGACY_CRON = '/etc/cron.d/vyos-wwan'
 
 def match_iface(ifname: str) -> bool:
     """ Helper function returning true if interface name is a match for further
@@ -216,6 +247,104 @@ def _reconcile_dhcp_operstate() -> None:
                       f'Reconcile {ifname}: prev={prev} current={operstate}')
         _handle_dhcp_events(operstate, ifname)
 
+def _wwan_clear_backoff(ifname: str) -> None:
+    """ Forget any re-dial backoff for an interface that no longer needs one """
+    _wwan_next_attempt.pop(ifname, None)
+    _wwan_backoff.pop(ifname, None)
+
+def _wwan_defer(ifname: str, reason: str) -> None:
+    """ Grow the re-dial backoff for an interface after a failed attempt """
+    backoff = min(max(_wwan_backoff.get(ifname, 0) * 2, WWAN_BACKOFF_MIN),
+                  WWAN_BACKOFF_MAX)
+    _wwan_backoff[ifname] = backoff
+    _wwan_next_attempt[ifname] = monotonic() + backoff
+    syslog.syslog(syslog.LOG_WARNING, f'{reason}, retrying in {backoff}s')
+
+def _wwan_dial(ifname: str, config: dict) -> None:
+    """ Re-establish a lost WWAN session. Runs on a worker thread - dialling
+    blocks for as long as the modem takes to answer, and the event loop must
+    stay responsive for every other interface while it does. """
+    try:
+        # A session cannot be dialled without ModemManager. It is normally
+        # started by conf_mode, but recover here too in case it died.
+        start_modem_manager()
+
+        # Number of bearers is limited - always disconnect first
+        modem_disconnect(ifname)
+
+        if modem_connect(ifname, connect_options(config)):
+            syslog.syslog(syslog.LOG_INFO, f'Re-dialled WWAN interface {ifname}')
+            _wwan_clear_backoff(ifname)
+            return None
+
+        _wwan_defer(ifname, f'Failed to re-dial WWAN interface {ifname}')
+    except Exception as e:
+        _wwan_defer(ifname, f'Error re-dialling WWAN interface {ifname}: {e}')
+    finally:
+        with _wwan_lock:
+            _wwan_dialing.discard(ifname)
+
+def _wwan_dial_async(ifname: str, config: dict) -> None:
+    """ Hand a re-dial to a worker thread, one at a time per interface """
+    with _wwan_lock:
+        if ifname in _wwan_dialing:
+            return None
+        _wwan_dialing.add(ifname)
+
+    threading.Thread(target=_wwan_dial, args=(ifname, config),
+                     name=f'wwan-dial-{ifname}', daemon=True).start()
+
+def _wwan_present() -> bool:
+    """ True if the system has any WWAN interface at all.
+
+    Every modem VyOS supports binds a driver that creates the netdev as soon as
+    the device is probed - independently of whether a session is up - so this is
+    a cheap way to keep systems without a modem from reading the config on every
+    reconcile pass.
+    """
+    try:
+        return any(name.startswith('wwan') for name in os.listdir('/sys/class/net'))
+    except OSError:
+        return False
+
+def _reconcile_wwan() -> None:
+    """ Re-dial every configured WWAN interface that has lost its session.
+
+    This replaces the /etc/cron.d/vyos-wwan job that used to re-run the
+    conf_mode script every 5 minutes. Running it here means it inherits the
+    boot_configuration_complete() and commit_in_progress2() gates of the main
+    loop, so a re-dial can no longer land on a half-applied configuration, and
+    it dials ModemManager directly instead of re-entering conf_mode.
+    """
+    if not _wwan_present():
+        return None
+
+    config_dict = op_mode_config_dict(
+        ['interfaces', 'wwan'], key_mangling=('-', '_'), get_first_key=True
+    )
+    if not config_dict:
+        return None
+
+    for ifname, config in config_dict.items():
+        # Do not dial an interface the user has explicitly disabled, but let it
+        # start from a clean slate once it is enabled again.
+        if 'disable' in config:
+            _wwan_clear_backoff(ifname)
+            continue
+
+        if is_wwan_connected(ifname):
+            _wwan_clear_backoff(ifname)
+            continue
+
+        if monotonic() < _wwan_next_attempt.get(ifname, 0):
+            continue
+
+        syslog.syslog(syslog.LOG_INFO,
+                      f'WWAN interface {ifname} is not connected, re-dialling...')
+        _wwan_dial_async(ifname, config)
+
+    return None
+
 def main():
     global _in_commit_skip
 
@@ -237,6 +366,18 @@ def main():
         )
         ipr.bind()
 
+    # Drop the re-dial cron job left behind by an earlier version - WWAN
+    # sessions are reconciled from this daemon now.
+    try:
+        os.unlink(WWAN_LEGACY_CRON)
+        syslog.syslog(syslog.LOG_INFO,
+                      f'Removed superseded WWAN re-dial cron job {WWAN_LEGACY_CRON}')
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        syslog.syslog(syslog.LOG_ERR,
+                      f'Failed to remove {WWAN_LEGACY_CRON}: {e}')
+
     # Establish a baseline so the first UP re-notification is not mistaken
     # for a real interface transition.
     for link in ipr.get_links():
@@ -247,6 +388,8 @@ def main():
             _iface_prev_operstate[ifname] = operstate
 
     fd = ipr.fileno()
+
+    wwan_next_reconcile = 0.0
 
     global running
     while running:
@@ -283,6 +426,14 @@ def main():
                 syslog.syslog(syslog.LOG_INFO,
                               'Config commit finished, reconciling DHCP client state with operstate')
                 _reconcile_dhcp_operstate()
+
+            # Re-dial WWAN sessions that were lost. Placed after the commit
+            # gate above so conf_mode always owns the modem while a commit is
+            # running, and reached on the select() timeout too, so it does not
+            # depend on netlink traffic arriving.
+            if monotonic() >= wwan_next_reconcile:
+                wwan_next_reconcile = monotonic() + WWAN_RECONCILE_INTERVAL
+                _reconcile_wwan()
 
             if not rlist:
                 # timeout - retry

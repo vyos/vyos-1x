@@ -14,10 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
-from time import sleep
 
 from vyos.config import Config
 from vyos.configdep import set_dependents
@@ -31,19 +28,16 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
-from vyos.utils.dict import dict_search
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
-from vyos.utils.process import call
-from vyos.utils.process import DEVNULL
-from vyos.utils.process import is_systemd_service_active
-from vyos.utils.file import write_file
+from vyos.utils.wwan import connect_options
+from vyos.utils.wwan import modem_connect
+from vyos.utils.wwan import modem_disconnect
+from vyos.utils.wwan import service_name
+from vyos.utils.wwan import start_modem_manager
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
-service_name = 'ModemManager.service'
-cron_script = '/etc/cron.d/vyos-wwan'
 
 def get_config(config=None):
     """
@@ -117,49 +111,25 @@ def verify(wwan):
     return None
 
 def generate(wwan):
-    if 'deleted' in wwan:
-        # We are the last WWAN interface - there are no other ones remaining
-        # thus the cronjob needs to go away, too
-        if 'other_interfaces' not in wwan:
-            if os.path.exists(cron_script):
-                os.unlink(cron_script)
-        return None
-
-    # Install cron triggered helper script to re-dial WWAN interfaces on
-    # disconnect - e.g. happens during RF signal loss. The script watches every
-    # WWAN interface - so there is only one instance.
-    if not os.path.exists(cron_script):
-        write_file(cron_script, '*/5 * * * * root /usr/libexec/vyos/vyos-check-wwan.py\n')
-
+    # Nothing to render - re-dialling a session that was lost (e.g. during RF
+    # signal loss) is owned by vyos-netlinkd, which reconciles every configured
+    # WWAN interface against ModemManager on its own.
     return None
 
 def apply(wwan):
     # ModemManager is required to dial WWAN connections - one instance is
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.
-    if not is_systemd_service_active(service_name):
-        cmdl(['systemctl', 'start', service_name])
-
-        counter = 100
-        # Wait until a modem is detected and then we can continue
-        while counter > 0:
-            counter -= 1
-            tmp = cmdl(['mmcli', '-L'])
-            if tmp != 'No modems were found':
-                break
-            sleep(0.250)
+    start_modem_manager()
 
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        # we only need the modem number. wwan0 -> 0, wwan1 -> 1
-        modem = wwan['ifname'].lstrip('wwan')
-        base_cmd = f'mmcli --modem {modem}'
         # Number of bearers is limited - always disconnect first
-        call(f'{base_cmd} --simple-disconnect')
+        modem_disconnect(wwan['ifname'])
 
     w = WWANIf(wwan['ifname'])
 
-    # We cannot proceed with the configuration if the modem is not detected - so we bail out
-    # and wait for the next cronjob run to re-apply the configuration.
+    # We cannot proceed with the configuration if the modem is not detected - so
+    # we bail out and let vyos-netlinkd re-dial once the modem has shown up.
     if not w.exists(wwan['ifname']):
         return None
 
@@ -170,10 +140,6 @@ def apply(wwan):
         # remaining, thus we can stop ModemManager and free resources.
         if 'other_interfaces' not in wwan:
             cmdl(['systemctl', 'stop', service_name])
-            # Clean CRON helper script which is used for to re-connect when
-            # RF signal is lost
-            if os.path.exists(cron_script):
-                os.unlink(cron_script)
 
         # run the dependents
         call_dependents()
@@ -181,39 +147,7 @@ def apply(wwan):
         return None
 
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        ip_type = 'ipv4'
-        slaac = dict_search('ipv6.address.autoconf', wwan) != None
-        if 'address' in wwan:
-            if 'dhcp' in wwan['address'] and ('dhcpv6' in wwan['address'] or slaac):
-                ip_type = 'ipv4v6'
-            elif 'dhcpv6' in wwan['address'] or slaac:
-                ip_type = 'ipv6'
-            elif 'dhcp' in wwan['address']:
-                ip_type = 'ipv4'
-
-        options = f'ip-type={ip_type},apn=' + wwan['apn']
-        if 'authentication' in wwan:
-            options += ',user={username},password={password}'.format(**wwan['authentication'])
-
-        # Some networks only ever admit a single combined IPv4+IPv6 PDN context
-        # per APN and reject a standalone IPv6 "Start Network" request outright
-        # (QMI CallEndReason ip-version-mismatch) once an IPv4 session already
-        # exists for that APN. ModemManager's --simple-connect with
-        # ip-type=ipv4v6 opens two separate WDS sessions (one per family) rather
-        # than negotiating both together, which is what a normal handset attach
-        # does and why this is invisible on most other devices.
-        #
-        # Pre-negotiating the attach-time PDN type upfront avoids the rejection;
-        # the resulting bearer only sets up what the *next* --simple-connect is
-        # allowed to request and can't be connected directly, so a failure here
-        # isn't fatal - unsupported modems simply proceed to --simple-connect
-        # exactly as before.
-        if ip_type in ('ipv4v6', 'ipv6'):
-            call(f'{base_cmd} --3gpp-set-initial-eps-bearer-settings="{options}"',
-                stdout=DEVNULL)
-
-        command = f'{base_cmd} --simple-connect="{options}"'
-        call(command, stdout=DEVNULL)
+        modem_connect(wwan['ifname'], connect_options(wwan))
 
     w.update(wwan)
 
