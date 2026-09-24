@@ -23,6 +23,8 @@ invocations in one place means a re-dial can never drift from what conf_mode
 would have done.
 """
 
+import os
+
 from time import sleep
 
 from vyos.utils.dict import dict_search
@@ -38,6 +40,14 @@ service_name = 'ModemManager.service'
 # probed and exported on the bus, which takes a moment longer.
 modem_wait_timeout = 25
 modem_wait_poll = 0.250
+
+# Markers for WWAN interfaces the operator has taken down with op-mode
+# "disconnect interface wwanN". vyos-netlinkd re-dials every configured
+# interface that has lost its session, which would otherwise bring the
+# interface back up within one reconcile interval and make the disconnect look
+# like it never happened. Kept in /run - a manual disconnect is not meant to
+# survive a reboot, and a commit re-asserts the configured state too.
+admin_disconnect_dir = '/run/vyos-wwan'
 
 def modem_index(ifname: str) -> str:
     """ Return the ModemManager modem index backing an interface, wwan0 -> 0 """
@@ -92,11 +102,39 @@ def connect_options(config: dict) -> str:
 
     return options
 
-def modem_disconnect(ifname: str) -> None:
+def _admin_disconnect_marker(ifname: str) -> str:
+    return os.path.join(admin_disconnect_dir, f'{ifname}.disconnected')
+
+def set_admin_disconnected(ifname: str) -> None:
+    """ Mark a WWAN interface as administratively disconnected, so it is left
+    alone by the re-dial pass in vyos-netlinkd """
+    # rejects anything that is not a WWAN interface, so a bogus name can never
+    # end up creating a file here
+    modem_index(ifname)
+    os.makedirs(admin_disconnect_dir, exist_ok=True)
+    with open(_admin_disconnect_marker(ifname), 'w'):
+        pass
+
+def clear_admin_disconnected(ifname: str) -> None:
+    """ Take a WWAN interface out of the administratively disconnected state """
+    modem_index(ifname)
+    try:
+        os.unlink(_admin_disconnect_marker(ifname))
+    except FileNotFoundError:
+        pass
+
+def is_admin_disconnected(ifname: str) -> bool:
+    """ True if a WWAN interface was taken down with op-mode "disconnect" and
+    has not been connected again since """
+    return os.path.exists(_admin_disconnect_marker(ifname))
+
+def modem_disconnect(ifname: str, quiet: bool = False) -> None:
     """ Disconnect every bearer of the modem backing ifname. The number of
     bearers a modem can hold is limited, so we always disconnect before we
     dial again. """
-    call(f'mmcli --modem {modem_index(ifname)} --simple-disconnect')
+    call(f'mmcli --modem {modem_index(ifname)} --simple-disconnect',
+         stdout=DEVNULL if quiet else None,
+         stderr=DEVNULL if quiet else None)
 
 def modem_connect(ifname: str, options: str) -> bool:
     """ Dial the modem backing ifname, returns True if the modem connected """

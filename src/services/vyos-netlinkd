@@ -43,6 +43,7 @@ from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.wwan import connect_options
+from vyos.utils.wwan import is_admin_disconnected
 from vyos.utils.wwan import modem_connect
 from vyos.utils.wwan import modem_disconnect
 from vyos.utils.wwan import start_modem_manager
@@ -329,6 +330,13 @@ def _reconcile_wwan() -> None:
         # Do not dial an interface the user has explicitly disabled, but let it
         # start from a clean slate once it is enabled again.
         if 'disable' in config:
+            _wwan_clear_backoff(ifname)
+            continue
+
+        # Do not undo an explicit op-mode "disconnect interface wwanN" - the
+        # session stays down until it is connected again or the configuration
+        # is re-applied by a commit.
+        if is_admin_disconnected(ifname):
             _wwan_clear_backoff(ifname)
             continue
 
