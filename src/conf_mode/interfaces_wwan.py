@@ -30,6 +30,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.wwan import clear_admin_disconnected
 from vyos.utils.wwan import connect_options
 from vyos.utils.wwan import modem_connect
@@ -126,9 +127,17 @@ def apply(wwan):
     # ModemManager is required to dial WWAN connections - one instance is
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.
-    start_modem_manager()
+    #
+    # Tearing an interface down never dials, so it must not wait for the modem
+    # to become dialable either - the hardware being gone is a common reason to
+    # remove the configuration in the first place, and waiting out the budget
+    # for a modem that will never appear would stall the commit for nothing.
+    if 'deleted' not in wwan and 'disable' not in wwan:
+        start_modem_manager(wwan['ifname'])
 
-    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
+    # No ModemManager, no session to drop - and nothing that would answer
+    if is_systemd_service_active(service_name) and (
+            'shutdown_required' in wwan or not is_wwan_connected(wwan['ifname'])):
         # Number of bearers is limited - always disconnect first
         modem_disconnect(wwan['ifname'])
 

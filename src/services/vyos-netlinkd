@@ -292,7 +292,7 @@ def _wwan_dial(ifname: str, config: dict) -> None:
     try:
         # A session cannot be dialled without ModemManager. It is normally
         # started by conf_mode, but recover here too in case it died.
-        start_modem_manager()
+        start_modem_manager(ifname)
 
         if not _wwan_dial_wanted(ifname):
             return None
