@@ -540,15 +540,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         )
         self.assertRaises(ConfigSessionError, self.cli_commit)
 
-        # An API key (or GraphQL token / mTLS) must also be configured,
-        # since verify() separately requires at least one authentication
-        # method once "api" is present -- OIDC alone was not (previously)
-        # recognized by that check, so without a key the second commit
-        # below would fail for an unrelated reason. See
-        # test_api_oidc_standalone_auth_allowed for the regression test
-        # covering that gap directly.
-        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', 'key'])
-
         # Setting audience alongside issuer must allow the commit to succeed.
         self.cli_set(
             base_path
