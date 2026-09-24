@@ -315,7 +315,9 @@ class TestStoreIO(unittest.TestCase):
         return Path(d) / 'interface-mapping.json'
 
     def test_roundtrip(self):
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory() as d, \
+             mock.patch('vyos.ifconfig.ifname_store.encrypted_config_volume',
+                        return_value=False):
             p = self._config_dir(d)
             s = store_of({'eth0': 'pci-0000:00:12.0'})
             self.assertTrue(save_store(s, p))
@@ -337,7 +339,9 @@ class TestStoreIO(unittest.TestCase):
         # qcow2 that marker is absent on the first boot, so no store was ever
         # written and the next boot named the hardware from scratch - pull a
         # card and every name below it moved onto the wrong port.
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory() as d, \
+             mock.patch('vyos.ifconfig.ifname_store.encrypted_config_volume',
+                        return_value=False):
             p = Path(d) / 'interface-mapping.json'
             self.assertFalse((Path(d) / '.vyatta_config').exists())
             self.assertTrue(save_store(store_of({'eth0': 'pci-0000:00:12.0'}), p))
@@ -363,7 +367,9 @@ class TestStoreIO(unittest.TestCase):
             self.assertEqual(load_store(p), empty_store())
 
     def test_write_is_atomic_no_leftovers(self):
-        with tempfile.TemporaryDirectory() as d:
+        with tempfile.TemporaryDirectory() as d, \
+             mock.patch('vyos.ifconfig.ifname_store.encrypted_config_volume',
+                        return_value=False):
             p = self._config_dir(d)
             save_store(store_of({'eth0': 'pci-0000:00:12.0'}), p)
             self.assertEqual(sorted(f.name for f in Path(d).iterdir()),
