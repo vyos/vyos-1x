@@ -17,11 +17,9 @@
 from vyos.config import Config
 from vyos.configverify import verify_vrf
 from vyos.configverify import has_frr_protocol_in_dict
-from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.template import is_ipv6
 from vyos.utils.network import is_ipv6_link_local
-from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -78,12 +76,9 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
+    return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

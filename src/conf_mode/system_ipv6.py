@@ -22,12 +22,9 @@ from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_route_map
-from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
-from vyos.utils.process import is_systemd_service_active
-from vyos.utils.process import is_systemd_service_running
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
@@ -58,8 +55,6 @@ def verify(config_dict):
     return
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
@@ -95,13 +90,6 @@ def apply(config_dict):
         for name in files:
             if name == 'accept_dad':
                 write_file(os.path.join(root, name), value)
-
-    # During startup of vyos-router that brings up FRR, the service is not yet
-    # running when this script is called first. Skip this part and wait for initial
-    # commit of the configuration to trigger this statement
-    if is_systemd_service_active('frr.service'):
-        if config_dict and not is_systemd_service_running('vyos-configd.service'):
-            FRRender().apply()
 
     call_dependents()
     return None

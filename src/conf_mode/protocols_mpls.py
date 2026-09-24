@@ -21,11 +21,9 @@ from sys import exit
 from glob import glob
 from vyos.config import Config
 from vyos.configverify import has_frr_protocol_in_dict
-from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
-from vyos.utils.process import is_systemd_service_running
 from vyos.utils.system import sysctl_write
 from vyos.configverify import verify_interface_exists
 from vyos import ConfigError
@@ -68,14 +66,9 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
-
     if not has_frr_protocol_in_dict(config_dict, 'mpls'):
         return None
 
