@@ -31,12 +31,8 @@ parser.add_argument("--imsi", help="Get module IMSI", action="store_true")
 parser.add_argument("--msisdn", help="Get module MSISDN", action="store_true")
 parser.add_argument("--sim", help="Get SIM card status", action="store_true")
 parser.add_argument("--signal", help="Get current RF signal info", action="store_true")
-parser.add_argument(
-    "--firmware", help="Get current RF signal info", action="store_true"
-)
-parser.add_argument(
-    "--detail", help="Get detailed modem information summary", action="store_true"
-)
+parser.add_argument("--firmware", help="Get current RF signal info", action="store_true")  # fmt: skip
+parser.add_argument("--detail", help="Get detailed modem information summary", action="store_true")  # fmt: skip
 
 required = parser.add_argument_group('Required arguments')
 required.add_argument("--interface", help="WWAN interface name, e.g. wwan0", required=True)

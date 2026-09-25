@@ -310,7 +310,7 @@ def get_wwan_modem_ports(interface):
         raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
 
     try:
-        modem_list = loads(cmdl(['mmcli', '-L', '--output-json'])).get('modem-list', [])
+        modem_list = loads(cmdl(['mmcli', '--list-modems', '--output-json'])).get('modem-list', [])  # fmt: skip
     except OSError:
         return None, []
 
