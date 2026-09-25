@@ -24,8 +24,12 @@ from ipaddress import IPv6Network
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import PPPoEIf
+from vyos.ifconfig.interface import link_local_prefix
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_address
+from vyos.utils.network import mac2eui64
 from vyos.xml_ref import default_value
 
 config_file: str = '/etc/ppp/peers/{}'
@@ -72,6 +76,19 @@ def wait_for_interface(interface: str, timeout=connect_timeout) -> bool:
         if time() - start_time >= timeout:
             return False
     return True
+
+def get_interface_addresses(interface, family) -> list:
+    """ Return the list of addresses of a given family assigned to interface """
+    tmp = get_interface_address(interface)
+    if not tmp or 'addr_info' not in tmp:
+        return []
+    return [addr['local'] for addr in tmp['addr_info']
+            if 'family' in addr and addr['family'] == family]
+
+def has_global_ipv6_address(interface) -> bool:
+    """ Check if the interface got a non link-local IPv6 address assigned """
+    return any(not IPv6Address(addr).is_link_local
+               for addr in get_interface_addresses(interface, 'inet6'))
 
 # add a classmethod to setup a temporaray PPPoE server for "proper" validation
 class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
@@ -137,14 +154,20 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
     def _verify_interface_address(self, interface):
         # Verify that the assigned IPv4/IPv6 addresses from the BRAS (PPPoE
-        # server) are from the assigned pools
-        for address in get_interface_address(interface):
-            if 'family' in address and address['family'] == 'inet':
+        # server) are from the assigned pools - 'local' is our own address
+        tmp = get_interface_address(interface)
+        self.assertIn('addr_info', tmp)
+
+        for addr_info in tmp['addr_info']:
+            if 'family' not in addr_info:
+                continue
+
+            if addr_info['family'] == 'inet':
                 # The PPPoE assigned IPv4 address must be from our pool
-                self.assertIn(IPv4Address(address['address']), IPv4Network(ipv4_pool))
-            elif 'family' in address and address['family'] == 'inet6':
+                self.assertIn(IPv4Address(addr_info['local']), IPv4Network(ipv4_pool))
+            elif addr_info['family'] == 'inet6':
                 # The PPPoE assigned IPv6 address must be from our pool
-                ipv6 = IPv6Address(address['address'])
+                ipv6 = IPv6Address(addr_info['local'])
                 if not ipv6.is_link_local:
                     self.assertIn(ipv6, IPv6Network(ipv6_pool))
 
@@ -326,6 +349,51 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
                 self.assertEqual(gen_addr, ipv6)
 
             self.cli_delete(['interfaces', 'dummy', delegate_if])
+
+    def test_pppoe_ipv6_link_local(self):
+        # T9060: the IPv6 interface identifier of a PPP link is negotiated
+        # with the peer via IPV6CP (RFC 5072). A second, EUI-64 derived
+        # link-local address is unknown to the BRAS, and RFC 6724 source
+        # address selection may pick it for e.g. DHCPv6-PD.
+        for interface in self._interfaces:
+            (user, passwd) = self.u_p_dict[interface]
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            # Only with the "ipv6" node present pppd is told to negotiate
+            # IPV6CP - without it the peer config contains "noipv6"
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        # commit changes
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertTrue(wait_for_interface(interface),
+                            msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+            # The link-local address is assigned before the router
+            # solicitation is sent out - once a global IPv6 address is present
+            # we know we are not testing too early
+            self.assertTrue(wait_for(has_global_ipv6_address, interface,
+                                     interval=0.250, timeout=connect_timeout),
+                            msg=f'Interface {interface} got no global IPv6 address!')
+
+            link_local = [addr for addr in get_interface_addresses(interface, 'inet6')
+                          if IPv6Address(addr).is_link_local]
+
+            # There must be exactly one link-local address - the one negotiated
+            # via IPV6CP
+            self.assertEqual(len(link_local), 1)
+
+            # ... and it must not be the one derived from the synthetic MAC
+            # address of the interface
+            eui64 = mac2eui64(PPPoEIf(interface).get_mac(), link_local_prefix)
+            self.assertNotIn(eui64, link_local)
+
+            # Validate and verify assigned IP addresses
+            self._verify_interface_address(interface)
 
     def test_pppoe_options(self):
         # Verify access-concentrator and service-name CLI options

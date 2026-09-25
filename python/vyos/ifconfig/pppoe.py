@@ -14,9 +14,11 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
+from vyos.template import is_ipv6
 from vyos.utils.assertion import assert_range
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import mac2eui64
 
 @Interface.register
 class PPPoEIf(Interface):
@@ -27,6 +29,10 @@ class PPPoEIf(Interface):
             'prefixes': ['pppoe', ],
         },
     }
+
+    # T9060: the IPv6 interface identifier of a PPP link is negotiated with
+    # the peer via IPV6CP (RFC 5072) - see Interface._ipv6_default_link_local
+    _ipv6_default_link_local = False
 
     _sysfs_get = {
         **Interface._sysfs_get,**{
@@ -79,6 +85,17 @@ class PPPoEIf(Interface):
     def del_addr(self, addr):
         # we cannot create this interface as it is managed outside
         pass
+
+    def del_ipv6_eui64_address(self, prefix):
+        """
+        del_addr() is a NOOP as the addresses are managed by pppd. The EUI-64
+        link-local address was added by VyOS itself, so use the generic
+        implementation to clean it off an already established session.
+        """
+        if is_ipv6(prefix):
+            eui64 = mac2eui64(self.get_mac(), prefix)
+            prefixlen = prefix.split('/')[1]
+            super().del_addr(f'{eui64}/{prefixlen}')
 
     def get_mac(self):
         """ Get a synthetic MAC address. """
