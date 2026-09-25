@@ -218,7 +218,7 @@ class Ethtool:
 
         # ['10baset/half', '10baset/full', '100baset/half', '100baset/full', '1000baset/full']
         tmp = [x.lower() for x in self._base_settings['supported-link-modes']]
-        if f'{speed}baset/{duplex}' in tmp:
+        if any(f'{speed}{suffix}/{duplex}' in tmp for suffix in ['baset', 'basex']):
             return True
         return False
 
