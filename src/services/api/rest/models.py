@@ -291,6 +291,20 @@ class ResetModel(ApiModel):
         }
 
 
+class ReconnectModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        json_schema_extra = {
+            'example': {
+                'key': 'id_key',
+                'op': 'reconnect',
+                'path': ['op', 'mode', 'path'],
+            }
+        }
+
+
 class PoweroffModel(ApiModel):
     op: StrictStr
     path: List[StrictStr]
