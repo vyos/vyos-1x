@@ -79,7 +79,7 @@ class Ethtool:
         if driver:
             self._driver_name = driver.group(1)
 
-        # Build a dictionary of supported link-speed and dupley settings.
+        # Build a dictionary of supported link-speed and duplex settings.
         # [ {
         #     "ifname": "eth0",
         #     "supported-ports": [ "TP" ],
@@ -216,9 +216,9 @@ class Ethtool:
         if self.get_driver_name() in _drivers_without_speed_duplex_flow:
             return False
 
-        # ['10baset/half', '10baset/full', '100baset/half', '100baset/full', '1000baset/full']
+        # ['10baset/half', '10baset/full', '100baset/half', '100baset/full', '1000baset/full', '2500basex/full', '10000basekx4/full', '10000basesr/full']
         tmp = [x.lower() for x in self._base_settings['supported-link-modes']]
-        if f'{speed}baset/{duplex}' in tmp:
+        if any(f'{speed}base' in item and f'/{duplex}' in item for item in tmp):
             return True
         return False
 
