@@ -192,6 +192,50 @@ class TestVyOSUtils(TestCase):
             )
             mock_is_assigned.assert_called_once_with('eth0', '10.0.0.1')
 
+    def test_is_addr_assigned_default_vrf_ignores_vrf_slave(self):
+        """An address inside a VRF must not satisfy a default VRF lookup."""
+        from vyos.utils.network import is_addr_assigned
+
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=['eth0']
+        ), patch(
+            'vyos.utils.network.get_interface_config', return_value={'master': 'red'}
+        ), patch(
+            'vyos.utils.network.is_intf_addr_assigned', return_value=True
+        ):
+            self.assertFalse(is_addr_assigned('10.0.0.1'))
+
+    def test_is_addr_assigned_default_vrf_ignores_vrf_device(self):
+        """An address on a VRF device belongs to that VRF, not to the default one."""
+        from vyos.utils.network import is_addr_assigned
+
+        vrf_device = {'linkinfo': {'info_kind': 'vrf'}}
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=['red']
+        ), patch(
+            'vyos.utils.network.get_interface_config', return_value=vrf_device
+        ), patch(
+            'vyos.utils.network.is_intf_addr_assigned', return_value=True
+        ):
+            self.assertFalse(is_addr_assigned('10.0.0.1'))
+            # naming the VRF device asks for the addresses it carries itself
+            self.assertTrue(is_addr_assigned('10.0.0.1', vrf='red'))
+            self.assertTrue(is_addr_assigned('10.0.0.1', include_vrf=True))
+
+    def test_is_ip_address_or_range_rejects_host_bits(self):
+        """A prefix with host bits set is not a valid network for nftables."""
+        from vyos.utils.network import is_ipv4_address_or_range
+        from vyos.utils.network import is_ipv6_address_or_range
+
+        self.assertTrue(is_ipv4_address_or_range('192.0.2.1'))
+        self.assertTrue(is_ipv4_address_or_range('192.0.2.0/24'))
+        self.assertTrue(is_ipv4_address_or_range('192.0.2.1-192.0.2.9'))
+        self.assertFalse(is_ipv4_address_or_range('192.0.2.1/24'))
+
+        self.assertTrue(is_ipv6_address_or_range('2001:db8::1'))
+        self.assertTrue(is_ipv6_address_or_range('2001:db8::/64'))
+        self.assertFalse(is_ipv6_address_or_range('2001:db8::1/64'))
+
     def test_is_addr_assigned_wrong_vrf(self):
         """Address on VRF 'red' must not match when querying vrf='blue'."""
         from vyos.utils.network import is_addr_assigned

@@ -423,13 +423,10 @@ def check_port_availability(address: str = None, port: int = 0,
                 s.bind(sockaddr)
                 return True # port is free to use
         except OSError:
-            # This address family is busy, but another might be free.
-            # Continue to the next one.
-            pass
+            return False # port is already in use
 
-    # If we reach this point, the port is already in use
-    # or no socket was tested, in which case it is safer
-    # to assume the port being in use
+    # if we reach this point, no socket was tested and we assume the port is
+    # already in use - better safe then sorry
     return False
 
 
@@ -523,12 +520,15 @@ def is_addr_assigned(
             return True
 
     for interface in interfaces():
-        # Check if interface belongs to the requested VRF, if this is not the
-        # case there is no need to proceed with this data set - continue loop
-        # with next element
-        if vrf is not None and not include_vrf and interface != vrf:
+        # Only an interface of the requested VRF may satisfy the lookup - an
+        # enslaved interface and a VRF device alike belong to their own L3
+        # domain, not to the default one. Naming the VRF device is the way to
+        # ask for the addresses it carries itself.
+        if not include_vrf and interface != vrf:
             tmp = get_interface_config(interface)
             if dict_search('master', tmp) != vrf:
+                continue
+            if dict_search('linkinfo.info_kind', tmp) == 'vrf':
                 continue
 
         if is_intf_addr_assigned(interface, ip_address):
@@ -833,23 +833,40 @@ def is_ipv6_range(addr: str) -> bool:
 def is_ipv4_address_or_range(addr: str) -> bool:
     """
     Validates if the provided address is a valid IPv4, CIDR or IPv4 range
+
+    A prefix with host bits set (192.0.2.1/24) is rejected - this classifies
+    untrusted input which is handed over to nftables, where only a prefix in
+    its canonical form is accepted.
     :param addr: address to test
     :return: bool: True if provided address is valid
     """
-    from vyos.template import is_ipv4
+    from ipaddress import ip_network
 
-    return is_ipv4(addr) or is_ipv4_range(addr)
+    if '-' in addr:
+        return is_ipv4_range(addr)
+    try:
+        return ip_network(addr).version == 4
+    except Exception:
+        return False
 
 
 def is_ipv6_address_or_range(addr: str) -> bool:
     """
     Validates if the provided address is a valid IPv6, CIDR or IPv6 range
+
+    A prefix with host bits set (2001:db8::1/64) is rejected, see the IPv4
+    counterpart above.
     :param addr: address to test
     :return: bool: True if provided address is valid
     """
-    from vyos.template import is_ipv6
+    from ipaddress import ip_network
 
-    return is_ipv6(addr) or is_ipv6_range(addr)
+    if '-' in addr:
+        return is_ipv6_range(addr)
+    try:
+        return ip_network(addr).version == 6
+    except Exception:
+        return False
 
 
 def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -> list:
@@ -868,12 +885,15 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
 
     ifaces = []
     for interface in netifaces.interfaces():
-        # Check if interface belongs to the requested VRF, if this is not the
-        # case there is no need to proceed with this data set - continue loop
-        # with next element
-        if vrf is not None and not include_vrf and interface != vrf:
+        # Only an interface of the requested VRF may satisfy the lookup - an
+        # enslaved interface and a VRF device alike belong to their own L3
+        # domain, not to the default one. Naming the VRF device is the way to
+        # ask for the addresses it carries itself.
+        if not include_vrf and interface != vrf:
             tmp = get_interface_config(interface)
             if dict_search('master', tmp) != vrf:
+                continue
+            if dict_search('linkinfo.info_kind', tmp) == 'vrf':
                 continue
 
         if is_intf_addr_assigned(interface, ip_address):
