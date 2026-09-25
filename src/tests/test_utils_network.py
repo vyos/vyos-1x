@@ -53,6 +53,7 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertTrue(vyos.utils.network.is_ipv6_link_local('fe80::'))
         self.assertTrue(vyos.utils.network.is_ipv6_link_local('fe80::affe:1'))
         self.assertTrue(vyos.utils.network.is_ipv6_link_local('fe80::affe:1%eth0'))
+        self.assertTrue(vyos.utils.network.is_ipv6_link_local('fe80::1%eth0'))
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('2001:db8::'))
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('2001:db8::%eth0'))
         self.assertFalse(vyos.utils.network.is_ipv6_link_local('VyOS'))
