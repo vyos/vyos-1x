@@ -46,8 +46,41 @@ def verify(mgmt):
     if confirm.get('action', '') == 'reload' and 'commit_revisions' not in d:
         raise ConfigError('commit-confirm reload requires non-zero commit-revisions')
 
-    if 'commit_archive' in d:
-        verify_vrf(d['commit_archive'])
+    commit_archive = d.get('commit_archive', {})
+    if commit_archive:
+        verify_vrf(commit_archive)
+
+    for name, archive in commit_archive.get('location', {}).items():
+        # the only children of a location are its transport protocol nodes
+        protocols = list(archive)
+        if not protocols:
+            raise ConfigError(
+                f'commit-archive location "{name}" requires a transport protocol'
+            )
+        if len(protocols) > 1:
+            raise ConfigError(
+                f'commit-archive location "{name}" allows only one transport '
+                f'protocol, got: {", ".join(protocols)}'
+            )
+
+        protocol = protocols[0]
+        protocol_config = archive[protocol]
+        if 'server' not in protocol_config:
+            raise ConfigError(
+                f'commit-archive location "{name}" {protocol} requires a '
+                f'server address'
+            )
+
+        # authentication, if configured, requires both username and password
+        if 'authentication' in protocol_config:
+            auth = protocol_config['authentication']
+            required_keys = {'username', 'password'}
+            if not all(key in auth for key in required_keys):
+                missing_keys = required_keys - set(auth)
+                raise ConfigError(
+                    f'commit-archive location "{name}" authentication options '
+                    f'are missing: {", ".join(missing_keys)}'
+                )
 
     return
 

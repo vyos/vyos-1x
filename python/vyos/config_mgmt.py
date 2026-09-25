@@ -148,13 +148,14 @@ class ConfigMgmt:
         d = config.get_config_dict(
             ['system', 'config-management'],
             key_mangling=('-', '_'),
+            no_tag_node_value_mangle=True,
             get_first_key=True,
             with_recursive_defaults=True,
         )
 
         self.max_revisions = int(d.get('commit_revisions', 0))
         self.num_revisions = 0
-        self.locations = d.get('commit_archive', {}).get('location', [])
+        self.locations = d.get('commit_archive', {}).get('location', {})
         self.source_address = d.get('commit_archive', {}).get('source_address', '')
         self.reboot_unconfirmed = bool(
             d.get('commit_confirm', {}).get('action') == 'reboot'
@@ -174,9 +175,15 @@ class ConfigMgmt:
         # post-commit hook in conf_mode script
         base_path = ['system', 'config-management', 'commit-archive']
         location_path = base_path + ['location']
-        self.effective_locations = None
+        self.effective_locations = {}
         if config.exists_effective(location_path):
-            self.effective_locations = config.return_effective_values(location_path)
+            self.effective_locations = config.get_config_dict(
+                location_path,
+                effective=True,
+                key_mangling=('-', '_'),
+                no_tag_node_value_mangle=True,
+                get_first_key=True,
+            )
 
         vrf_path = base_path + ['vrf']
         self.effective_vrf = None
@@ -492,6 +499,35 @@ Proceed ?"""
             self._add_log_entry()
             self._update_archive()
 
+    @staticmethod
+    def _build_archive_url(proto: str, conf: dict) -> str:
+        """Reconstruct an upload URL from a structured commit-archive entry."""
+        userinfo = ''
+        auth = conf.get('authentication', {})
+        if auth.get('username'):
+            userinfo = auth['username']
+            if auth.get('password'):
+                userinfo += f":{auth['password']}"
+            userinfo += '@'
+
+        netloc = conf['server']
+        if conf.get('port'):
+            netloc += f":{conf['port']}"
+
+        path = conf.get('path', '/')
+        if not path.startswith('/'):
+            path = f'/{path}'
+
+        if proto == 'git':
+            # default the transport to https here. Bare 'git' is the read-only
+            # native protocol and cannot push, so https is the
+            # sensible working default when none is configured.
+            transport = conf.get('transport', 'https')
+            scheme = f'git+{transport}'
+        else:
+            scheme = proto
+        return urlunsplit((scheme, f'{userinfo}{netloc}', path, '', ''))
+
     def commit_archive(self):
         """Upload config to remote archive."""
         from vyos.remote import upload
@@ -504,13 +540,28 @@ Proceed ?"""
 
         if self.effective_locations:
             print('Archiving config...')
-            for location in self.effective_locations:
-                url = urlsplit(location)
-                _, _, netloc = url.netloc.rpartition('@')
-                redacted_location = urlunsplit(url._replace(netloc=netloc))
-                print(f'  {redacted_location}', end=' ', flush=True)
-                upload(archive_config_file, f'{location}/{remote_file}',
-                       source_host=source_address, vrf=self.effective_vrf)
+            archive_failed = False
+            for name, archive in self.effective_locations.items():
+                for proto, conf in archive.items():
+                    location = self._build_archive_url(proto, conf)
+                    url = urlsplit(location)
+                    _, _, netloc = url.netloc.rpartition('@')
+                    redacted_location = urlunsplit(url._replace(netloc=netloc))
+                    print(f'  {name}: {redacted_location}', end=' ', flush=True)
+                    try:
+                        upload(
+                            archive_config_file,
+                            f'{location.rstrip("/")}/{remote_file}',
+                            source_host=source_address,
+                            vrf=self.effective_vrf,
+                        )
+                    except SystemExit:
+                        # upload() calls sys.exit on failure; keep archiving the
+                        # remaining destinations instead of aborting the whole hook
+                        archive_failed = True
+
+            if archive_failed:
+                sys.exit(1)
 
     # op-mode functions
     #

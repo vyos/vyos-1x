@@ -13,44 +13,112 @@
               <help>Commit archive settings</help>
             </properties>
             <children>
-              <leafNode name="location">
+              <tagNode name="location">
                 <properties>
                   <help>Commit archive location</help>
                   <valueHelp>
-                    <format>http://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
+                    <format>txt</format>
+                    <description>Name of the commit archive location</description>
                   </valueHelp>
-                  <valueHelp>
-                    <format>https://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>sftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>scp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>tftp://&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>git+https://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
-                    <description/>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="url --file-transport"/>
-                    <regex>(ssh|git|git\+(\w+)):\/\/.*</regex>
-                  </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  <node name="scp">
+                    <properties>
+                      <help>Archive configuration using SCP</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="sftp">
+                    <properties>
+                      <help>Archive configuration using SFTP</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="ssh">
+                    <properties>
+                      <help>Archive configuration using SSH</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="ftp">
+                    <properties>
+                      <help>Archive configuration using FTP</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="ftps">
+                    <properties>
+                      <help>Archive configuration using FTP over TLS</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="http">
+                    <properties>
+                      <help>Archive configuration using HTTP</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="https">
+                    <properties>
+                      <help>Archive configuration using HTTPS</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="git">
+                    <properties>
+                      <help>Archive configuration using git</help>
+                    </properties>
+                    <children>
+                      <leafNode name="transport">
+                        <properties>
+                          <help>Transport used to reach the git remote</help>
+                          <completionHelp>
+                            <list>https http ssh</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>https</format>
+                            <description>Push over HTTPS</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>http</format>
+                            <description>Push over plain HTTP</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ssh</format>
+                            <description>Push over SSH</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(https|http|ssh)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      #include <include/config-management/remote-auth.xml.i>
+                    </children>
+                  </node>
+                  <node name="tftp">
+                    <properties>
+                      <help>Archive configuration using TFTP</help>
+                    </properties>
+                    <children>
+                      #include <include/config-management/remote.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
               #include <include/source-address-ipv4-ipv6.xml.i>
               #include <include/interface/vrf.xml.i>
             </children>
