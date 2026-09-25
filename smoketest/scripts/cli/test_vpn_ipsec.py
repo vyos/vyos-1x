@@ -2142,6 +2142,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         try:
             self.cli_set(['vpp', 'settings', 'ipsec-acceleration'])
+            # VPP verify runs first (priority 295 vs IPsec 901) and requires
+            # settings.interface. Use the non-SSH test NIC; apply never runs
+            # because IPsec verify must reject the algorithms below.
+            self.cli_set(['vpp', 'settings', 'interface', interface])
 
             self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
             self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
@@ -2160,16 +2164,26 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
             # verify() - ESP 3des is not in the VPP allow-list
             self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', '3des'])
-            with self.assertRaises(ConfigSessionError):
+            err_msg = (
+                f'Encryption algorithm 3des cannot be used for ESP proposal 1 '
+                f'on tunnel 1 for site-to-site peer {connection_name} with VPP'
+            )
+            with self.assertRaisesRegex(ConfigSessionError, err_msg):
                 self.cli_commit()
 
             # verify() - IKE serpent128 is not compatible with VPP
             self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
             self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'serpent128'])
-            with self.assertRaises(ConfigSessionError):
+            err_msg = (
+                f'Encryption algorithm serpent128 cannot be used for IKE proposal 1 '
+                f'for site-to-site peer {connection_name} with VPP'
+            )
+            with self.assertRaisesRegex(ConfigSessionError, err_msg):
                 self.cli_commit()
         finally:
-            # Drop uncommitted VPP config so later tests do not apply it
+            # Drop uncommitted VPP nodes so tearDown's commit cannot apply VPP.
+            # Commits above must fail, so running VPP is unchanged; class
+            # tearDown reloads the saved config.
             self.cli_delete(['vpp'])
 
 
