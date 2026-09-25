@@ -450,6 +450,8 @@ def is_listen_port_bind_service(port: int, service: str, address: str = None) ->
     """
     from psutil import net_connections as connections
     from psutil import Process as process
+    from psutil import AccessDenied
+    from psutil import NoSuchProcess
     from ipaddress import ip_address
 
     has_address = bool(address)
@@ -470,7 +472,13 @@ def is_listen_port_bind_service(port: int, service: str, address: str = None) ->
         if pid is None:
             continue
 
-        pid_name = process(pid).name()
+        # The socket table is a snapshot - the process behind it may be gone
+        # by now, or belong to another user. Neither can be our service.
+        try:
+            pid_name = process(pid).name()
+        except (NoSuchProcess, AccessDenied):
+            continue
+
         pid_port = addr.port
 
         # Ignore address check when service listening on "any address",
