@@ -29,6 +29,7 @@ from shutil import copy, chown
 from subprocess import Popen
 from subprocess import PIPE
 from subprocess import DEVNULL
+from urllib.parse import quote
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 from tabulate import tabulate
@@ -152,13 +153,14 @@ class ConfigMgmt:
         d = config.get_config_dict(
             ['system', 'config-management'],
             key_mangling=('-', '_'),
+            no_tag_node_value_mangle=True,
             get_first_key=True,
             with_recursive_defaults=True,
         )
 
         self.max_revisions = int(d.get('commit_revisions', 0))
         self.num_revisions = 0
-        self.locations = d.get('commit_archive', {}).get('location', [])
+        self.locations = d.get('commit_archive', {}).get('location', {})
         self.source_address = d.get('commit_archive', {}).get('source_address', '')
         self.reboot_unconfirmed = bool(
             d.get('commit_confirm', {}).get('action') == 'reboot'
@@ -178,9 +180,15 @@ class ConfigMgmt:
         # post-commit hook in conf_mode script
         base_path = ['system', 'config-management', 'commit-archive']
         location_path = base_path + ['location']
-        self.effective_locations = None
+        self.effective_locations = {}
         if config.exists_effective(location_path):
-            self.effective_locations = config.return_effective_values(location_path)
+            self.effective_locations = config.get_config_dict(
+                location_path,
+                effective=True,
+                key_mangling=('-', '_'),
+                no_tag_node_value_mangle=True,
+                get_first_key=True,
+            )
 
         vrf_path = base_path + ['vrf']
         self.effective_vrf = None
@@ -496,6 +504,71 @@ Proceed ?"""
             self._add_log_entry()
             self._update_archive()
 
+    @staticmethod
+    def _build_archive_url(proto: str, conf: dict) -> str:
+        """Reconstruct an upload URL from a structured commit-archive entry.
+
+        Credentials are stored as plain text and percent-encoded here so that
+        special characters do not corrupt the URL.
+        """
+        from vyos.template import is_ipv6
+
+        # git over file:// is a local repository: just a path, no host, port or
+        # credentials. Return early and leave the remote path below untouched.
+        if proto == 'git' and conf.get('transport') == 'file':
+            path = conf.get('path', '/')
+            if not path.startswith('/'):
+                path = f'/{path}'
+            path = quote(path, safe='/')
+            return f'git+file://{path}'
+
+        userinfo = ''
+        auth = conf.get('authentication', {})
+        username = auth.get('username', '')
+        password = auth.get('password', '')
+        # a lone password is emitted as ':password@' (empty user) so ftp/ftps
+        # keep their REMOTE_USERNAME/anonymous fallback for the user
+        if username or password:
+            userinfo = quote(username, safe='')
+            if password:
+                userinfo += f":{quote(password, safe='')}"
+            userinfo += '@'
+
+        # bracket IPv6 literals so the ':' are not read as host/port separators
+        server = conf['server']
+        if is_ipv6(server):
+            server = f'[{server}]'
+        netloc = server
+        if conf.get('port'):
+            netloc += f":{conf['port']}"
+
+        path = conf.get('path', '/')
+        if not path.startswith('/'):
+            path = f'/{path}'
+        if proto in ('scp', 'sftp', 'ssh', 'ftp', 'ftps'):
+            # these clients unquote the path once before use, so encode '%' as
+            # well: that single decode then restores the configured path,
+            # including a literal %2F
+            path = quote(path, safe='/')
+        else:
+            # http(s)/git keep the path encoded on the wire (the server/remote
+            # decodes it), so leave an existing %2F intact instead of
+            # double-encoding it
+            path = ''.join(
+                part if part.lower() == '%2f' else quote(part, safe='/')
+                for part in re.split('(%2[fF])', path)
+            )
+
+        if proto == 'git':
+            # default the transport to https here. Bare 'git' is the read-only
+            # native protocol and cannot push, so https is the
+            # sensible working default when none is configured.
+            transport = conf.get('transport', 'https')
+            scheme = f'git+{transport}'
+        else:
+            scheme = proto
+        return urlunsplit((scheme, f'{userinfo}{netloc}', path, '', ''))
+
     def commit_archive(self):
         """Upload config to remote archive."""
         from vyos.remote import upload
@@ -508,13 +581,35 @@ Proceed ?"""
 
         if self.effective_locations:
             print('Archiving config...')
-            for location in self.effective_locations:
-                url = urlsplit(location)
-                _, _, netloc = url.netloc.rpartition('@')
-                redacted_location = urlunsplit(url._replace(netloc=netloc))
-                print(f'  {redacted_location}', end=' ', flush=True)
-                upload(archive_config_file, f'{location}/{remote_file}',
-                       source_host=source_address, vrf=self.effective_vrf)
+            archive_failed = False
+            for name, archive in self.effective_locations.items():
+                for proto, conf in archive.items():
+                    location = self._build_archive_url(proto, conf)
+                    url = urlsplit(location)
+                    _, _, netloc = url.netloc.rpartition('@')
+                    redacted_location = urlunsplit(url._replace(netloc=netloc))
+                    print(f'  {name}: {redacted_location}', end=' ', flush=True)
+                    try:
+                        upload(
+                            archive_config_file,
+                            f'{location.rstrip("/")}/{remote_file}',
+                            source_host=source_address,
+                            vrf=self.effective_vrf,
+                        )
+                        print('OK', flush=True)
+                    except SystemExit:
+                        # upload() exits on failure and already prints the reason;
+                        # just end the status line and keep archiving the rest
+                        # instead of aborting the whole hook
+                        print(flush=True)
+                        archive_failed = True
+                    except KeyboardInterrupt:
+                        # a user interrupt aborts the whole archive run cleanly
+                        # rather than moving on to the next destination
+                        sys.exit(1)
+
+            if archive_failed:
+                sys.exit(1)
 
     # op-mode functions
     #

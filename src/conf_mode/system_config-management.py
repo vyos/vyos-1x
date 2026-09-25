@@ -46,8 +46,64 @@ def verify(mgmt):
     if confirm.get('action', '') == 'reload' and 'commit_revisions' not in d:
         raise ConfigError('commit-confirm reload requires non-zero commit-revisions')
 
-    if 'commit_archive' in d:
-        verify_vrf(d['commit_archive'])
+    commit_archive = d.get('commit_archive', {})
+    if commit_archive:
+        verify_vrf(commit_archive)
+
+    for name, archive in commit_archive.get('location', {}).items():
+        # the only children of a location are its transport protocol nodes
+        protocols = list(archive)
+        if not protocols:
+            raise ConfigError(
+                f'commit-archive location "{name}" requires a transport protocol'
+            )
+        if len(protocols) > 1:
+            raise ConfigError(
+                f'commit-archive location "{name}" allows only one transport '
+                f'protocol, got: {", ".join(protocols)}'
+            )
+
+        protocol = protocols[0]
+        protocol_config = archive[protocol]
+
+        # git over file:// is a local repository: it needs a path and has no
+        # remote endpoint, unlike every other protocol
+        if protocol == 'git' and protocol_config.get('transport') == 'file':
+            # the path is the repository, so one must be set (its correctness,
+            # like any other transport's path, is left to runtime)
+            if not protocol_config.get('path'):
+                raise ConfigError(
+                    f'commit-archive location "{name}" git file transport '
+                    f'requires a path to the local repository'
+                )
+            # server, port and authentication are remote concepts that do not
+            # apply to a local repository
+            for node in ('server', 'port', 'authentication'):
+                if node in protocol_config:
+                    raise ConfigError(
+                        f'commit-archive location "{name}" git file transport '
+                        f'is local and does not use "{node}"'
+                    )
+        elif 'server' not in protocol_config:
+            raise ConfigError(
+                f'commit-archive location "{name}" {protocol} requires a '
+                f'server address'
+            )
+
+        # authentication requires a username; the password is optional. Key-
+        # based scp/git+ssh and token-as-username setups use a username alone.
+        # ftp/ftps are the exception: they accept a password alone and fall
+        # back to the REMOTE_USERNAME/anonymous user.
+        auth = protocol_config.get('authentication')
+        if (
+            auth is not None
+            and 'username' not in auth
+            and protocol not in ('ftp', 'ftps')
+        ):
+            raise ConfigError(
+                f'commit-archive location "{name}" {protocol} authentication '
+                f'requires a username'
+            )
 
     return
 
