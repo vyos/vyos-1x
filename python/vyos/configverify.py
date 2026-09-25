@@ -173,12 +173,15 @@ def verify_tunnel(config):
         if 'source_address' in config and is_ipv6(config['source_address']):
             raise ConfigError('Cannot use local IPv6 address is for mGRE tunnels')
 
-def verify_mirror_redirect(config):
+def verify_mirror_redirect(config, parent=None):
     """
     Common helper function used by interface implementations to perform
     recurring validation of mirror and redirect interface configuration via tc(8)
 
     It makes no sense to mirror traffic back at yourself!
+
+    parent: parent interface dictionary when config is a VLAN sub-interface
+    dictionary, which does not carry the interfaces_root attribute itself.
     """
     if 'mirror' in config and 'redirect' in config:
         raise ConfigError('Mirror and redirect cannot be enabled at the same time!')
@@ -190,9 +193,13 @@ def verify_mirror_redirect(config):
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
-            if not interface_exists(mirror_interface):
-                raise ConfigError(f'Requested mirror interface "{mirror_interface}" '\
-                                   'does not exist!')
+            # T6393: interface types are committed in priority order, the
+            # mirror target may only be defined on the CLI and not (yet) be
+            # created in the kernel. VLAN sub-interfaces are only accepted
+            # from the kernel as nothing would install the filter later on.
+            verify_interface_exists(
+                config if parent is None else parent, mirror_interface
+            )
 
             if mirror_interface == config['ifname']:
                 raise ConfigError(f'Cannot mirror "{direction}" traffic back '\
@@ -395,7 +402,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
-        verify_mirror_redirect(vlan)
+        verify_mirror_redirect(vlan, config)
         verify_mtu_parent(vlan, config)
         verify_mtu_ipv6(vlan)
 
@@ -407,7 +414,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(s_vlan)
         verify_address(s_vlan)
         verify_vrf(s_vlan)
-        verify_mirror_redirect(s_vlan)
+        verify_mirror_redirect(s_vlan, config)
         verify_mtu_parent(s_vlan, config)
         verify_mtu_ipv6(s_vlan)
 
@@ -418,7 +425,7 @@ def verify_vlan_config(config):
             verify_dhcpv6(c_vlan)
             verify_address(c_vlan)
             verify_vrf(c_vlan)
-            verify_mirror_redirect(c_vlan)
+            verify_mirror_redirect(c_vlan, config)
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
             verify_mtu_ipv6(c_vlan)
