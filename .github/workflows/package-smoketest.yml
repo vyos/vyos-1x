@@ -193,7 +193,7 @@ jobs:
           retention-days: 2
           name: vyos-${{ steps.version.outputs.build_version }}
           path: |
-            build/live-image-amd64.hybrid.iso
+            build/vyos-*-amd64.iso
             build/manifest.json
 
       - uses: atos-actions/clean-self-hosted-runner@v1.4.10
@@ -221,11 +221,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS CLI smoketests (no interfaces)
         id: test
         shell: bash
         run: |
-          if sudo make ${{ needs.set_config.outputs.test_cli_command }}; then
+          if sudo make ISO_PATH="$iso_path" ${{ needs.set_config.outputs.test_cli_command }}; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
@@ -255,11 +259,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS CLI smoketests VPP
         id: test
         shell: bash
         run: |
-          if sudo make test-vpp; then
+          if sudo make ISO_PATH="$iso_path" test-vpp; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
@@ -288,11 +296,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS CLI smoketests (interfaces only)
         id: test
         shell: bash
         run: |
-          if sudo make test-interfaces; then
+          if sudo make ISO_PATH="$iso_path" test-interfaces; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
@@ -321,11 +333,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS config load tests
         id: test
         shell: bash
         run: |
-          if sudo make testc; then
+          if sudo make ISO_PATH="$iso_path" testc; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
@@ -355,11 +371,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS config load tests VPP
         id: test
         shell: bash
         run: |
-          if sudo make testcvpp; then
+          if sudo make ISO_PATH="$iso_path" testcvpp; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
@@ -388,11 +408,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS RAID1 installation tests
         id: test
         shell: bash
         run: |
-          if sudo make testraid; then
+          if sudo make ISO_PATH="$iso_path" testraid; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
@@ -422,11 +446,15 @@ jobs:
           name: vyos-${{ needs.build_iso.outputs.build_version }}
           path: build
 
+      - name: Locate ISO image
+        shell: bash
+        run: echo "iso_path=$(ls build/vyos-*-amd64.iso | head -n1)" >> $GITHUB_ENV
+
       - name: VyOS TPM encryption tests
         id: test
         shell: bash
         run: |
-          if sudo make testtpm; then
+          if sudo make ISO_PATH="$iso_path" testtpm; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
             echo "exit_code=fail" >> $GITHUB_OUTPUT
