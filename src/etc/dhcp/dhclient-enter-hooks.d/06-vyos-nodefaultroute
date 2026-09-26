@@ -17,4 +17,7 @@ PYEND
 
 if [[ "$(get_no_default_route)" == 'True' ]]; then
     new_routers=""
+    # Exit-hooks (same dhclient-script shell) use this to skip stale-default
+    # cleanup when the lease still carries a force-sent option 3.
+    VYOS_NO_DEFAULT_ROUTE=1
 fi
