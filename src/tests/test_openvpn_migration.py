@@ -437,6 +437,58 @@ class TestOpenVPNMigration(TestCase):
         tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
         self.assertEqual(config.return_value(tmp), '1000')
 
+    def test_site_to_site_keepalive_left_alone_when_valid(self):
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 10\n'
+            '            failure-count 60\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '60')
+
+    def test_site_to_site_keepalive_over_a_day_is_clamped(self):
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 600\n'
+            '            failure-count 1000\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        # 600 * 144 is exactly 24 hours, and nothing doubles it here
+        self.assertEqual(config.return_value(tmp), '144')
+
+    def test_site_to_site_disabled_keepalive_survives(self):
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 0\n'
+            '            failure-count 1000\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        base_ka = ['interfaces', 'openvpn', 'vtun10', 'keep-alive']
+        self.assertEqual(config.return_value(base_ka + ['interval']), '0')
+        self.assertEqual(config.return_value(base_ka + ['failure-count']), '1000')
+
+    def test_site_to_site_keeps_a_failure_count_below_two(self):
+        # only "keepalive" wants the timeout to be twice the interval, and
+        # site-to-site does not render one
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 10\n'
+            '            failure-count 1\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '1')
+
     def test_raw_cipher_drops_dco_in_site_to_site(self):
         # site-to-site renders neither "client" nor "server", so OpenVPN takes
         # a raw "--cipher" as the fallback cipher and gives up the offload

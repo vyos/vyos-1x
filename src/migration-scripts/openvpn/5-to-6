@@ -17,6 +17,11 @@
 # can not serve, because OpenVPN 2.6 silently ignored the module. Now that the
 # offload is real those combinations are rejected, so drop the request from
 # configurations that would otherwise fail to load.
+#
+# T9337: site-to-site rendered "ping-restart <failure-count>", so the count
+# landed as seconds while the server has always rendered interval *
+# failure-count. Now that both agree, a timeout OpenVPN refuses is reachable
+# there too.
 
 from vyos.configtree import ConfigTree
 
@@ -94,8 +99,9 @@ def _value(config: ConfigTree, path: list):
 
 
 def _clamp_keepalive(config: ConfigTree, path: list) -> None:
-    """Bring a server keepalive within what verify() accepts."""
-    if _value(config, path + ['mode']) != 'server':
+    """Bring a keepalive within what verify() accepts."""
+    mode = _value(config, path + ['mode'])
+    if mode not in ['server', 'site-to-site']:
         return
 
     # both nodes carry a CLI default, so they render even when absent
@@ -107,11 +113,18 @@ def _clamp_keepalive(config: ConfigTree, path: list) -> None:
     if interval < 1:
         return
 
-    # the timeout is interval * failure-count: it has to reach twice the
-    # interval and stay below 12 hours. Beyond an interval of 21600 no count
-    # satisfies both - the CLI range stops at 600, so only a hand-edited
-    # configuration gets there and its interval is rejected anyway.
-    wanted = min(max(count, 2), max(2, 43200 // interval))
+    if mode == 'server':
+        # the timeout is interval * failure-count: it has to reach twice the
+        # interval and stay below 12 hours. Beyond an interval of 21600 no
+        # count satisfies both - the CLI range stops at 600, so only a
+        # hand-edited configuration gets there and its interval is rejected
+        # anyway.
+        wanted = min(max(count, 2), max(2, 43200 // interval))
+    else:
+        # site-to-site renders "ping-restart" itself, which OpenVPN caps at
+        # 24 hours and does not double
+        wanted = min(count, 86400 // interval)
+
     if wanted != count:
         config.set(path + ['keep-alive', 'failure-count'], value=str(wanted))
 
