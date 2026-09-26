@@ -14,6 +14,21 @@
       "test_vpp_runner": ["ubuntu-24.04"],
       "mirror_enabled": true
     },
+    "scutum": {
+      "vyos_mirror": "https://packages.vyos.net/repositories/scutum/",
+      "container_image": "vyos/vyos-build:scutum",
+      "vyos_build_repo": "VyOS-Networks/vyos-build",
+      "use_pat": true,
+      "build_runner": ["self-hosted", "azure"],
+      "build_version_format": "1.6-integration-%Y%m%d%H%M",
+      "install_build_deps": true,
+      "test_cli_command": "test-no-interfaces-no-vpp",
+      "test_tpm_tests": true,
+      "test_vpp": true,
+      "test_vpp_runner": ["self-hosted", "vpp"],
+      "smoketests_runner": ["self-hosted", "smoketests"],
+      "mirror_enabled": false
+    },
     "circinus": {
       "vyos_mirror": "https://packages.vyos.net/repositories/circinus/",
       "container_image": "vyos/vyos-build:circinus",
