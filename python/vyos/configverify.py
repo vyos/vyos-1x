@@ -423,29 +423,6 @@ def verify_vlan_config(config):
             verify_mtu_parent(c_vlan, s_vlan)
             verify_mtu_ipv6(c_vlan)
 
-
-def verify_diffie_hellman_length(file, min_keysize):
-    """ Verify Diffie-Hellamn keypair length given via file. It must be greater
-    then or equal to min_keysize """
-    import os
-    import re
-    from vyos.utils.process import cmdl
-
-    try:
-        keysize = str(min_keysize)
-    except:
-        return False
-
-    if os.path.exists(file):
-        out = cmdl(['openssl', 'dhparam', '-inform', 'PEM', '-in', file, '-text'])
-        prog = re.compile('\d+\s+bit')
-        if prog.search(out):
-            bits = prog.search(out)[0].split()[0]
-            if int(bits) >= int(min_keysize):
-                return True
-
-    return False
-
 def verify_common_route_maps(config):
     """
     Common helper function used by routing protocol implementations to perform
