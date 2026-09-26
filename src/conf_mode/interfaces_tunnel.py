@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from sys import exit
+from typing import NamedTuple
 import ipaddress
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -37,6 +38,41 @@ from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+
+class TunnelIdentity(NamedTuple):
+    local: str | None
+    remote: str | None
+    source_interface: str | None
+    key: str | None
+
+
+def tunnel_identity(conf):
+    """
+    The Kernel identifies a GRE tunnel by the tuple of local address, remote
+    address, source-interface and key, see ip_tunnel_find() in
+    net/ipv4/ip_tunnel.c. Two tunnels collide iff these tuples match.
+
+    An unconfigured endpoint is stored as the any address, so "0.0.0.0" and
+    "::" compare equal to an endpoint which is not set at all. A zero GRE key
+    only fails to make a tunnel unique when neither a local nor a remote
+    address is set - ip_tunnel_lookup() then ends in a loop which compares the
+    key without testing the flag saying that a key is set at all. A tunnel
+    which carries an address is matched before that, by ip_tunnel_key_match(),
+    where a zero key and an unset key differ.
+    """
+    local = dict_search('source_address', conf)
+    if local in ['0.0.0.0', '::']:
+        local = None
+    remote = dict_search('remote', conf)
+    if remote in ['0.0.0.0', '::']:
+        remote = None
+    source_interface = dict_search('source_interface', conf)
+    key = dict_search('parameters.ip.key', conf)
+    if local is None and remote is None and key == '0':
+        key = None
+    return TunnelIdentity(local, remote, source_interface, key)
+
 
 def get_config(config=None):
     """
@@ -122,18 +158,30 @@ def verify(tunnel):
             if 'direction' not in tunnel['parameters']['erspan']:
                 raise ConfigError('ERSPAN version 2 requires direction to be set!')
 
-    # If tunnel source is any and gre key is not set
+    # If tunnel source is any and the gre key does not identify the tunnel
     interface = tunnel['ifname']
-    if tunnel['encapsulation'] in ['gre'] and \
-       dict_search('source_address', tunnel) == '0.0.0.0' and \
-       dict_search('parameters.ip.key', tunnel) == None:
-        raise ConfigError(f'"parameters ip key" must be set for {interface} when '\
-                           'encapsulation is GRE!')
+    if (
+        tunnel['encapsulation'] in ['gre']
+        and dict_search('source_address', tunnel) == '0.0.0.0'
+    ):
+        # The source-address being the any address, a tunnel without a remote
+        # carries no endpoint at all - a zero key does not tell such a tunnel
+        # apart from a keyless one either
+        identity = tunnel_identity(tunnel)
+        if identity.key is None:
+            # Only a tunnel which has no remote either is asked for a
+            # non-zero key, a zero one does identify the rest
+            tmp = 'set to a non-zero value' if identity.remote is None else 'set'
+            raise ConfigError(
+                f'"parameters ip key" must be {tmp} for {interface} when '
+                'encapsulation is GRE!'
+            )
 
     gre_encapsulations = ['gre', 'gretap']
     if tunnel['encapsulation'] in gre_encapsulations and 'other_tunnels' in tunnel:
         # Check pairs tunnel source-address/encapsulation/key with exists tunnels.
         # Prevent the same key for 2 tunnels with same source-address/encap. T2920
+        ours = tunnel_identity(tunnel)
         for o_tunnel, o_tunnel_conf in tunnel['other_tunnels'].items():
             # no match on encapsulation - bail out
             our_encapsulation = tunnel['encapsulation']
@@ -142,36 +190,54 @@ def verify(tunnel):
                 not in gre_encapsulations:
                 continue
 
-            our_address = dict_search('source_address', tunnel)
-            our_key = dict_search('parameters.ip.key', tunnel)
-            their_address = dict_search('source_address', o_tunnel_conf)
-            their_key = dict_search('parameters.ip.key', o_tunnel_conf)
-            if our_key != None:
-                if their_address == our_address and their_key == our_key:
-                    raise ConfigError(f'Key "{our_key}" for source-address "{our_address}" ' \
-                                      f'is already used for tunnel "{o_tunnel}"!')
-            else:
-                our_source_if = dict_search('source_interface', tunnel)
-                their_source_if = dict_search('source_interface', o_tunnel_conf)
-                our_remote = dict_search('remote', tunnel)
-                their_remote = dict_search('remote', o_tunnel_conf)
-                # If no IP GRE key is defined we cannot have more then one GRE tunnel
-                # bound to any one interface/IP address and the same remote. This will
-                # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
-                if our_remote == their_remote:
-                    if our_address is not None and their_address == our_address: 
-                        # If set to the same values, this is always a fail 
-                        raise ConfigError(f'Missing required "ip key" parameter when '\
-                                           'running more then one GRE based tunnel on the '\
-                                           'same source-address')
+            theirs = tunnel_identity(o_tunnel_conf)
+            if ours != theirs:
+                continue
 
-                    if their_source_if == our_source_if and their_address == our_address:
-                        # Note that lack of None check on these is deliberate. 
-                        # source-if and source-ip matching while unset (all None) is a fail
-                        # source-ifs set and matching with unset source-ips is a fail
-                        raise ConfigError(f'Missing required "ip key" parameter when '\
-                                           'running more then one GRE based tunnel on the '\
-                                           'same source-interface')
+            # Remember whether a zero key was configured, the error message
+            # differs from the one for a tunnel carrying no key at all.
+            zero_key = '0' in [
+                dict_search('parameters.ip.key', tunnel),
+                dict_search('parameters.ip.key', o_tunnel_conf),
+            ]
+
+            if ours.key is not None:
+                # Prevent the same key for 2 tunnels sharing both endpoints. T2920
+                # Report the source as configured and not as normalised,
+                # else an "any" source-address would render as "None".
+                # One of both is always present, see verify_tunnel()
+                tmp = dict_search('source_address', tunnel) or ours.source_interface
+                raise ConfigError(
+                    f'Key "{ours.key}" for source "{tmp}" is already used '
+                    f'for tunnel "{o_tunnel}"!'
+                )
+
+            # A keyless tunnel never collides with a keyed one, as the Kernel
+            # only matches a tunnel carrying no key against another tunnel
+            # carrying no key, see ip_tunnel_key_match() in
+            # include/net/ip_tunnels.h. Tuple equality already requires that.
+
+            # If no IP GRE key is defined we cannot have more than one GRE tunnel
+            # bound to any one interface/IP address and the same remote. This will
+            # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
+
+            # Name what the two tunnels really have in common. An "any"
+            # source-address normalises to None and cannot pick the noun,
+            # and a tunnel carrying no source-interface always has a
+            # source-address, see verify_tunnel()
+            tmp = 'source-address'
+            if ours.source_interface is not None:
+                tmp = 'source-interface'
+            if zero_key:
+                raise ConfigError(
+                    'A zero "ip key" parameter cannot be told apart from '
+                    'an unset one - use a non-zero key to run more than '
+                    f'one GRE based tunnel on the same {tmp} as "{o_tunnel}"'
+                )
+            raise ConfigError(
+                'Missing required "ip key" parameter when running more '
+                f'than one GRE based tunnel on the same {tmp}'
+            )
 
     # Keys are not allowed with ipip and sit tunnels
     if tunnel['encapsulation'] in ['ipip', 'sit']:
