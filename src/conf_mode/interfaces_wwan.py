@@ -32,6 +32,8 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.dict import dict_search
+from vyos.utils.misc import wait_for
+from vyos.utils.network import get_wwan_modem
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmdl
 from vyos.utils.process import call
@@ -150,11 +152,36 @@ def apply(wwan):
             sleep(0.250)
 
     if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        # we only need the modem number. wwan0 -> 0, wwan1 -> 1
-        modem = wwan['ifname'].lstrip('wwan')
-        base_cmd = f'mmcli --modem {modem}'
-        # Number of bearers is limited - always disconnect first
-        call(f'{base_cmd} --simple-disconnect')
+        # get_wwan_modem() can transiently come back empty even with
+        # ModemManager already active and this exact modem present a
+        # moment before or after - confirmed live, e.g. right after a
+        # disconnect/reconnect cycle, ModemManager briefly re-registering
+        # the modem on D-Bus. The "wait until a modem is detected" loop
+        # above only ever runs the one time ModemManager itself is first
+        # started, so it does not cover this - give this specific lookup
+        # its own short retry rather than treating a momentary gap the
+        # same as the modem genuinely not being there.
+        modem = None
+        def _modem_found():
+            nonlocal modem
+            modem = get_wwan_modem(wwan['ifname'])
+            return modem is not None
+        wait_for(_modem_found, interval=0.25, timeout=10)
+
+        if modem is None:
+            # We cannot talk to a modem we can't find. For a delete/disable,
+            # there's nothing to disconnect and the local cleanup below (removing
+            # the interface, stopping the cron helper/ModemManager, dependents)
+            # doesn't need the modem either, so let that still run. Otherwise bail
+            # out and wait for the next cronjob run, the same tolerance the
+            # w.exists() check below already has for hardware that isn't detected
+            # yet.
+            if 'deleted' not in wwan and 'disable' not in wwan:
+                return None
+        else:
+            base_cmd = f'mmcli --modem {modem}'
+            # Number of bearers is limited - always disconnect first
+            call(f'{base_cmd} --simple-disconnect')
 
     w = WWANIf(wwan['ifname'])
 
