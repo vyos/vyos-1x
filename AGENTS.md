@@ -127,9 +127,9 @@ system: reading logs, `ip`/`nft`/`vtysh` output, `systemctl status`, poking at
 
 - Commit and PR titles: see "Commit messages" below.
 - See `CONTRIBUTING.md` for additional commit message guidance.
-- Branch model: `rolling` (default), `circinus` (1.5 LTS), `sagitta`
-  (1.4 LTS), `equuleus` (1.3 LTS). Backports via
-  `@Mergifyio backport <branch>`.
+- Branch model: `rolling` (default), `scutum` (1.6), `circinus` (1.5 LTS),
+  `sagitta` (1.4 LTS). Backports via `@Mergifyio backport <branch>`. Work
+  never lands on these branches directly - see "Change workflow" below.
 - Default-branch protection: 2 required approvals; required status checks.
 - Linting (`vyos/.github` reusables): ruff 0.6.4, darker, pylint W0611, Jinja2
   lint. `ruff.toml` and `nose2.cfg` are at repository root.
@@ -144,6 +144,88 @@ system: reading logs, `ip`/`nft`/`vtysh` output, `systemctl status`, poking at
 - Do not name functions, methods or files unless the message is meaningless
   without them. It reads as noise and eats the budget.
 - Use `*` or `-` for a list, and only when one is genuinely needed.
+
+## Change workflow
+
+Every change follows the same three steps before a PR exists. None of them is
+optional, and they happen in this order.
+
+### 1. Work on a feature branch
+
+Never commit to a release branch (`rolling`, `scutum`, `circinus`, `sagitta`)
+directly. Branch from the release branch the change targets and name the branch
+after the Phorge task, for example `T1234-bgp-peer-group`:
+
+```bash
+git fetch origin
+git checkout -b T1234-short-description origin/rolling
+```
+
+The branch you fork from is the branch the PR merges into. A fix that belongs in
+an LTS release starts from that LTS branch, not from `rolling` - backports in
+the other direction are handled by `@Mergifyio backport <branch>`.
+
+### 2. Rebase onto the common merge-base before submitting
+
+Immediately before opening the PR, rebase the feature branch on top of the
+current tip of its base branch. A merge commit is not a substitute; the history
+must stay linear:
+
+```bash
+git fetch origin
+git rebase origin/rolling     # or scutum / circinus / sagitta
+```
+
+Rebasing last means CI tests the code as it will exist after the merge, not
+against a base that moved weeks ago. If the rebase changes anything non-trivial,
+the smoketest run in step 3 has to be repeated on the rebased result.
+
+### 3. Run the full smoketest suite
+
+A PR is submitted only after a complete smoketest run has passed locally, with
+the same steps the `.github/workflows/package-smoketest.yml` pipeline executes.
+Build-time tests (`make all`) do not count - they never boot an image.
+
+Build the package and an ISO carrying it, from the `vyos-build` checkout that
+has this repository at `packages/vyos-1x`:
+
+```bash
+# in packages/vyos-1x
+dpkg-buildpackage -uc -us -tc -b
+
+# in the vyos-build root, ISO includes the smoketest package
+sudo --preserve-env ./build-vyos-image \
+  --architecture amd64 \
+  --build-by <you@example.com> \
+  --build-type release \
+  --custom-package vyos-1x-smoketest \
+  --version <version-string> \
+  generic
+```
+
+Then run every test job the pipeline runs for the target branch, against that
+ISO:
+
+```bash
+sudo make test-no-interfaces-no-vpp   # rolling, scutum, circinus
+sudo make test-no-interfaces          # sagitta (no VPP split there)
+sudo make test-interfaces             # CLI smoketests, interfaces only
+sudo make testc                       # config load tests
+sudo make testraid                    # RAID1 installation test
+sudo make test-vpp                    # only where VPP is enabled
+sudo make testcvpp                    # only where VPP is enabled
+sudo make testtpm                     # only where TPM tests are enabled
+```
+
+Which of the optional jobs apply is not a guess: the per-branch flags
+(`test_cli_command`, `test_vpp`, `test_tpm_tests`) live in
+`.github/config/smoketest-branches.json`. Read that file for the target branch
+and run exactly the set it selects.
+
+All of them must pass. A failing or skipped-because-it-broke test is a reason to
+fix the change, not a reason to open the PR and let the pipeline report it. If a
+test cannot run locally for an environmental reason, say so explicitly in the PR
+rather than claiming a clean run.
 
 ## Pull requests
 
