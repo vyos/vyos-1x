@@ -1,0 +1,19 @@
+# Hardware appearing after boot needs naming too. Interfaces already in the
+# mapping store are renamed by udev from the generated .link files, but a NIC
+# this system has never seen has to be assigned a name and recorded.
+
+ACTION!="add",                  GOTO="vyos_hotplug_end"
+SUBSYSTEM!="net",               GOTO="vyos_hotplug_end"
+
+# hypervisor VF datapaths are not interfaces in their own right
+KERNEL=="vf_*",                 GOTO="vyos_hotplug_end"
+
+# Only hardware: virtual interfaces (bridges, bonds, VLANs, veth, tunnels) are
+# created by configuration, not discovered, and are named by whoever created
+# them. This has to be the positive form. DRIVERS is matched against the whole
+# parent chain one device at a time, and a net device never carries a driver
+# itself - it sits below the one that does - so DRIVERS!="?*" is true for every
+# interface and would skip the very hardware this rule exists for.
+DRIVERS=="?*", ENV{SYSTEMD_WANTS}+="vyos-net-name-resolve-hotplug.service"
+
+LABEL="vyos_hotplug_end"

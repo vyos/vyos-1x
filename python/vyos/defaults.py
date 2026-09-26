@@ -32,7 +32,6 @@ directories = {
   'api_schema': f'{base_dir}/services/api/graphql/graphql/schema/',
   'api_client_op': f'{base_dir}/services/api/graphql/graphql/client_op/',
   'api_templates': f'{base_dir}/services/api/graphql/session/templates/',
-  'vyos_udev_dir' : '/run/udev/vyos',
   'isc_dhclient_dir' : '/run/dhclient',
   'dhcp6_client_dir' : '/run/dhcp6c',
   'vyos_configdir' : '/opt/vyatta/config',
