@@ -20,7 +20,7 @@
               <help>NetFlow settings</help>
             </properties>
             <children>
-              #include <include/generic-interface-multi.xml.i>
+              #include <include/dependent-warning-generic-interface-multi.xml.i>
               <leafNode name="engine-id">
                 <properties>
                   <help>NetFlow engine-id</help>
@@ -112,7 +112,7 @@
                     <defaultValue>2055</defaultValue>
                   </leafNode>
                   #include <include/source-address-ipv4-ipv6.xml.i>
-                  #include <include/source-interface.xml.i>
+                  #include <include/dependent-warning-source-interface.xml.i>
                 </children>
               </tagNode>
               <leafNode name="inactive-timeout">

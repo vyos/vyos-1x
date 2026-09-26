@@ -381,7 +381,7 @@
                <help>Global options used for HTTP client</help>
              </properties>
              <children>
-               #include <include/source-interface.xml.i>
+               #include <include/dependent-error-source-interface.xml.i>
                #include <include/source-address-ipv4-ipv6.xml.i>
              </children>
            </node>

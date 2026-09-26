@@ -16,7 +16,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
-          #include <include/generic-interface-multi.xml.i>
+          #include <include/dependent-error-generic-interface-multi.xml.i>
           <leafNode name="offload">
             <properties>
               <help>Offloading method</help>
