@@ -17,12 +17,17 @@
 import glob
 import os
 import re
-import subprocess
 import syslog
 import time
 from datetime import datetime, timezone
 
-DHCLIENT_DIR = '/run/dhclient'
+from vyos.defaults import directories
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
+from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import rc_cmd
+
+DHCLIENT_DIR = directories['isc_dhclient_dir']
 # Wait this long after the ISC "renew" time before declaring RENEW stuck.
 GRACE_SECS = 900  # 15 minutes
 # Do not thrash the client more often than this per interface.
@@ -32,7 +37,7 @@ STATE_DIR = '/run/vyos-dhclient-lease-watch'
 # ISC dhclient default db-time-format: UTC civil time
 # "renew 2 2026/07/21 05:22:11;"
 _TS = re.compile(
-    r'(renew|rebind|expire)\s+\d+\s+'
+    r'(renew|expire)\s+\d+\s+'
     r'(\d{4})/(\d{2})/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\s*;'
 )
 
@@ -63,15 +68,6 @@ def _lease_times(block: str):
     return renew_ts, expire_ts
 
 
-def _service_active(unit: str) -> bool:
-    r = subprocess.run(
-        ['systemctl', 'is-active', unit],
-        capture_output=True,
-        text=True,
-    )
-    return r.stdout.strip() == 'active'
-
-
 def _restart(iface: str) -> bool:
     """Restart dhclient@iface. Return True if systemctl succeeded."""
     unit = f'dhclient@{iface}.service'
@@ -80,11 +76,11 @@ def _restart(iface: str) -> bool:
         f'{unit}: DHCPv4 RENEW overdue (likely stuck unicast RENEW); '
         f'restarting client to force rediscovery',
     )
-    r = subprocess.run(['systemctl', 'restart', unit], check=False)
-    if r.returncode != 0:
+    rc, out = rc_cmd(f'systemctl restart {unit}')
+    if rc != 0:
         syslog.syslog(
             syslog.LOG_ERR,
-            f'{unit}: restart failed (rc={r.returncode}); will retry next cycle',
+            f'{unit}: restart failed (rc={rc}): {out}',
         )
         return False
     return True
@@ -92,7 +88,6 @@ def _restart(iface: str) -> bool:
 
 def main() -> int:
     syslog.openlog('vyos-dhclient-lease-watch', syslog.LOG_PID, syslog.LOG_DAEMON)
-    os.makedirs(STATE_DIR, exist_ok=True)
     now = time.time()
 
     for conf in sorted(glob.glob(f'{DHCLIENT_DIR}/dhclient_*.conf')):
@@ -106,7 +101,7 @@ def main() -> int:
             continue
 
         unit = f'dhclient@{iface}.service'
-        if not _service_active(unit):
+        if not is_systemd_service_active(unit):
             continue
 
         leases_path = f'{DHCLIENT_DIR}/dhclient_{iface}.leases'
@@ -132,26 +127,21 @@ def main() -> int:
         if now >= expire_ts:
             continue
 
-        state_file = os.path.join(STATE_DIR, f'{iface}.last_restart')
+        state_file = f'{STATE_DIR}/{iface}.last_restart'
         try:
-            if os.path.isfile(state_file):
-                with open(state_file, encoding='utf-8') as f:
-                    last = float(f.read().strip() or '0')
-                if now - last < COOLDOWN_SECS:
-                    continue
-        except (OSError, ValueError):
+            last_restart = float(read_file(state_file, defaultonfailure='0') or '0')
+            if now - last_restart < COOLDOWN_SECS:
+                continue
+        except ValueError:
             pass
 
         # Record cooldown before restart. If the write fails, skip the
         # restart: a successful restart with no marker would fire again
         # on the next 5-minute tick and defeat COOLDOWN_SECS.
-        try:
-            with open(state_file, 'w', encoding='utf-8') as f:
-                f.write(str(now))
-        except OSError as e:
+        if write_file(state_file, str(now), defaultonfailure=False) is False:
             syslog.syslog(
                 syslog.LOG_ERR,
-                f'{state_file}: {e}; skipping restart (cannot honor cooldown)',
+                f'{state_file}: cannot write; skipping restart',
             )
             continue
 
