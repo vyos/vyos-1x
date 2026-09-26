@@ -1,0 +1,16 @@
+[Unit]
+Description=Periodically check for stuck DHCPv4 unicast RENEW
+Documentation=man:dhclient(8)
+After=vyos-router.service
+
+[Timer]
+# First run a few minutes after boot (leases need to exist)
+OnBootSec=3min
+# Then every 5 minutes
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=vyos-dhclient-lease-watch.service
+
+[Install]
+WantedBy=timers.target
