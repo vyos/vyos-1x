@@ -60,6 +60,9 @@ def main():
     parser.add_argument('--package-name', type=non_trivial, default='vyos-1x',
                         help='name of current package')
     parser.add_argument('--output-path', help='path to generated cache')
+    parser.add_argument(
+        '--exclude-paths', action='extend', nargs='+', help='exclude paths from cache'
+    )
     args = vars(parser.parse_args())
 
     xml_dir = abspath(args['xml_dir'])
@@ -69,10 +72,21 @@ def main():
     path = out_path if out_path is not None else pkg_cache
     xml_cache = abspath(join(path, cache_name))
     internal_cache = args['internal_cache']
+    exclude_paths = args['exclude_paths'] or []
+    # we accept paths as directory path strings, with possible 'node.tag'
+    # entries, for comparison with removal in template dirs in the Makefile
+    exclude_paths = list(
+        map(lambda l: [c for c in l.split('/') if c and c != 'node.tag'], exclude_paths)
+    )
+    json_exclude_paths = json.dumps(exclude_paths)
 
     try:
-        reference_tree_to_json(xml_dir, xml_tmp,
-                               internal_cache=internal_cache)
+        reference_tree_to_json(
+            xml_dir,
+            xml_tmp,
+            internal_cache=internal_cache,
+            exclude_paths=json_exclude_paths,
+        )
     except ConfigTreeError as e:
         print(e)
         sys.exit(1)
