@@ -395,6 +395,55 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             # Validate and verify assigned IP addresses
             self._verify_interface_address(interface)
 
+    def test_pppoe_ipv6_autoconf_without_router_advertisement(self):
+        # T9354: When the link comes up with IPv6 autoconf enabled a Router
+        # Solicitation is sent out. This is best effort - if the BRAS never
+        # answers, rdisc6(8) blocks for the duration of all its retries and
+        # then exits non-zero. Neither may stall or fail a commit.
+
+        # Take the IPv6 pool away from the BRAS, so it neither assigns an
+        # address to the link nor ever answers a Router Solicitation
+        self.cli_delete(pppoe_server_path + ['default-ipv6-pool'])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            (user, passwd) = self.u_p_dict[interface]
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertTrue(wait_for_interface(interface),
+                            msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+            # The BRAS has no IPv6 to offer, so the link carries none
+            self.assertFalse(get_interface_addresses(interface, 'inet6'))
+
+        # Changing an option that does not require a reconnect updates the
+        # established session in the very commit that changes it - this is
+        # where the Router Solicitation is sent from, and this commit must
+        # not fail although no Router Advertisement will be received
+        for interface in self._interfaces:
+            self.cli_set(base_path + [interface, 'address', 'dhcpv6'])
+
+        self.cli_commit()
+
+        # rdisc6(8) is still soliciting in the background - it must have been
+        # detached from the commit into a transient systemd unit, thus it is
+        # re-parented to PID 1 and none of our children
+        for process in process_iter(['name', 'ppid']):
+            if process.info['name'] == 'rdisc6':
+                self.assertEqual(process.info['ppid'], 1)
+
+        # Restore the BRAS IPv6 pool for the remaining tests
+        self.cli_set(pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
+        self.cli_commit()
+
     def test_pppoe_options(self):
         # Verify access-concentrator and service-name CLI options
 
