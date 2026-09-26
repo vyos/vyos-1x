@@ -1,0 +1,97 @@
+# Copyright (C) VyOS Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T6304: rework 'system config-management commit-archive' from a flat list of
+# URLs ('location <url>') into a structured, per-destination tagNode carrying
+# an explicit transport protocol, server, path, port and authentication.
+
+from urllib.parse import urlsplit
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'config-management', 'commit-archive']
+
+# URL schemes that map 1:1 onto a transport protocol node of the same name;
+# git schemes are handled separately below.
+direct_schemes = {'scp', 'sftp', 'ssh', 'ftp', 'ftps', 'http', 'https', 'tftp'}
+
+
+def scheme_to_target(scheme: str):
+    """Map a URL scheme to a (protocol node, git transport) tuple, or None if
+    unsupported. A git scheme maps to the 'git' node carrying its transport
+    ('git' alone carries none); every other scheme maps to a node of its name.
+    """
+    protocol, _, transport = scheme.partition('+')
+    if protocol == 'git':
+        return 'git', (transport or None)
+    if scheme in direct_schemes:
+        return scheme, None
+    return None
+
+
+def migrate(config: ConfigTree) -> None:
+    location_base = base + ['location']
+    if not config.exists(location_base):
+        return
+
+    # already migrated: 'location' is a tagNode, not a leaf of URLs - a forced
+    # re-run must not delete and rebuild it
+    if config.is_tag(location_base):
+        return
+
+    migratable = []
+    for value in config.return_values(location_base):
+        target = scheme_to_target(urlsplit(value).scheme)
+        if target is not None:
+            migratable.append((value, target))
+
+    config.delete(location_base)
+
+    for index, (location, (proto, transport)) in enumerate(migratable, start=1):
+        url = urlsplit(location)
+
+        name = f'archive-{index}'
+        proto_base = location_base + [name, proto]
+
+        if url.hostname:
+            config.set(proto_base + ['server'], value=url.hostname)
+        if url.port:
+            config.set(proto_base + ['port'], value=str(url.port))
+
+        # only record a non-root path; '/' is the default applied at upload time
+        if url.path and url.path != '/':
+            config.set(proto_base + ['path'], value=url.path)
+
+        if proto != 'tftp':
+            if url.username:
+                config.set(
+                    proto_base + ['authentication', 'username'],
+                    value=url.username,
+                )
+            if url.password:
+                config.set(
+                    proto_base + ['authentication', 'password'],
+                    value=url.password,
+                )
+
+        # record the git transport whenever the URL specified one explicitly
+        # (git+https/git+http/git+ssh) - preserve the user's choice even if it
+        # matches the https default. A bare 'git' scheme carries none.
+        if proto == 'git' and transport:
+            config.set(proto_base + ['transport'], value=transport)
+
+    # mark 'location' as a tagNode
+    if migratable:
+        config.set_tag(location_base)
