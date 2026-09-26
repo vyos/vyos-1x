@@ -213,7 +213,8 @@ def get_config(config=None):
                         _, vti = get_interface_dict(conf, ['interfaces', 'vti'], vti_interface)
                         ipsec['vti_interface_dicts'][vti_interface] = vti
 
-    ipsec['vpp_ipsec_exists'] = conf.exists(['vpp', 'settings', 'ipsec'])
+    # T8262 renamed 'vpp settings ipsec' to 'vpp settings ipsec-acceleration'
+    ipsec['vpp_ipsec_exists'] = conf.exists(['vpp', 'settings', 'ipsec-acceleration'])
 
     return ipsec
 
