@@ -343,6 +343,8 @@ class BasicAccelPPPTest:
             source_address = "1.2.3.4"
             self.set(["authentication", "radius", "source-address", source_address])
 
+            self.set(["authentication", "radius", "blast-protection"])
+
             # commit changes
             self.cli_commit()
 
@@ -367,6 +369,7 @@ class BasicAccelPPPTest:
             self.assertEqual(conf["radius"]["nas-identifier"], nas_id)
             self.assertEqual(conf["radius"]["nas-ip-address"], nas_ip)
             self.assertEqual(conf["radius"]["bind"], source_address)
+            self.assertEqual(conf["radius"]["blast-protection"], "1")
 
             server = conf["radius"]["server"].split(",")
             self.assertEqual(radius_server, server[0])
