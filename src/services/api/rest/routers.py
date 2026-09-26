@@ -53,6 +53,10 @@ from vyos.configsession import ConfigSessionError
 from ..background import BackgroundOpManager
 from ..background import BackgroundOpError
 from ..session import SessionState
+from ..session_recover import SESSION_UNAVAILABLE
+from ..session_recover import is_session_lost
+from ..session_recover import recreate_config_session
+from ..session_recover import safe_discard
 from .models import success
 from .models import error
 from .models import responses
@@ -93,6 +97,7 @@ LOG = logging.getLogger('http_api.routers')
 lock = Lock()
 
 asynclock = asyncio.Lock()
+
 
 def check_auth(key_list, key):
     key_id = None
@@ -409,8 +414,6 @@ def _execute_configure_op(
     is_background_job = background_tasks is None
 
     state = SessionState()
-    session = state.session
-    env = session.get_session_env()
 
     # A non-zero confirm_time will start commit-confirm timer on commit
     confirm_time = 0
@@ -428,12 +431,23 @@ def _execute_configure_op(
     # so the lock is really global
     lock.acquire()
 
-    config = Config(session_env=env)
-
     status = 200
     msg = None
     error_msg = None
+    env = None
+    session = None
     try:
+        session = state.session
+        if session is None:
+            if not recreate_config_session(state):
+                status = 503
+                error_msg = SESSION_UNAVAILABLE
+                raise ConfigSessionError(error_msg)
+            session = state.session
+
+        env = session.get_session_env()
+        config = Config(session_env=env)
+
         for c in data:
             op = c.op
             op_error = ConfigSessionError(f"'{op}' is not a valid operation")
@@ -530,20 +544,28 @@ def _execute_configure_op(
 
         LOG.info(f"Configuration modified via HTTP API using key '{state.id}'")
     except ConfigSessionError as e:
-        session.discard()
-        status = 400
+        safe_discard(session)
         if state.debug:
             LOG.critical(f'ConfigSessionError:\n {traceback.format_exc()}')
-        error_msg = str(e)
+        if is_session_lost(e) or error_msg == SESSION_UNAVAILABLE:
+            # Recreate ConfigSession for the next request; do not leave
+            # the process wedged on HTTP 500.
+            if status != 503:
+                recreate_config_session(state)
+            status = 503
+            error_msg = SESSION_UNAVAILABLE
+        else:
+            status = 400
+            error_msg = str(e)
     except Exception:
-        session.discard()
+        safe_discard(session)
         LOG.critical(traceback.format_exc())
         status = 500
 
         # Don't give the details away to the outer world
         error_msg = 'An internal error occurred. Check the logs for details.'
     finally:
-        if 'IN_COMMIT_CONFIRM' in env:
+        if env is not None and 'IN_COMMIT_CONFIRM' in env:
             del env['IN_COMMIT_CONFIRM']
         lock.release()
 
