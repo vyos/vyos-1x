@@ -235,6 +235,60 @@
 #include <include/dhcp/log-level.xml.i>
 #include <include/listen-address-ipv4.xml.i>
 #include <include/listen-interface-multi-broadcast.xml.i>
+<tagNode name="custom-option">
+  <properties>
+    <help>Custom DHCP option definition</help>
+    <constraint>
+      #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+    </constraint>
+    <constraintErrorMessage>Custom DHCP option name may only contain letters, numbers, dots, underscores, and hyphens</constraintErrorMessage>
+  </properties>
+  <children>
+    <leafNode name="array">
+      <properties>
+        <help>Encode multiple values in one DHCP option</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="code">
+      <properties>
+        <help>DHCP option code</help>
+        <valueHelp>
+          <format>1-254</format>
+          <description>DHCP option code</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-254"/>
+        </constraint>
+        <constraintErrorMessage>DHCP option code must be in range 1 to 254</constraintErrorMessage>
+      </properties>
+    </leafNode>
+    <leafNode name="type">
+      <properties>
+        <help>DHCP option data type</help>
+        <completionHelp>
+          <list>binary boolean fqdn ipv4-address ipv6-address string uint8 uint16 uint32 int8 int16 int32</list>
+        </completionHelp>
+        <valueHelp>
+          <format>binary</format>
+          <description>Raw hexadecimal data</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ipv4-address</format>
+          <description>IPv4 address</description>
+        </valueHelp>
+        <valueHelp>
+          <format>string</format>
+          <description>Text string</description>
+        </valueHelp>
+        <constraint>
+          <regex>(binary|boolean|fqdn|ipv4-address|ipv6-address|string|uint8|uint16|uint32|int8|int16|int32)</regex>
+        </constraint>
+        <constraintErrorMessage>Invalid DHCP option data type</constraintErrorMessage>
+      </properties>
+    </leafNode>
+  </children>
+</tagNode>
 <tagNode name="shared-network-name">
   <properties>
     <help>Name of DHCP shared network</help>
