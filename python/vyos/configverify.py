@@ -423,43 +423,6 @@ def verify_vlan_config(config):
             verify_mtu_parent(c_vlan, s_vlan)
             verify_mtu_ipv6(c_vlan)
 
-
-def verify_diffie_hellman_length(file: str, min_keysize: int) -> bool:
-    """ Verify Diffie-Hellman keypair length given via file. It must be greater
-    than or equal to min_keysize.
-
-    Raises TypeError if min_keysize is not an integer and ValueError if it is
-    not a positive integer - both indicate a logic error in the caller. An
-    unreadable or malformed file is user input, not a logic error, and simply
-    fails the check. """
-    import os
-    import re
-    from vyos.utils.process import cmdl
-
-    if isinstance(min_keysize, bool) or not isinstance(min_keysize, int):
-        raise TypeError(
-            f'min_keysize must be an integer, got {type(min_keysize).__name__}')
-    if min_keysize < 1:
-        raise ValueError(
-            f'min_keysize must be a positive integer, got {min_keysize}')
-
-    if os.path.exists(file):
-        try:
-            out = cmdl(
-                ['openssl', 'dhparam', '-inform', 'PEM', '-in', file, '-text'])
-        except OSError:
-            # Not a readable PEM encoded Diffie-Hellman parameter file
-            return False
-
-        prog = re.compile(r'\d+\s+bit')
-        match = prog.search(out)
-        if match:
-            bits = match[0].split()[0]
-            if int(bits) >= min_keysize:
-                return True
-
-    return False
-
 def verify_common_route_maps(config):
     """
     Common helper function used by routing protocol implementations to perform
