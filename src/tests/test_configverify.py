@@ -12,20 +12,41 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from unittest import TestCase
 from vyos.configverify import verify_diffie_hellman_length
 from vyos.utils.process import cmdl
 
 dh_file = '/tmp/dh.pem'
+dh_file_invalid = '/tmp/dh_invalid.pem'
 
-class TestDictSearch(TestCase):
+class TestVerifyDiffieHellmanLength(TestCase):
     def setUp(self):
         pass
 
     def test_dh_key_none(self):
-        self.assertFalse(verify_diffie_hellman_length('/tmp/non_existing_file', '1024'))
+        self.assertFalse(verify_diffie_hellman_length('/tmp/non_existing_file', 1024))
 
     def test_dh_key_512(self):
-        key_len = '512'
-        cmdl(['openssl', 'dhparam', '-out', dh_file, key_len])
+        key_len = 512
+        cmdl(['openssl', 'dhparam', '-out', dh_file, str(key_len)])
         self.assertTrue(verify_diffie_hellman_length(dh_file, key_len))
+
+    def test_dh_key_malformed(self):
+        with open(dh_file_invalid, 'w') as f:
+            f.write('this is not a PEM encoded file')
+        self.assertFalse(verify_diffie_hellman_length(dh_file_invalid, 512))
+        os.unlink(dh_file_invalid)
+
+    def test_dh_keysize_not_integer(self):
+        with self.assertRaises(TypeError):
+            verify_diffie_hellman_length(dh_file, '1024')
+        with self.assertRaises(TypeError):
+            verify_diffie_hellman_length(dh_file, True)
+
+    def test_dh_keysize_not_positive(self):
+        with self.assertRaises(ValueError):
+            verify_diffie_hellman_length(dh_file, -512)
+        with self.assertRaises(ValueError):
+            verify_diffie_hellman_length(dh_file, 0)
