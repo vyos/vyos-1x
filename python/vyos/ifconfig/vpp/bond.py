@@ -160,8 +160,11 @@ class VPPBondInterface(Interface, VPPInterface):
             if member not in members:
                 self.add_member(interface=member)
 
+        # Apply all settings to the lcp pair (kernel) interface first: creating
+        # the kernel VLANs is what makes linux-cp create the matching VPP
+        # sub-interfaces and their taps, which the VPP-specific settings below
+        # (MTU sync to those taps) then depend on.
+        super().update(config)
+
         # Apply VPP-specific interface settings
         VPPInterface.update(self, config)
-
-        # Apply all settings to the lcp pair (kernel) interface
-        super().update(config)

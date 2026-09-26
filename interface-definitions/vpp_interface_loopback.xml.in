@@ -23,6 +23,9 @@
               #include <include/interface/address-ipv4-ipv6.xml.i>
               #include <include/interface/mac.xml.i>
               #include <include/interface/mtu-68-16000.xml.i>
+              <leafNode name="mtu">
+                <defaultValue>1500</defaultValue>
+              </leafNode>
               #include <include/vpp/vif.xml.i>
             </children>
           </tagNode>
