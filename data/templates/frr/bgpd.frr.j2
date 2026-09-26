@@ -710,6 +710,9 @@ interface {{ iface }}
 {%         if iface_config.mpls.forwarding is vyos_defined %}
  mpls bgp forwarding
 {%         endif %}
+{%         if iface_config.mpls.l3vpn_multi_domain_switching is vyos_defined %}
+ mpls bgp l3vpn-multi-domain-switching
+{%         endif %}
 exit
 !
 {%     endfor %}
