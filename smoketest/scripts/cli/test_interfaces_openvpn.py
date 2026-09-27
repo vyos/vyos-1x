@@ -33,7 +33,7 @@ from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
 from vyos.pki import create_certificate
 from vyos.pki import create_certificate_request
-from vyos.pki import create_private_key
+from vyos.pki import create_ec_private_key
 from vyos.pki import encode_certificate
 from vyos.pki import encode_private_key
 from vyos.utils.network import get_interface_config
@@ -99,7 +99,7 @@ def generate_pki():
         'organization': 'VyOS',
         'common_name': 'VyOS Test',
     }
-    key = create_private_key('ec', 256)
+    key = create_ec_private_key(256)
     request = create_certificate_request(subject, key)
     # is_ca gives it both CLIENT_AUTH and SERVER_AUTH, so one certificate
     # serves either end of a tunnel
