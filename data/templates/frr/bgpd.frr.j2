@@ -205,10 +205,11 @@
 {%         if afi_config.attribute_unchanged is vyos_defined %}
   neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if afi_config.attribute_unchanged.as_path is vyos_defined }}{{ 'med ' if afi_config.attribute_unchanged.med is vyos_defined }}{{ 'next-hop ' if afi_config.attribute_unchanged.next_hop is vyos_defined }}
 {%         endif %}
-{%         if afi_config.capability.orf.prefix_list.send is vyos_defined %}
+{%         if afi_config.capability.orf.prefix_list.send is vyos_defined and afi_config.capability.orf.prefix_list.receive is vyos_defined %}
+  neighbor {{ neighbor }} capability orf prefix-list both
+{%         elif afi_config.capability.orf.prefix_list.send is vyos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list send
-{%         endif %}
-{%         if afi_config.capability.orf.prefix_list.receive is vyos_defined %}
+{%         elif afi_config.capability.orf.prefix_list.receive is vyos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list receive
 {%         endif %}
 {%         if afi_config.default_originate is vyos_defined %}
