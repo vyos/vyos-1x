@@ -23,7 +23,7 @@ import unittest
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.ethtool import Ethtool
 from vyos.ifconfig import Section
-from vyos.utils.process import call
+from vyos.utils.process import run
 from vyos import ConfigError
 
 config_dir = '/usr/libexec/vyos/tests/configs'
@@ -51,11 +51,16 @@ def read_offload() -> dict:
 
 
 def restore_offload(state: dict) -> None:
+    current = read_offload()
     for ifname, options in state.items():
+        # Only touch what actually drifted - ethtool(8) is chatty and reports
+        # every sub-feature it could not turn on ("Actual changes: ...") on
+        # stdout, which would otherwise flood the test log on every setUp().
         tmp = ' '.join(f'{option} {"on" if on else "off"}'
-                       for option, (on, fixed) in options.items() if not fixed)
+                       for option, (on, fixed) in options.items()
+                       if not fixed and current[ifname][option][0] != on)
         if tmp:
-            call(f'sudo ethtool --features {ifname} {tmp}')
+            run(f'sudo ethtool --features {ifname} {tmp}')
 
 class DynamicClassBase(unittest.TestCase):
     def setUp(self):
