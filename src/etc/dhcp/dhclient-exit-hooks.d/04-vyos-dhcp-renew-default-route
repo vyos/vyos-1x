@@ -44,7 +44,8 @@
 # Adds still use the enter-hook ip() wrapper so FRR gets tag/distance.
 # After a stale-gateway delete, re-check the kernel with /usr/sbin/ip: if
 # that default is still present, skip the replacement add (otherwise the
-# new nexthop ECMP-joins the leftover).
+# new nexthop ECMP-joins the leftover). ip/jq inspect failure is the same
+# skip — do not treat "could not read the table" as "route gone".
 
 RUN="yes"
 
@@ -58,16 +59,21 @@ case "$reason" in
 esac
 
 # Kernel default via $1 on $interface? Real ip(8) JSON — never the wrapper.
+# 0 = present, 1 = confirmed absent, 2 = ip/jq inspect failed.
 _default_via_present() {
     local gw="$1"
     local json
-    json=$(/usr/sbin/ip -j -4 route show default ${VRF_OPTION} 2>/dev/null) || return 1
-    [ -n "$json" ] || return 1
+    local jq_status
+    json=$(/usr/sbin/ip -j -4 route show default ${VRF_OPTION} 2>/dev/null) || return 2
+    [ -n "$json" ] || return 2
     echo "$json" | jq -e --arg gw "$gw" --arg dev "$interface" \
         'any(.[];
             (.gateway == $gw and .dev == $dev)
             or any(.nexthops[]?; .gateway == $gw and .dev == $dev)
         )' >/dev/null 2>&1
+    jq_status=$?
+    [ "$jq_status" -le 1 ] && return "$jq_status"
+    return 2
 }
 
 # FRR staticd already has 0/0 via $1 at distance $2 on $interface?
@@ -145,10 +151,16 @@ if [ -n "$rfc3442_parse_ok" ] &&
             metric "${if_metric}" >/dev/null 2>&1
         # Wrapper exit is not a gate (vtysh "no ip route" fails if already
         # gone). Kernel table is: leftover still present → do not add a
-        # replacement (ECMP over old+new).
-        if _default_via_present "${router}"; then
+        # replacement (ECMP over old+new). Inspect failure is the same skip.
+        _default_via_present "${router}"
+        present_st=$?
+        if [ "$present_st" -eq 0 ]; then
             logmsg warn \
                 "RENEW/REBIND: stale default still present via ${router} dev ${interface}"
+            stale_still_present=1
+        elif [ "$present_st" -eq 2 ]; then
+            logmsg warn \
+                "RENEW/REBIND: failed to inspect stale default via ${router} dev ${interface}"
             stale_still_present=1
         fi
         if_metric=$((if_metric + 1))
@@ -165,7 +177,7 @@ fi
 
 if [ -n "$stale_still_present" ]; then
     logmsg warn \
-        "RENEW/REBIND: skipping default reinstall; stale gateway still present"
+        "RENEW/REBIND: skipping default reinstall; stale gateway still present or unverifiable"
     return 0 2>/dev/null || exit 0
 fi
 
