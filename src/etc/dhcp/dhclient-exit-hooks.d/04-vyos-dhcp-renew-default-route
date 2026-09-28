@@ -7,15 +7,20 @@
 # delete, remetric races), RENEW leaves the interface with a live address and
 # no default via $new_routers.
 #
-# Presence check MUST use /usr/sbin/ip, not the enter-hook ip() wrapper.
-# That wrapper sends any `ip … route` that is not `del` through vtysh as an
-# add, so `ip -4 route show` both misses the kernel table and writes a
-# staticd duplicate. Use `ip -j` so a multipath default (two DHCP WANs at
-# the same distance) is visible. Do not match kernel .metric to IF_METRIC:
-# FRR distance is IF_METRIC, the kernel row is typically proto static
-# metric 20. A backup option-3 router at distance 211 is FRR-only and will
-# not appear in the kernel while 210 is installed — do not warn "still
-# missing after add" for those.
+# Kernel leftover / post-add checks MUST use /usr/sbin/ip, not the
+# enter-hook ip() wrapper. That wrapper sends any `ip … route` that is not
+# `del` through vtysh as an add, so `ip -4 route show` both misses the
+# kernel table and writes a staticd duplicate. Use `ip -j` so a multipath
+# default (two DHCP WANs at the same distance) is visible. Do not match
+# kernel .metric to IF_METRIC: FRR distance is IF_METRIC, the kernel row
+# is typically proto static metric 20. A backup option-3 router at
+# distance 211 is FRR-only and will not appear in the kernel while 210 is
+# installed — do not warn "still missing after add" for those.
+#
+# Skip restoration only when FRR already has this gw+dev at the requested
+# distance (running-config, same string iptovtysh writes). A kernel
+# default via the same gw (operator static, or another distance) must not
+# hide a missing DHCP route at IF_METRIC.
 #
 # If option 3 changes across a same-IP RENEW, drop defaults via gateways
 # that disappeared from $new_routers. Delete with the same per-router
@@ -63,6 +68,18 @@ _default_via_present() {
             (.gateway == $gw and .dev == $dev)
             or any(.nexthops[]?; .gateway == $gw and .dev == $dev)
         )' >/dev/null 2>&1
+}
+
+# FRR staticd already has 0/0 via $1 at distance $2 on $interface?
+# Same string as 03-vyos-ipwrapper iptovtysh. Kernel .metric is not this.
+_frr_default_present() {
+    local gw="$1"
+    local distance="$2"
+    local needle="ip route 0.0.0.0/0 ${gw} ${interface} tag 210 ${distance}"
+    if [ -n "$VRF_OPTION" ]; then
+        needle="${needle} ${VRF_OPTION}"
+    fi
+    vtysh -c "show running-config no-header" 2>/dev/null | grep -Fqx "$needle"
 }
 
 # Gateways of RFC3442 0.0.0.0/0 entries (option 121). Shared decoder:
@@ -155,7 +172,7 @@ fi
 base_metric="${IF_METRIC:-210}"
 if_metric="$base_metric"
 for router in $new_routers; do
-    if _default_via_present "${router}"; then
+    if _frr_default_present "${router}" "${if_metric}"; then
         if_metric=$((if_metric + 1))
         continue
     fi

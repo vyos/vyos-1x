@@ -830,6 +830,17 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             'vtysh -c "configure terminal" '
             f'-c "no ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}"'
         )
+
+        def default_gone():
+            frrconfig = self.getFRRconfig()
+            if route_str in frrconfig:
+                return False
+            out = cmd('/usr/sbin/ip -4 route show default')
+            return not (router in out and interface in out)
+
+        gone, _ = self.wait_for_result(default_gone, True, pause=1, timeout=30)
+        self.assertTrue(gone, 'IPv4 default still present after vtysh delete')
+
         cmd(f'systemctl kill -s SIGUSR1 dhclient@{interface}.service')
         self.assert_in_frrconfig(route_str)
 
