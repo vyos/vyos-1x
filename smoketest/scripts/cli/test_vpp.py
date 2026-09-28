@@ -89,6 +89,12 @@ def get_address(interface):
             return ip_address
 
 
+def wrapped_error_regex(message):
+    # Commit errors are line-wrapped when printed, so build a regex that
+    # matches the message across arbitrary whitespace including newlines
+    return r'\s+'.join(re.escape(word) for word in message.split())
+
+
 def get_isolated_cpus():
     isolated = read_file('/sys/devices/system/cpu/isolated')
     return range_str_to_list(isolated)
@@ -1868,6 +1874,64 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Cleanup
         self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
 
+    def test_27_vpp_ipsec_incompatible_algorithms(self):
+        # T9303: VPP IPsec acceleration must reject unsupported IKE/ESP
+        # algorithms, as the crypto plugin for VPP does not support every
+        # algorithm strongSwan offers. This lives here and not in
+        # test_vpn_ipsec.py as the validation requires VPP to be enabled.
+        ipsec_path = ['vpn', 'ipsec']
+        peer = 'main-branch'
+        peer_path = ipsec_path + ['site-to-site', 'peer', peer]
+        ike_group = 'MyIKEGroup'
+        esp_group = 'MyESPGroup'
+        local_address = '192.0.2.10'
+        peer_ip = '203.0.113.45'
+        secret = 'MYSECRETKEY'
+
+        self.cli_set(base_path + ['settings', 'ipsec-acceleration'])
+
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes256'])
+        self.cli_set(ipsec_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', '3des'])
+
+        self.cli_set(ipsec_path + ['authentication', 'psk', peer, 'id', local_address])
+        self.cli_set(ipsec_path + ['authentication', 'psk', peer, 'id', peer_ip])
+        self.cli_set(ipsec_path + ['authentication', 'psk', peer, 'secret', secret])
+
+        self.cli_set(peer_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_path + ['ike-group', ike_group])
+        self.cli_set(peer_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_path + ['local-address', local_address])
+        self.cli_set(peer_path + ['remote-address', peer_ip])
+        self.cli_set(peer_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24'])
+        self.cli_set(peer_path + ['tunnel', '1', 'remote', 'prefix', '172.17.10.0/24'])
+
+        # 3des is not supported for ESP when VPP is used
+        err_msg = wrapped_error_regex(
+            f'Encryption algorithm 3des cannot be used for ESP proposal 1 '
+            f'on tunnel 1 for site-to-site peer {peer} with VPP'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        self.cli_set(ipsec_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes256'])
+
+        # serpent128 is not supported for IKE when VPP is used
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'serpent128'])
+        err_msg = wrapped_error_regex(
+            f'Encryption algorithm serpent128 cannot be used for IKE proposal 1 '
+            f'for site-to-site peer {peer} with VPP'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # supported algorithms on both IKE and ESP commit just fine
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes256'])
+        self.cli_commit()
+
+        # cleanup - the IPsec configuration is not covered by tearDown()
+        self.cli_delete(ipsec_path)
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
