@@ -13,7 +13,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+
+
+def _make_psutil_net_conn(ip, port, pid):
+    c = MagicMock()
+    c.laddr.ip = ip
+    c.laddr.port = port
+    c.pid = pid
+    return c
+
 
 class TestVyOSUtils(TestCase):
     def test_cmdl_basic(self):
@@ -117,3 +126,170 @@ class TestVyOSUtils(TestCase):
         # duplicated values
         self.assertEqual(list_to_range_str([1, 1, 2, 2, 3, 3]), '1-3')
         self.assertEqual(list_to_range_str([5, 1, 2, 2, 3, 5]), '1-3,5')
+
+    def test_is_ip_range(self):
+        """A range is exactly two plain host addresses."""
+        from vyos.utils.network import is_ipv4_range
+        from vyos.utils.network import is_ipv6_range
+
+        self.assertTrue(is_ipv4_range('192.0.2.1-192.0.2.9'))
+        self.assertTrue(is_ipv6_range('2001:db8::1-2001:db8::9'))
+        # a nested range or a prefix as endpoint is not a range
+        self.assertFalse(is_ipv4_range('192.0.2.1-192.0.2.2-192.0.2.3'))
+        self.assertFalse(is_ipv4_range('192.0.2.0/24-192.0.2.9'))
+        self.assertFalse(is_ipv6_range('2001:db8::/64-2001:db8::9'))
+        self.assertFalse(is_ipv4_range('192.0.2.1'))
+
+    def test_is_addr_assigned_nonlocal_bind_ipv4(self):
+        """When net.ipv4.ip_nonlocal_bind=1, any valid IPv4 must return True."""
+        from vyos.utils.network import is_addr_assigned
+
+        with patch('vyos.utils.system.sysctl_read', return_value='1'):
+            self.assertTrue(is_addr_assigned('192.0.2.99', allow_nonlocal=True))
+
+    def test_is_addr_assigned_nonlocal_bind_ipv6(self):
+        from vyos.utils.network import is_addr_assigned
+
+        with patch('vyos.utils.system.sysctl_read', return_value='1'):
+            self.assertTrue(is_addr_assigned('2001:db8::1', allow_nonlocal=True))
+
+    def test_is_addr_assigned_nonlocal_bind_ipv4_off_unassigned(self):
+        """When sysctl is 0 and address is not assigned, must return False."""
+        from vyos.utils.network import is_addr_assigned
+
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=[]
+        ):
+            self.assertFalse(is_addr_assigned('192.0.2.99', allow_nonlocal=True))
+
+    def test_is_addr_assigned_nonlocal_bind_ipv6_off_unassigned(self):
+        """When sysctl is 0 and address is not assigned, must return False."""
+        from vyos.utils.network import is_addr_assigned
+
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=[]
+        ):
+            self.assertFalse(is_addr_assigned('2001:db8::1', allow_nonlocal=True))
+
+    def test_is_addr_assigned_vrf_filter(self):
+        """Address on a VRF slave should only match when vrf matches."""
+        from vyos.utils.network import is_addr_assigned
+
+        iface_cfg_red = {'master': 'red'}
+        iface_cfg_lo = {'master': None}  # loopback has no master
+
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=['lo', 'eth0']
+        ), patch(
+            'vyos.utils.network.get_interface_config',
+            side_effect=[iface_cfg_lo, iface_cfg_red],
+        ), patch(
+            'vyos.utils.network.is_intf_addr_assigned', return_value=True
+        ) as mock_is_assigned:
+            # vrf='red' → should find it on eth0
+            self.assertTrue(
+                is_addr_assigned('10.0.0.1', vrf='red', allow_nonlocal=True)
+            )
+            mock_is_assigned.assert_called_once_with('eth0', '10.0.0.1')
+
+    def test_is_addr_assigned_default_vrf_ignores_vrf_slave(self):
+        """An address inside a VRF must not satisfy a default VRF lookup."""
+        from vyos.utils.network import is_addr_assigned
+
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=['eth0']
+        ), patch(
+            'vyos.utils.network.get_interface_config', return_value={'master': 'red'}
+        ), patch(
+            'vyos.utils.network.is_intf_addr_assigned', return_value=True
+        ):
+            self.assertFalse(is_addr_assigned('10.0.0.1'))
+
+    def test_is_addr_assigned_default_vrf_ignores_vrf_device(self):
+        """An address on a VRF device belongs to that VRF, not to the default one."""
+        from vyos.utils.network import is_addr_assigned
+
+        vrf_device = {'linkinfo': {'info_kind': 'vrf'}}
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=['red']
+        ), patch(
+            'vyos.utils.network.get_interface_config', return_value=vrf_device
+        ), patch(
+            'vyos.utils.network.is_intf_addr_assigned', return_value=True
+        ):
+            self.assertFalse(is_addr_assigned('10.0.0.1'))
+            # naming the VRF device asks for the addresses it carries itself
+            self.assertTrue(is_addr_assigned('10.0.0.1', vrf='red'))
+            self.assertTrue(is_addr_assigned('10.0.0.1', include_vrf=True))
+
+    def test_is_ip_address_or_range_rejects_host_bits(self):
+        """A prefix with host bits set is not a valid network for nftables."""
+        from vyos.utils.network import is_ipv4_address_or_range
+        from vyos.utils.network import is_ipv6_address_or_range
+
+        self.assertTrue(is_ipv4_address_or_range('192.0.2.1'))
+        self.assertTrue(is_ipv4_address_or_range('192.0.2.0/24'))
+        self.assertTrue(is_ipv4_address_or_range('192.0.2.1-192.0.2.9'))
+        self.assertFalse(is_ipv4_address_or_range('192.0.2.1/24'))
+
+        self.assertTrue(is_ipv6_address_or_range('2001:db8::1'))
+        self.assertTrue(is_ipv6_address_or_range('2001:db8::/64'))
+        self.assertFalse(is_ipv6_address_or_range('2001:db8::1/64'))
+
+    def test_is_addr_assigned_wrong_vrf(self):
+        """Address on VRF 'red' must not match when querying vrf='blue'."""
+        from vyos.utils.network import is_addr_assigned
+
+        iface_cfg = {'master': 'red'}
+        with patch('vyos.utils.system.sysctl_read', return_value='0'), patch(
+            'netifaces.interfaces', return_value=['eth0']
+        ), patch(
+            'vyos.utils.network.get_interface_config', return_value=iface_cfg
+        ), patch(
+            'vyos.utils.network.is_intf_addr_assigned', return_value=True
+        ):
+            self.assertFalse(
+                is_addr_assigned('10.0.0.1', vrf='blue', allow_nonlocal=True)
+            )
+
+    def test_is_listen_port_wildcard_ipv4(self):
+        """Service on 0.0.0.0 must match even when a specific address filter is given."""
+        from vyos.utils.network import is_listen_port_bind_service
+
+        conn = _make_psutil_net_conn('0.0.0.0', 443, 1234)
+        with patch('psutil.net_connections', return_value=[conn]), patch(
+            'psutil.Process'
+        ) as MockProc:
+            MockProc.return_value.name.return_value = 'haproxy'
+            self.assertTrue(
+                is_listen_port_bind_service(443, 'haproxy', address='194.0.2.1')
+            )
+
+    def test_is_listen_port_wildcard_ipv6(self):
+        """Service on :: must match even when an address filter is given."""
+        from vyos.utils.network import is_listen_port_bind_service
+
+        conn = _make_psutil_net_conn('::', 443, 1234)
+        with patch('psutil.net_connections', return_value=[conn]), patch(
+            'psutil.Process'
+        ) as MockProc:
+            MockProc.return_value.name.return_value = 'haproxy'
+            self.assertTrue(
+                is_listen_port_bind_service(443, 'haproxy', address='2001:db8::1')
+            )
+
+    def test_is_listen_port_specific_address_match(self):
+        """Service on specific IP must match only the exact address."""
+        from vyos.utils.network import is_listen_port_bind_service
+
+        conn = _make_psutil_net_conn('194.0.2.1', 443, 1234)
+        with patch('psutil.net_connections', return_value=[conn]), patch(
+            'psutil.Process'
+        ) as MockProc:
+            MockProc.return_value.name.return_value = 'haproxy'
+            self.assertTrue(
+                is_listen_port_bind_service(443, 'haproxy', address='194.0.2.1')
+            )
+            self.assertFalse(
+                is_listen_port_bind_service(443, 'haproxy', address='10.0.0.1')
+            )
