@@ -25,6 +25,7 @@ from vyos.template import is_ipv6
 from vyos.template import get_dhcp_router
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -804,6 +805,49 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             os.path.exists(dhcp_hook_iflist),
             'DHCP hook interface list file should be removed when no dhcp-interface routes exist',
         )
+
+    def test_08_dhcp_renew_reinstalls_missing_default(self):
+        # T9085: same-IP RENEW must reinstall a flushed IPv4 default.
+        # eth0 has a DHCP server in the QEMU smoketest harness.
+        if not self.running_in_smoketest_harness():
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', interface]
+        default_distance = default_value(
+            interface_path + ['dhcp-options', 'default-route-distance']
+        )
+        self.cli_set(interface_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        router = self.wait_for_dhcp_router(interface)
+        route_str = (
+            f'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}'
+        )
+        self.assert_in_frrconfig(route_str)
+
+        cmd(
+            'vtysh -c "configure terminal" '
+            f'-c "no ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}"'
+        )
+        cmd(f'systemctl kill -s SIGUSR1 dhclient@{interface}.service')
+        self.assert_in_frrconfig(route_str)
+
+        def kernel_has_default():
+            out = cmd('/usr/sbin/ip -4 route show default')
+            return router in out and interface in out
+
+        result, _ = self.wait_for_result(
+            kernel_has_default, True, pause=1, timeout=30
+        )
+        self.assertTrue(
+            result, 'IPv4 default not reinstalled after RENEW (T9085)'
+        )
+
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+        while process_named_running('dhclient', cmdline=interface, timeout=10):
+            sleep(0.250)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
