@@ -313,6 +313,20 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="mtu">
+            <properties>
+              <help>Maximum Transmission Unit (MTU) - with DCO the default is 1420</help>
+              <valueHelp>
+                <format>u32:68-16000</format>
+                <description>Maximum Transmission Unit in byte</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 68-16000"/>
+              </constraint>
+              <constraintErrorMessage>MTU must be between 68 and 16000</constraintErrorMessage>
+            </properties>
+            <defaultValue>1500</defaultValue>
+          </leafNode>
           <node name="offload">
             <properties>
               <help>Configurable offload options</help>

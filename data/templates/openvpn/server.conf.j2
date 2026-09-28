@@ -52,6 +52,9 @@ compress lzo
 {% if offload.dco is not vyos_defined %}
 disable-dco
 {% endif %}
+{% if tun_mtu is vyos_defined %}
+tun-mtu {{ tun_mtu }}
+{% endif %}
 
 {% if mode is vyos_defined('client') %}
 #
