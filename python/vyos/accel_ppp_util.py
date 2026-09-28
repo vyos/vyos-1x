@@ -130,19 +130,23 @@ def verify_accel_ppp_authentication(config, local_users=True):
     Common helper function which must be used by all Accel-PPP services based
     on get_config_dict()
     """
+    # "any-login" accepts every username/password combination, thus there is
+    # no need to have any local user account configured at all
+    any_login = False
+    if 'authentication' in config and 'any_login' in config['authentication']:
+        any_login = True
+
     # verify auth settings
     if local_users and dict_search("authentication.mode", config) == "local":
-        if (
-            dict_search("authentication.local_users", config) is None
-            or dict_search("authentication.local_users", config) == {}
-        ):
+        local_users_config = dict_search('authentication.local_users.username',
+                                         config, default={})
+
+        if not local_users_config and not any_login:
             raise ConfigError(
                 "Authentication mode local requires local users to be configured!"
             )
 
-        for user in dict_search("authentication.local_users.username", config):
-            user_config = config["authentication"]["local_users"]["username"][user]
-
+        for user, user_config in local_users_config.items():
             if "password" not in user_config:
                 raise ConfigError(f'Password required for local user "{user}"')
 
