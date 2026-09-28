@@ -626,6 +626,16 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertIn(interface, interfaces())
 
+    def assertServiceRunning(self, interface):
+        # a commit restarts the daemon, so the unit needs a moment to reach
+        # "running" - asserting straight after the commit races it, which shows
+        # up as a failure on a cold boot and a pass on a warm one
+        for _ in range(10):
+            if is_systemd_service_running(f'openvpn@{interface}.service'):
+                return
+            sleep(1)
+        self.fail(f'openvpn@{interface}.service is not running')
+
     def assertDcoDataPath(self, interface, multipoint=True):
         # An "ovpn" device in the wrong operating mode is adopted by the daemon
         # just the same and then rejects every peer, and iproute2 cannot show
@@ -1297,6 +1307,48 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['ip-version', 'dual-stack'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+    def test_openvpn_site2site_keepalive_off(self):
+        # site-to-site renders the keepalive as "ping"/"ping-restart" rather
+        # than the "keepalive" helper, so a zero interval has to leave both
+        # out: "ping 0" arms nothing while the "ping-restart" left behind
+        # keeps tearing an idle tunnel down
+        interface = 'vtun5002'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        # not the dummy interface address setUpClass configures, which
+        # OpenVPN would be assigning to the tunnel a second time
+        self.cli_set(path + ['local-address', '10.0.20.1'])
+        self.cli_set(path + ['remote-address', '10.0.20.2'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+        self.cli_set(path + ['keep-alive', 'interval', '0'])
+        self.cli_commit()
+
+        # match on the directive, not on the text: "ping" is too short to
+        # look for anywhere in the file
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        directives = [line.split()[0] for line in config.splitlines() if line.strip()]
+        self.assertNotIn('ping', directives)
+        self.assertNotIn('ping-restart', directives)
+        self.assertServiceRunning(interface)
+
+        # an enabled keepalive still renders both
+        self.cli_set(path + ['keep-alive', 'interval', '10'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '60'])
+        self.cli_commit()
+
+        # exact lines, not a substring of the file: "ping 10" would otherwise
+        # be satisfied by a rendered "ping 100"
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        lines = config.splitlines()
+        self.assertIn('ping 10', lines)
+        self.assertIn('ping-restart 60', lines)
+        self.assertServiceRunning(interface)
 
         self.cli_delete(base_path)
         self.cli_commit()
