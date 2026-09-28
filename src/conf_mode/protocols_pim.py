@@ -94,7 +94,11 @@ def apply(config_dict):
     pim_pid = process_named_running(pim_daemon)
     pim = config_dict['pim']
     if 'deleted' in pim:
-        os.kill(int(pim_pid), SIGTERM)
+        if pim_pid:
+            try:
+                os.kill(int(pim_pid), SIGTERM)
+            except ProcessLookupError:
+                pass
         return None
 
     if not pim_pid:
