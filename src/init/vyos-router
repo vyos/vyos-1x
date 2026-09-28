@@ -611,6 +611,14 @@ start ()
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
 
+    # Config sessions are kernel overlayfs mounts. The overlayfs workdir must
+    # live on the same filesystem as the session upperdir, so it goes on this
+    # tmpfs - but outside of ${vyatta_configdir}/tmp, which the CLI backend
+    # enumerates and wipes when reaping stale sessions.
+    modprobe -q overlay || true
+    mkdir -m 2775 -p ${vyatta_configdir}/ovl_work
+    chgrp ${GROUP} ${vyatta_configdir}/ovl_work
+
     mount_encrypted_config || overall_status=1
 
     # T5239: early read of system hostname as this value is read-only once during
