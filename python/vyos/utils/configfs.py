@@ -30,11 +30,14 @@ def delete_cli_node(cli_path: list):
     else:
         from shutil import rmtree
 
-        for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
-            tmp = os.path.join(os.environ[config_dir], '/'.join(cli_path))
-            # delete CLI node
-            if os.path.exists(tmp):
-                rmtree(tmp)
+        # Only ever operate on the merged union mount; the union backend
+        # propagates the change to its own r/w branch. Writing into
+        # VYATTA_CHANGES_ONLY_DIR behind the mount leaves the kernel with
+        # stale dentries under overlayfs.
+        tmp = os.path.join(os.environ['VYATTA_TEMP_CONFIG_DIR'], '/'.join(cli_path))
+        # delete CLI node
+        if os.path.exists(tmp):
+            rmtree(tmp)
 
 
 def add_cli_node(cli_path: list, value: str = None):
@@ -48,22 +51,24 @@ def add_cli_node(cli_path: list, value: str = None):
         from vyos.utils.file import write_file
 
         current_user = get_current_user()
-        for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
-            # store new value
-            tmp = os.path.join(os.environ[config_dir], '/'.join(cli_path))
-            write_file(
-                f'{tmp}/node.val',
-                value,
-                user=current_user,
-                group='vyattacfg',
-                mode=0o664,
-            )
-            # mark CLI node as modified
-            if config_dir == 'VYATTA_CHANGES_ONLY_DIR':
-                write_file(
-                    f'{tmp}/.modified',
-                    '',
-                    user=current_user,
-                    group='vyattacfg',
-                    mode=0o664,
-                )
+        # Only ever operate on the merged union mount; the union backend
+        # propagates the change to its own r/w branch. Writing into
+        # VYATTA_CHANGES_ONLY_DIR behind the mount leaves the kernel with
+        # stale dentries under overlayfs.
+        tmp = os.path.join(os.environ['VYATTA_TEMP_CONFIG_DIR'], '/'.join(cli_path))
+        # store new value
+        write_file(
+            f'{tmp}/node.val',
+            value,
+            user=current_user,
+            group='vyattacfg',
+            mode=0o664,
+        )
+        # mark CLI node as modified
+        write_file(
+            f'{tmp}/.modified',
+            '',
+            user=current_user,
+            group='vyattacfg',
+            mode=0o664,
+        )
