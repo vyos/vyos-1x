@@ -394,5 +394,120 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.assertIn(f'ptpport {default_ptp_port}', config)
 
+    def test_poll_interval(self):
+        # minpoll/maxpoll carry a CLI default and must always be rendered
+        servers = ['192.0.2.1', '192.0.2.2']
+        default_minpoll = default_value(base_path + ['server', servers[0], 'minpoll'])
+        default_maxpoll = default_value(base_path + ['server', servers[0], 'maxpoll'])
+
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for server in servers:
+            self.assertIn(f'server {server} iburst minpoll {default_minpoll} '
+                          f'maxpoll {default_maxpoll}', config)
+
+        # Now override the defaults per server
+        minpoll = '4'
+        maxpoll = '12'
+        for server in servers:
+            self.cli_set(base_path + ['server', server, 'minpoll', minpoll])
+            self.cli_set(base_path + ['server', server, 'maxpoll', maxpoll])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for server in servers:
+            self.assertIn(f'server {server} iburst minpoll {minpoll} '
+                          f'maxpoll {maxpoll}', config)
+
+    def test_poll_interval_range(self):
+        server = '192.0.2.1'
+
+        # Poll exponents are limited to 0-24
+        for option in ['minpoll', 'maxpoll']:
+            with self.assertRaises(ConfigSessionError):
+                self.cli_set(base_path + ['server', server, option, '25'])
+
+        self.cli_set(base_path + ['server', server, 'minpoll', '0'])
+        self.cli_set(base_path + ['server', server, 'maxpoll', '24'])
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        self.assertIn(f'server {server} iburst minpoll 0 maxpoll 24', config)
+
+    def test_presend(self):
+        servers = ['192.0.2.1', '192.0.2.2']
+        presend = '2'
+
+        # presend is limited to 0-10 and has no CLI default
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(base_path + ['server', servers[0], 'presend', '11'])
+
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for server in servers:
+            self.assertNotIn('presend', config)
+
+        for server in servers:
+            self.cli_set(base_path + ['server', server, 'presend', presend])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for server in servers:
+            self.assertIn(f'server {server} iburst minpoll', config)
+            self.assertIn(f'presend {presend}', config)
+
+    def test_extfield_f323(self):
+        # The CLI node is "extfield-f323", chrony expects "extfield F323"
+        servers = ['192.0.2.1', '192.0.2.2']
+        default_minpoll = default_value(base_path + ['server', servers[0], 'minpoll'])
+        default_maxpoll = default_value(base_path + ['server', servers[0], 'maxpoll'])
+
+        for server in servers:
+            self.cli_set(base_path + ['server', server, 'extfield-f323'])
+
+        self.cli_commit()
+
+        config = read_file(NTP_CONF, sudo=True)
+        for server in servers:
+            self.assertIn(f'server {server} iburst minpoll {default_minpoll} '
+                          f'maxpoll {default_maxpoll} extfield F323', config)
+
+    def test_server_all_options(self):
+        # Ensure the per-server options are emitted in the order chrony parses
+        server = '192.0.2.1'
+        pool = 'pool.vyos.io'
+        minpoll = '5'
+        maxpoll = '11'
+        presend = '3'
+
+        for association in [server, pool]:
+            for option in ['nts', 'noselect', 'prefer', 'interleave',
+                           'extfield-f323']:
+                self.cli_set(base_path + ['server', association, option])
+            self.cli_set(base_path + ['server', association, 'minpoll', minpoll])
+            self.cli_set(base_path + ['server', association, 'maxpoll', maxpoll])
+            self.cli_set(base_path + ['server', association, 'presend', presend])
+
+        self.cli_set(base_path + ['server', pool, 'pool'])
+
+        self.cli_commit()
+
+        options = (f'iburst nts noselect prefer xleave minpoll {minpoll} '
+                   f'maxpoll {maxpoll} presend {presend} extfield F323')
+
+        config = read_file(NTP_CONF, sudo=True)
+        self.assertIn(f'server {server} {options}', config)
+        self.assertIn(f'pool {pool} {options}', config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
