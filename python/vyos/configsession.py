@@ -83,6 +83,7 @@ SET_DEFAULT_IMAGE = [
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
+RECONNECT = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reconnect']
 REBOOT = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reboot']
 RENEW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'renew']
 POWEROFF = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'poweroff']
@@ -465,6 +466,10 @@ class ConfigSession(object):
 
     def reset(self, path):
         out = self.__run_command(RESET + path)
+        return out
+
+    def reconnect(self, path):
+        out = self.__run_command(RECONNECT + path)
         return out
 
     def renew(self, path):

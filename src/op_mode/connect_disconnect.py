@@ -15,14 +15,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import argparse
 
+from argparse import SUPPRESS
 from psutil import process_iter
 
 from vyos.utils.process import call
+from vyos.utils.process import rc_cmd
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import DEVNULL
+
+# Dialer interfaces we support - also sanitizes the name before it becomes
+# part of a systemd-run(1) command line
+dialer_interface_re = r'(pppoe|sstpc|wwan)\d+'
 
 def check_ppp_interface(interface):
     if not os.path.isfile(f'/etc/ppp/peers/{interface}'):
@@ -80,6 +87,51 @@ def disconnect(interface):
     else:
         print(f'Unknown interface {interface}, cannot disconnect. Aborting!')
 
+def reconnect(interface):
+    """ Reconnect dialer interface """
+
+    if interface.startswith('pppoe') or interface.startswith('sstpc'):
+        check_ppp_interface(interface)
+        # Restarting the service hangs up and dials again in one operation,
+        # leaving no window in which we could be interrupted with the link down
+        print(f'Interface {interface}: reconnecting...')
+        call(f'systemctl restart ppp@{interface}.service')
+    elif interface.startswith('wwan'):
+        # The modem must be disconnected before it can be dialed again
+        disconnect(interface)
+        connect(interface)
+    else:
+        print(f'Unknown interface {interface}, cannot reconnect. Aborting!')
+
+def reconnect_detached(interface):
+    """ Reconnect dialer interface from a transient systemd unit.
+
+    A reconnect is usually issued via the very interface being reconnected.
+    Once the link drops, the calling session dies and this process would be
+    killed by SIGHUP - or SIGPIPE on the next write to the dead terminal -
+    before the interface is dialed again, leaving the system unreachable. """
+
+    if not re.fullmatch(dialer_interface_re, interface):
+        print(f'Unknown interface {interface}, cannot reconnect. Aborting!')
+        exit(1)
+
+    unit = f'vyos-reconnect-{interface}'
+    command = (
+        f'systemd-run --quiet --collect --unit={unit} '
+        f'{os.path.abspath(__file__)} --reconnect --detached '
+        f'--interface {interface}'
+    )
+
+    rc, output = rc_cmd(command)
+    if rc != 0:
+        print(f'Interface {interface}: cannot reconnect: {output}')
+        exit(1)
+
+    print(
+        f'Interface {interface}: reconnecting in the background, this session '
+        f'may be disconnected. Progress is logged to journal unit {unit}.'
+    )
+
 def main():
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
@@ -87,6 +139,8 @@ def main():
     group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store_true")
     group.add_argument("--reconnect", help="Reconnect connection-oriented network interface", action="store_true")
     parser.add_argument("--interface", help="Interface name", action="store", required=True)
+    # Set only when we re-launch ourself detached from the calling session
+    parser.add_argument('--detached', action='store_true', help=SUPPRESS)
     args = parser.parse_args()
 
     # Disallow connecting interfaces while their configuration might be changing
@@ -100,8 +154,10 @@ def main():
     elif args.disconnect:
         disconnect(args.interface)
     elif args.reconnect:
-        disconnect(args.interface)
-        connect(args.interface)
+        if args.detached:
+            reconnect(args.interface)
+        else:
+            reconnect_detached(args.interface)
     else:
         parser.print_help()
 

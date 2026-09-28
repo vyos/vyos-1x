@@ -1,10 +1,13 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="reset">
+  <node name="reconnect">
+    <properties>
+      <help>Re-establish a connection</help>
+    </properties>
     <children>
-      <tagNode name="connection">
+      <tagNode name="interface">
         <properties>
-          <help>Bring connection-oriented network interface down and up</help>
+          <help>Bring a connection-oriented network interface down and up</help>
           <completionHelp>
             <path>interfaces pppoe</path>
             <path>interfaces sstpc</path>
