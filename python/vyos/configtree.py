@@ -97,6 +97,8 @@ _PROTOTYPES = {
     'get_nodes_of_kind': ([c_void_p, c_char_p, c_char_p], c_char_p),
     'get_rdeps_of_kind': ([c_void_p, c_char_p, c_char_p], c_char_p),
     'get_rdeps_of_kind_data': ([c_void_p, c_char_p, c_char_p], c_char_p),
+    'reference_path_from_config_path': ([c_void_p, c_char_p], c_char_p),
+    'reference_path_from_partial_path': ([c_void_p, c_char_p], c_char_p),
 }
 
 

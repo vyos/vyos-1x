@@ -115,3 +115,21 @@ class ReferenceTree:
         ).decode()
         sort = sorted(json.loads(res))
         return list(map(tuple, sort)) if as_tuple else sort
+
+    def reference_path_from_config_path(self, path):
+        import json
+
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        path = self.__lib.reference_path_from_config_path(self.__pointer, path_str)
+        return json.loads(path)
+
+    def reference_path_from_partial_path(self, path):
+        import json
+
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        path = self.__lib.reference_path_from_partial_path(self.__pointer, path_str)
+        return json.loads(path)
