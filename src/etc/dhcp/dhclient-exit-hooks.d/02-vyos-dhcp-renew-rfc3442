@@ -7,7 +7,7 @@ function convert_to_cidr () {
 	_rfc3442_cidr_append() {
 		cidr+="$2/$1:$3 "
 	}
-	_rfc3442_walk "$1" _rfc3442_cidr_append
+	_rfc3442_walk "$1" _rfc3442_cidr_append || return 1
 }
 
 # main script starts here
@@ -15,9 +15,11 @@ function convert_to_cidr () {
 RUN="yes"
 
 if [ "$RUN" = "yes" ]; then
-	convert_to_cidr "$old_rfc3442_classless_static_routes"
+	# Fail closed on truncated/unknown option 121: a partial new_cidr would
+	# delete every old route missing from it. 04- already fail-closes.
+	convert_to_cidr "$old_rfc3442_classless_static_routes" || return 1
 	old_cidr=$cidr
-	convert_to_cidr "$new_rfc3442_classless_static_routes"
+	convert_to_cidr "$new_rfc3442_classless_static_routes" || return 1
 	new_cidr=$cidr
 
 	if [ "$reason" = "RENEW" ]; then
