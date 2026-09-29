@@ -59,17 +59,25 @@ def _modem_owning_port(ifname: str):
     from json import loads
 
     try:
-        modem_list = loads(cmdl(['mmcli', '--list-modems', '--output-json'])).get(
-            'modem-list', []
-        )
-    except OSError:
+        data = loads(cmdl(['mmcli', '--list-modems', '--output-json']))
+    except (OSError, ValueError):
+        # ValueError also catches json.JSONDecodeError - mmcli can return
+        # empty or malformed output while ModemManager is still starting
+        # (T6604), and that must retry under wait=True, not abort it.
+        return None
+
+    # Well-formed JSON of an unexpected shape is treated like no modems at all
+    modem_list = []
+    if isinstance(data, dict) and 'modem-list' in data:
+        modem_list = data['modem-list']
+    if not isinstance(modem_list, list):
         return None
 
     for modem_path in modem_list:
         idx = modem_path.rsplit('/', 1)[-1]
         try:
             detail = loads(cmdl(['mmcli', '--modem', idx, '--output-json']))
-        except OSError:
+        except (OSError, ValueError):
             continue
         ports = dict_search('modem.generic.ports', detail) or []
         if any(port.split(' ')[0] == ifname for port in ports):
