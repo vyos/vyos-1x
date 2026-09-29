@@ -456,12 +456,7 @@ table bridge vyos_filter {
 {%                 endif %}
 {%             endif %}
 {%             if global_options.state_policy is vyos_defined %}
-{#     T7150: the bridge output hook only sees frames the router sends itself.
-       Frames that never pass inet conntrack (non-IP such as ARP/STP, AF_PACKET
-       DHCP, bridge IGMP/MLD queries) carry no conntrack entry, which nft
-       reports as invalid. Real invalid IP is already dropped by the ip/ip6
-       output state policy, so do not apply the invalid verdict here. #}
-        ct state != invalid jump VYOS_STATE_POLICY
+        jump VYOS_STATE_POLICY_OUTPUT
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
@@ -519,6 +514,19 @@ table bridge vyos_filter {
         {{ global_options.state_policy.related | nft_state_policy('related', bridge=True) }}
 {%     endif %}
         return
+    }
+
+{#  T7150: bridge output only sees frames the router sends itself. Some of
+    them never pass through conntrack, so nft calls them invalid even though
+    nothing is wrong with them: ARP and STP, DHCP from raw sockets, and the
+    bridge's own IGMP/MLD queries. Let those skip the state policy and send
+    everything else through it, so other invalid IP is still dropped. #}
+    chain VYOS_STATE_POLICY_OUTPUT {
+        ct state invalid meta protocol != { ip, ip6 } return
+        ct state invalid udp sport . udp dport { 67 . 68, 68 . 67 } return
+        ct state invalid ip protocol igmp return
+        ct state invalid icmpv6 type mld-listener-query return
+        jump VYOS_STATE_POLICY
     }
 {% endif %}
 }

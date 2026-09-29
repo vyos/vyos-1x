@@ -1340,16 +1340,23 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
 
-        # T7150: the bridge output hook only carries router-originated frames.
-        # Those that bypassed inet conntrack have no ct entry and read as
-        # invalid, so the invalid verdict must not apply there. Forwarded and
-        # input traffic keep the full state policy.
-        self.verify_nftables_chain([['ct state != invalid', 'jump VYOS_STATE_POLICY']],
+        # T7150: bridge output goes through its own chain that lets the
+        # router's untracked control traffic (ARP/STP, DHCP, IGMP, MLD
+        # queries) skip the state policy. Other invalid IP still has to hit
+        # VYOS_STATE_POLICY. Forward and input use the plain state policy.
+        self.verify_nftables_chain([['jump VYOS_STATE_POLICY_OUTPUT']],
                                    'bridge vyos_filter', 'VYOS_OUTPUT_filter')
-        self.verify_nftables_chain([['ct state != invalid', 'jump VYOS_STATE_POLICY']],
+        self.verify_nftables_chain([['jump VYOS_STATE_POLICY_OUTPUT']],
                                    'bridge vyos_filter', 'VYOS_FORWARD_filter', inverse=True)
-        self.verify_nftables_chain([['ct state != invalid', 'jump VYOS_STATE_POLICY']],
+        self.verify_nftables_chain([['jump VYOS_STATE_POLICY_OUTPUT']],
                                    'bridge vyos_filter', 'VYOS_INPUT_filter', inverse=True)
+        self.verify_nftables_chain([
+            ['ct state invalid', 'meta protocol != { ip, ip6 }', 'return'],
+            ['ct state invalid', 'udp sport . udp dport', '67 . 68', '68 . 67', 'return'],
+            ['ct state invalid', 'ip protocol igmp', 'return'],
+            ['ct state invalid', 'icmpv6 type mld-listener-query', 'return'],
+            ['jump VYOS_STATE_POLICY'],
+        ], 'bridge vyos_filter', 'VYOS_STATE_POLICY_OUTPUT')
 
         ## Check bridge-nf-call-iptables is set to 1, and for ipv6 remains on default 0
         self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-iptables'), '1')
