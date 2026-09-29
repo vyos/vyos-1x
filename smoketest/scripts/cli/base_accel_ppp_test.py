@@ -24,6 +24,7 @@ from vyos.utils.cpu import get_core_count
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmdl
 
+
 class BasicAccelPPPTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
         _base_path = None
@@ -343,18 +344,22 @@ class BasicAccelPPPTest:
             source_address = "1.2.3.4"
             self.set(["authentication", "radius", "source-address", source_address])
 
-            self.set([
-                "authentication",
-                "radius",
-                "message-authenticator",
-                "include-access-request",
-            ])
-            self.set([
-                "authentication",
-                "radius",
-                "message-authenticator",
-                "require-access-response",
-            ])
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "message-authenticator",
+                    "include-access-request",
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "message-authenticator",
+                    "require-access-response",
+                ]
+            )
 
             # commit changes
             self.cli_commit()
@@ -369,7 +374,9 @@ class BasicAccelPPPTest:
             # check auth
             self.assertTrue(conf["radius"].getboolean("verbose"))
             self.assertEqual(conf["radius"]["acct-timeout"], acct_timeout)
-            self.assertEqual(conf["radius"]["acct-interim-interval"], acct_interim_interval)
+            self.assertEqual(
+                conf["radius"]["acct-interim-interval"], acct_interim_interval
+            )
             self.assertEqual(conf["radius"]["acct-interim-jitter"], acct_interim_jitter)
             self.assertEqual(conf["radius"]["timeout"], "3")
             self.assertEqual(conf["radius"]["max-try"], "3")
@@ -380,8 +387,12 @@ class BasicAccelPPPTest:
             self.assertEqual(conf["radius"]["nas-identifier"], nas_id)
             self.assertEqual(conf["radius"]["nas-ip-address"], nas_ip)
             self.assertEqual(conf["radius"]["bind"], source_address)
-            self.assertEqual(conf["radius"]["message-authenticator-include-access-request"], "1")
-            self.assertEqual(conf["radius"]["message-authenticator-require-access-response"], "1")
+            self.assertEqual(
+                conf["radius"]["message-authenticator-include-access-request"], "1"
+            )
+            self.assertEqual(
+                conf["radius"]["message-authenticator-require-access-response"], "1"
+            )
 
             server = conf["radius"]["server"].split(",")
             self.assertEqual(radius_server, server[0])
@@ -517,28 +528,41 @@ class BasicAccelPPPTest:
             client_prefix_1 = f'{prefix_1},{prefix_mask}'
             client_prefix_2 = f'{prefix_2},{prefix_mask}'
             self.set(
-                ['client-ipv6-pool', pool_name, 'prefix', prefix_1, 'mask',
-                 prefix_mask])
+                ['client-ipv6-pool', pool_name, 'prefix', prefix_1, 'mask', prefix_mask]
+            )
             self.set(
-                ['client-ipv6-pool', pool_name, 'prefix', prefix_2, 'mask',
-                 prefix_mask])
+                ['client-ipv6-pool', pool_name, 'prefix', prefix_2, 'mask', prefix_mask]
+            )
 
             delegate_1_prefix = '2001:db8:fff1::/56'
             delegate_2_prefix = '2001:db8:fff2::/56'
             delegate_mask = '64'
             self.set(
-                ['client-ipv6-pool', pool_name, 'delegate', delegate_1_prefix,
-                 'delegation-prefix', delegate_mask])
+                [
+                    'client-ipv6-pool',
+                    pool_name,
+                    'delegate',
+                    delegate_1_prefix,
+                    'delegation-prefix',
+                    delegate_mask,
+                ]
+            )
             self.set(
-                ['client-ipv6-pool', pool_name, 'delegate', delegate_2_prefix,
-                 'delegation-prefix', delegate_mask])
+                [
+                    'client-ipv6-pool',
+                    pool_name,
+                    'delegate',
+                    delegate_2_prefix,
+                    'delegation-prefix',
+                    delegate_mask,
+                ]
+            )
 
             # commit changes
             self.cli_commit()
 
             # Validate configuration values
-            conf = ConfigParser(allow_no_value=True, delimiters='=',
-                                strict=False)
+            conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
             conf.read(self._config_file)
 
             for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
@@ -603,12 +627,12 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             self.assertEqual(conf['ppp']['min-mtu'], min_mtu)
             self.assertEqual(conf['ppp']['mru'], mru)
 
-            self.assertEqual(conf['ppp']['ccp'],'0')
+            self.assertEqual(conf['ppp']['ccp'], '0')
 
             # check interface-cache
             self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
 
-            #check ipv6
+            # check ipv6
             for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
                 self.assertEqual(conf['modules'][tmp], None)
 
@@ -619,7 +643,6 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             self.assertEqual(conf['ppp']['lcp-echo-failure'], lcp_failure)
             self.assertEqual(conf['ppp']['lcp-echo-interval'], lcp_interval)
             self.assertEqual(conf['ppp']['lcp-echo-timeout'], lcp_timeout)
-
 
         def test_accel_wins_server(self):
             self.basic_config()
@@ -639,7 +662,7 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
             conf.read(self._config_file)
             self.assertEqual(conf['modules']['net-snmp'], None)
-            self.assertEqual(conf['snmp']['master'],'1')
+            self.assertEqual(conf['snmp']['master'], '1')
 
         def test_accel_shaper(self):
             self.basic_config()
