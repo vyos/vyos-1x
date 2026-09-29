@@ -1381,7 +1381,8 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('ping-restart', directives)
         self.assertServiceRunning(interface)
 
-        # an enabled keepalive still renders both
+        # an enabled keepalive renders both, and the timeout is the interval
+        # times the number of failures it tolerates
         self.cli_set(path + ['keep-alive', 'interval', '10'])
         self.cli_set(path + ['keep-alive', 'failure-count', '60'])
         self.cli_commit()
@@ -1391,8 +1392,33 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         config = read_file(f'/run/openvpn/{interface}.conf')
         lines = config.splitlines()
         self.assertIn('ping 10', lines)
-        self.assertIn('ping-restart 60', lines)
+        self.assertIn('ping-restart 600', lines)
         self.assertServiceRunning(interface)
+
+        # check validate() - OpenVPN caps ping-restart at 24 hours, and
+        # nothing doubles the value here the way it does for the server
+        self.cli_set(path + ['keep-alive', 'interval', '600'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '145'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+86400'):
+            self.cli_commit()
+
+        # 600 * 144 is exactly 24 hours, which OpenVPN still accepts
+        self.cli_set(path + ['keep-alive', 'failure-count', '144'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 86400', config.splitlines())
+        self.assertServiceRunning(interface)
+
+        # a failure-count below 2 is deliberately allowed here, unlike the
+        # server: it renders "ping-restart 10", a working "restart after one
+        # missed ping"
+        self.cli_set(path + ['keep-alive', 'interval', '10'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '1'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 10', config.splitlines())
 
         self.cli_delete(base_path)
         self.cli_commit()
