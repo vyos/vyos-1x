@@ -45,6 +45,8 @@ def debug(message):
         return
     print(message)
 
+frr_config_file: str = '/run/frr/config/vyos.frr.conf'
+
 ERROR_RELOAD_TEST: str = 'The system encountered an error while rendering the ' \
     'new routing daemon configuration. To ensure network stability and avoid ' \
     'potential connectivity disruptions, the configuration was not applied!'
@@ -740,7 +742,7 @@ class FRRender:
     cached_config_dict = {}
     cached_dhcp_gateways = {}
     def __init__(self):
-        self._frr_conf = '/run/frr/config/vyos.frr.conf'
+        self._frr_conf = frr_config_file
 
     def generate(self, config_dict) -> None:
         """

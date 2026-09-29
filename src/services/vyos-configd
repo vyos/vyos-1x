@@ -70,6 +70,8 @@ class Response(Enum):
     ERROR_DAEMON = 4
     PASS = 8
     ERROR_COMMIT_APPLY = 16
+    # Request received during the init handshake, the client has to retry
+    RETRY = 32
 
 
 ## config session vyshim env var
@@ -118,42 +120,70 @@ def run_script(
     return Response.SUCCESS, ''
 
 
+def request_type(msg: str):
+    """Return the type of a request, None if the message is a raw payload of
+    the init handshake."""
+    # pylint: disable=broad-exception-caught
+    try:
+        return json.loads(msg)['type']
+    except Exception:
+        return None
+
+
+def recv_handshake(socket):
+    """Receive the next raw payload of the init handshake.
+
+    ZMQ fair-queues the requests of every connected peer, so a request can be
+    delivered in the middle of the multi message handshake, where it would be
+    consumed as configuration data and corrupt the session config of the
+    running commit. Answer it with a retry instead and keep waiting.
+
+    Returns None if the client restarted the handshake, which it does after a
+    client side timeout, and the raw payload otherwise.
+    """
+    while True:
+        msg = socket.recv().decode('utf-8', 'ignore')
+        msg_type = request_type(msg)
+        if msg_type is None:
+            return msg
+        if msg_type == 'init':
+            logger.debug('Received resent init message')
+            socket.send(b'init')
+            return None
+        logger.warning(f'Deferring "{msg_type}" request received during initialization')
+        send_result(socket, Response.RETRY, '')
+
+
 def initialization(config_manager: ConfigManager, socket):
     # pylint: disable=broad-exception-caught,too-many-locals
 
-    # Reset config strings:
-    active_string = ''
-    session_string = ''
-    # check first for resent init msg, in case of client timeout
-    while True:
-        msg = socket.recv().decode('utf-8', 'ignore')
-        try:
-            message = json.loads(msg)
-            if message['type'] == 'init':
-                resp = 'init'
-                socket.send(resp.encode())
-        except Exception:
-            break
+    # Payloads in the order sent by the client, the name is also the receipt
+    handshake = [
+        'active',
+        'session',
+        'pid',
+        'sudo_user',
+        'temp_config_dir',
+        'changes_only_dir',
+    ]
 
-    # zmq synchronous for ipc from single client:
-    active_string = msg
-    resp = 'active'
-    socket.send(resp.encode())
-    session_string = socket.recv().decode('utf-8', 'ignore')
-    resp = 'session'
-    socket.send(resp.encode())
-    pid_string = socket.recv().decode('utf-8', 'ignore')
-    resp = 'pid'
-    socket.send(resp.encode())
-    sudo_user_string = socket.recv().decode('utf-8', 'ignore')
-    resp = 'sudo_user'
-    socket.send(resp.encode())
-    temp_config_dir_string = socket.recv().decode('utf-8', 'ignore')
-    resp = 'temp_config_dir'
-    socket.send(resp.encode())
-    changes_only_dir_string = socket.recv().decode('utf-8', 'ignore')
-    resp = 'changes_only_dir'
-    socket.send(resp.encode())
+    config_strings = {}
+    while len(config_strings) < len(handshake):
+        # A restarted handshake invalidates what was received so far
+        config_strings.clear()
+        for name in handshake:
+            payload = recv_handshake(socket)
+            if payload is None:
+                break
+            config_strings[name] = payload
+            socket.send(name.encode())
+
+    active_string = config_strings['active']
+    session_string = config_strings['session']
+    pid_string = config_strings['pid']
+    sudo_user_string = config_strings['sudo_user']
+    temp_config_dir_string = config_strings['temp_config_dir']
+    changes_only_dir_string = config_strings['changes_only_dir']
 
     logger.debug(f'config session pid is {pid_string}')
     logger.debug(f'config session sudo_user is {sudo_user_string}')
