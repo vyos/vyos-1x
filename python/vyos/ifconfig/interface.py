@@ -41,6 +41,7 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import is_systemd_unit_live
 from vyos.utils.process import process_named_running
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
@@ -1730,7 +1731,10 @@ class Interface(Control):
         the DHCP server so unicast RELEASE works after disable. Unmask last.
 
         Returns True if RELEASE was attempted or there was no lease to send.
-        No lease still runtime-masks and SIGKILLs; skip only dhclient -r.
+        No lease skips dhclient -r. Mask and SIGKILL still run when the unit
+        is live or a dhclient process matches the interface, so Restart=always
+        cannot respawn. If neither is true, return without mask/unmask — those
+        daemon-reload, and update() calls this for every non-DHCP interface.
         """
         from vyos.utils.network import get_interface_vrf
 
@@ -1754,6 +1758,14 @@ class Interface(Control):
                     source_lease = path
                     break
         has_lease = bool(info.get('addr'))
+        # Nothing to release and nothing Restart=always can respawn. Skip
+        # mask/unmask (two daemon-reloads per non-DHCP interface per commit).
+        # Live includes activating, so auto-restart during RestartSec is not
+        # treated as already stopped.
+        if (not has_lease
+                and not is_systemd_unit_live(systemd_service, netns=netns)
+                and not process_named_running('dhclient', cmdline=interface)):
+            return True
         if has_lease:
             _write_temp_isc_lease(temp_lf, info, interface)
 
@@ -1961,7 +1973,9 @@ class Interface(Control):
             else:
                 # Already stopped: skip mask/unmask (two daemon-reloads per
                 # disabled address-dhcp iface on every later commit).
-                if (not is_systemd_service_active(systemd_service, netns=netns)
+                # Live includes activating/auto-restart, not ActiveState=active
+                # only, so Restart=always cannot slip the skip.
+                if (not is_systemd_unit_live(systemd_service, netns=netns)
                         and not process_named_running('dhclient',
                                                       cmdline=self.ifname)):
                     return None
