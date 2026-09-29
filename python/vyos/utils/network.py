@@ -290,6 +290,7 @@ def is_wwan_connected(interface):
     carrier network or not """
     from vyos.utils.dict import dict_search
     from vyos.utils.process import is_systemd_service_active
+    from vyos.utils.wwan import modem_index
 
     if not interface.startswith('wwan'):
         raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
@@ -299,7 +300,9 @@ def is_wwan_connected(interface):
     if not is_systemd_service_active('ModemManager.service'):
         return False
 
-    modem = interface.lstrip('wwan')
+    modem = modem_index(interface)
+    if modem is None:
+        return False
 
     try:
         tmp = cmdl(['mmcli', '--modem', modem, '--output-json'])

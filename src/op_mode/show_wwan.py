@@ -68,7 +68,10 @@ def mmcli(*args: str) -> dict:
 
 def modem_info(ifname: str) -> dict:
     """ Return everything ModemManager knows about the modem behind ifname """
-    return mmcli('--modem', modem_index(ifname))['modem']
+    index = modem_index(ifname)
+    if index is None:
+        raise ValueError(f'No modem found for interface "{ifname}"')
+    return mmcli('--modem', index)['modem']
 
 def sim_info(modem: dict) -> dict:
     """ Return the properties of the SIM card inserted into a modem """
