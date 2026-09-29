@@ -963,6 +963,12 @@
             <valueless/>
           </properties>
         </leafNode>
+        <leafNode name="l3vpn-multi-domain-switching">
+          <properties>
+            <help>Redistribute labeled L3VPN routes from AS to neighboring AS</help>
+            <valueless/>
+          </properties>
+        </leafNode>
       </children>
     </node>
   </children>
