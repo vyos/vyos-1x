@@ -20,6 +20,7 @@ import os
 import json
 
 from vyos.config import Config
+from vyos.config import ConfigDict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
 
@@ -577,6 +578,9 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
             dict['ipv6']['address'].update({'interface_identifier_old': interface_identifier})
 
     for vif, vif_config in dict.get('vif', {}).items():
+        # T6393: carry the CLI interfaces tree, see Config.get_config_dict()
+        dict['vif'][vif] = ConfigDict(vif_config)
+        dict['vif'][vif].interfaces_root = dict.interfaces_root
         # Add subinterface name to dictionary
         dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
 
@@ -604,6 +608,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         if dhcpv6: dict['vif'][vif].update({'dhcpv6_options_changed' : {}})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
+        dict['vif_s'][vif_s] = ConfigDict(vif_s_config)
+        dict['vif_s'][vif_s].interfaces_root = dict.interfaces_root
         # Add subinterface name to dictionary
         dict['vif_s'][vif_s].update({'ifname' : f'{ifname}.{vif_s}'})
 
@@ -632,6 +638,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         if dhcpv6: dict['vif_s'][vif_s].update({'dhcpv6_options_changed' : {}})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
+            dict['vif_s'][vif_s]['vif_c'][vif_c] = ConfigDict(vif_c_config)
+            dict['vif_s'][vif_s]['vif_c'][vif_c].interfaces_root = dict.interfaces_root
             # Add subinterface name to dictionary
             dict['vif_s'][vif_s]['vif_c'][vif_c].update({'ifname' : f'{ifname}.{vif_s}.{vif_c}'})
 
