@@ -56,10 +56,16 @@ def verify_oidc_token(token: str):
             issuer=state.oidc_issuer,
             leeway=30,
         )
-        if state.oidc_audience:
-            decode_kwargs["audience"] = state.oidc_audience
-        else:
-            decode_options["verify_aud"] = False
+        if not state.oidc_audience:
+            # Fail closed: config-time validation in service_https.py's
+            # verify() requires oidc.audience whenever oidc.issuer is
+            # set, but never trust that alone for a security-critical
+            # check. PyJWT also skips aud validation whenever no
+            # "audience" kwarg is passed at all, independent of
+            # verify_aud -- so this must refuse outright, not just stop
+            # forcing verify_aud=False.
+            return None
+        decode_kwargs["audience"] = state.oidc_audience
         payload = jwt.decode(token, signing_key.key, **decode_kwargs)
         return payload.get("sub") or payload.get("client_id")
     except Exception:

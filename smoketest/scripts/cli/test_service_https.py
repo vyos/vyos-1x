@@ -521,6 +521,58 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         success = r.json()['data']['ShowVersion']['success']
         self.assertTrue(success)
 
+    def test_api_oidc_audience_required(self):
+        # Regression test for GHSA-8pg8-p637-q6ch: OIDC issuer configured
+        # without audience must be rejected at commit time. Without this
+        # check, verify_oidc_token() would silently disable aud claim
+        # validation, accepting any valid token from the trusted issuer
+        # regardless of which application it was actually issued for.
+        self.cli_set(
+            base_path
+            + [
+                'api',
+                'rest',
+                'authentication',
+                'oidc',
+                'issuer',
+                'https://idp.example.com',
+            ]
+        )
+        self.assertRaises(ConfigSessionError, self.cli_commit)
+
+        # Setting audience alongside issuer must allow the commit to succeed.
+        self.cli_set(
+            base_path
+            + ['api', 'rest', 'authentication', 'oidc', 'audience', 'vyos-rest-api']
+        )
+        self.cli_commit()
+
+    def test_api_oidc_standalone_auth_allowed(self):
+        # Regression test: OIDC alone (issuer + audience, no API keys,
+        # no GraphQL token auth, no mTLS) must be sufficient to commit.
+        # verify()'s "at least one auth method" check previously only
+        # recognized API keys, GraphQL token auth, and mTLS -- OIDC was
+        # never added to it despite being introduced in the same PR
+        # that added mTLS to this same check, so an OIDC-only deployment
+        # was incorrectly rejected at commit time.
+        self.cli_set(
+            base_path
+            + [
+                'api',
+                'rest',
+                'authentication',
+                'oidc',
+                'issuer',
+                'https://idp.example.com',
+            ]
+        )
+        self.cli_set(
+            base_path
+            + ['api', 'rest', 'authentication', 'oidc', 'audience', 'vyos-rest-api']
+        )
+        # No API key configured at all -- this must succeed now.
+        self.cli_commit()
+
     @ignore_warning(InsecureRequestWarning)
     def test_api_add_delete(self):
         url = f'https://{address}/retrieve'
