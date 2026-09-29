@@ -54,11 +54,14 @@ modem_wait_poll = 0.250
 # survive a reboot, and a commit re-asserts the configured state too.
 admin_disconnect_dir = '/run/vyos-wwan'
 
+
 def _modem_owning_port(ifname: str):
-    """ Return the ModemManager modem index whose own port list includes
-    ifname, or None if no currently-known modem owns it. """
+    """Return the ModemManager modem index whose own port list includes
+    ifname, or None if no currently-known modem owns it."""
     try:
-        modem_list = loads(cmdl(['mmcli', '--list-modems', '--output-json'])).get('modem-list', [])
+        modem_list = loads(cmdl(['mmcli', '--list-modems', '--output-json'])).get(
+            'modem-list', []
+        )
     except OSError:
         return None
 
@@ -74,8 +77,9 @@ def _modem_owning_port(ifname: str):
 
     return None
 
-def modem_index(ifname: str):
-    """ Return the ModemManager modem index backing an interface, or None if
+
+def modem_index(ifname: str, wait: bool = False):
+    """Return the ModemManager modem index backing an interface, or None if
     no modem currently owns it.
 
     The kernel-assigned WWAN interface number and ModemManager's own modem
@@ -85,20 +89,24 @@ def modem_index(ifname: str):
     ModemManager currently knows about is listed, and whichever one
     actually has ifname among its own ports is returned.
 
-    A modem that has not shown up on the bus yet looks the same here as one
-    that will never exist, so this waits up to modem_wait_timeout for it to
-    appear before giving up - the same budget start_modem_manager already
-    gives a modem to become dialable, since a modem slow enough to need
-    that budget is also slow enough to not be listed yet when this is first
-    called. """
+    "No modem owns this yet" is a routine result for most callers (deleted
+    interfaces, admin-disconnect markers, vyos-netlinkd's reconcile loop), so
+    by default this checks once and returns immediately. Only
+    start_modem_manager() passes wait=True, to give a modem that is still
+    enumerating up to modem_wait_timeout to show up."""
     if not ifname.startswith('wwan'):
         raise ValueError(f'Specified interface "{ifname}" is not a WWAN interface')
 
+    if not wait:
+        return _modem_owning_port(ifname)
+
     index = None
+
     def _resolve():
         nonlocal index
         index = _modem_owning_port(ifname)
         return index is not None
+
     wait_for(_resolve, interval=modem_wait_poll, timeout=modem_wait_timeout)
 
     return index
@@ -128,7 +136,7 @@ def start_modem_manager(ifname: str) -> None:
     if not is_systemd_service_active(service_name):
         cmdl(['systemctl', 'start', service_name])
 
-    index = modem_index(ifname)
+    index = modem_index(ifname, wait=True)
     if index is None:
         # No modem currently owns ifname at all - nothing more this can do.
         # Matches the pre-existing tolerance for hardware that isn't detected
@@ -205,9 +213,12 @@ def modem_disconnect(ifname: str, quiet: bool = False) -> None:
     modem = modem_index(ifname)
     if modem is None:
         return None
-    call(f'mmcli --modem {modem} --simple-disconnect',
-         stdout=DEVNULL if quiet else None,
-         stderr=DEVNULL if quiet else None)
+    call(
+        f'mmcli --modem {modem} --simple-disconnect',
+        stdout=DEVNULL if quiet else None,
+        stderr=DEVNULL if quiet else None,
+    )
+
 
 def modem_connect(ifname: str, options: str) -> bool:
     """ Dial the modem backing ifname, returns True if the modem connected """
