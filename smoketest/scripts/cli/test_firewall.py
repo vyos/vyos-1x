@@ -1339,6 +1339,18 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
+
+        # T7150: the bridge output hook only carries router-originated frames.
+        # Those that bypassed inet conntrack have no ct entry and read as
+        # invalid, so the invalid verdict must not apply there. Forwarded and
+        # input traffic keep the full state policy.
+        self.verify_nftables_chain([['ct state != invalid', 'jump VYOS_STATE_POLICY']],
+                                   'bridge vyos_filter', 'VYOS_OUTPUT_filter')
+        self.verify_nftables_chain([['ct state != invalid', 'jump VYOS_STATE_POLICY']],
+                                   'bridge vyos_filter', 'VYOS_FORWARD_filter', inverse=True)
+        self.verify_nftables_chain([['ct state != invalid', 'jump VYOS_STATE_POLICY']],
+                                   'bridge vyos_filter', 'VYOS_INPUT_filter', inverse=True)
+
         ## Check bridge-nf-call-iptables is set to 1, and for ipv6 remains on default 0
         self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-iptables'), '1')
         self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-ip6tables'), '0')

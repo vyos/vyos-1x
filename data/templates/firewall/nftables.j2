@@ -456,7 +456,12 @@ table bridge vyos_filter {
 {%                 endif %}
 {%             endif %}
 {%             if global_options.state_policy is vyos_defined %}
-        jump VYOS_STATE_POLICY
+{#     T7150: the bridge output hook only sees frames the router sends itself.
+       Frames that never pass inet conntrack (non-IP such as ARP/STP, AF_PACKET
+       DHCP, bridge IGMP/MLD queries) carry no conntrack entry, which nft
+       reports as invalid. Real invalid IP is already dropped by the ip/ip6
+       output state policy, so do not apply the invalid verdict here. #}
+        ct state != invalid jump VYOS_STATE_POLICY
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
