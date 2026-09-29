@@ -1730,6 +1730,7 @@ class Interface(Control):
         the DHCP server so unicast RELEASE works after disable. Unmask last.
 
         Returns True if RELEASE was attempted or there was no lease to send.
+        No lease still runtime-masks and SIGKILLs; skip only dhclient -r.
         """
         from vyos.utils.network import get_interface_vrf
 
@@ -1752,9 +1753,9 @@ class Interface(Control):
                 if info.get('addr'):
                     source_lease = path
                     break
-        if not info.get('addr'):
-            return True
-        _write_temp_isc_lease(temp_lf, info, interface)
+        has_lease = bool(info.get('addr'))
+        if has_lease:
+            _write_temp_isc_lease(temp_lf, info, interface)
 
         vrf = get_interface_vrf(interface)
         if vrf == 'default':
@@ -1778,80 +1779,85 @@ class Interface(Control):
                 rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
                         systemd_service], netns=netns)
 
-                lease_ip = info.get('addr')
-                pfx = info.get('prefixlen', 32)
-                server = info.get('server')
-                router = info.get('router')
-                link_code, _ = rc_cmd(['ip', 'link', 'show', 'dev', interface],
-                                      netns=netns)
-                if link_code == 0:
-                    if not _iface_admin_up(interface, netns=netns):
-                        rc_cmd(['ip', 'link', 'set', 'dev', interface, 'up'],
-                               netns=netns)
-                        restored_link = True
-                    if (lease_ip and
-                            not is_intf_addr_assigned(interface, lease_ip,
-                                                      netns=netns)):
-                        cidr = f'{lease_ip}/{pfx}'
-                        rc_cmd(['ip', 'addr', 'add', cidr, 'dev', interface],
-                               netns=netns)
-                        restored_cidr = cidr
-                    if server:
-                        # Same VRF as dhclient -r. If a route already exists
-                        # (FRR static), do not replace it — restore would leave
-                        # an unowned proto boot copy (alexk37).
-                        code, out = rc_cmd(['ip', '-j', 'route', 'show',
-                                            f'{server}/32'],
-                                           vrf=vrf, netns=netns)
-                        if code == 0 and out and out.strip() not in ('', '[]'):
-                            try:
-                                prev = json.loads(out)
-                                if prev:
-                                    prev_route = prev[0]
-                            except (json.JSONDecodeError, IndexError, TypeError):
-                                prev_route = None
-                        if prev_route is None:
-                            if router:
-                                rcode, _ = rc_cmd(
-                                    ['ip', 'route', 'replace', f'{server}/32',
-                                     'via', router, 'dev', interface],
-                                    vrf=vrf, netns=netns)
-                            else:
-                                rcode, _ = rc_cmd(
-                                    ['ip', 'route', 'replace', f'{server}/32',
-                                     'dev', interface],
-                                    vrf=vrf, netns=netns)
-                            if rcode == 0:
-                                restored_route = server
+                if not has_lease:
+                    # No DHCPRELEASE to send. Still masked+killed so
+                    # Restart=always cannot respawn after address dhcp is gone.
+                    released = True
+                else:
+                    lease_ip = info.get('addr')
+                    pfx = info.get('prefixlen', 32)
+                    server = info.get('server')
+                    router = info.get('router')
+                    link_code, _ = rc_cmd(['ip', 'link', 'show', 'dev', interface],
+                                          netns=netns)
+                    if link_code == 0:
+                        if not _iface_admin_up(interface, netns=netns):
+                            rc_cmd(['ip', 'link', 'set', 'dev', interface, 'up'],
+                                   netns=netns)
+                            restored_link = True
+                        if (lease_ip and
+                                not is_intf_addr_assigned(interface, lease_ip,
+                                                          netns=netns)):
+                            cidr = f'{lease_ip}/{pfx}'
+                            rc_cmd(['ip', 'addr', 'add', cidr, 'dev', interface],
+                                   netns=netns)
+                            restored_cidr = cidr
+                        if server:
+                            # Same VRF as dhclient -r. If a route already exists
+                            # (FRR static), do not replace it — restore would leave
+                            # an unowned proto boot copy (alexk37).
+                            code, out = rc_cmd(['ip', '-j', 'route', 'show',
+                                                f'{server}/32'],
+                                               vrf=vrf, netns=netns)
+                            if code == 0 and out and out.strip() not in ('', '[]'):
+                                try:
+                                    prev = json.loads(out)
+                                    if prev:
+                                        prev_route = prev[0]
+                                except (json.JSONDecodeError, IndexError, TypeError):
+                                    prev_route = None
+                            if prev_route is None:
+                                if router:
+                                    rcode, _ = rc_cmd(
+                                        ['ip', 'route', 'replace', f'{server}/32',
+                                         'via', router, 'dev', interface],
+                                        vrf=vrf, netns=netns)
+                                else:
+                                    rcode, _ = rc_cmd(
+                                        ['ip', 'route', 'replace', f'{server}/32',
+                                         'dev', interface],
+                                        vrf=vrf, netns=netns)
+                                if rcode == 0:
+                                    restored_route = server
 
-                # Stock dhclient-script removes the address, default, and
-                # nameservers and runs user RELEASE hooks. Skip configd wait
-                # only when a commit already holds the lock (CONTROLLED_STOP).
-                from vyos.utils.commit import commit_in_progress
-                dhclient_r = ['/sbin/dhclient', '-4', '-r']
-                if commit_in_progress():
-                    dhclient_r += ['-e', 'CONTROLLED_STOP=yes']
-                metric = _dhcp_if_metric(interface, self.config)
-                if metric:
-                    dhclient_r += ['-e', f'IF_METRIC={metric}']
-                dhclient_r += [
-                    '-cf',
-                    conf,
-                    '-pf',
-                    release_pid,
-                    '-lf',
-                    temp_lf,
-                    interface,
-                ]
-                target = router or server
-                if target:
-                    _wait_dhcp_neigh(interface, target, vrf=vrf, netns=netns)
-                # Hang cap 8s. Kill the process group so a leftover
-                # dhclient-script cannot flush an address the replacement
-                # client already bound (alexk37).
-                _dhclient_release_run(dhclient_r, vrf=vrf, netns=netns,
-                                      timeout=8)
-                released = True
+                    # Stock dhclient-script removes the address, default, and
+                    # nameservers and runs user RELEASE hooks. Skip configd wait
+                    # only when a commit already holds the lock (CONTROLLED_STOP).
+                    from vyos.utils.commit import commit_in_progress
+                    dhclient_r = ['/sbin/dhclient', '-4', '-r']
+                    if commit_in_progress():
+                        dhclient_r += ['-e', 'CONTROLLED_STOP=yes']
+                    metric = _dhcp_if_metric(interface, self.config)
+                    if metric:
+                        dhclient_r += ['-e', f'IF_METRIC={metric}']
+                    dhclient_r += [
+                        '-cf',
+                        conf,
+                        '-pf',
+                        release_pid,
+                        '-lf',
+                        temp_lf,
+                        interface,
+                    ]
+                    target = router or server
+                    if target:
+                        _wait_dhcp_neigh(interface, target, vrf=vrf, netns=netns)
+                    # Hang cap 8s. Kill the process group so a leftover
+                    # dhclient-script cannot flush an address the replacement
+                    # client already bound (alexk37).
+                    _dhclient_release_run(dhclient_r, vrf=vrf, netns=netns,
+                                          timeout=8)
+                    released = True
         except Exception:
             released = False
         finally:
