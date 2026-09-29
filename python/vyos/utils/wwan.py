@@ -25,11 +25,9 @@ would have done.
 
 import os
 
-from json import loads
 from time import sleep
 
 from vyos.utils.dict import dict_search
-from vyos.utils.misc import wait_for
 from vyos.utils.process import call
 from vyos.utils.process import cmdl
 from vyos.utils.process import DEVNULL
@@ -58,6 +56,8 @@ admin_disconnect_dir = '/run/vyos-wwan'
 def _modem_owning_port(ifname: str):
     """Return the ModemManager modem index whose own port list includes
     ifname, or None if no currently-known modem owns it."""
+    from json import loads
+
     try:
         modem_list = loads(cmdl(['mmcli', '--list-modems', '--output-json'])).get(
             'modem-list', []
@@ -99,6 +99,8 @@ def modem_index(ifname: str, wait: bool = False):
 
     if not wait:
         return _modem_owning_port(ifname)
+
+    from vyos.utils.misc import wait_for
 
     index = None
 
