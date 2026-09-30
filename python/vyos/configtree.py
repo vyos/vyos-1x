@@ -71,7 +71,7 @@ _PROTOTYPES = {
         [c_void_p, c_void_p, c_void_p, c_char_p, c_bool, c_bool],
         c_char_p,
     ),
-    'diff_tree': ([c_char_p, c_void_p, c_void_p], c_void_p),
+    'diff_tree': ([c_bool, c_char_p, c_void_p, c_void_p], c_void_p),
     'diff_compare': ([c_bool, c_char_p, c_void_p, c_void_p], c_char_p),
     'diff_show': ([c_void_p, c_void_p, c_void_p, c_char_p], c_char_p),
     'tree_union': ([c_void_p, c_void_p], c_void_p),
@@ -929,7 +929,7 @@ def validate_tree(
 
 class DiffTree:
     # pylint: disable=too-many-instance-attributes,too-few-public-methods
-    def __init__(self, left, right, path=None, libpath=LIBPATH):
+    def __init__(self, left, right, path=None, diff_comments=False, libpath=LIBPATH):
         if left is None:
             left = ConfigTree(config_string='\n')
         if right is None:
@@ -951,7 +951,7 @@ class DiffTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__lib.diff_tree(path_str, left.get_tree(), right.get_tree())
+        res = self.__lib.diff_tree(diff_comments, path_str, left.get_tree(), right.get_tree())
 
         # full diff config_tree and python dict representation
         self.full = ConfigTree(address=res)

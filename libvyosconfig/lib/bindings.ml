@@ -419,7 +419,7 @@ let copy_node c_ptr old_path new_path =
         error_message := s; 1
     | Vytree.Insert_error s -> error_message := s; 1
 
-let diff_tree path c_ptr_l c_ptr_r =
+let diff_tree diff_comments path c_ptr_l c_ptr_r =
     (* alert exn DT.diff_tree:
         [Diff.Incommensurable] caught
         [Diff.Empty_comparison] caught
@@ -428,7 +428,7 @@ let diff_tree path c_ptr_l c_ptr_r =
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        let ct_ret = (DT.diff_tree[@alert "-exn"]) path ct_l ct_r in
+        let ct_ret = (DT.diff_tree[@alert "-exn"]) ~diff_comments:diff_comments path ct_l ct_r in
         Ctypes.Root.create ct_ret
     with
         | D.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
@@ -655,7 +655,7 @@ struct
   let () = I.internal "list_nodes" ((ptr void) @-> string @-> returning string) list_nodes
   let () = I.internal "return_value" ((ptr void) @-> string @-> returning string) return_value
   let () = I.internal "return_values" ((ptr void) @-> string @-> returning string) return_values
-  let () = I.internal "diff_tree" (string @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) diff_tree
+  let () = I.internal "diff_tree" (bool @-> string @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) diff_tree
   let () = I.internal "diff_compare" (bool @-> string @-> (ptr void) @-> (ptr void) @-> returning string) diff_compare
   let () = I.internal "diff_show" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning string) diff_show
   let () = I.internal "tree_union" ((ptr void) @-> (ptr void) @-> returning (ptr void)) tree_union
