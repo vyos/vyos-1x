@@ -133,6 +133,44 @@ class WWANIf(Interface):
         # silently do nothing while the interface looks configured.
         return self._apply_bearer_address(bearer, family)
 
+    def set_ipv6_autoconf(self, autoconf):
+        if autoconf == '0':
+            result = super().set_ipv6_autoconf(autoconf)
+            # The base class calls this with '0' on every commit where
+            # autoconf isn't configured, not just on an actual
+            # enabled-to-disabled transition - confirmed live (it wiped
+            # out a dhcpv6-applied address on every commit, T7487-branch
+            # testing). Only sweep here if dhcpv6 isn't also configured:
+            # if it is, dhcpv6 owns this address and its own del_addr()
+            # already handles cleanup when it stops being configured -
+            # by construction at most one of the two ever puts an address
+            # on the interface, so this must not step on the other one.
+            if 'dhcpv6' not in (self.config.get('address') or []):
+                self._clear_bearer_address('ipv6')
+            return result
+
+        # Same reasoning as add_addr()'s dhcp/dhcpv6 handling: on a modem
+        # that resolves IPv6 itself over the air (confirmed live - no RA
+        # traffic ever reaches the kernel), the kernel's own autoconf has
+        # nothing to autoconfigure from and would never produce an address.
+        # Apply the bearer's already-resolved config directly instead; a
+        # modem that genuinely needs host-side SLAAC (e.g. Intel XMM-based
+        # modems) falls through to the real mechanism unchanged.
+        bearer, method = None, None
+        for _ in range(10):
+            bearer = self._get_active_bearer()
+            method = (
+                dict_search('bearer.ipv6-config.method', bearer) if bearer else None
+            )
+            if method is not None:
+                break
+            sleep(0.5)
+
+        if method in (None, '', '--', 'dhcp'):
+            return super().set_ipv6_autoconf(autoconf)
+
+        return self._apply_bearer_address(bearer, 'ipv6')
+
     def del_addr(self, addr: str) -> bool:
         if addr not in ('dhcp', 'dhcpv6'):
             return super().del_addr(addr)
