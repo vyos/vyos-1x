@@ -52,11 +52,74 @@ modem_wait_poll = 0.250
 # survive a reboot, and a commit re-asserts the configured state too.
 admin_disconnect_dir = '/run/vyos-wwan'
 
-def modem_index(ifname: str) -> str:
-    """ Return the ModemManager modem index backing an interface, wwan0 -> 0 """
+
+def _modem_owning_port(ifname: str):
+    """Return the ModemManager modem index whose own port list includes
+    ifname, or None if no currently-known modem owns it."""
+    from json import loads
+
+    try:
+        data = loads(cmdl(['mmcli', '--list-modems', '--output-json']))
+    except (OSError, ValueError):
+        # ValueError also catches json.JSONDecodeError - mmcli can return
+        # empty or malformed output while ModemManager is still starting
+        # (T6604), and that must retry under wait=True, not abort it.
+        return None
+
+    # Well-formed JSON of an unexpected shape is treated like no modems at all
+    modem_list = []
+    if isinstance(data, dict) and 'modem-list' in data:
+        modem_list = data['modem-list']
+    if not isinstance(modem_list, list):
+        return None
+
+    for modem_path in modem_list:
+        idx = modem_path.rsplit('/', 1)[-1]
+        try:
+            detail = loads(cmdl(['mmcli', '--modem', idx, '--output-json']))
+        except (OSError, ValueError):
+            continue
+        ports = dict_search('modem.generic.ports', detail) or []
+        if any(port.split(' ')[0] == ifname for port in ports):
+            return idx
+
+    return None
+
+
+def modem_index(ifname: str, wait: bool = False):
+    """Return the ModemManager modem index backing an interface, or None if
+    no modem currently owns it.
+
+    The kernel-assigned WWAN interface number and ModemManager's own modem
+    index are independently enumerated and are not guaranteed to match - on
+    a box with more than one modem, wwan0 does not necessarily belong to
+    modem 0 (T7487). Resolved by real port ownership instead: every modem
+    ModemManager currently knows about is listed, and whichever one
+    actually has ifname among its own ports is returned.
+
+    "No modem owns this yet" is a routine result for most callers (deleted
+    interfaces, admin-disconnect markers, vyos-netlinkd's reconcile loop), so
+    by default this checks once and returns immediately. Only
+    start_modem_manager() passes wait=True, to give a modem that is still
+    enumerating up to modem_wait_timeout to show up."""
     if not ifname.startswith('wwan'):
         raise ValueError(f'Specified interface "{ifname}" is not a WWAN interface')
-    return ifname[len('wwan'):]
+
+    if not wait:
+        return _modem_owning_port(ifname)
+
+    from vyos.utils.misc import wait_for
+
+    index = None
+
+    def _resolve():
+        nonlocal index
+        index = _modem_owning_port(ifname)
+        return index is not None
+
+    wait_for(_resolve, interval=modem_wait_poll, timeout=modem_wait_timeout)
+
+    return index
 
 def modem_state(index: str) -> str:
     """ ModemManager state of a modem, empty if it cannot be read yet """
@@ -83,7 +146,14 @@ def start_modem_manager(ifname: str) -> None:
     if not is_systemd_service_active(service_name):
         cmdl(['systemctl', 'start', service_name])
 
-    index = modem_index(ifname)
+    index = modem_index(ifname, wait=True)
+    if index is None:
+        # No modem currently owns ifname at all - nothing more this can do.
+        # Matches the pre-existing tolerance for hardware that isn't detected
+        # yet: interfaces_wwan.py's own w.exists() check right after this
+        # call already bails out the same way.
+        return None
+
     counter = int(modem_wait_timeout / modem_wait_poll)
     while counter > 0:
         counter -= 1
@@ -150,13 +220,21 @@ def modem_disconnect(ifname: str, quiet: bool = False) -> None:
     """ Disconnect every bearer of the modem backing ifname. The number of
     bearers a modem can hold is limited, so we always disconnect before we
     dial again. """
-    call(f'mmcli --modem {modem_index(ifname)} --simple-disconnect',
-         stdout=DEVNULL if quiet else None,
-         stderr=DEVNULL if quiet else None)
+    modem = modem_index(ifname)
+    if modem is None:
+        return None
+    call(
+        f'mmcli --modem {modem} --simple-disconnect',
+        stdout=DEVNULL if quiet else None,
+        stderr=DEVNULL if quiet else None,
+    )
+
 
 def modem_connect(ifname: str, options: str) -> bool:
     """ Dial the modem backing ifname, returns True if the modem connected """
     modem = modem_index(ifname)
+    if modem is None:
+        return False
 
     # Some networks only ever admit a single combined IPv4+IPv6 PDN context per
     # APN and reject a standalone IPv6 "Start Network" request outright (QMI
