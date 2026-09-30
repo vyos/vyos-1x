@@ -107,6 +107,18 @@ dco_cipher_options = ['data-ciphers', 'data-ciphers-fallback', 'ncp-ciphers']
 # dco_ciphers again, spelled the way OpenVPN reports them in
 # dco_get_supported_ciphers()
 dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY1305']
+# The "ovpn" Kernel module does not clamp the TCP MSS the way the userspace data
+# path does with "mssfix", so a 1500 bytes tunnel MTU fragments every full sized
+# packet on the underlay. Leave room for the worst case encapsulation: IPv6 (40)
+# plus UDP (8) plus the DCO data channel header (24: opcode and peer-id 4,
+# packet-id 4, AEAD tag 16) is 72 bytes, rounded down to the WireGuard default.
+dco_default_mtu = '1420'
+# Raw options that size the tunnel themselves. OpenVPN refuses "tun-mtu" next to
+# "link-mtu" (or its alias "udp-mtu"), so any of them rules out the one rendered
+# from "mtu".
+raw_mtu_options = ['tun-mtu', 'link-mtu', 'udp-mtu']
+# TUN_MTU_MIN in OpenVPN's mtu.h
+openvpn_min_mtu = 100
 otp_path = '/config/auth/openvpn'
 otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
@@ -183,8 +195,9 @@ def get_config(config=None):
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
     # the offload, the operating mode and the device type all decide what kind
-    # of interface the data path needs, which can only change on a restart
-    for node in [['offload', 'dco'], ['mode'], ['device-type']]:
+    # of interface the data path needs, which can only change on a restart.
+    # OpenVPN also applies "tun-mtu" only when it brings the interface up.
+    for node in [['offload', 'dco'], ['mode'], ['device-type'], ['mtu']]:
         if is_node_changed(conf, base + [ifname] + node):
             openvpn.update({'restart_required': {}})
             break
@@ -219,11 +232,37 @@ def get_config(config=None):
     else:
         openvpn['protocol_modifier'] = ''
 
+    # The XML default only documents what OpenVPN uses on its own, so only an
+    # MTU set on the CLI counts. Anything else is left to OpenVPN to apply: VyOS
+    # sets an explicit "mtu" on the link only, so neither a raw option nor a
+    # tun-mtu pushed by the server is overridden.
+    if conf.exists(base + [ifname, 'mtu']):
+        openvpn['tun_mtu'] = openvpn['mtu']
+    else:
+        openvpn.pop('mtu', None)
+        # DCO can not fix the MSS, so pick an MTU that does not fragment on
+        # the underlay - unless a raw option sizes the tunnel
+        if (
+            dict_search('offload.dco', openvpn) is not None
+            and raw_mtu_option(openvpn) is None
+        ):
+            openvpn['tun_mtu'] = dco_default_mtu
+
     # Check vrf membership, to ensure firewall is updated
     if is_vrf_changed(conf, ifname):
         set_dependents('firewall', conf)
 
     return openvpn
+
+
+def raw_mtu_option(openvpn):
+    """The raw "openvpn-option" keyword that sizes the tunnel, if any."""
+    for option in dict_search('openvpn_option', openvpn) or []:
+        tmp = option.split()
+        if tmp and tmp[0].lstrip('-') in raw_mtu_options:
+            return tmp[0].lstrip('-')
+    return None
+
 
 def is_ec_private_key(pki, cert_name):
     if not pki or 'certificate' not in pki:
@@ -329,6 +368,32 @@ def verify_shared_secret(pki: dict, interface: str, path: list, name: str):
         path_str = ' '.join(path)
         raise ConfigError(
             f'Invalid "{path_str}" value "{name}" on OpenVPN interface {interface}'
+        )
+
+
+def verify_openvpn_mtu(openvpn):
+    if 'mtu' not in openvpn:
+        return
+
+    # The raw option lands on the command line: "tun-mtu" silently overrides the
+    # rendered one while VyOS still applies "mtu" to the link, and "link-mtu"
+    # keeps the daemon from starting at all
+    keyword = raw_mtu_option(openvpn)
+    if keyword is not None:
+        raise ConfigError(f'Cannot use "mtu" together with "openvpn-option {keyword}"')
+
+    if int(openvpn['mtu']) < openvpn_min_mtu:
+        raise ConfigError(f'OpenVPN requires an MTU of at least {openvpn_min_mtu}')
+
+    # The tunnel addresses tell whether IPv6 runs inside the tunnel, which then
+    # needs the IPv6 minimum link MTU. "ip-version" is about the underlay only.
+    addresses = list(dict_search('local_address', openvpn) or [])
+    addresses += dict_search('server.subnet', openvpn) or []
+    min_mtu = 1280
+    if int(openvpn['mtu']) < min_mtu and any(is_ipv6(addr) for addr in addresses):
+        raise ConfigError(
+            f'IPv6 is used on interface "{openvpn["ifname"]}", '
+            f'the required minimum MTU is "{min_mtu}"!'
         )
 
 def verify_pki(openvpn):
@@ -816,6 +881,7 @@ def verify(openvpn):
 
     verify_data_ciphers_fallback(openvpn)
     verify_dco(openvpn)
+    verify_openvpn_mtu(openvpn)
 
     return None
 
