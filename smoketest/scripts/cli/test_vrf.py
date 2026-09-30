@@ -953,20 +953,33 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         insert_failed = get_conntrack_insert_failed()
         for gw_vrf, config in lans.items():
-            for destination in [server_addr4.split('/')[0],
-                                server_addr6.split('/')[0]]:
+            destinations = [server_addr4.split('/')[0],
+                            server_addr6.split('/')[0]]
+            for destination in destinations:
                 ping_in_vrf(config['cl_vrf'], destination,
                             f'{config["cl_vrf"]} -> {destination} failed, '
                             f'leaked via {gw_vrf}')
 
             # The flow is tracked in the zone of the VRF it entered, and it must
-            # have seen a reply - an unmatched reply shows up as [UNREPLIED]
+            # have seen a reply - an unmatched reply shows up as [UNREPLIED].
+            # Only the flows towards the far end are of interest here: the box
+            # also tracks its own link-local multicast in the very same zone
+            # (an IGMP/MLD membership report, say), and that is [UNREPLIED] by
+            # nature - asserting on it would make this test fire at random.
             zone = f'zone-orig={config["table"]}'
             conntrack = get_conntrack_entries()
             self.assertIn(zone, conntrack)
+            tracked = 0
             for line in conntrack.splitlines():
-                if zone in line:
-                    self.assertNotIn('[UNREPLIED]', line)
+                if zone not in line:
+                    continue
+                if not any(f'dst={destination}' in line
+                           for destination in destinations):
+                    continue
+                tracked += 1
+                self.assertNotIn('[UNREPLIED]', line)
+            self.assertTrue(tracked, f'No flow towards {destinations} tracked '
+                                     f'in {zone}')
 
         # Leaking must not cost us a single conntrack entry
         self.assertEqual(insert_failed, get_conntrack_insert_failed())
