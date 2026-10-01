@@ -347,10 +347,13 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.basic_config()
         self.cli_commit()
 
-        # Default: no lease-time options emitted
+        # Default: "lease-time" is baked into the CLI as accel-ppp's own
+        # built-in default (ipoe.c: LEASE_TIME), the other three are derived
+        # from it and stay unset until the operator overrides them
         conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
         conf.read(self._config_file)
-        for option in ['lease-time', 'max-lease-time', 'renew-time', 'rebind-time']:
+        self.assertEqual(conf['ipoe']['lease-time'], '600')
+        for option in ['max-lease-time', 'renew-time', 'rebind-time']:
             self.assertNotIn(option, conf['ipoe'])
 
         self.set(['lease-time', lease_time])

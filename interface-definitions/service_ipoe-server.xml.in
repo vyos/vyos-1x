@@ -238,10 +238,11 @@
                 <validator name="numeric" argument="--range 1-2147483647"/>
               </constraint>
             </properties>
+            <defaultValue>600</defaultValue>
           </leafNode>
           <leafNode name="max-lease-time">
             <properties>
-              <help>Server-side session expiry timer used if the DHCP lease is not renewed in time (in seconds)</help>
+              <help>Server-side session expiry timer used if the DHCP lease is not renewed in time (in seconds). Defaults to lease-time plus a tenth of it if unset</help>
               <valueHelp>
                 <format>u32:1-2147483647</format>
                 <description>Session expiry timer in seconds</description>
@@ -253,7 +254,7 @@
           </leafNode>
           <leafNode name="renew-time">
             <properties>
-              <help>DHCP lease renewal (T1) time (in seconds)</help>
+              <help>DHCP lease renewal (T1) time (in seconds). Defaults to half of lease-time if unset</help>
               <valueHelp>
                 <format>u32:1-2147483647</format>
                 <description>Renewal time in seconds</description>
@@ -265,7 +266,7 @@
           </leafNode>
           <leafNode name="rebind-time">
             <properties>
-              <help>DHCP lease rebinding (T2) time (in seconds)</help>
+              <help>DHCP lease rebinding (T2) time (in seconds). Defaults to seven eighths of lease-time if unset</help>
               <valueHelp>
                 <format>u32:1-2147483647</format>
                 <description>Rebinding time in seconds</description>

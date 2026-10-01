@@ -117,7 +117,7 @@ def verify(ipoe):
     # nothing it is compared against appears in our configuration. Mirror
     # that calculation from accel-ppp's ipoe.c:load_config() and report the
     # values that will not survive it.
-    lease_time = int(dict_search('lease_time', ipoe) or 600)
+    lease_time = int(dict_search('lease_time', ipoe))
     max_lease_time = dict_search('max_lease_time', ipoe)
     renew_time = dict_search('renew_time', ipoe)
     rebind_time = dict_search('rebind_time', ipoe)
