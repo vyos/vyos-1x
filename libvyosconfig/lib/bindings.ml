@@ -487,13 +487,14 @@ let tree_merge destructive c_ptr_l c_ptr_r =
         | TA.Nonexistent_child -> error_message := "Nonexistent child"; Ctypes.null
         | TA.Incompatible_union -> error_message := "Trees must have equivalent root"; Ctypes.null
 
-let reference_tree_to_json internal_cache from_dir to_file =
+let reference_tree_to_json internal_cache exclude_paths from_dir to_file =
     (* alert exn Generate.reference_tree_to_json:
         [Generate.Load_error] caught
         [Generate.Write_error] caught
      *)
     try
-        (Generate.reference_tree_to_json[@alert "-exn"]) ~internal_cache:internal_cache from_dir to_file;
+        (Generate.reference_tree_to_json[@alert "-exn"])
+        ~internal_cache:internal_cache ~exclude_paths:exclude_paths from_dir to_file;
         0
     with
         | Generate.Load_error msg ->
@@ -649,7 +650,7 @@ struct
   let () = I.internal "diff_show" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning string) diff_show
   let () = I.internal "tree_union" ((ptr void) @-> (ptr void) @-> returning (ptr void)) tree_union
   let () = I.internal "tree_merge" (bool @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) tree_merge
-  let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> returning int) reference_tree_to_json
+  let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> string @-> returning int) reference_tree_to_json
   let () = I.internal "mask_inclusive" ((ptr void) @-> (ptr void) @-> returning (ptr void)) mask_inclusive
   let () = I.internal "mask_exclusive" ((ptr void) @-> (ptr void) @-> returning (ptr void)) mask_exclusive
   let () = I.internal "subtree_from_partial" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning (ptr void)) subtree_from_partial

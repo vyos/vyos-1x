@@ -37,8 +37,6 @@ interface_definitions: libvyosconfig $(config_xml_obj)
 
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
-	$(CURDIR)/python/vyos/xml_ref/generate_cache.py --xml-dir $(BUILD_DIR)/interface-definitions --internal-cache $(DATA_DIR)/reftree.cache || exit 1
-
 	# XXX: delete top level node.def's that now live in other packages
 	# IPSec VPN EAP-RADIUS does not support source-address
 	rm -rf $(TMPL_DIR)/vpn/ipsec/remote-access/radius/source-address
@@ -47,6 +45,11 @@ interface_definitions: libvyosconfig $(config_xml_obj)
 	rm -rf $(TMPL_DIR)/protocols/eigrp
 	# T2773 - EIGRP support for VRF
 	rm -rf $(TMPL_DIR)/vrf/name/node.tag/protocols/eigrp
+
+	# Pass excluded paths in format above for ease of comparison, as they
+	# will be converted by script.
+	$(CURDIR)/python/vyos/xml_ref/generate_cache.py --xml-dir $(BUILD_DIR)/interface-definitions --internal-cache $(DATA_DIR)/reftree.cache \
+	--exclude-paths '/vpn/ipsec/remote-access/radius/source-address' '/protocols/eigrp' '/vrf/name/node.tag/protocols/eigrp' || exit 1
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
