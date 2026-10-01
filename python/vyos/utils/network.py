@@ -522,7 +522,14 @@ def is_addr_assigned(
            sysctl_read(['net', 'ipv6', 'ip_nonlocal_bind']) == '1':
             return True
 
-    for interface in interfaces():
+    # A zone index ("fe80::1%eth0") names the one interface the address has to
+    # be assigned to. It still has to pass the VRF filter below.
+    candidates = interfaces()
+    if '%' in ip_address:
+        ip_address, zone = ip_address.split('%', 1)
+        candidates = [zone] if zone in candidates else []
+
+    for interface in candidates:
         # Only an interface of the requested VRF may satisfy the lookup - an
         # enslaved interface and a VRF device alike belong to their own L3
         # domain, not to the default one. Naming the VRF device is the way to
@@ -898,8 +905,14 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
     import netifaces
     from vyos.utils.dict import dict_search
 
+    # A zone index names the one interface to look at, see is_addr_assigned()
+    candidates = netifaces.interfaces()
+    if '%' in ip_address:
+        ip_address, zone = ip_address.split('%', 1)
+        candidates = [zone] if zone in candidates else []
+
     ifaces = []
-    for interface in netifaces.interfaces():
+    for interface in candidates:
         # Only an interface of the requested VRF may satisfy the lookup - an
         # enslaved interface and a VRF device alike belong to their own L3
         # domain, not to the default one. Naming the VRF device is the way to

@@ -24,6 +24,30 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertTrue(vyos.utils.network.is_addr_assigned('::1'))
         self.assertFalse(vyos.utils.network.is_addr_assigned('127.251.255.123'))
 
+    def test_is_addr_assigned_zone_index(self):
+        # a zone index restricts the lookup to the named interface
+        self.assertTrue(vyos.utils.network.is_addr_assigned('::1%lo'))
+        self.assertFalse(vyos.utils.network.is_addr_assigned('::1%eth99'))
+        self.assertFalse(vyos.utils.network.is_addr_assigned('fe80::1%lo'))
+
+    def test_is_addr_assigned_zone_index_honours_vrf(self):
+        # the interface named by the zone index has to be part of the VRF
+        # asked for, just like any other candidate
+        from unittest.mock import patch
+        tmp = {'master': 'red', 'linkinfo': {'info_kind': 'dummy'}}
+        with patch('netifaces.interfaces', return_value=['lo', 'dum0']), \
+             patch('vyos.utils.network.get_interface_config', return_value=tmp), \
+             patch('vyos.utils.network.is_intf_addr_assigned', return_value=True):
+            self.assertTrue(vyos.utils.network.is_addr_assigned('fe80::1%dum0', vrf='red'))
+            self.assertFalse(vyos.utils.network.is_addr_assigned('fe80::1%dum0'))
+            self.assertTrue(vyos.utils.network.is_addr_assigned('fe80::1%dum0', include_vrf=True))
+            self.assertEqual(vyos.utils.network.get_interfaces_by_ip('fe80::1%dum0'), [])
+            self.assertEqual(vyos.utils.network.get_interfaces_by_ip('fe80::1%dum0', vrf='red'), ['dum0'])
+
+    def test_get_interfaces_by_ip_zone_index(self):
+        self.assertEqual(vyos.utils.network.get_interfaces_by_ip('::1%lo'), ['lo'])
+        self.assertEqual(vyos.utils.network.get_interfaces_by_ip('::1%eth99'), [])
+
     def test_is_intf_addr_assigned(self):
         self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '127.0.0.1'))
         self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '127.0.0.1/8'))
