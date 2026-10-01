@@ -329,6 +329,76 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             f'{self._openvpn_log(client)}',
         )
 
+    def test_openvpn_dco_chacha20poly1305(self):
+        # ChaCha20-Poly1305 is offloaded just like AES-GCM. A peer only shows
+        # up in the Kernel once its key got installed, so a client and a server
+        # offering nothing else prove the module took that very cipher.
+        server = 'vtun5110'
+        client = 'vtun5111'
+        port = '1196'
+
+        path = base_path + [server]
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['local-port', port])
+        self.cli_set(path + ['server', 'subnet', '10.98.0.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'chacha20poly1305'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{server}.conf')
+        self.assertIn('data-ciphers CHACHA20-POLY1305', config)
+        self.assertDcoDataPath(server)
+
+        path = base_path + [client]
+        self.cli_set(path + ['mode', 'client'])
+        self.cli_set(path + ['remote-host', '127.0.0.1'])
+        self.cli_set(path + ['remote-port', port])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'data-ciphers', 'chacha20poly1305'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        self.assertDcoDataPath(client, multipoint=False)
+        self.assertGreater(
+            self._peers(server),
+            0,
+            f'the Kernel holds no peer for {server}\n{self._openvpn_log(server)}',
+        )
+        self.assertGreater(
+            self._peers(client),
+            0,
+            f'the Kernel holds no peer for {client}\n{self._openvpn_log(client)}',
+        )
+
+        # and it is the cipher the two of them settled on
+        log = cmdl(
+            ['sudo', 'journalctl', '-u', f'openvpn@{client}.service', '-o', 'cat']
+        )
+        self.assertIn("Data Channel: cipher 'CHACHA20-POLY1305'", log)
+
+    def test_openvpn_site2site_dco_chacha20poly1305(self):
+        # the fallback cipher decides the offload in site-to-site mode
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'role', 'active'])
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'chacha20poly1305'])
+        self.cli_set(path + ['offload', 'dco'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('data-ciphers-fallback CHACHA20-POLY1305', config)
+        self.assertDcoDataPath(interface, multipoint=False)
+
     # OVPN_CMD_PEER_GET carries GENL_ADMIN_PERM, hence the detour through
     # sudo. The probe swallows its own errors so a missing interface or a
     # refused dump reads as "no peer" with the reason attached, instead of

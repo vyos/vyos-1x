@@ -91,7 +91,7 @@
                 <properties>
                   <help>Cipher negotiation list for use in server or client mode</help>
                   <completionHelp>
-                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm chacha20poly1305</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
@@ -125,8 +125,12 @@
                     <format>aes256gcm</format>
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>chacha20poly1305</format>
+                    <description>ChaCha20 stream cipher with Poly1305 authenticator</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm|chacha20poly1305)</regex>
                   </constraint>
                   <multi/>
                 </properties>
@@ -135,7 +139,7 @@
                 <properties>
                   <help>Fallback cipher to use for site-to-site tunnels</help>
                   <completionHelp>
-                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm chacha20poly1305</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
@@ -169,8 +173,12 @@
                     <format>aes256gcm</format>
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>chacha20poly1305</format>
+                    <description>ChaCha20 stream cipher with Poly1305 authenticator</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm|chacha20poly1305)</regex>
                   </constraint>
                 </properties>
               </leafNode>

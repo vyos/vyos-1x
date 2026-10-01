@@ -610,7 +610,8 @@ openvpn_translate = {
     'aes192gcm': 'aes-192-gcm',
     'aes192': 'aes-192-cbc',
     'aes256gcm': 'aes-256-gcm',
-    'aes256': 'aes-256-cbc'
+    'aes256': 'aes-256-cbc',
+    'chacha20poly1305': 'chacha20-poly1305',
 }
 
 @register_filter('openvpn_cipher')
