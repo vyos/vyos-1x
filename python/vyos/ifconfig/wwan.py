@@ -14,12 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from json import loads
-from time import sleep
 
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.hostsd_client import VyOSHostsdError
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
+from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_address
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.process import cmdl
@@ -76,27 +76,31 @@ class WWANIf(Interface):
                 return bearer
         return None
 
+    def _wait_for_bearer_method(self, family):
+        # A bearer can report "connected" before its ipv4-config/ipv6-config
+        # is populated over D-Bus - retry briefly rather than mistaking that
+        # delay for "no static config".
+        result = {}
+
+        def _ready():
+            result['bearer'] = self._get_active_bearer()
+            result['method'] = (
+                dict_search(f'bearer.{family}-config.method', result['bearer'])
+                if result['bearer']
+                else None
+            )
+            return result['method'] is not None
+
+        wait_for(_ready, interval=0.5, timeout=5)
+        return result['bearer'], result['method']
+
     def add_addr(self, addr: str, vrf_changed: bool = False) -> bool:
         if addr not in ('dhcp', 'dhcpv6'):
             return super().add_addr(addr, vrf_changed=vrf_changed)
 
         family = 'ipv4' if addr == 'dhcp' else 'ipv6'
 
-        # A bearer can report itself "connected" slightly before its own
-        # ipv4-config/ipv6-config properties are fully populated over D-Bus -
-        # retry briefly rather than mistaking that propagation delay for "no
-        # static config, start a DHCP(v6) client instead".
-        bearer, method = None, None
-        for _ in range(10):
-            bearer = self._get_active_bearer()
-            method = (
-                dict_search(f'bearer.{family}-config.method', bearer)
-                if bearer
-                else None
-            )
-            if method is not None:
-                break
-            sleep(0.5)
+        bearer, method = self._wait_for_bearer_method(family)
 
         if method in (None, '', '--', 'dhcp'):
             if method != 'dhcp':
@@ -125,15 +129,7 @@ class WWANIf(Interface):
         # no RA traffic for the kernel to autoconf from, so apply the
         # bearer's result directly. Falls through unchanged for a modem that
         # genuinely needs host-side SLAAC (e.g. Intel XMM-based).
-        bearer, method = None, None
-        for _ in range(10):
-            bearer = self._get_active_bearer()
-            method = (
-                dict_search('bearer.ipv6-config.method', bearer) if bearer else None
-            )
-            if method is not None:
-                break
-            sleep(0.5)
+        bearer, method = self._wait_for_bearer_method('ipv6')
 
         if method in (None, '', '--', 'dhcp'):
             if method != 'dhcp':
