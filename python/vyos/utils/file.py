@@ -99,6 +99,25 @@ def read_json(fname, defaultonfailure=None):
         raise e
 
 
+def write_json(fname, data, defaultonfailure=_unset):
+    """
+    Write the provided data to a file in JSON format.
+    If defaultonfailure is not None and writing fails, it returns the default value.
+    """
+
+    import json
+
+    default_indent = 4  # Indent for pretty printing
+
+    try:
+        with open(fname, 'w') as f:
+            json.dump(data, f, indent=default_indent)
+    except Exception as e:
+        if defaultonfailure is not _unset:
+            return defaultonfailure
+        raise e
+
+
 def chmod(path, bitmask):
     # path may also be an open file descriptor
     if not isinstance(path, int) and not os.path.exists(path):

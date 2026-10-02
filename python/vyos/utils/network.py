@@ -903,3 +903,63 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
             ifaces.append(interface)
 
     return ifaces
+
+
+def fqdn_resolve(fqdn: str, ipv6: bool = False, vrf: str = None) -> frozenset | None:
+    """Resolve a FQDN to a set of addresses, optionally inside a VRF.
+
+    When `vrf` is None, resolution is performed with the standard
+    library resolver (getaddrinfo), in the process's default
+    routing/namespace context - this matches the original,
+    non-VRF-aware behavior exactly.
+
+    When `vrf` is given, resolution is instead performed inside that
+    VRF's routing/namespace context via `ip vrf exec`, so lookups
+    against a resolver only reachable through that VRF succeed.
+
+    Args:
+        fqdn: The hostname to resolve.
+        ipv6: If True, resolve AAAA (IPv6) records instead of A
+              (IPv4) records.
+        vrf: Name of the VRF to resolve within, or None to resolve in
+             the default/global routing context.
+
+    Returns:
+        A set of resolved address strings, or None if resolution
+        failed or returned no usable addresses.
+    """
+
+    import socket
+
+    addresses = None
+
+    if vrf:
+        # Prepare the code to be run in a separate Python process that
+        # executes the `fqdn_resolve` function, passing
+        # the FQDN and ipv6 flag inside a VRF
+        pycode = ';'.join(
+            [
+                '''from vyos.utils.network import fqdn_resolve''',
+                f'''res = fqdn_resolve("{fqdn}", ipv6={ipv6})''',
+                '''exit(1) if res is None else print("\\n".join(res))''',
+            ]
+        )
+        try:
+            # Execute the code in the VRF context
+            out = cmdl(['python3', '-u', '-c', pycode], vrf=vrf)
+        except OSError:
+            pass
+        else:
+            addresses = []
+            for line in out.splitlines():
+                addr = line.strip()
+                addresses.append(addr)
+    else:
+        try:
+            res = socket.getaddrinfo(fqdn, None, AF_INET6 if ipv6 else AF_INET)
+        except OSError:
+            pass
+        else:
+            addresses = [item[4][0] for item in res]
+
+    return frozenset(addresses) if addresses else None
