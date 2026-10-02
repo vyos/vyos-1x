@@ -607,6 +607,16 @@ let subtree_values_of_path c_ptr_rt c_ptr_ct path =
             let msg = Printf.sprintf "Malformed path: \'%s\'" s in
             error_message := msg; "#1@"
 
+let reference_path_from_config_path c_ptr_rt path =
+    let rt = Root.get c_ptr_rt in
+    let path = split_on_whitespace path in
+    Util_rt.get_refpath_from_config_path rt path
+
+let reference_path_from_partial_path c_ptr_rt path =
+    let rt = Root.get c_ptr_rt in
+    let path = split_on_whitespace path in
+    Util_rt.get_refpath_from_partial_path rt path
+
 module Stubs(I : Cstubs_inverted.INTERNAL) =
 struct
 
@@ -663,4 +673,6 @@ struct
   let () = I.internal "get_rdeps_of_kind" ((ptr void) @-> string @-> string @-> returning string) get_rdeps_of_kind
   let () = I.internal "get_rdeps_of_kind_data" ((ptr void) @-> string @-> string @-> returning string) get_rdeps_of_kind_data
   let () = I.internal "subtree_values_of_path" ((ptr void) @-> (ptr void) @-> string @-> returning string) subtree_values_of_path
+  let () = I.internal "reference_path_from_config_path" ((ptr void) @-> string @-> returning string) reference_path_from_config_path
+  let () = I.internal "reference_path_from_partial_path" ((ptr void) @-> string @-> returning string) reference_path_from_partial_path
 end
