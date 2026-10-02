@@ -46,12 +46,14 @@ class WWANIf(Interface):
         # interface is up, which only happens at the end of super().update() -
         # queue it here and apply after, like sibling PPPoEIf does.
         self._pending_bearer_routes = {}
-        super().update(config)
-        for family, (gateway, distance) in self._pending_bearer_routes.items():
-            self._install_bearer_route(family, gateway, distance)
-        # Drop the queue so a later direct add_addr() call installs its
-        # route immediately instead of silently doing nothing.
-        del self._pending_bearer_routes
+        try:
+            super().update(config)
+            for family, (gateway, distance) in self._pending_bearer_routes.items():
+                self._install_bearer_route(family, gateway, distance)
+        finally:
+            # Drop the queue so a later direct add_addr() call installs its
+            # route immediately instead of silently doing nothing.
+            del self._pending_bearer_routes
 
     def _get_active_bearer(self):
         """Return the mmcli --output-json dict for this interface's
