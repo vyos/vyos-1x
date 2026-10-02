@@ -18,6 +18,7 @@ import hashlib
 from json import loads
 from socket import AF_INET
 from socket import AF_INET6
+from socket import AF_UNSPEC
 from vyos.utils.process import cmdl
 
 def _are_same_ip(one, two):
@@ -903,3 +904,73 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
             ifaces.append(interface)
 
     return ifaces
+
+
+def fqdn_resolve(
+    fqdn: str, ipv6: bool | None = False, vrf: str = None
+) -> frozenset | None:
+    """Resolve a FQDN to a set of addresses, optionally inside a VRF.
+
+    When `vrf` is None, resolution is performed with the standard
+    library resolver (getaddrinfo), in the process's default
+    routing/namespace context - this matches the original,
+    non-VRF-aware behavior exactly.
+
+    When `vrf` is given, resolution is instead performed inside that
+    VRF's routing/namespace context via `ip vrf exec`, so lookups
+    against a resolver only reachable through that VRF succeed.
+
+    Args:
+        fqdn: The hostname to resolve.
+        ipv6: If True, resolve AAAA (IPv6) records instead of A
+              (IPv4) records. With None will use dual-stack resolving.
+        vrf: Name of the VRF to resolve within, or None to resolve in
+             the default/global routing context.
+
+    Returns:
+        A set of resolved address strings, or None if resolution
+        failed or returned no usable addresses.
+    """
+
+    import socket
+
+    addresses = None
+
+    if vrf:
+        # Prepare the code to be run in a separate Python process that
+        # executes the `fqdn_resolve` function, passing
+        # the FQDN and ipv6 flag inside a VRF
+        pycode = ';'.join(
+            [
+                '''import sys''',
+                '''from vyos.utils.network import fqdn_resolve''',
+                '''ipv6 = None if sys.argv[2] == "None" else sys.argv[2] == "True"''',
+                '''res = fqdn_resolve(sys.argv[1], ipv6=ipv6)''',
+                '''exit(1) if res is None else print("\\n".join(res))''',
+            ]
+        )
+        try:
+            # Execute the code in the VRF context
+            out = cmdl(['python3', '-u', '-c', pycode, fqdn, str(ipv6)], vrf=vrf)
+        except OSError:
+            pass
+        else:
+            addresses = []
+            for line in out.splitlines():
+                addr = line.strip()
+                addresses.append(addr)
+    else:
+        if ipv6 is None:
+            # Use dual-stack resolving
+            family = AF_UNSPEC
+        else:
+            family = AF_INET6 if ipv6 else AF_INET
+
+        try:
+            res = socket.getaddrinfo(fqdn, None, family=family)
+        except OSError:
+            pass
+        else:
+            addresses = [item[4][0] for item in res]
+
+    return frozenset(addresses) if addresses else None

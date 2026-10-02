@@ -18,6 +18,7 @@ import os
 import shutil
 
 from sys import exit
+from glob import glob
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -26,12 +27,16 @@ from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
 from vyos.defaults import systemd_services
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.network import fqdn_resolve
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
+from vyos.utils.file import read_json
+from vyos.utils.file import write_json
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
+from vyos.template import is_ip
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos import ConfigError
@@ -41,6 +46,10 @@ airbag.enable()
 cert_dir = '/etc/rsyslog.d/certs'
 rsyslog_conf = '/run/rsyslog/rsyslog.conf'
 logrotate_messages_conf = '/etc/logrotate.d/vyos-rsyslog'
+
+# T9336: shared state written/read by `vyos-domain-resolver.py` (keyed by "fqdn|vrf")
+resolver_state_file = '/run/vyos-rsyslog-name-resolve.json'
+domain_resolver_usage = '/run/use-vyos-domain-resolver-syslog'
 
 systemd_socket = 'syslog.socket'
 systemd_service = systemd_services['syslog']
@@ -152,6 +161,68 @@ def get_config(config=None):
         if syslog.from_defaults(['remote', remote, 'tls']):
             del syslog['remote'][remote]['tls']
 
+    # T9336: Identify remotes that need VRF-aware FQDN resolution,
+    # and pre-resolve them synchronously so `generate()` has an address
+    # to render even before the background resolver daemon runs
+    resolver_state = read_json(resolver_state_file, defaultonfailure={})
+    syslog['vrf_fqdn_remotes'] = []
+    for remote, remote_options in syslog.get('remote', {}).items():
+        target = remote
+        vrf = remote_options.get('vrf')
+        source_address = remote_options.get('source_address')
+
+        # The remote uses VRF context and target address is FQDN
+        if vrf and not is_ip(target):
+            state_key = f'{target}|{vrf}'
+
+            syslog['vrf_fqdn_remotes'].append(target)
+
+            # Already resolved by a previous commit or by the
+            # background daemon ('vyos-domain-resolver').
+            # Use the cached value so a commit
+            # doesn't force a redundant DNS round-trip
+            if state_key in resolver_state:
+                use_cache = True
+                cached = resolver_state[state_key]
+
+                # When a FQDN remote acquires an IPv4 'source-address',
+                # this cached hit can utilize a previously stored IPv6 address.
+                # Re-resolve the address if the cached version
+                # belongs to the incorrect address family:
+                ips = (source_address, cached)
+                is_same_family = all(map(is_ipv4, ips)) or all(map(is_ipv6, ips))
+                if source_address and not is_same_family:
+                    use_cache = False
+
+                if use_cache:
+                    remote_options['resolved_address'] = cached
+                    continue
+
+            # Resolve a remote syslog target inside a VRF, trying both families
+            if source_address:
+                # Select record family matching the configured source address
+                addrs = fqdn_resolve(target, ipv6=is_ipv6(source_address), vrf=vrf)
+            else:
+                # Tries A and AAAA record, inside the given VRF's routing context
+                addrs = fqdn_resolve(target, ipv6=None, vrf=vrf)
+
+            # First time we've seen this remote: resolve it now,
+            # synchronously, so rsyslog has a real target from the
+            # very first commit instead of waiting for the daemon's
+            # next poll interval (for example 300s).
+            if addrs:
+                resolved = sorted(addrs)[0]
+                remote_options['resolved_address'] = resolved
+                resolver_state[state_key] = resolved
+            else:
+                # If resolution fails here, back to the
+                # raw FQDN, and the background daemon will pick it up on
+                # its next poll once the resolver becomes reachable
+                pass
+
+    if resolver_state:
+        write_json(resolver_state_file, resolver_state, atomic=True)
+
     return syslog
 
 def verify(syslog):
@@ -199,8 +270,10 @@ def generate(syslog):
     _cleanup_tls_certs()
 
     if not syslog:
-        if os.path.exists(rsyslog_conf):
-            os.unlink(rsyslog_conf)
+        delete_files = [rsyslog_conf, resolver_state_file]
+        for delete_file in delete_files:
+            if os.path.exists(delete_file):
+                os.unlink(delete_file)
 
         return None
 
@@ -209,10 +282,33 @@ def generate(syslog):
             if _remote_has_tls(remote_options):
                 _save_tls_certificates_for_remote(syslog, remote_options)
 
+    # Cleanup state file that need for VRF-aware FQDN resolution
+    if not syslog['vrf_fqdn_remotes'] and os.path.exists(resolver_state_file):
+        os.unlink(resolver_state_file)
+
     render(rsyslog_conf, 'rsyslog/rsyslog.conf.j2', syslog)
     return None
 
+
 def apply(syslog):
+    ignore_domain_resolver = getattr(apply, 'ignore_domain_resolver', False)
+
+    ## DOMAIN RESOLVER
+    if not ignore_domain_resolver:
+        domain_action = 'restart'
+        if syslog and syslog['vrf_fqdn_remotes']:
+            text = (
+                '# Automatically generated by system_syslog.py\n'
+                'This file indicates that vyos-domain-resolver service is used by syslog.\n'
+            )
+            write_file(domain_resolver_usage, text)
+        else:
+            if os.path.exists(domain_resolver_usage):
+                os.unlink(domain_resolver_usage)
+            if not glob('/run/use-vyos-domain-resolver*'):
+                domain_action = 'stop'
+        call(f'systemctl {domain_action} vyos-domain-resolver.service')
+
     if not syslog:
         call(f'systemctl stop {systemd_service} {systemd_socket}')
         return None
