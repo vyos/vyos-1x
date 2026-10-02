@@ -42,26 +42,22 @@ class WWANIf(Interface):
         pass
 
     def update(self, config):
-        # The kernel rejects a default route via the bearer's gateway until
-        # the interface is administratively up, which super().update() only
-        # does as its last step - so add_addr(), called partway through it,
-        # can't install the route directly. Record it here instead and apply
-        # it after super().update() returns, same as sibling PPPoEIf does.
+        # The kernel rejects a route via the bearer's gateway until the
+        # interface is up, which only happens at the end of super().update() -
+        # queue it here and apply after, like sibling PPPoEIf does.
         self._pending_bearer_routes = {}
         super().update(config)
         for family, (gateway, distance) in self._pending_bearer_routes.items():
             self._install_bearer_route(family, gateway, distance)
-        # A later direct add_addr() call outside of update() (e.g.
-        # interactively) must install its route immediately rather than
-        # queuing it here with nothing left to flush it.
+        # Drop the queue so a later direct add_addr() call installs its
+        # route immediately instead of silently doing nothing.
         del self._pending_bearer_routes
 
     def _get_active_bearer(self):
         """Return the mmcli --output-json dict for this interface's
-        currently connected ModemManager bearer, or None if it doesn't have
-        one. A modem can hold a disconnected bearer left over from an
-        earlier dial attempt alongside the current one, so this matches on
-        status.connected rather than assuming bearers[0] is it."""
+        connected ModemManager bearer, or None. Matches on status.connected
+        rather than bearers[0], since a stale disconnected bearer can
+        linger alongside the current one."""
         modem = modem_index(self.ifname)
         if modem is None:
             return None
@@ -104,46 +100,31 @@ class WWANIf(Interface):
 
         if method in (None, '', '--', 'dhcp'):
             if method != 'dhcp':
-                # The bearer is missing entirely (lost, or not up yet) -
-                # DNS a previous static bearer registered under this
-                # family's tag is now stale, and nothing else will clear
-                # it: the real DHCP(v6) client this falls through to only
-                # replaces the tag on a successful lease, which for a modem
-                # that needs this fallback at all may never happen. A
-                # bearer whose own method already reports 'dhcp' never had
-                # its DNS set this way in the first place, so there's
-                # nothing of ours to clear there.
+                # Bearer is gone or not up yet: clear any DNS a previous
+                # static bearer left under this tag, since the DHCP(v6)
+                # client below only replaces it on a successful lease.
                 self._set_hostsd_name_servers(family, None)
-            # No active bearer yet, or the network itself wants a real
-            # DHCP(v6) exchange for this family (e.g. some ECM/NCM/RNDIS
-            # modems) - unchanged, existing behaviour.
             return super().add_addr(addr, vrf_changed=vrf_changed)
 
-        # Anything else (normally "static", the common case for modern QMI
-        # raw-ip modems) is applied directly from the bearer's own
-        # already-negotiated address/gateway/DNS - a DHCP(v6) client would
-        # never get a reply from a static bearer's gateway, just hang or
-        # silently do nothing while the interface looks configured.
+        # method == 'static' (the common case for QMI raw-ip modems): apply
+        # the bearer's own address/gateway/DNS directly, since a DHCP(v6)
+        # client would never get a reply from it.
         return self._apply_bearer_address(bearer, family)
 
     def set_ipv6_autoconf(self, autoconf):
         if autoconf == '0':
             result = super().set_ipv6_autoconf(autoconf)
-            # The base class calls this with '0' on every commit where
-            # autoconf isn't configured, not just on a real disable
-            # transition, so only sweep if dhcpv6 isn't configured either -
-            # otherwise this would delete the address dhcpv6 just applied.
-            # dhcpv6 owns its own cleanup via del_addr() when it stops being
-            # configured.
+            # Called with '0' on every commit where autoconf isn't
+            # configured, not just on disable - skip the sweep if dhcpv6
+            # owns the address instead, which cleans up after itself.
             if 'dhcpv6' not in (self.config.get('address') or []):
                 self._clear_bearer_address('ipv6')
             return result
 
-        # Same reasoning as add_addr()'s dhcp/dhcpv6 handling: a modem that
-        # resolves IPv6 itself over the air never sends RA traffic the
-        # kernel's own autoconf could use, so apply the bearer's
-        # already-resolved config directly. A modem that genuinely needs
-        # host-side SLAAC (e.g. Intel XMM-based) falls through unchanged.
+        # Same idea as add_addr(): a modem resolving IPv6 over the air sends
+        # no RA traffic for the kernel to autoconf from, so apply the
+        # bearer's result directly. Falls through unchanged for a modem that
+        # genuinely needs host-side SLAAC (e.g. Intel XMM-based).
         bearer, method = None, None
         for _ in range(10):
             bearer = self._get_active_bearer()
@@ -156,10 +137,6 @@ class WWANIf(Interface):
 
         if method in (None, '', '--', 'dhcp'):
             if method != 'dhcp':
-                # Same reasoning as add_addr()'s fallback: a previous static
-                # bearer's DNS under this family's tag is now stale, and the
-                # real kernel SLAAC this falls through to doesn't use that
-                # tag at all, so nothing would ever clear it otherwise.
                 self._set_hostsd_name_servers('ipv6', None)
             return super().set_ipv6_autoconf(autoconf)
 
@@ -169,12 +146,9 @@ class WWANIf(Interface):
         if addr not in ('dhcp', 'dhcpv6'):
             return super().del_addr(addr)
 
-        # Let a real DHCP(v6) client (if one is actually running for this
-        # family) release its lease and clean up its own vyos-hostsd tag
-        # first, exactly as it always has. Only afterwards sweep anything
-        # a static bearer applied directly for this family - by
-        # construction at most one of the two ever put an address on the
-        # interface, so this is never removing something still in use.
+        # Let a real DHCP(v6) client release its lease and clean up its own
+        # tag first; only then sweep anything a static bearer applied,
+        # since at most one of the two ever had the address.
         result = super().del_addr(addr)
         family = 'ipv4' if addr == 'dhcp' else 'ipv6'
         self._clear_bearer_address(family)
@@ -195,11 +169,8 @@ class WWANIf(Interface):
             # will remain visible for the operating system.
             self.set_admin_state('down')
 
-        # flush_addrs() below removes the addresses themselves regardless of
-        # how they got there, but it stops a real DHCP(v6) client via
-        # set_dhcp()/set_dhcpv6() directly rather than going through
-        # del_addr(), so it never runs the vyos-hostsd tag cleanup a static
-        # bearer's DNS servers need - do that here instead.
+        # flush_addrs() clears the addresses but bypasses del_addr(), so it
+        # never runs the vyos-hostsd tag cleanup a static bearer needs.
         self._clear_bearer_address('ipv4')
         self._clear_bearer_address('ipv6')
 
@@ -213,13 +184,10 @@ class WWANIf(Interface):
             return False
         cidr = f'{address}/{plen}'
 
-        # A reconnect can negotiate a different address than before, and
-        # unlike every other interface type a bearer's address is never
-        # recorded in the config tree to diff against - remove whatever of
-        # this family is already there except a plain static address the
-        # operator explicitly configured on this same leaf-list, which is
-        # never ours to touch, so a stale one never ends up coexisting
-        # alongside the new one.
+        # A reconnect can negotiate a different address, and there's no
+        # config-tree entry for a bearer's address to diff against - remove
+        # any stale one of this family except a static address the operator
+        # configured directly.
         configured = set(self.config.get('address') or [])
         inet_family = 'inet' if family == 'ipv4' else 'inet6'
         current = get_interface_address(self.ifname) or {}
@@ -246,19 +214,15 @@ class WWANIf(Interface):
 
     def _apply_bearer_route(self, bearer, family):
         gateway = dict_search(f'bearer.{family}-config.gateway', bearer)
-        # IPv6 has no equivalent 'no-default-route'/'default-route-distance'
-        # leaf in this interface's schema (dhcpv6-options.xml.i has neither -
-        # unsurprising, since IPv6 default routes normally come from RA, not
-        # DHCPv6), so those only ever apply to the IPv4 default route below.
+        # IPv6 has no no-default-route/default-route-distance leaf (routes
+        # normally come from RA, not DHCPv6) - only IPv4 uses these.
         no_default_route = (
             family == 'ipv4'
             and dict_search('dhcp_options.no_default_route', self.config) is not None
         )
         if not gateway or no_default_route:
-            # Withdraw a route a previous commit may have installed, if this
-            # one no longer wants one - a bearer's gateway is never recorded
-            # in the config tree, so nothing else would notice and remove
-            # it. Best-effort: harmless if there's nothing there to remove.
+            # Withdraw a route a previous commit may have installed; a
+            # bearer's gateway isn't tracked in the config tree either.
             self._remove_bearer_route(family)
             return
 
@@ -266,18 +230,15 @@ class WWANIf(Interface):
         if family == 'ipv4':
             distance = dict_search('dhcp_options.default_route_distance', self.config)
         if not hasattr(self, '_pending_bearer_routes'):
-            # add_addr() can be called directly outside of update() (e.g.
-            # interactively) - install immediately rather than queuing with
-            # nothing left to flush it.
+            # Called directly outside update() - install now, since nothing
+            # will flush a queued route.
             self._install_bearer_route(family, gateway, distance)
             return
         self._pending_bearer_routes[family] = (gateway, distance)
 
     def _install_bearer_route(self, family, gateway, distance):
-        # Confirmed live: a device being enslaved to a VRF is not enough on
-        # its own for "ip route replace ... dev <if>" to land in that VRF's
-        # table rather than main - the vrf keyword has to be given to the
-        # route subcommand itself, after "route replace", not before it.
+        # Table selection needs an explicit vrf keyword after "route
+        # replace" - enslaving the device to the VRF alone doesn't do it.
         route_cmd = ['ip'] if family == 'ipv4' else ['ip', '-6']
         route_cmd += ['route', 'replace']
         vrf = self.config.get('vrf')
@@ -316,9 +277,8 @@ class WWANIf(Interface):
         self._set_hostsd_name_servers(family, servers)
 
     def _clear_bearer_address(self, family):
-        # Skip a plain static address the operator explicitly configured on
-        # this same leaf-list - see _apply_bearer_address()'s own comment.
-        # Everything else of this family present here was applied by us.
+        # Skip a static address the operator configured directly - see
+        # _apply_bearer_address(). Everything else here was applied by us.
         configured = set(self.config.get('address') or [])
         inet_family = 'inet' if family == 'ipv4' else 'inet6'
         current = get_interface_address(self.ifname) or {}
