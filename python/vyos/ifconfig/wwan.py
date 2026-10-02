@@ -50,24 +50,18 @@ class WWANIf(Interface):
         self._pending_bearer_routes = {}
         super().update(config)
         for family, (gateway, distance) in self._pending_bearer_routes.items():
-            route_cmd = ['ip'] if family == 'ipv4' else ['ip', '-6']
-            route_cmd += [
-                'route',
-                'replace',
-                'default',
-                'via',
-                gateway,
-                'dev',
-                self.ifname,
-            ]
-            if distance:
-                route_cmd += ['metric', str(distance)]
-            self._cmdl(route_cmd)
+            self._install_bearer_route(family, gateway, distance)
+        # A later direct add_addr() call outside of update() (e.g.
+        # interactively) must install its route immediately rather than
+        # queuing it here with nothing left to flush it.
+        del self._pending_bearer_routes
 
     def _get_active_bearer(self):
         """Return the mmcli --output-json dict for this interface's
-        currently active ModemManager bearer, or None if no modem/bearer
-        can currently be found for it."""
+        currently connected ModemManager bearer, or None if it doesn't have
+        one. A modem can hold a disconnected bearer left over from an
+        earlier dial attempt alongside the current one, so this matches on
+        status.connected rather than assuming bearers[0] is it."""
         modem = modem_index(self.ifname)
         if modem is None:
             return None
@@ -76,13 +70,15 @@ class WWANIf(Interface):
         except (OSError, ValueError):
             return None
         bearers = dict_search('modem.generic.bearers', modem_info) or []
-        if not bearers:
-            return None
-        bearer_id = bearers[0].rsplit('/', 1)[-1]
-        try:
-            return loads(cmdl(['mmcli', '--bearer', bearer_id, '--output-json']))
-        except (OSError, ValueError):
-            return None
+        for bearer_path in bearers:
+            bearer_id = bearer_path.rsplit('/', 1)[-1]
+            try:
+                bearer = loads(cmdl(['mmcli', '--bearer', bearer_id, '--output-json']))
+            except (OSError, ValueError):
+                continue
+            if dict_search('bearer.status.connected', bearer) == 'yes':
+                return bearer
+        return None
 
     def add_addr(self, addr: str, vrf_changed: bool = False) -> bool:
         if addr not in ('dhcp', 'dhcpv6'):
@@ -203,7 +199,11 @@ class WWANIf(Interface):
         # A reconnect can negotiate a different address than before, and
         # unlike every other interface type a bearer's address is never
         # recorded in the config tree to diff against - remove whatever of
-        # this family is already there first so a stale one never coexists.
+        # this family is already there except a plain static address the
+        # operator explicitly configured on this same leaf-list, which is
+        # never ours to touch, so a stale one never ends up coexisting
+        # alongside the new one.
+        configured = set(self.config.get('address') or [])
         inet_family = 'inet' if family == 'ipv4' else 'inet6'
         current = get_interface_address(self.ifname) or {}
         for addr_info in current.get('addr_info', []):
@@ -213,7 +213,7 @@ class WWANIf(Interface):
             ):
                 continue
             old_cidr = f"{addr_info['local']}/{addr_info['prefixlen']}"
-            if old_cidr != cidr:
+            if old_cidr != cidr and old_cidr not in configured:
                 self.del_addr(old_cidr)
 
         if not is_intf_addr_assigned(self.ifname, cidr):
@@ -228,43 +228,60 @@ class WWANIf(Interface):
         return True
 
     def _apply_bearer_route(self, bearer, family):
-        # Only records the route to install - see update()'s own doc
-        # comment for why this can't just run ip route directly here.
         gateway = dict_search(f'bearer.{family}-config.gateway', bearer)
-        if not gateway:
-            return
         # IPv6 has no equivalent 'no-default-route'/'default-route-distance'
         # leaf in this interface's schema (dhcpv6-options.xml.i has neither -
         # unsurprising, since IPv6 default routes normally come from RA, not
         # DHCPv6), so those only ever apply to the IPv4 default route below.
-        if (
+        no_default_route = (
             family == 'ipv4'
             and dict_search('dhcp_options.no_default_route', self.config) is not None
-        ):
+        )
+        if not gateway or no_default_route:
+            # Withdraw a route a previous commit may have installed, if this
+            # one no longer wants one - a bearer's gateway is never recorded
+            # in the config tree, so nothing else would notice and remove
+            # it. Best-effort: harmless if there's nothing there to remove.
+            self._remove_bearer_route(family)
             return
+
         distance = None
         if family == 'ipv4':
             distance = dict_search('dhcp_options.default_route_distance', self.config)
         if not hasattr(self, '_pending_bearer_routes'):
             # add_addr() can be called directly outside of update() (e.g.
-            # interactively) - fall back to installing immediately rather
-            # than silently dropping the route in that case.
-            self._pending_bearer_routes = {}
-            route_cmd = ['ip'] if family == 'ipv4' else ['ip', '-6']
-            route_cmd += [
-                'route',
-                'replace',
-                'default',
-                'via',
-                gateway,
-                'dev',
-                self.ifname,
-            ]
-            if distance:
-                route_cmd += ['metric', str(distance)]
-            self._cmdl(route_cmd)
+            # interactively) - install immediately rather than queuing with
+            # nothing left to flush it.
+            self._install_bearer_route(family, gateway, distance)
             return
         self._pending_bearer_routes[family] = (gateway, distance)
+
+    def _install_bearer_route(self, family, gateway, distance):
+        # Confirmed live: a device being enslaved to a VRF is not enough on
+        # its own for "ip route replace ... dev <if>" to land in that VRF's
+        # table rather than main - the vrf keyword has to be given to the
+        # route subcommand itself, after "route replace", not before it.
+        route_cmd = ['ip'] if family == 'ipv4' else ['ip', '-6']
+        route_cmd += ['route', 'replace']
+        vrf = self.config.get('vrf')
+        if vrf:
+            route_cmd += ['vrf', vrf]
+        route_cmd += ['default', 'via', gateway, 'dev', self.ifname]
+        if distance:
+            route_cmd += ['metric', str(distance)]
+        self._cmdl(route_cmd)
+
+    def _remove_bearer_route(self, family):
+        route_cmd = ['ip'] if family == 'ipv4' else ['ip', '-6']
+        route_cmd += ['route', 'del']
+        vrf = self.config.get('vrf')
+        if vrf:
+            route_cmd += ['vrf', vrf]
+        route_cmd += ['default', 'dev', self.ifname]
+        try:
+            self._cmdl(route_cmd)
+        except OSError:
+            pass
 
     def _apply_bearer_dns(self, bearer, family):
         # A current mmcli --output-json reports this as a JSON list under a
@@ -282,6 +299,10 @@ class WWANIf(Interface):
         self._set_hostsd_name_servers(family, servers)
 
     def _clear_bearer_address(self, family):
+        # Skip a plain static address the operator explicitly configured on
+        # this same leaf-list - see _apply_bearer_address()'s own comment.
+        # Everything else of this family present here was applied by us.
+        configured = set(self.config.get('address') or [])
         inet_family = 'inet' if family == 'ipv4' else 'inet6'
         current = get_interface_address(self.ifname) or {}
         for addr_info in current.get('addr_info', []):
@@ -291,6 +312,8 @@ class WWANIf(Interface):
             ):
                 continue
             cidr = f"{addr_info['local']}/{addr_info['prefixlen']}"
+            if cidr in configured:
+                continue
             if is_intf_addr_assigned(self.ifname, cidr):
                 self._cmdl(['ip', 'addr', 'del', cidr, 'dev', self.ifname])
             if cidr in self._addr:
