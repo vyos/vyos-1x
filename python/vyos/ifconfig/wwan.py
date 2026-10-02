@@ -103,6 +103,17 @@ class WWANIf(Interface):
             sleep(0.5)
 
         if method in (None, '', '--', 'dhcp'):
+            if method != 'dhcp':
+                # The bearer is missing entirely (lost, or not up yet) -
+                # DNS a previous static bearer registered under this
+                # family's tag is now stale, and nothing else will clear
+                # it: the real DHCP(v6) client this falls through to only
+                # replaces the tag on a successful lease, which for a modem
+                # that needs this fallback at all may never happen. A
+                # bearer whose own method already reports 'dhcp' never had
+                # its DNS set this way in the first place, so there's
+                # nothing of ours to clear there.
+                self._set_hostsd_name_servers(family, None)
             # No active bearer yet, or the network itself wants a real
             # DHCP(v6) exchange for this family (e.g. some ECM/NCM/RNDIS
             # modems) - unchanged, existing behaviour.
@@ -144,6 +155,12 @@ class WWANIf(Interface):
             sleep(0.5)
 
         if method in (None, '', '--', 'dhcp'):
+            if method != 'dhcp':
+                # Same reasoning as add_addr()'s fallback: a previous static
+                # bearer's DNS under this family's tag is now stale, and the
+                # real kernel SLAAC this falls through to doesn't use that
+                # tag at all, so nothing would ever clear it otherwise.
+                self._set_hostsd_name_servers('ipv6', None)
             return super().set_ipv6_autoconf(autoconf)
 
         return self._apply_bearer_address(bearer, 'ipv6')
