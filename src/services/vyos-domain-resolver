@@ -20,12 +20,16 @@ import os
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 
+from vyos import ConfigError
 from vyos.configdict import dict_merge
 from vyos.configquery import ConfigTreeQuery
+from vyos.defaults import directories
 from vyos.firewall import fqdn_config_parse
-from vyos.firewall import fqdn_resolve
+from vyos.utils.network import fqdn_resolve
 from vyos.ifconfig import WireGuardIf
 from vyos.remote import download
+from vyos.template import is_ip
+from vyos.template import is_ipv6
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.convert import human_to_seconds
 from vyos.utils.dict import dict_search_args
@@ -33,8 +37,11 @@ from vyos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
 from vyos.utils.file import makedir, chmod_775, write_file, read_file
 from vyos.utils.network import is_ipv4_address_or_range
 from vyos.utils.network import is_ipv6_address_or_range
+from vyos.utils.file import read_json
+from vyos.utils.file import write_json
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
+from vyos.utils.system import load_as_module
 from vyos.xml_ref import get_defaults
 
 base = ['firewall']
@@ -43,6 +50,7 @@ cache = False
 base_firewall = ['firewall']
 base_nat = ['nat']
 base_interfaces = ['interfaces']
+base_syslog = ['system', 'syslog']
 
 firewall_config_dir = "/config/firewall"
 
@@ -109,6 +117,16 @@ def resolve(domains, ipv6=False):
 
         ip_list = ip_list | resolved
     return ip_list
+
+def wait_commit():
+    """Pause code execution while commit still in progress"""
+
+    count = 1
+    while commit_in_progress():
+        if count % 60 == 0:
+            logger.info(f'Commit still in progress after {count}s - waiting')
+        count += 1
+        time.sleep(1)
 
 def nft_output(table, set_name, ip_list):
     output = [f'flush set {table} {set_name}']
@@ -323,20 +341,113 @@ def update_interfaces(config, node):
                     ):
                         intf.operational.reset_peer(public_key=public_key)
 
+def collect_syslog_targets(config):
+    """Collect VRF-bound FQDN targets from 'system syslog remote <hostname>'"""
+
+    targets = []
+    for remote, remote_options in config.get('remote', {}).items():
+        target = remote
+        vrf = remote_options.get('vrf')
+
+        if vrf and not is_ip(target):  # The remote uses VRF context and target address is FQDN
+            targets.append((target, vrf, remote_options))
+
+    return targets
+
+
+def update_syslog(config: dict):
+    """Handle a resolved-address change for a VRF-bound syslog remote"""
+
+    targets = collect_syslog_targets(config)
+    if not targets:
+        return
+
+    wait_commit()
+
+    logger.info('Starting `update_syslog` with targets: %s', ['|'.join(t[:2]) for t in targets])
+
+    # Shared state which keyed by "fqdn|vrf" for 'system_syslog.py'
+    resolver_state_file = '/run/vyos-rsyslog-name-resolve.json'
+    resolver_state = read_json(resolver_state_file, defaultonfailure={})
+    prev_resolver_state = resolver_state.copy()
+
+    changed = False
+
+    for fqdn, vrf, remote_options in targets:
+        logger.debug('Resolving FQDN %s for VRF %s', fqdn, vrf)
+
+        # Resolve a remote syslog target inside a VRF, trying both families
+        source_address = remote_options.get('source_address')
+        if source_address:
+            # Select record family matching the configured source address
+            addrs = fqdn_resolve(fqdn, ipv6=is_ipv6(source_address), vrf=vrf)
+        else:
+            # Tries A and AAAA record, inside the given VRF's routing context
+            addrs = fqdn_resolve(fqdn, ipv6=None, vrf=vrf)
+
+        if not addrs:
+            logger.warning(
+                'No addresses resolved for %s in VRF %s. Keeping last-known-good.', fqdn, vrf
+            )
+            continue  # Keep last-known-good rather than clearing on a transient failure
+
+        state_key = f'{fqdn}|{vrf}'
+        resolved = sorted(addrs)[0]
+        old_value = resolver_state.get(state_key)
+        if old_value != resolved:
+            logger.info('Address changed for %s: %s -> %s', state_key, old_value, resolved)
+            resolver_state[state_key] = resolved
+            changed = True
+
+    failed = False
+
+    if resolver_state and changed:
+        write_json(resolver_state_file, resolver_state, atomic=True)
+
+        mod_name = 'system_syslog'
+        conf_mode = directories['conf_mode']
+        mod_path = f'{conf_mode}/{mod_name}.py'
+
+        logger.info('Executing module: %s', mod_path)
+        mod = load_as_module(mod_name, mod_path)
+
+        try:
+            c = mod.get_config()
+            mod.verify(c)
+            mod.generate(c)
+            # By default 'apply' triggers restart of the 'vyos-domain-resolver' service.
+            # Necessary to disable it and run 'apply' without restart the service:
+            mod.apply.ignore_domain_resolver = True
+            mod.apply(c)
+        except ConfigError as e:
+            failed = True
+            logger.error('Failed to execute `%s.py` module: %s', mod_name, e)
+        except Exception:
+            failed = True
+            logger.exception('Unexpected failure in `%s.py` module', mod_name)
+        else:
+            logger.info('`update_syslog` successfully executed')
+    else:
+        logger.info('No changes detected in `update_syslog`')
+
+    if failed:
+        try:
+            # Restore the prior state on failure
+            write_json(resolver_state_file, prev_resolver_state, atomic=True)
+        except Exception as e:
+            logger.exception('Failed to restore prior resolver state')
+
+
 if __name__ == '__main__':
     logger.info('VyOS domain resolver')
 
-    count = 1
-    while commit_in_progress():
-        if ( count % 60 == 0 ):
-            logger.info(f'Commit still in progress after {count}s - waiting')
-        count += 1
-        time.sleep(1)
+    wait_commit()
 
     conf = ConfigTreeQuery()
     firewall = get_config(conf, base_firewall)
     nat = get_config(conf, base_nat)
     interfaces = get_config(conf, base_interfaces)
+    syslog = get_config(conf, base_syslog)
 
     logger.info(f'interval: {timeout}s - cache: {cache}')
 
@@ -351,6 +462,7 @@ if __name__ == '__main__':
             update_fqdn(firewall, 'firewall')
             update_fqdn(nat, 'nat')
             update_interfaces(interfaces, 'interfaces')
+            update_syslog(syslog)
 
         update_remote_group(firewall)
 

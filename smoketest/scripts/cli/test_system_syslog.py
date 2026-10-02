@@ -599,5 +599,124 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 idx = source_address.split('.')[-1]
                 self.cli_delete(['interfaces', 'dummy', f'dum{idx}'])
 
+    def test_remote_fqdn_vrf(self):
+        # T9336: Rsyslog's own runtime resolution is
+        # not VRF-aware (it uses the default routing table regardless
+        # of the per-remote 'Device=' binding), so system_syslog.py
+        # must pre-resolve such targets itself and render the
+        # resolved IP into 'target=', not the raw FQDN.
+
+        vrf = 'blue'
+        vrf_table = '12345'
+        dns_dummy_if = 'dum9336'
+        dns_server_address = '169.254.9.1'
+        fqdn = 'fqdn-vrf.vyos.test'
+        resolved_address = '169.254.9.2'
+        source_address = '169.254.9.3'
+
+        vrf_path = ['vrf', 'name', vrf]
+        dns_dummy_if_path = ['interfaces', 'dummy', dns_dummy_if]
+
+        self.cli_set(vrf_path + ['table'], value=vrf_table)
+        self.cli_set(dns_dummy_if_path + ['address'], value=f'{dns_server_address}/24')
+        self.cli_set(dns_dummy_if_path + ['address'], value=f'{source_address}/24')
+        self.cli_set(dns_dummy_if_path + ['vrf'], value=vrf)
+
+        # A local DNS forwarder, reachable only through vrf 'blue',
+        # answering authoritatively for `fqdn` via `static-host-mapping`.
+        # This stands in for the 'internal, VRF-only' resolver from
+        # the original bug report.
+        self.cli_set(
+            ['system', 'static-host-mapping', 'host-name', fqdn, 'inet'],
+            value=resolved_address,
+        )
+        self.cli_set(
+            ['service', 'dns', 'forwarding', 'listen-address'],
+            value=dns_server_address,
+        )
+        self.cli_set(
+            ['service', 'dns', 'forwarding', 'allow-from'],
+            value=f'{resolved_address[:-2]}.0/24',
+        )
+        self.cli_set(['system', 'name-server'], value=dns_server_address)
+
+        self.cli_commit()
+
+        remote_base = base_path + ['remote', fqdn]
+        self.cli_set(remote_base + ['facility', 'all'])
+        self.cli_set(remote_base + ['vrf'], value=vrf)
+        self.cli_set(remote_base + ['source-address', source_address])
+
+        self.cli_commit()
+
+        config = get_config(f'# Remote syslog to {fqdn} ({resolved_address})')
+        self.assertIn(f'target="{resolved_address}"', config)
+        self.assertNotIn(f'target="{fqdn}"', config)
+        self.assertIn(f'Device="{vrf}"', config)
+        self.assertIn(f'Address="{source_address}"', config)
+
+        # Cleanup DNS, VRF and dummy interface configuration
+        self.cli_delete(['system', 'name-server', dns_server_address])
+        self.cli_delete(['service', 'dns', 'forwarding'])
+        self.cli_delete(['system', 'static-host-mapping', 'host-name', fqdn])
+        self.cli_delete(dns_dummy_if_path)
+        self.cli_delete(vrf_path)
+        self.cli_commit()
+
+    def test_remote_fqdn_vrf_ipv6(self):
+        # IPv6 variant of `test_remote_fqdn_vrf`: the remote syslog
+        # target has only an AAAA record (no A record at all).
+
+        vrf = 'green'
+        vrf_table = '12346'
+        dns_dummy_if = 'dum9337'
+        dns_server_address = 'fdb9:336::1'
+        fqdn = 'fqdn-vrf-ipv6.vyos.test'
+        resolved_address = 'fdb9:336::2'
+
+        vrf_path = ['vrf', 'name', vrf]
+        dns_dummy_if_path = ['interfaces', 'dummy', dns_dummy_if]
+
+        self.cli_set(vrf_path + ['table'], value=vrf_table)
+        self.cli_set(dns_dummy_if_path + ['address'], value=f'{dns_server_address}/64')
+        self.cli_set(dns_dummy_if_path + ['vrf'], value=vrf)
+
+        # AAAA-only 'static-host-mapping'
+        self.cli_set(
+            ['system', 'static-host-mapping', 'host-name', fqdn, 'inet'],
+            value=resolved_address,
+        )
+        self.cli_set(
+            ['service', 'dns', 'forwarding', 'listen-address'],
+            value=dns_server_address,
+        )
+        self.cli_set(
+            ['service', 'dns', 'forwarding', 'allow-from'],
+            value=f'{resolved_address[:-1]}/64',
+        )
+        self.cli_set(['system', 'name-server'], value=dns_server_address)
+
+        self.cli_commit()
+
+        remote_base = base_path + ['remote', fqdn]
+        self.cli_set(remote_base + ['facility', 'all'])
+        self.cli_set(remote_base + ['vrf'], value=vrf)
+
+        self.cli_commit()
+
+        config = get_config(f'# Remote syslog to {fqdn} ({resolved_address})')
+        self.assertIn(f'target="{resolved_address}"', config)
+        self.assertNotIn(f'target="{fqdn}"', config)
+        self.assertIn(f'Device="{vrf}"', config)
+
+        # Cleanup DNS, VRF and dummy interface configuration
+        self.cli_delete(['system', 'name-server', dns_server_address])
+        self.cli_delete(['service', 'dns', 'forwarding'])
+        self.cli_delete(['system', 'static-host-mapping', 'host-name', fqdn])
+        self.cli_delete(dns_dummy_if_path)
+        self.cli_delete(vrf_path)
+        self.cli_commit()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
