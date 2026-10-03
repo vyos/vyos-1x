@@ -15,12 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from sys import exit
 
 from vyos.config import Config
-from vyos.utils.process import popen
+from vyos.qat import find_devices
 from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag
@@ -64,21 +63,11 @@ def verify(qat):
     if not os.path.exists(qat_init_script):
         raise ConfigError('QAT init script not found')
 
-    # Check if QAT device exist
-    output, err = popen('lspci -nn', decode='utf-8')
-    if not err:
-        # PCI id | Chipset
-        # 19e2 -> C3xx
-        # 37c8 -> C62x
-        # 37c9 -> C62xvf
-        # 0435 -> DH895
-        # 6f54 -> D15xx
-        # 18ee -> QAT_200XX
-        data = re.findall(
-            '(8086:19e2)|(8086:37c[8-9])|(8086:0435)|(8086:6f54)|(8086:18ee)', output)
-        # If QAT devices found
-        if not data:
-            raise ConfigError('No QAT acceleration device found')
+    # Check if QAT device exist. The list of supported PCI IDs lives in
+    # vyos.qat so that conf mode and op mode cannot disagree about which
+    # devices are supported.
+    if not find_devices():
+        raise ConfigError('No QAT acceleration device found')
 
 def generate(qat):
     return
