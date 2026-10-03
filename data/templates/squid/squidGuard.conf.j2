@@ -127,7 +127,7 @@ dest local-block-{{ rule }} {
 {%                     if rule in ruleacls %}
 {%                         set _dummy = ruleacls.update({rule: ruleacls[rule] + ' !local-block-url-' + rule}) %}
 {%                     else    %}
-{%                         set _dummy = ruleacls.update({rule:'!ocal-block-url-' + rule}) %}
+{%                         set _dummy = ruleacls.update({rule:'!local-block-url-' + rule}) %}
 {%                     endif   %}
 dest local-block-url-{{ rule }} {
     urllist     local-block-url-{{ rule }}/urls
