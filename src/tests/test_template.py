@@ -208,3 +208,15 @@ class TestVyOSTemplate(TestCase):
                          internal_ports['certbot_haproxy'])
         self.assertEqual(vyos.template.nft_accept_invalid('arp'),
                          'ct state invalid ether type arp counter accept')
+
+    def test_openvpn_ciphers(self):
+        # CLI values map onto the names OpenVPN expects
+        self.assertEqual(
+            vyos.template.get_openvpn_data_ciphers(['chacha20poly1305', 'aes256gcm']),
+            'CHACHA20-POLY1305:AES-256-GCM',
+        )
+        self.assertEqual(
+            vyos.template.get_openvpn_data_ciphers_fallback('chacha20poly1305'),
+            'CHACHA20-POLY1305',
+        )
+        self.assertEqual(vyos.template.get_openvpn_cipher('aes128'), 'AES-128-CBC')
