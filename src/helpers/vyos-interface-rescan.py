@@ -14,21 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+# Make discovered interfaces visible in the configuration, so a newly
+# installed NIC shows up without the operator adding it by hand.
 #
+# T3871: the node is created bare. Writing a 'hw-id' back into config.boot is
+# what used to make a bad guess unrecoverable - naming belongs to the store.
 
-import os
-import stat
 import argparse
 import logging
-import netaddr
+import os
+import stat
+from pathlib import Path
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
+from vyos.ifconfig.ifname_store import load_store
 from vyos.utils.permission import get_cfg_group_id
 
 debug = False
 
-vyos_udev_dir = directories['vyos_udev_dir']
 vyos_log_dir = directories['log']
 log_file = os.path.splitext(os.path.basename(__file__))[0]
 vyos_log_file = os.path.join(vyos_log_dir, log_file)
@@ -39,140 +43,73 @@ formatter = logging.Formatter('%(levelname)s: %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-passlist = {
-    '02:07:01' : 'Interlan',
-    '02:60:60' : '3Com',
-    '02:60:8c' : '3Com',
-    '02:a0:c9' : 'Intel',
-    '02:aa:3c' : 'Olivetti',
-    '02:cf:1f' : 'CMC',
-    '02:e0:3b' : 'Prominet',
-    '02:e6:d3' : 'BTI',
-    '52:54:00' : 'Realtek',
-    '52:54:4c' : 'Novell 2000',
-    '52:54:ab' : 'Realtec',
-    'e2:0c:0f' : 'Kingston Technologies'
-}
-
-def is_multicast(addr: netaddr.eui.EUI) -> bool:
-    return bool(addr.words[0] & 0b1)
-
-def is_locally_administered(addr: netaddr.eui.EUI) -> bool:
-    return bool(addr.words[0] & 0b10)
-
-def is_on_passlist(hwid: str) -> bool:
-    top = hwid.rsplit(':', 3)[0]
-    if top in list(passlist):
-        return True
-    return False
-
-def is_persistent(hwid: str) -> bool:
-    addr = netaddr.EUI(hwid)
-    if is_multicast(addr):
-        return False
-    if is_locally_administered(addr) and not is_on_passlist(hwid):
-        return False
-    return True
-
-def get_wireless_physical_device(intf: str) -> str:
-    if 'wlan' not in intf:
-        return ''
-    try:
-        tmp = os.readlink(f'/sys/class/net/{intf}/phy80211')
-    except OSError:
-        logger.critical(f"Failed to read '/sys/class/net/{intf}/phy80211'")
-        return ''
-    phy = os.path.basename(tmp)
-    logger.info(f"wireless phy is {phy}")
-    return phy
 
 def get_interface_type(intf: str) -> str:
-    if 'eth' in intf:
-        intf_type = 'ethernet'
-    elif 'wlan' in intf:
-        intf_type = 'wireless'
-    else:
-        logger.critical('Unrecognized interface type!')
-        intf_type = ''
-    return intf_type
+    if intf.startswith('eth'):
+        return 'ethernet'
+    if intf.startswith('wlan'):
+        return 'wireless'
+    logger.critical(f"Unrecognized interface type for '{intf}'")
+    return ''
 
-def get_new_interfaces() -> dict:
-    """ Read any new interface data left in /run/udev/vyos by
-    vyos-net-name-resolve.py for interfaces without a configured hw-id
-    """
-    interfaces = {}
 
-    for intf in os.listdir(vyos_udev_dir):
-        path = os.path.join(vyos_udev_dir, intf)
-        try:
-            with open(path) as f:
-                hwid = f.read().rstrip()
-        except OSError as e:
-            logger.error(f"OSError {e}")
-            continue
-        interfaces[intf] = hwid
+def get_wireless_physical_device(intf: str) -> str:
+    """The phy a wireless interface belongs to."""
+    try:
+        return os.path.basename(
+            os.readlink(f'/sys/class/net/{intf}/phy80211'))
+    except OSError:
+        return ''
 
-    # reverse sort to simplify insertion in config
-    interfaces = {key: value for key, value in sorted(interfaces.items(),
-                                                      reverse=True)}
-    return interfaces
-
-def filter_interfaces(intfs: dict) -> dict:
-    """ Ignore no longer existing interfaces or non-persistent mac addresses
-    """
-    filtered = {}
-
-    for intf, hwid in intfs.items():
-        if not os.path.isdir(os.path.join('/sys/class/net', intf)):
-            continue
-        if not is_persistent(hwid):
-            continue
-        filtered[intf] = hwid
-
-    return filtered
 
 def interface_rescan(config_path: str):
-    """ Read new data and update config file
-    """
-    interfaces = get_new_interfaces()
+    """Add a node for every named interface which does not have one yet."""
+    store = load_store()
 
-    logger.debug(f"interfaces from udev: {interfaces}")
+    # a reserved name whose hardware is absent has nothing to create a node for
+    names = [name for name in sorted(store.get('interfaces', {}))
+             if Path(f'/sys/class/net/{name}').is_dir()]
 
-    interfaces = filter_interfaces(interfaces)
-
-    logger.debug(f"filtered interfaces: {interfaces}")
+    logger.debug(f'named interfaces present: {names}')
 
     try:
-        with open(config_path) as f:
-            config_file = f.read()
+        config_file = Path(config_path).read_text()
     except OSError as e:
-        logger.critical(f"OSError {e}")
+        logger.critical(f'OSError {e}')
         exit(1)
 
     config = ConfigTree(config_file)
+    changed = False
 
-    for intf, hwid in interfaces.items():
-        logger.info(f"Writing '{intf}' '{hwid}' to config file")
+    for intf in names:
         intf_type = get_interface_type(intf)
         if not intf_type:
             continue
+        if config.exists(['interfaces', intf_type, intf]):
+            continue
+
+        logger.info(f"Adding '{intf}' to the configuration")
         if not config.exists(['interfaces', intf_type]):
             config.set(['interfaces', intf_type])
             config.set_tag(['interfaces', intf_type])
-        config.set(['interfaces', intf_type, intf, 'hw-id'], value=hwid)
+        config.set(['interfaces', intf_type, intf])
+        changed = True
 
         if intf_type == 'wireless':
             phy = get_wireless_physical_device(intf)
-            if not phy:
-                continue
-            config.set(['interfaces', intf_type, intf, 'physical-device'],
-                       value=phy)
+            if phy:
+                config.set(['interfaces', intf_type, intf, 'physical-device'],
+                           value=phy)
+
+    if not changed:
+        return
 
     try:
-        with open(config_path, 'w') as f:
-            f.write(config.to_string())
+        Path(config_path).write_text(config.to_string())
     except OSError as e:
-        logger.critical(f"OSError {e}")
+        logger.critical(f'OSError {e}')
+        exit(1)
+
 
 def main():
     global debug
@@ -202,6 +139,7 @@ def main():
              stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)
 
     interface_rescan(configfile)
+
 
 if __name__ == '__main__':
     main()
