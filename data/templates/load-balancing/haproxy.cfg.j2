@@ -252,7 +252,9 @@ backend {{ back }}
 {%             endfor %}
 {%         endif %}
 {%         if back_config.server is vyos_defined %}
-{%             set ssl_back =  'ssl ca-file /run/haproxy/' ~ back_config.ssl.ca_certificate ~ '.pem' if back_config.ssl.ca_certificate is vyos_defined else ('ssl verify none' if back_config.ssl.no_verify is vyos_defined else '') %}
+{#             With checks-only, TLS is used for health checks but forwarded traffic stays untouched (e.g. TCP passthrough to TLS backends) #}
+{%             set ssl_keyword = 'check-ssl' if back_config.ssl.checks_only is vyos_defined else 'ssl' %}
+{%             set ssl_back =  ssl_keyword ~ ' ca-file /run/haproxy/' ~ back_config.ssl.ca_certificate ~ '.pem' if back_config.ssl.ca_certificate is vyos_defined else (ssl_keyword ~ ' verify none' if back_config.ssl.no_verify is vyos_defined else '') %}
 {%             for server, server_config in back_config.server.items() %}
 {%                 set address = server_config.address %}
 {%                 set port = server_config.port %}

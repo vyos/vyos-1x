@@ -288,6 +288,12 @@
                 </properties>
                 <children>
                   #include <include/pki/ca-certificate.xml.i>
+                  <leafNode name="checks-only">
+                    <properties>
+                      <help>Use SSL for health checks only, forward traffic unencrypted</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="no-verify">
                     <properties>
                       <help>Do not attempt to verify SSL certificates for backend servers</help>
