@@ -298,3 +298,9 @@ fi
 if systemctl is-active --quiet vyos-netlinkd; then
     systemctl restart vyos-netlinkd
 fi
+
+# Enable DHCPv4 stuck-RENEW watchdog
+systemctl enable vyos-dhclient-lease-watch.timer
+if [ -d /run/systemd/system ]; then
+    systemctl start vyos-dhclient-lease-watch.timer
+fi
