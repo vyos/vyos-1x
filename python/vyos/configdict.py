@@ -20,6 +20,7 @@ import os
 import json
 
 from vyos.config import Config
+from vyos.config import ConfigDict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
 
@@ -233,37 +234,53 @@ def is_member(conf, interface, intftype=None):
 
 def is_mirror_intf(conf, interface, direction=None):
     """
-    Check whether the passed interface is used for port mirroring. Direction
-    is optional, if not passed it will search all known direction
-    (currently ingress and egress)
+    Check whether the passed interface is used as the mirror or redirect
+    target of other interfaces, including VLAN (vif, vif-s, vif-c)
+    sub-interfaces. Direction is optional, if not passed it will search all
+    known direction (currently ingress and egress)
 
     Returns:
     None -> Interface is not a monitor interface
-    Array() -> This interface is a monitor interface of interfaces
+    dict -> {source interface name : source interface config dict} for every
+            interface mirroring or redirecting into the passed interface
     """
-    from vyos.ifconfig import Section
-
     directions = ['ingress', 'egress']
     if direction not in directions + [None]:
         raise ValueError(f'Unknown interface mirror direction "{direction}"')
 
     direction = directions if direction == None else [direction]
 
-    ret_val = None
-    base = ['interfaces']
+    ret_val = {}
+    interfaces = conf.get_config_dict(
+        ['interfaces'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
 
-    for dir in direction:
-        for iftype in conf.list_nodes(base):
-            iftype_base = base + [iftype]
-            for intf in conf.list_nodes(iftype_base):
-                mirror = iftype_base + [intf, 'mirror', dir, interface]
-                if conf.exists(mirror):
-                    path = ['interfaces', Section.section(intf), intf]
-                    tmp = conf.get_config_dict(path, key_mangling=('-', '_'),
-                                               get_first_key=True)
-                    ret_val = {intf : tmp}
+    def add_source(ifname, config):
+        targets = [config.get('mirror', {}).get(dir) for dir in direction]
+        # redirect only works on ingress
+        if 'ingress' in direction:
+            targets.append(config.get('redirect'))
+        if interface not in targets:
+            return
+        ret_val[ifname] = config
+        # QoS marker, see get_interface_dict()
+        if conf.exists(['qos', 'interface', ifname]):
+            ret_val[ifname]['qos'] = {}
 
-    return ret_val
+    for intfs in interfaces.values():
+        for intf, config in intfs.items():
+            add_source(intf, config)
+            for vif, vif_config in config.get('vif', {}).items():
+                add_source(f'{intf}.{vif}', vif_config)
+            for vif_s, vif_s_config in config.get('vif_s', {}).items():
+                add_source(f'{intf}.{vif_s}', vif_s_config)
+                for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
+                    add_source(f'{intf}.{vif_s}.{vif_c}', vif_c_config)
+
+    return ret_val or None
 
 def has_address_configured(conf, intf):
     """
@@ -561,6 +578,9 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
             dict['ipv6']['address'].update({'interface_identifier_old': interface_identifier})
 
     for vif, vif_config in dict.get('vif', {}).items():
+        # T6393: carry the CLI interfaces tree, see Config.get_config_dict()
+        dict['vif'][vif] = ConfigDict(vif_config)
+        dict['vif'][vif].interfaces_root = dict.interfaces_root
         # Add subinterface name to dictionary
         dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
 
@@ -588,6 +608,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         if dhcpv6: dict['vif'][vif].update({'dhcpv6_options_changed' : {}})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
+        dict['vif_s'][vif_s] = ConfigDict(vif_s_config)
+        dict['vif_s'][vif_s].interfaces_root = dict.interfaces_root
         # Add subinterface name to dictionary
         dict['vif_s'][vif_s].update({'ifname' : f'{ifname}.{vif_s}'})
 
@@ -616,6 +638,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         if dhcpv6: dict['vif_s'][vif_s].update({'dhcpv6_options_changed' : {}})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
+            dict['vif_s'][vif_s]['vif_c'][vif_c] = ConfigDict(vif_c_config)
+            dict['vif_s'][vif_s]['vif_c'][vif_c].interfaces_root = dict.interfaces_root
             # Add subinterface name to dictionary
             dict['vif_s'][vif_s]['vif_c'][vif_c].update({'ifname' : f'{ifname}.{vif_s}.{vif_c}'})
 

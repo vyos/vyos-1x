@@ -138,13 +138,14 @@ def get_certificate_count(interface, cert_type):
     tmp = read_file(f'/run/wpa_supplicant/{interface}_{cert_type}.pem')
     return tmp.count(CERT_BEGIN)
 
-def is_mirrored_to(interface, mirror_if, qdisc) -> bool:
+def is_mirrored_to(interface, mirror_if, qdisc, action='mirror') -> bool:
     """
     Ask tc(8) if we are mirroring traffic to a specific interface.
 
     interface: source interface
     mirror_if: destination where we mirror our data to
     qdisc: must be ffff or 1 for ingress/egress
+    action: mirred action, mirror or redirect
     """
     if qdisc not in ['ffff', '1']:
         raise ValueError()
@@ -152,8 +153,15 @@ def is_mirrored_to(interface, mirror_if, qdisc) -> bool:
     tmp = loads(cmdl(['tc', '-json', 'filter', 'ls', 'dev', interface, 'parent', f'{qdisc}:']))
     # the following syntax looks odd but we need to filter out the first
     # result sets from tc which do not have "options.actions...".
-    tmp = jmespath.search("[?options.actions[0].kind=='mirred'].options.actions[0].{mirred_action: mirred_action, to_dev: to_dev} | [0]", tmp)
-    return bool(dict_search('mirred_action', tmp) == 'mirror' and dict_search('to_dev', tmp) == mirror_if)
+    tmp = jmespath.search(
+        "[?options.actions[0].kind=='mirred'].options.actions[0].{mirred_action: mirred_action, to_dev: to_dev} | [0]",
+        tmp,
+    )
+    return bool(
+        dict_search('mirred_action', tmp) == action
+        and dict_search('to_dev', tmp) == mirror_if
+    )
+
 
 class BasicInterfaceTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
@@ -167,6 +175,7 @@ class BasicInterfaceTest:
         _test_ipv6_pd = False
         _test_ipv6_dhcpc6 = False
         _test_mirror = False
+        _test_redirect = False
         _test_vrf = False
         _base_path = []
 
@@ -198,6 +207,7 @@ class BasicInterfaceTest:
             cls._test_mtu = cli_defined(cls._base_path, 'mtu')
             cls._test_vrf = cli_defined(cls._base_path, 'vrf')
             cls._test_mirror = cli_defined(cls._base_path, 'mirror')
+            cls._test_redirect = cli_defined(cls._base_path, 'redirect')
 
             # Setup mirror interfaces for SPAN (Switch Port Analyzer)
             for span in cls._mirror_interfaces:
@@ -572,6 +582,94 @@ class BasicInterfaceTest:
                 for interface in self._interfaces:
                     self.assertFalse(is_mirrored_to(interface, mirror, 'ffff'))
                     self.assertFalse(is_mirrored_to(interface, mirror, '1'))
+
+        def test_span_mirror_target_created_later(self):
+            if not self._test_mirror:
+                self.skipTest(MSG_TESTCASE_UNSUPPORTED)
+
+            mirror = 'tun21354'
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+            # A mirror target which is neither configured nor existing must
+            # still be rejected
+            for interface in self._interfaces:
+                self.cli_set(
+                    self._base_path + [interface, 'mirror', 'ingress', 'tun4711']
+                )
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            # Mirror into a target which is created in the very same commit
+            for interface in self._interfaces:
+                self.cli_set(self._base_path + [interface, 'mirror', 'ingress', mirror])
+                self.cli_set(self._base_path + [interface, 'mirror', 'egress', mirror])
+            self.cli_set(['interfaces', 'tunnel', mirror, 'encapsulation', 'gre'])
+            self.cli_set(
+                ['interfaces', 'tunnel', mirror, 'source-address', '198.51.100.1']
+            )
+            self.cli_set(['interfaces', 'tunnel', mirror, 'remote', '198.51.100.254'])
+            self.cli_commit()
+
+            # every mirroring interface must have its filters
+            for interface in self._interfaces:
+                self.assertTrue(is_mirrored_to(interface, mirror, 'ffff'))
+                self.assertTrue(is_mirrored_to(interface, mirror, '1'))
+
+            # delete interface mirror and target - check that configuration
+            # from tc is removed
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'mirror'])
+            self.cli_delete(['interfaces', 'tunnel', mirror])
+            self.cli_commit()
+
+            for interface in self._interfaces:
+                self.assertFalse(is_mirrored_to(interface, mirror, 'ffff'))
+                self.assertFalse(is_mirrored_to(interface, mirror, '1'))
+
+        def test_redirect_target_created_later(self):
+            if not self._test_redirect:
+                self.skipTest(MSG_TESTCASE_UNSUPPORTED)
+
+            redirect = 'tun21354'
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+            # A redirect target which is neither configured nor existing must
+            # still be rejected
+            for interface in self._interfaces:
+                self.cli_set(self._base_path + [interface, 'redirect', 'tun4711'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            # Redirect into a target which is created in the very same commit
+            for interface in self._interfaces:
+                self.cli_set(self._base_path + [interface, 'redirect', redirect])
+            self.cli_set(['interfaces', 'tunnel', redirect, 'encapsulation', 'gre'])
+            self.cli_set(
+                ['interfaces', 'tunnel', redirect, 'source-address', '198.51.100.1']
+            )
+            self.cli_set(['interfaces', 'tunnel', redirect, 'remote', '198.51.100.254'])
+            self.cli_commit()
+
+            for interface in self._interfaces:
+                self.assertTrue(
+                    is_mirrored_to(interface, redirect, 'ffff', action='redirect')
+                )
+
+            # delete interface redirect and target - check that configuration
+            # from tc is removed
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'redirect'])
+            self.cli_delete(['interfaces', 'tunnel', redirect])
+            self.cli_commit()
+
+            for interface in self._interfaces:
+                self.assertFalse(
+                    is_mirrored_to(interface, redirect, 'ffff', action='redirect')
+                )
 
         def test_interface_disable(self):
             # Check if description can be added to interface and
