@@ -141,6 +141,7 @@
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
               </completionHelp>
+              <dependency kind="interface" alert="error"/>
             </properties>
             <children>
               <leafNode name="peer">

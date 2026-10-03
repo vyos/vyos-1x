@@ -28,9 +28,7 @@
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
-              <constraint>
-                #include <include/constraint/interface-name.xml.i>
-              </constraint>
+              #include <include/constraint/dependent-error-interface-name.xml.i>
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
