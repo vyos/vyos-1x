@@ -74,12 +74,13 @@ def _load_config_sync_settings() -> dict:
     port = int(secondary.get('port', 443))
     timeout = int(secondary.get('timeout')) if secondary.get('timeout') else None
     # config-sync talks to a remote secondary over HTTPS. TLS verification is
-    # off by default because secondary nodes typically present a self-signed
-    # certificate; an operator can opt in (True, or a CA bundle path) once the
-    # runtime config exposes it.
+    # off because secondary nodes typically present a self-signed certificate.
+    # It is hard-coded rather than read from the runtime config: that config
+    # has no key mangling and its leaf values are strings, so mapping a CLI
+    # option to a bool or CA bundle path belongs with the CLI work.
     # TODO(T9396): expose ca-certificate / peer-fingerprint under
     # service config-sync secondary
-    verify_tls = secondary.get('verify_tls', False)
+    verify_tls = False
 
     if not address or not key:
         raise opmode.UnconfiguredObject(

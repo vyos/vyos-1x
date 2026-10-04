@@ -16,13 +16,30 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import warnings
 import urllib3
 import requests
+from contextlib import contextmanager
 from typing import Optional
 from dataclasses import dataclass
 
 from vyos.version import get_version
 from vyos.template import bracketize_ipv6
+
+
+@contextmanager
+def _suppress_insecure_warning(enabled: bool):
+    """Locally ignore urllib3's InsecureRequestWarning when enabled.
+
+    Uses warnings.catch_warnings() so the process-wide filters are restored
+    on exit instead of being changed globally.
+    """
+    if not enabled:
+        yield
+        return
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', urllib3.exceptions.InsecureRequestWarning)
+        yield
 
 
 class ApiError(Exception):
@@ -55,7 +72,20 @@ class ApiClientConfig:
     #   True       - verify against the system CA store (secure default)
     #   False      - disable verification (insecure; opt-in only)
     #   "<path>"   - verify against a custom CA bundle file/dir
+    # Strings are always treated as paths: pass a real bool, not "false".
     verify_tls: bool | str = True
+
+    def __post_init__(self):
+        # requests treats an empty string as falsy and silently disables
+        # verification, so only accept a bool or a non-empty path string.
+        value = self.verify_tls
+        if isinstance(value, bool):
+            return
+        if isinstance(value, str) and value:
+            return
+        raise ValueError(
+            f'verify_tls must be a bool or a non-empty CA bundle path, got {value!r}'
+        )
 
 
 class ApiClient:
@@ -81,11 +111,6 @@ class ApiClient:
 
         self._session = requests.Session()
         self._session.headers.update(self._DEFAULT_HEADERS)
-
-        # Only silence the insecure-request warning when verification has been
-        # explicitly disabled. A CA bundle path or True must keep warnings on.
-        if config.verify_tls is False:
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     @property
     def base_url(self) -> str:
@@ -121,17 +146,26 @@ class ApiClient:
 
         url = f'{self.base_url}{endpoint}'
 
+        # Only silence the insecure-request warning for this call, and only
+        # when verification has been explicitly disabled.
+        insecure = self._cfg.verify_tls is False
+
         try:
-            resp = self._session.post(
-                url,
-                data=json.dumps(body),
-                params=params,
-                timeout=self._cfg.timeout,
-                verify=self._cfg.verify_tls,
-            )
+            with _suppress_insecure_warning(insecure):
+                resp = self._session.post(
+                    url,
+                    data=json.dumps(body),
+                    params=params,
+                    timeout=self._cfg.timeout,
+                    verify=self._cfg.verify_tls,
+                )
         except requests.exceptions.Timeout as e:
             raise ApiTransportError(f'Request timed out: {e}') from e
         except requests.exceptions.RequestException as e:
+            raise ApiTransportError(f'Request failed: {e}') from e
+        except OSError as e:
+            # e.g. requests' cert_verify on a missing CA bundle path. Must stay
+            # after the RequestException handlers: those subclass OSError.
             raise ApiTransportError(f'Request failed: {e}') from e
 
         if not resp.ok:
