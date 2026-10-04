@@ -68,18 +68,23 @@ print(json.dumps({'uid': os.geteuid(), 'gid': os.getegid(),
 '''
 
 class TestConfigdInit(unittest.TestCase):
+    """Verify configd startup and its local socket access boundary."""
+
     def setUp(self):
+        """Record the daemon's initial state for cleanup."""
         self.running_state = is_systemd_service_running(service_name)
         # always forward to base class
         super().setUp()
 
     def tearDown(self):
+        """Stop configd if it was not running before the test."""
         if not self.running_state:
             cmdl(['systemctl', 'stop', service_name], sudo=True)
         # always forward to base class
         super().tearDown()
 
     def test_configd_init(self):
+        """Verify that configd can start and remains active."""
         if not self.running_state:
             cmdl(['systemctl', 'start', service_name], sudo=True)
             # allow time for init to succeed/fail
@@ -87,6 +92,7 @@ class TestConfigdInit(unittest.TestCase):
         self.assertTrue(is_systemd_service_running(service_name))
 
     def test_configd_socket_permissions(self):
+        """Verify root-only socket access with each account's credentials."""
         if not self.running_state:
             cmdl(['systemctl', 'start', service_name], sudo=True)
 
