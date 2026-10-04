@@ -309,10 +309,14 @@ if __name__ == '__main__':
     context = zmq.Context()
     socket = context.socket(zmq.REP)
 
-    # Set the right permissions on the socket, then change it back
-    o_mask = os.umask(0)
-    socket.bind(SOCKET_PATH)
-    os.umask(o_mask)
+    # Create the configuration daemon's control socket owner-only.
+    # Apply the mask when libzmq creates the inode, before any client can
+    # connect, and restore the process mask even if the bind fails.
+    old_mask = os.umask(0o177)
+    try:
+        socket.bind(SOCKET_PATH)
+    finally:
+        os.umask(old_mask)
 
     cfg_group = grp.getgrnam(CFG_GROUP)
     os.setgid(cfg_group.gr_gid)
