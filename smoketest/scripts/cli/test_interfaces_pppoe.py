@@ -406,6 +406,13 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(pppoe_server_path + ['default-ipv6-pool'])
         self.cli_commit()
 
+        # Restore the BRAS IPv6 pool for the remaining tests - also when this
+        # test fails. Cleanups run after tearDown(), so all clients are gone
+        def restore_ipv6_pool():
+            self.cli_set(pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
+            self.cli_commit()
+        self.addCleanup(restore_ipv6_pool)
+
         for interface in self._interfaces:
             (user, passwd) = self.u_p_dict[interface]
 
@@ -421,8 +428,10 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(wait_for_interface(interface),
                             msg=f'Interface {interface} not found after {connect_timeout} seconds!')
 
-            # The BRAS has no IPv6 to offer, so the link carries none
-            self.assertFalse(get_interface_addresses(interface, 'inet6'))
+            # The BRAS has no IPv6 to offer, so the link carries no global
+            # address. IPV6CP is still negotiated, thus a link-local address
+            # may show up at any time
+            self.assertFalse(has_global_ipv6_address(interface))
 
         # Changing an option that does not require a reconnect updates the
         # established session in the very commit that changes it - this is
@@ -439,10 +448,6 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         for process in process_iter(['name', 'ppid']):
             if process.info['name'] == 'rdisc6':
                 self.assertEqual(process.info['ppid'], 1)
-
-        # Restore the BRAS IPv6 pool for the remaining tests
-        self.cli_set(pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
-        self.cli_commit()
 
     def test_pppoe_options(self):
         # Verify access-concentrator and service-name CLI options
