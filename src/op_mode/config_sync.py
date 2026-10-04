@@ -16,6 +16,8 @@
 
 import sys
 import typing
+import warnings
+import urllib3
 from pathlib import Path
 
 from vyos import opmode
@@ -293,6 +295,12 @@ def show_sync_diff(
 
 
 if __name__ == '__main__':
+    # This one-shot op-mode process deliberately connects to the secondary
+    # without TLS verification (verify_tls=False) until T9396. The filter is
+    # scoped to this process only; the library never touches warning filters.
+    warnings.filterwarnings(
+        'ignore', category=urllib3.exceptions.InsecureRequestWarning
+    )
     try:
         res = opmode.run(sys.modules[__name__])
         if res:

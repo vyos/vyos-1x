@@ -16,30 +16,12 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-import warnings
-import urllib3
 import requests
-from contextlib import contextmanager
 from typing import Optional
 from dataclasses import dataclass
 
 from vyos.version import get_version
 from vyos.template import bracketize_ipv6
-
-
-@contextmanager
-def _suppress_insecure_warning(enabled: bool):
-    """Locally ignore urllib3's InsecureRequestWarning when enabled.
-
-    Uses warnings.catch_warnings() so the process-wide filters are restored
-    on exit instead of being changed globally.
-    """
-    if not enabled:
-        yield
-        return
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', urllib3.exceptions.InsecureRequestWarning)
-        yield
 
 
 class ApiError(Exception):
@@ -96,6 +78,8 @@ class ApiClient:
     - consistent error handling + typed exceptions
     - secure defaults (verify_tls=True); deployments using self-signed
       certificates opt into verify_tls=False or supply a CA bundle path
+    - no warning-filter changes: callers that disable verification are
+      responsible for handling urllib3's InsecureRequestWarning
     """
 
     _DEFAULT_HEADERS = {
@@ -146,19 +130,14 @@ class ApiClient:
 
         url = f'{self.base_url}{endpoint}'
 
-        # Only silence the insecure-request warning for this call, and only
-        # when verification has been explicitly disabled.
-        insecure = self._cfg.verify_tls is False
-
         try:
-            with _suppress_insecure_warning(insecure):
-                resp = self._session.post(
-                    url,
-                    data=json.dumps(body),
-                    params=params,
-                    timeout=self._cfg.timeout,
-                    verify=self._cfg.verify_tls,
-                )
+            resp = self._session.post(
+                url,
+                data=json.dumps(body),
+                params=params,
+                timeout=self._cfg.timeout,
+                verify=self._cfg.verify_tls,
+            )
         except requests.exceptions.Timeout as e:
             raise ApiTransportError(f'Request timed out: {e}') from e
         except requests.exceptions.RequestException as e:
