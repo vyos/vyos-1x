@@ -79,6 +79,10 @@ def routing_policy_find(key, dictionary):
                 for a, b in v.items():
                     if a in ['import', 'export']:
                         yield b
+                    elif key == 'route_map' and isinstance(b, dict):
+                        # T9394: Currently, only BGP VPN/VRF policies nest dictionaries under route-map:
+                        # route-map -> vpn/vrf -> import/export.
+                        yield from routing_policy_find(key, {key: b})
             else:
                 yield v
         elif isinstance(v, dict):
