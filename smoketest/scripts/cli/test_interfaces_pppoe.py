@@ -537,6 +537,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # T6991/T9054: The PPPoE default route must not be withdrawn from FRR
         # when "protocols static" is deleted - only the statically configured
         # routes must disappear, the PPPoE-sourced default route must stay.
+        # Both IPv4 and IPv6 default routes are rendered by vyos.frrender, so
+        # they also survive any other FRR re-render.
         interface = self._interfaces[0]
         (user, passwd) = self.u_p_dict[interface]
         static_base_path = ['protocols', 'static']
@@ -544,14 +546,17 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + [interface, 'authentication', 'username', user])
         self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
         self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+        self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
         self.cli_commit()
 
         self.assertTrue(wait_for_interface(interface),
                         msg=f'Interface {interface} not found after {connect_timeout} seconds!')
 
         default_route = rf'ip route 0.0.0.0/0 {interface} tag 210'
+        default_route6 = rf'ipv6 route ::/0 {interface} tag 210'
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
 
         # Add an unrelated static route - this is what triggers "protocols
         # static" to exist on the CLI in the first place
@@ -560,6 +565,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
         self.assertIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
 
         # Now delete "protocols static" entirely - the PPPoE default route
@@ -570,6 +576,15 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('')
         self.assertNotIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
+
+        # Deleting the PPPoE interface withdraws both default routes
+        self.cli_delete(base_path + [interface])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('')
+        self.assertNotIn(default_route, frrconfig)
+        self.assertNotIn(default_route6, frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

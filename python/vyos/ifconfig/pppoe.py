@@ -19,7 +19,6 @@ from vyos.utils.assertion import assert_range
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
 from vyos.utils.process import get_wrapper
-from vyos.utils.network import get_interface_config
 from vyos.utils.network import mac2eui64
 
 @Interface.register
@@ -50,31 +49,6 @@ class PPPoEIf(Interface):
             'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra_defrtr',
         },
     }}
-
-    def _remove_routes(self, vrf=None):
-        # Always delete default routes when interface is removed
-        vrf_cmd = ['-c', f'vrf {vrf}'] if vrf else []
-        self._cmdl(['vtysh', '-c', 'conf t'] + vrf_cmd + ['-c', f'no ip route 0.0.0.0/0 {self.ifname} tag 210'])
-        self._cmdl(['vtysh', '-c', 'conf t'] + vrf_cmd + ['-c', f'no ipv6 route ::/0 {self.ifname} tag 210'])
-
-    def remove(self):
-        """
-        Remove interface from operating system. Removing the interface
-        deconfigures all assigned IP addresses and clear possible DHCP(v6)
-        client processes.
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> i = Interface('pppoe0')
-        >>> i.remove()
-        """
-        vrf = None
-        tmp = get_interface_config(self.ifname)
-        if 'master' in tmp:
-            vrf = tmp['master']
-        self._remove_routes(vrf)
-
-        # remove bond master which places members in disabled state
-        super().remove()
 
     def _create(self):
         # we cannot create this interface as it is managed outside
@@ -141,22 +115,14 @@ class PPPoEIf(Interface):
 
         super().update(config)
 
-        # generate proper configuration string when VRFs are in use
-        vrf = []
-        if 'vrf' in config:
-            tmp = config['vrf']
-            vrf = ['-c', f'vrf {tmp}']
+        vrf = config.get('vrf')
 
         # learn default router in Router Advertisement.
         tmp = '0' if 'no_default_route' in config else '1'
         self.set_accept_ra_defrtr(tmp)
 
-        if 'no_default_route' not in config:
-            # Set default route(s) pointing to PPPoE interface
-            distance = config['default_route_distance']
-            self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ip route 0.0.0.0/0 {self.ifname} tag 210 {distance}'])
-            if 'ipv6' in config:
-                self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ipv6 route ::/0 {self.ifname} tag 210 {distance}'])
+        # Default route(s) pointing to the PPPoE interface are rendered by
+        # vyos.frrender.get_pppoe_interfaces() at the end of every commit
 
         # Kick a Router Solicitation when IPv6 is up. This is best effort -
         # the peer may answer late or not at all
@@ -164,7 +130,7 @@ class PPPoEIf(Interface):
             # systemd-run(1) only asks PID 1 to start the transient unit, so
             # rdisc6(8) does not inherit our VRF context - it has to be entered
             # inside the unit itself
-            wrapper = get_wrapper(config['vrf'] if 'vrf' in config else None, None)
+            wrapper = get_wrapper(vrf, None)
             description = f'VyOS IPv6 Router Solicitation on {self.ifname}'
             cmdl(['systemd-run', '--quiet', '--collect',
                   f'--description={description}'] + wrapper +
