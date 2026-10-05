@@ -41,6 +41,18 @@ verbose=1
 {% if idle_timeout is vyos_defined %}
 idle-timeout={{ idle_timeout }}
 {% endif %}
+{% if lease_time is vyos_defined %}
+lease-time={{ lease_time }}
+{% endif %}
+{% if max_lease_time is vyos_defined %}
+max-lease-time={{ max_lease_time }}
+{% endif %}
+{% if renew_time is vyos_defined %}
+renew-time={{ renew_time }}
+{% endif %}
+{% if rebind_time is vyos_defined %}
+rebind-time={{ rebind_time }}
+{% endif %}
 {% if lua_file is vyos_defined %}
 lua-file={{ lua_file }}
 {% endif %}
