@@ -157,3 +157,33 @@ def get_secure_boot_state() -> bool:
         return False
     tmp = cmdl(['mokutil', '--sb-state'], expect=[0, 255])
     return bool('enabled' in tmp)
+
+def get_secure_boot_certificates(kernel: str='/boot/vmlinuz') -> list:
+    """
+    Return the signature certificates of the given Linux Kernel image as a
+    list of dictionaries with the keys "issuer" and "subject". Returns an
+    empty list if the image is unsigned or the signature could not be read.
+    """
+    from vyos.utils.process import cmdl
+    try:
+        tmp = cmdl(['sbverify', '--list', kernel])
+    except OSError:
+        return []
+
+    certificates = []
+    subject = None
+    in_certificates = False
+    for line in tmp.splitlines():
+        line = line.strip()
+        if line.startswith('signature '):
+            in_certificates = False
+        elif line == 'image signature certificates:':
+            in_certificates = True
+        elif in_certificates and line.startswith('- subject:'):
+            subject = line.removeprefix('- subject:').strip()
+        elif in_certificates and line.startswith('issuer:') and subject:
+            issuer = line.removeprefix('issuer:').strip()
+            certificates.append({'issuer': issuer, 'subject': subject})
+            subject = None
+
+    return certificates
