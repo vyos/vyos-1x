@@ -8,6 +8,12 @@
         </properties>
         <command>${vyos_op_scripts_dir}/secure_boot.py show</command>
         <children>
+          <leafNode name="detail">
+            <properties>
+              <help>Show Linux Kernel signature certificate issuer and subject</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/secure_boot.py show_detail</command>
+          </leafNode>
           <leafNode name="keys">
             <properties>
               <help>Show enrolled certificates</help>
