@@ -568,6 +568,31 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         tmp = cmdl(['podman', 'exec', '-it', cont_name, 'id', '-g'], sudo=True)
         self.assertEqual(tmp, gid)
 
+    def test_tmpfs_chown(self):
+        cont_name = 'tmpfs-test'
+        uid = '1001'
+        gid = '100'
+        # /home exists in the busybox image and is not owned by the container
+        # user: without chown the tmpfs mounted over it is not writable
+        destination = '/home'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'uid', uid])
+        self.cli_set(base_path + ['name', cont_name, 'gid', gid])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        self.cli_set(base_path + ['name', cont_name, 'tmpfs', 'home', 'destination', destination])
+        self.cli_set(base_path + ['name', cont_name, 'tmpfs', 'home', 'size', '1'])
+        self.cli_set(base_path + ['name', cont_name, 'tmpfs', 'home', 'chown'])
+        self.cli_commit()
+
+        self.assertTrue(self.is_running(cont_name))
+
+        # verify
+        tmp = cmdl(['podman', 'exec', '-it', cont_name, 'stat', '-c', '%u:%g', destination], sudo=True)
+        self.assertEqual(tmp, f'{uid}:{gid}')
+        cmdl(['podman', 'exec', '-it', cont_name, 'touch', f'{destination}/test'], sudo=True)
+
     def test_api_socket(self):
         base_name = 'api-test'
         container_list = range(1, 5)

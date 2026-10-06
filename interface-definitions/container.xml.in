@@ -494,6 +494,12 @@
                   <constraintErrorMessage>Container tmpfs size must be between 1 and 65535 MB</constraintErrorMessage>
                 </properties>
               </leafNode>
+              <leafNode name="chown">
+                <properties>
+                  <help>Change ownership of the tmpfs mount to the container user (UID/GID)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
           <tagNode name="volume">
