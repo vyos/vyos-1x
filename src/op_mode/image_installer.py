@@ -32,6 +32,13 @@ from os import readlink
 from os import getpid
 from os import getppid
 from os import sync
+from os import chmod
+from os import lchown
+from os import lstat
+from os import walk
+from stat import S_IFMT
+from stat import S_IMODE
+from stat import S_ISLNK
 from json import loads
 from json import dumps
 from typing import Union
@@ -349,11 +356,11 @@ def search_previous_installation(disks: list[str]) -> None:
 
     if not encrypted:
         if legacy_bind_mount:
-            copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+            config_src = f'{mnt_tmp}/boot/{image_name}/rw/config'
         else:
-            copytree(
-                f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config
-            )
+            config_src = f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config'
+        copytree(config_src, mnt_config, symlinks=True)
+        copy_ownership(config_src, mnt_config)
     else:
         copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
 
@@ -374,10 +381,38 @@ def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
     chown(dst, user=st.st_uid)
 
 
+def copy_ownership(src: str, dst: str) -> None:
+    """Give every entry of dst the owner, group and mode of the same path in src
+
+    copytree() preserves permissions but not ownership: directories and
+    symlinks are created by root, and copy_preserve_owner() only restores the
+    owner of regular files - their group is lost and chown() clears the
+    setuid/setgid bits. Services running as a non-root user can then no longer
+    write to their directories under /config after an image upgrade.
+    Only paths present in both trees and of the same type are touched.
+    """
+    for root, dirs, files in walk(src):
+        for name in ['.'] + dirs + files if root == src else dirs + files:
+            src_path = Path(root, name)
+            dst_path = Path(dst, src_path.relative_to(src))
+            try:
+                src_st = lstat(src_path)
+                dst_st = lstat(dst_path)
+            except FileNotFoundError:
+                continue
+            if S_IFMT(src_st.st_mode) != S_IFMT(dst_st.st_mode):
+                continue
+            lchown(dst_path, src_st.st_uid, src_st.st_gid)
+            # after chown, which clears setuid/setgid on files
+            if not S_ISLNK(src_st.st_mode):
+                chmod(dst_path, S_IMODE(src_st.st_mode))
+
+
 def copy_previous_installation_data(target_dir: str) -> None:
     if Path('/mnt/config').exists():
-        copytree('/mnt/config', f'{target_dir}{DIR_CONFIG}',
+        copytree('/mnt/config', f'{target_dir}{DIR_CONFIG}', symlinks=True,
                  dirs_exist_ok=True)
+        copy_ownership('/mnt/config', f'{target_dir}{DIR_CONFIG}')
     if Path('/mnt/ssh').exists():
         copytree('/mnt/ssh', f'{target_dir}/etc/ssh',
                  dirs_exist_ok=True)
@@ -1358,6 +1393,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 chmod_2775(target_config_dir)
                 copytree(f'{DIR_CONFIG}/', target_config_dir, symlinks=True,
                         copy_function=copy_preserve_owner, dirs_exist_ok=True)
+                copy_ownership(f'{DIR_CONFIG}/', target_config_dir)
 
                 # Record information from which image we upgraded to the new one.
                 # This can be used for a future automatic rollback into the old image.
