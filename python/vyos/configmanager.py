@@ -29,6 +29,7 @@ from vyos.configtree import DiffTree
 from vyos.referencetree import ReferenceTree
 from vyos.dependentverify import removed_dependency_value_paths_of_kind
 from vyos.dependentverify import dependent_value_paths_of_kind
+from vyos.dependentverify import concatenate_vif
 
 from vyos.utils.system import load_as_module
 from vyos.defaults import directories
@@ -163,6 +164,10 @@ class ConfigManager:
             'interface', self.reference_tree, self.session_config, self.diff_tree
         )
 
+        removed_dependency_value_paths, orig_value = concatenate_vif(
+            self.reference_tree, removed_dependency_value_paths
+        )
+
         LOG.debug(f'removed_dependency_value_paths: {removed_dependency_value_paths}')
 
         if not removed_dependency_value_paths:
@@ -178,7 +183,8 @@ class ConfigManager:
             return
 
         for vals, path in removed_dependency_value_paths:
-            owner = self.reference_tree.get_owner(path)
+            rpath = self.reference_tree.reference_path_from_config_path(path)
+            owner = self.reference_tree.get_owner(rpath)
             if owner is None:
                 LOG.error(f'Path {path} has no owner')
                 continue
@@ -190,16 +196,22 @@ class ConfigManager:
             rdep_err = component.rdep_error
             for dependent_vals, dependent_path in errors:
                 for v in set(vals) & set(dependent_vals):
+                    ov = orig_value.get(v, v)
+                    path_str = ' '.join(path + [ov])
+                    dpath_str = ' '.join(dependent_path)
                     rdep_err.append(
-                        f'\nNode:\n {path + [v]}\nis required by:\n {dependent_path}\n'
+                        f'\nNode:\n "{path_str}"\nis required by:\n "{dpath_str}"\n'
                     )
 
             warnings = dependent_value_paths.get('warning', [])
             rdep_warn = component.rdep_warning
             for dependent_vals, dependent_path in warnings:
                 for v in set(vals) & set(dependent_vals):
+                    ov = orig_value.get(v, v)
+                    path_str = ' '.join(path + [ov])
+                    dpath_str = ' '.join(dependent_path)
                     rdep_warn.append(
-                        f'removed node:\n {path + [v]}\nis referenced by:\n {dependent_path}\n'
+                        f'removed node:\n "{path_str}"\nis referenced by:\n "{dpath_str}"\n'
                     )
 
     def clear_rdep(self):
