@@ -2126,5 +2126,70 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' mpls bgp l3vpn-multi-domain-switching', frrconfig)
 
+    def test_bgp_107_default_local_pref_default_value(self):
+        # T9404: FRR does not print "bgp default local-preference 100" in its
+        # running config because 100 is the default. If we render the line
+        # anyway, frr-reload finds it missing on every reload and sends it
+        # again, and FRR runs "clear bgp * soft in" for each of those. So the
+        # default value must not be rendered.
+        #
+        # This reads the generated FRR config file instead of getFRRconfig():
+        # FRR never prints the line for 100, so vtysh cannot tell if we render it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        local_pref = ' bgp default local-preference'
+
+        # the XML default (100) is always in the config dict, but it is the
+        # default, so nothing is rendered when local-pref is not configured
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(local_pref, frrconfig)
+
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', '100'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(local_pref, frrconfig)
+
+        # a value other than the default is still rendered and applied
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', '200'])
+        self.cli_commit()
+
+        self.assertIn(f'{local_pref} 200', read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'{local_pref} 200', frrconfig)
+
+        # back to the default value, FRR must have the default again
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', '100'])
+        self.cli_commit()
+
+        self.assertNotIn(local_pref, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(local_pref, frrconfig)
+
+        # the VRF instance has the same default: 100 is not rendered in the
+        # VRF block, 200 is rendered in the VRF block only
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        vrf_local_pref = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'parameters', 'default', 'local-pref']
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(vrf_local_pref + ['100'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn(local_pref, frrconfig)
+
+        self.cli_set(vrf_local_pref + ['200'])
+        self.cli_commit()
+
+        # the global block comes first in the file, the VRF block after it
+        global_block, _, vrf_block = read_file(frr_conf).partition(vrf_header)
+        self.assertIn(f'router bgp {ASN}', global_block)
+        self.assertNotIn(local_pref, global_block)
+        self.assertIn(f'{local_pref} 200', vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(f'{local_pref} 200', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

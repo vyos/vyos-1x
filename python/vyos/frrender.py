@@ -297,6 +297,12 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                    no_tag_node_value_mangle=True,
                                    with_recursive_defaults=True)
         bgp['dependent_vrfs'] = {}
+        # The XML default of "parameters default local-pref" is added to the
+        # dict, the template cannot query it while rendering. Only the node
+        # "parameters default" is asked for, not the whole BGP tree.
+        tmp = conf.get_config_defaults(bgp_cli_path + ['parameters', 'default'],
+                                       key_mangling=('-', '_'), get_first_key=True)
+        bgp['xml_default_local_pref'] = tmp.get('local_pref')
         dict.update({'bgp' : bgp})
     elif conf.exists_effective(bgp_cli_path):
         dict.update({'bgp' : {'deleted' : '', 'dependent_vrfs' : {}}})
@@ -522,6 +528,8 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                 # merge in remaining default values
                 vrf_config['protocols']['bgp'] = config_dict_merge(default_values,
                                                                    vrf_config['protocols']['bgp'])
+                vrf_config['protocols']['bgp']['xml_default_local_pref'] = dict_search(
+                    'parameters.default.local_pref', default_values)
 
                 # Add this BGP VRF instance as dependency into the default VRF
                 if 'bgp' in dict:
