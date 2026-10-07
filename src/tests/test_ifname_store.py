@@ -134,6 +134,86 @@ class TestReplacedHardware(unittest.TestCase):
         self.assertEqual(new_store['interfaces']['eth0'], f'ID_PATH={self.PATH}')
 
 
+class TestMovedHardware(unittest.TestCase):
+    """A card carries its name with it. Matching on the slot alone would give
+    the name - and the address configured under it - to whatever took the old
+    position, which is how a card added for another purpose ended up on
+    another segment's address.
+    """
+
+    A = 'aa:aa:aa:aa:aa:01'
+    B = 'bb:bb:bb:bb:bb:02'
+    C = 'cc:cc:cc:cc:cc:03'
+
+    def setUp(self):
+        self.store = store_of({'eth0': 'pci-0000:00:02.0',
+                               'eth1': 'pci-0000:00:03.0'},
+                              {'eth0': self.A, 'eth1': self.B})
+
+    @staticmethod
+    def _at(slot, mac):
+        return dev('?', f'pci-0000:00:{slot:02x}.0', mac)
+
+    def test_card_moved_to_another_slot_keeps_its_name(self):
+        _, store, report = resolve([self._at(4, self.A), self._at(3, self.B)],
+                                    self.store)
+        self.assertEqual(report['moved'], {'eth0': self.A})
+        self.assertEqual(report['replaced'], {})
+        self.assertEqual(store['interfaces']['eth0'], 'ID_PATH=pci-0000:00:04.0')
+
+    def test_a_new_card_in_the_vacated_slot_does_not_inherit_the_name(self):
+        # the shape reported from the field, with the original card still in
+        # the box: it keeps eth0, and the newcomer is named as new hardware
+        _, store, report = resolve(
+            [self._at(4, self.A), self._at(3, self.B), self._at(2, self.C)],
+            self.store)
+        self.assertEqual(report['moved'], {'eth0': self.A})
+        self.assertEqual(report['bootstrapped'], {'eth2': self.C})
+        self.assertEqual(report['replaced'], {})
+        self.assertEqual(store['interfaces']['eth0'], 'ID_PATH=pci-0000:00:04.0')
+
+    def test_two_known_cards_swapping_slots_stay_with_their_slots(self):
+        # Both cards are on record, so this is a rearrangement within the set
+        # the store already describes - and the store is what decides names.
+        # The same path covers an operator swapping two entries by hand, which
+        # has to take effect or the map would not be authoritative at all.
+        _, store, report = resolve([self._at(3, self.A), self._at(2, self.B)],
+                                    self.store)
+        self.assertEqual(report['moved'], {})
+        self.assertEqual(report['matched'], {'eth0': self.B, 'eth1': self.A})
+        self.assertEqual(store['interfaces']['eth0'], 'ID_PATH=pci-0000:00:02.0')
+        self.assertEqual(store['hardware']['eth0'], self.B)
+
+    def test_editing_the_slot_map_by_hand_takes_effect(self):
+        # what `make test-ifname` does: swap the two entries in 'interfaces'
+        # and leave 'hardware' alone. Following the recorded address here
+        # would quietly undo the edit.
+        store = store_of({'eth0': 'pci-0000:00:03.0',
+                          'eth1': 'pci-0000:00:02.0'},
+                         {'eth0': self.A, 'eth1': self.B})
+        _, _, report = resolve([self._at(2, self.A), self._at(3, self.B)],
+                                store)
+        self.assertEqual(report['matched'], {'eth0': self.B, 'eth1': self.A})
+        self.assertEqual(report['moved'], {})
+
+    def test_identity_wins_over_the_slot(self):
+        # both rules could fire: the card that owns the name sits elsewhere
+        # while another card occupies its recorded slot. The card wins.
+        _, _, report = resolve(
+            [self._at(4, self.A), self._at(2, self.C), self._at(3, self.B)],
+            self.store)
+        self.assertIn('eth0', report['moved'])
+        self.assertNotIn('eth0', report['replaced'])
+
+    def test_gone_card_still_falls_back_to_the_slot_and_is_reported(self):
+        # the original is nowhere to be found, so nothing distinguishes an
+        # in-place replacement from an unrelated card - the slot decides, loudly
+        _, _, report = resolve([self._at(2, self.C), self._at(3, self.B)],
+                                self.store)
+        self.assertEqual(report['replaced'], {'eth0': self.C})
+        self.assertEqual(report['moved'], {})
+
+
 class TestStoreIO(unittest.TestCase):
     @staticmethod
     def _config_dir(d):
