@@ -121,6 +121,13 @@ def permanent_mac(ifname: str, sys_class_net: str = '/sys/class/net') -> str:
         return ''
 
 
+def recorded_mac(ifname: str) -> str:
+    """The address naming recorded for this name. It outlives a dataplane
+    taking the port over, which leaves nothing in sysfs to read it from.
+    """
+    return load_store().get('hardware', {}).get(ifname, '')
+
+
 def is_wireless(ifname: str, sys_class_net: str = '/sys/class/net') -> bool:
     """Checked via sysfs, not via the - possibly still probe-order - name."""
     return (Path(sys_class_net) / ifname / 'phy80211').exists()

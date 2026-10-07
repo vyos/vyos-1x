@@ -114,7 +114,6 @@ class EthernetIf(Interface):
             'ring_buffer.rx',
             'ring_buffer.tx',
             'speed',
-            'hw_id',
         ]
         return bond_allowed_sections
 
