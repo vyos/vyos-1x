@@ -160,8 +160,8 @@ def read_properties(ifname: str) -> dict:
 def discover_devices(sys_class_net: str = '/sys/class/net') -> list:
     """Every interface backed by independently-addressable hardware.
 
-    Skips virtual interfaces, enslaved ones, SR-IOV virtual functions and
-    hypervisor VF datapaths - the latter share another interface's MAC.
+    Skips virtual interfaces, SR-IOV virtual functions and hypervisor VF
+    datapaths - the latter share another interface's MAC.
 
     Wireless is skipped too, and not because it is uninteresting: a radio's
     interfaces are created from the configuration on a given phy, and every
@@ -178,7 +178,11 @@ def discover_devices(sys_class_net: str = '/sys/class/net') -> list:
     for entry in sorted(net_dir.iterdir()):
         if not (entry / 'device').exists():
             continue
-        if (entry / 'master').exists():
+        # a VF datapath is enslaved to the interface it accelerates, which is
+        # a device in its own right. A bridge, bond or VRF is not, and its
+        # members stay real hardware while they are in it.
+        master = entry / 'master'
+        if master.exists() and (master / 'device').exists():
             continue
         if (entry / 'device' / 'physfn').exists():
             continue

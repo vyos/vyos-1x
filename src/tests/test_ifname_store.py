@@ -684,10 +684,10 @@ class TestPermanentMac(unittest.TestCase):
 
 class TestDiscoverDevices(unittest.TestCase):
     """Only real, independently-addressable hardware is a naming candidate.
-    Virtual interfaces have no bus device; enslaved interfaces, SR-IOV VFs
-    and hypervisor VF datapaths are acceleration children that share another
-    interface's MAC, so naming them would invent a second interface for one
-    physical port.
+    Virtual interfaces have no bus device; SR-IOV VFs and hypervisor VF
+    datapaths are acceleration children sharing another interface's MAC, so
+    naming them would invent a second interface for one physical port. Being
+    a member of a bridge, bond or VRF says nothing about the hardware.
     """
 
     def setUp(self):
@@ -701,7 +701,8 @@ class TestDiscoverDevices(unittest.TestCase):
             patch.start()
             self.addCleanup(patch.stop)
 
-        def make(name, mac=None, has_device=True, enslaved=False, is_vf=False):
+        def make(name, mac=None, has_device=True, enslaved=False, is_vf=False,
+                 master_is_device=False):
             path = os.path.join(self.tmp, name)
             os.mkdir(path)
             if has_device:
@@ -713,6 +714,8 @@ class TestDiscoverDevices(unittest.TestCase):
             if enslaved:
                 master = os.path.join(self.tmp, f'{name}_master')
                 os.mkdir(master)
+                if master_is_device:
+                    os.mkdir(os.path.join(master, 'device'))
                 os.symlink(master, os.path.join(path, 'master'))
             if mac:
                 with open(os.path.join(path, 'address'), 'w') as f:
@@ -723,6 +726,8 @@ class TestDiscoverDevices(unittest.TestCase):
         make('br0', mac='aa:aa:aa:aa:aa:99', has_device=False)
         make('lo', has_device=False)
         make('eth8', mac='aa:aa:aa:aa:aa:08', enslaved=True)
+        make('eth7', mac='aa:aa:aa:aa:aa:07', enslaved=True,
+             master_is_device=True)
         make('eth9', mac='aa:aa:aa:aa:aa:09', is_vf=True)
         make('vf_eth0', mac='aa:aa:aa:aa:aa:00')
 
@@ -730,14 +735,21 @@ class TestDiscoverDevices(unittest.TestCase):
         return {d['name'] for d in discover_devices(self.tmp)}
 
     def test_only_physical_independent_interfaces(self):
-        self.assertEqual(self._names(), {'eth0', 'eth1'})
+        self.assertEqual(self._names(), {'eth0', 'eth1', 'eth8'})
 
     def test_virtual_interfaces_excluded(self):
         self.assertNotIn('br0', self._names())
         self.assertNotIn('lo', self._names())
 
-    def test_enslaved_interface_excluded(self):
-        self.assertNotIn('eth8', self._names())
+    def test_bridge_or_bond_member_still_discovered(self):
+        # a member is still its own card, in its own slot. Dropping it here
+        # would report the hardware as missing for as long as it is in use.
+        self.assertIn('eth8', self._names())
+
+    def test_vf_datapath_enslaved_to_its_parent_excluded(self):
+        # the accelerated path is enslaved to the interface it belongs to,
+        # which - unlike a bridge or a bond - is a device itself
+        self.assertNotIn('eth7', self._names())
 
     def test_sriov_virtual_function_excluded(self):
         # the general marker, independent of hypervisor - the previous
