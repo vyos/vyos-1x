@@ -151,8 +151,11 @@ def write_status(store: dict, devices: list, applied: dict, report: dict,
         'renamed': applied,
         # everything recognised from the store, however it was recognised
         'matched': {**report.get('matched', {}),
+                    **report.get('reassigned', {}),
                     **report.get('moved', {}),
                     **report.get('replaced', {})},
+        # the name changed hands between cards the store already knows
+        'reassigned': report.get('reassigned', {}),
         # the card was found in a different slot - certain, it is the same card
         'moved': report.get('moved', {}),
         # a different card took the slot - the one case that needs verifying
