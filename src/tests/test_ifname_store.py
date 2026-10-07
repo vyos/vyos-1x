@@ -278,7 +278,7 @@ class TestMovedHardware(unittest.TestCase):
         self.assertEqual(store['hardware']['eth0'], self.B)
 
     def test_editing_the_slot_map_by_hand_takes_effect(self):
-        # what `make test-ifname` does: swap the two entries in 'interfaces'
+        # what `make test-interface-naming` does: swap the two entries in 'interfaces'
         # and leave 'hardware' alone. Following the recorded address here
         # would quietly undo the edit.
         store = store_of({'eth0': 'pci-0000:00:03.0',
