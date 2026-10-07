@@ -2191,5 +2191,61 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
         self.assertIn(f'{local_pref} 200', frrconfig)
 
+    def test_bgp_108_reject_as_sets_default_value(self):
+        # FRR 10.5+ defaults to "bgp reject-as-sets" and does not print the
+        # default in its running config. If we render the line anyway,
+        # frr-reload finds it missing on every reload and sends it again, and
+        # FRR resets every BGP session for each of those. So only the
+        # non-default form ("no bgp reject-as-sets") must be rendered.
+        #
+        # This reads the generated FRR config file besides getFRRconfig():
+        # FRR never prints the default form, so vtysh cannot tell if we render it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        reject = ' bgp reject-as-sets'
+        no_reject = ' no bgp reject-as-sets'
+
+        # not set: the non-default form is rendered and FRR has it
+        self.cli_commit()
+        self.assertIn(no_reject, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(no_reject, frrconfig)
+
+        # set: this is the FRR default, nothing is rendered and FRR has the
+        # default again (the "no" line is gone from its running config)
+        self.cli_set(base_path + ['parameters', 'reject-as-sets'])
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(reject, frrconfig)
+        self.assertNotIn(no_reject, frrconfig)
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(reject, frrconfig)
+
+        # deleted again: FRR must go back to "no bgp reject-as-sets"
+        self.cli_delete(base_path + ['parameters', 'reject-as-sets'])
+        self.cli_commit()
+        self.assertIn(no_reject, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(no_reject, frrconfig)
+
+        # the VRF instance renders the same way: set only in the VRF instance,
+        # the global block keeps its "no" line and the VRF block has none
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        vrf_reject = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'parameters', 'reject-as-sets']
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(vrf_reject)
+        self.cli_commit()
+
+        global_block, sep, vrf_block = read_file(frr_conf).partition(vrf_header)
+        # the VRF instance must be rendered, else the checks below prove nothing
+        self.assertEqual(sep, vrf_header)
+        self.assertIn(f'router bgp {ASN}', global_block)
+        self.assertIn(no_reject, global_block)
+        self.assertNotIn(reject, vrf_block)
+        self.assertNotIn(no_reject, vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn(no_reject, frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

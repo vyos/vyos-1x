@@ -673,9 +673,11 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {% if parameters.no_suppress_duplicates is vyos_defined %}
  no bgp suppress-duplicates
 {% endif %}
-{% if parameters.reject_as_sets is vyos_defined %}
- bgp reject-as-sets
-{% else %}
+{# FRR 10.5+ defaults to "bgp reject-as-sets" and does not print the default
+   in show running-config. frr-reload would find the line missing on every
+   reload and send it again, and FRR resets every peer for each application.
+   Only the non-default form is rendered. #}
+{% if parameters.reject_as_sets is not vyos_defined %}
  no bgp reject-as-sets
 {% endif %}
 {% if parameters.router_id is vyos_defined and parameters.router_id is not none %}
