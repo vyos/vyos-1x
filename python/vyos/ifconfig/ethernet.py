@@ -20,6 +20,7 @@ from glob import glob
 from vyos.base import Warning
 from vyos.ethtool import Ethtool
 from vyos.ifconfig.ifname_store import permanent_mac
+from vyos.ifconfig.ifname_store import recorded_mac
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
@@ -162,7 +163,10 @@ class EthernetIf(Interface):
         # of step with the bond it is still in. Releasing it runs this again.
         tmp = get_interface_config(self.ifname)
         if dict_search('linkinfo.info_slave_kind', tmp) != 'bond':
-            mac = permanent_mac(self.ifname)
+            # what naming recorded first: a driver which cannot report a
+            # permanent address reports the current one instead, which is the
+            # custom address still on the port at this point
+            mac = recorded_mac(self.ifname) or permanent_mac(self.ifname)
             if mac:
                 self.set_mac(mac)
 
