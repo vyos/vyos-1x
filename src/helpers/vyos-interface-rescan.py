@@ -70,6 +70,13 @@ def interface_rescan(config_path: str):
     names = [name for name in sorted(store.get('interfaces', {}))
              if Path(f'/sys/class/net/{name}').is_dir()]
 
+    # radios are not in the map - every interface on a phy carries that phy's
+    # address, so there is nothing there to anchor a name to. Take them from
+    # the system instead, or a new one never gets a node at all.
+    names += sorted(entry.name for entry in Path('/sys/class/net').iterdir()
+                    if (entry / 'phy80211').exists()
+                    and entry.name not in names)
+
     logger.debug(f'named interfaces present: {names}')
 
     try:
