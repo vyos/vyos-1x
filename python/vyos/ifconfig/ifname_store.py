@@ -54,6 +54,13 @@ _BUS_RANK = {'pci': 0, 'vmbus': 1, 'xen': 2, 'usb': 3}
 _BUS_RANK_UNKNOWN = 90
 
 _PCI_BDF = re.compile(r'([0-9a-f]{4}):([0-9a-f]{2}):([0-9a-f]{2})\.([0-9a-f]+)', re.I)
+# ESXi labels its adapters Ethernet0..EthernetN, in "Network adapter N" order
+_PORT_LABEL = re.compile(r'^Ethernet(\d+)$')
+# sorts after every real label, and must stay an int - canonical_sort_key()
+# compares tuples element-wise, so a None here would raise against an int
+_LABEL_UNKNOWN = 1 << 30
+_VMWARE_PCI_VENDOR = '0x15ad'
+_DMI_SYS_VENDOR = Path('/sys/class/dmi/id/sys_vendor')
 _MAC_RE = re.compile(r'([0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5})')
 
 
@@ -91,18 +98,62 @@ def device_matches(properties: dict, key: str) -> bool:
 
 
 def canonical_sort_key(device: dict) -> tuple:
-    """Total order by bus class, physical position then MAC, so it never
-    depends on probe order. Only used for hardware not yet in the store.
+    """Total order by bus class, the hypervisor's adapter order where it says
+    so, then physical position and MAC, so it never depends on probe order.
+    Only used for hardware not yet in the store.
     """
     properties = device.get('properties') or {}
     path = properties.get('ID_PATH', '')
     rank = _BUS_RANK.get(properties.get('ID_BUS', ''), _BUS_RANK_UNKNOWN)
 
+    # a labelled adapter outranks the PCI address, which on ESXi does not
+    # follow the order the adapters were added in. Unlabelled hardware sorts
+    # after it: a passthrough NIC is not part of the hypervisor's own set and
+    # must not take the first name from it.
+    label = device.get('label_index', _LABEL_UNKNOWN)
+
     # numeric, so 0000:09:00.0 sorts before 0000:10:00.0
     segments = [tuple(int(part, 16) for part in m.groups())
                 for m in _PCI_BDF.finditer(path)]
 
-    return (rank, segments, path, device.get('mac') or '')
+    return (rank, label, segments, path, device.get('mac') or '')
+
+
+def _sysfs(path: Path) -> str:
+    try:
+        return path.read_text().strip()
+    except OSError:
+        return ''
+
+
+def is_vmware_nic(ifname: str, sys_class_net: str = '/sys/class/net') -> bool:
+    """Whether a NIC is one ESXi presents - vmxnet3 carries VMware's PCI
+    vendor, an emulated e1000 carries it as the subsystem vendor.
+
+    The DMI fallback is not redundant: smbios.reflectHost makes a guest report
+    the physical host's vendor, and a NIC model whose IDs are not listed here
+    would otherwise go unrecognised.
+    """
+    device = Path(sys_class_net) / ifname / 'device'
+    if _VMWARE_PCI_VENDOR in (_sysfs(device / 'vendor'),
+                              _sysfs(device / 'subsystem_vendor')):
+        return True
+    return _sysfs(_DMI_SYS_VENDOR) == 'VMware, Inc.'
+
+
+def port_label_index(ifname: str, sys_class_net: str = '/sys/class/net') -> int:
+    """The hypervisor's adapter number, from the firmware port label.
+
+    ESXi does not lay its adapters out in PCI address order - with four or more
+    it places the fourth on a root port which sorts ahead of the first three -
+    so the label is the only thing that gives their intended order.
+
+    Returns _LABEL_UNKNOWN when there is no such label. Physical servers label
+    ports too, e.g. "NIC1" or "Embedded LOM 1 Port 1", and must not be reordered
+    by this.
+    """
+    m = _PORT_LABEL.match(_sysfs(Path(sys_class_net) / ifname / 'device' / 'label'))
+    return int(m.group(1)) if m else _LABEL_UNKNOWN
 
 
 def permanent_mac(ifname: str, sys_class_net: str = '/sys/class/net') -> str:
@@ -200,6 +251,9 @@ def discover_devices(sys_class_net: str = '/sys/class/net') -> list:
             'mac': mac,
             'wireless': is_wireless(entry.name, sys_class_net),
             'wwan': is_wwan(entry.name, sys_class_net),
+            'label_index': (port_label_index(entry.name, sys_class_net)
+                            if is_vmware_nic(entry.name, sys_class_net)
+                            else _LABEL_UNKNOWN),
             'properties': read_properties(entry.name),
         })
 

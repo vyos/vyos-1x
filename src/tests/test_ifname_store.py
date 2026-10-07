@@ -37,6 +37,9 @@ from vyos.ifconfig.ifname_store import hardware_key
 from vyos.ifconfig.ifname_store import discover_devices
 from vyos.ifconfig.ifname_store import empty_store
 from vyos.ifconfig.ifname_store import load_store
+from vyos.ifconfig.ifname_store import port_label_index
+from vyos.ifconfig.ifname_store import is_vmware_nic
+from vyos.ifconfig.ifname_store import _LABEL_UNKNOWN
 from vyos.ifconfig.ifname_store import permanent_mac
 from vyos.ifconfig.ifname_store import render_link
 from vyos.ifconfig.ifname_store import resolve
@@ -44,14 +47,17 @@ from vyos.ifconfig.ifname_store import sync_link_files
 from vyos.ifconfig.ifname_store import save_store
 
 
-def dev(name, path, mac, wireless=False, bus='pci'):
+def dev(name, path, mac, wireless=False, bus='pci', label=None):
     """A device sitting at 'path'. Its key is what udev would report for it -
     here the raw ID_PATH, which is what a plain virtio or e1000e NIC with no
     firmware slot index ends up keyed on."""
     properties = {'ID_PATH': path, 'ID_BUS': bus} if path else {}
-    return {'name': name, 'mac': mac, 'wireless': wireless,
-            'properties': properties,
-            'key': hardware_key(properties)}
+    device = {'name': name, 'mac': mac, 'wireless': wireless,
+              'properties': properties,
+              'key': hardware_key(properties)}
+    if label is not None:
+        device['label_index'] = label
+    return device
 
 
 def store_of(mapping, hardware=None):
@@ -80,6 +86,91 @@ class TestCanonicalOrder(unittest.TestCase):
         low_slot = dev('x', 'pci-0000:00:02.0', 'ff:ff:ff:ff:ff:ff')
         high_slot = dev('y', 'pci-0000:00:05.0', '00:00:00:00:00:01')
         self.assertLess(canonical_sort_key(low_slot), canonical_sort_key(high_slot))
+
+
+class TestHypervisorAdapterOrder(unittest.TestCase):
+    """ESXi does not lay its adapters out in PCI address order. With four or
+    more it puts the fourth on a root port which sorts ahead of the first
+    three, so naming by PCI address alone made Network adapter 4 eth0. On the
+    OVA that moves the WAN: cloud-init takes eth0 from the OVF properties.
+    Reported against ESXi 8.0.3, vmx-21.
+    """
+
+    # the two interfaces from the report, verbatim
+    ADAPTER_4 = ('pci-0000:04:00.0', '00:0c:29:60:0e:5c', 3)   # Ethernet3
+    ADAPTER_1 = ('pci-0000:0b:00.0', '00:0c:29:60:0e:3e', 0)   # Ethernet0
+
+    def test_the_first_adapter_sorts_first_despite_its_pci_address(self):
+        a4 = dev('eth0', self.ADAPTER_4[0], self.ADAPTER_4[1], label=self.ADAPTER_4[2])
+        a1 = dev('eth1', self.ADAPTER_1[0], self.ADAPTER_1[1], label=self.ADAPTER_1[2])
+        self.assertEqual(sorted([a4, a1], key=canonical_sort_key)[0]['mac'],
+                          self.ADAPTER_1[1])
+
+    def test_four_adapters_are_named_in_adapter_order(self):
+        devices = [dev('?', 'pci-0000:04:00.0', 'aa:03', label=3),
+                   dev('?', 'pci-0000:0b:00.0', 'aa:00', label=0),
+                   dev('?', 'pci-0000:0c:00.0', 'aa:01', label=1),
+                   dev('?', 'pci-0000:0d:00.0', 'aa:02', label=2)]
+        _, store, report = resolve(devices, empty_store())
+        # assert on the hardware, not just that four names exist
+        self.assertEqual(report['bootstrapped'],
+                          {'eth0': 'aa:00', 'eth1': 'aa:01',
+                           'eth2': 'aa:02', 'eth3': 'aa:03'})
+        self.assertEqual(store['interfaces']['eth3'], 'ID_PATH=pci-0000:04:00.0')
+
+    def test_a_labelled_and_an_unlabelled_device_can_be_compared(self):
+        # the sentinel has to be an int - sort keys are tuples compared
+        # element-wise, and None against int raises
+        labelled = dev('eth0', 'pci-0000:0b:00.0', 'aa:00', label=0)
+        plain = dev('eth1', 'pci-0000:03:00.0', 'bb:00')
+        self.assertEqual(sorted([plain, labelled], key=canonical_sort_key)[0]['mac'],
+                          'aa:00')
+
+    def test_unlabelled_hardware_never_takes_the_first_name(self):
+        # a passthrough NIC is not in the OVF network mapping
+        devices = [dev('?', 'pci-0000:03:00.0', 'bb:00'),
+                   dev('?', 'pci-0000:0b:00.0', 'aa:00', label=0)]
+        _, _, report = resolve(devices, empty_store())
+        self.assertEqual(report['bootstrapped']['eth0'], 'aa:00')
+
+    def test_adding_unlabelled_hardware_does_not_reshuffle_the_adapters(self):
+        adapters = [dev('?', 'pci-0000:0b:00.0', 'aa:00', label=0),
+                    dev('?', 'pci-0000:04:00.0', 'aa:01', label=1)]
+        plain = dev('?', 'pci-0000:03:00.0', 'bb:00')
+        before = [d['mac'] for d in sorted(adapters, key=canonical_sort_key)]
+        after = [d['mac'] for d in sorted(adapters + [plain], key=canonical_sort_key)]
+        self.assertEqual(after[:len(before)], before)
+
+    def test_the_order_survives_into_the_store(self):
+        # the names close the gap: two adapters labelled 0 and 3 become
+        # eth0 and eth1, the lowest free names in adapter order
+        devices = [dev('enp4s0', 'pci-0000:04:00.0', 'aa:03', label=3),
+                   dev('enp11s0', 'pci-0000:0b:00.0', 'aa:00', label=0)]
+        plan, store, _ = resolve(devices, empty_store())
+        self.assertEqual(plan, {'enp11s0': 'eth0', 'enp4s0': 'eth1'})
+
+        # the next boot sees them under the names it just gave them
+        for device in devices:
+            device['name'] = plan[device['name']]
+
+        plan, _, report = resolve(devices, store)
+        self.assertEqual(plan, {})
+        self.assertEqual(report['bootstrapped'], {})
+
+    def test_hardware_added_later_takes_the_next_name(self):
+        devices = [dev('?', 'pci-0000:0b:00.0', 'aa:00', label=0)]
+        _, store, _ = resolve(devices, empty_store())
+        # a second adapter, labelled lower, must not displace the first
+        devices.append(dev('?', 'pci-0000:04:00.0', 'aa:09', label=9))
+        _, store, report = resolve(devices, store)
+        self.assertEqual(report['bootstrapped'], {'eth1': 'aa:09'})
+
+    def test_the_label_is_ordering_only_never_identity(self):
+        # it must not reach hardware_key(), or a relabelled adapter would read
+        # as different hardware
+        properties = {'ID_PATH': 'pci-0000:0b:00.0', 'ID_BUS': 'pci'}
+        self.assertNotIn('Ethernet', hardware_key(properties))
+        self.assertNotIn('label', hardware_key(properties))
 
 
 class TestReplacedHardware(unittest.TestCase):
@@ -674,6 +765,75 @@ class TestLinkFiles(unittest.TestCase):
             custom.write_text('[Match]\nType=ether\n\n[Link]\nMTUBytes=9000\n')
             sync_link_files(store_of({'eth1': 'p1'}), link_dir)
             self.assertTrue(custom.exists())
+
+
+class TestPortLabelGate(unittest.TestCase):
+    """The adapter label only orders hardware the hypervisor presented.
+    Physical servers label their ports too - "NIC1", "Embedded LOM 1 Port 1" -
+    and reordering those would be the same bug on bare metal.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.dmi = os.path.join(self.tmp, 'sys_vendor')
+        patch = mock.patch('vyos.ifconfig.ifname_store._DMI_SYS_VENDOR',
+                           Path(self.dmi))
+        patch.start()
+        self.addCleanup(patch.stop)
+        self._dmi('Dell Inc.')
+
+    def _dmi(self, vendor):
+        with open(self.dmi, 'w') as f:
+            f.write(vendor + '\n')
+
+    def _make(self, name, label=None, vendor=None, subsystem_vendor=None):
+        device = os.path.join(self.tmp, name, 'device')
+        os.makedirs(device)
+        for attr, value in (('label', label), ('vendor', vendor),
+                            ('subsystem_vendor', subsystem_vendor)):
+            if value is not None:
+                with open(os.path.join(device, attr), 'w') as f:
+                    f.write(value + '\n')
+        return name
+
+    def test_label_index_is_parsed(self):
+        self._make('eth0', label='Ethernet0')
+        self._make('eth1', label='Ethernet10')
+        self.assertEqual(port_label_index('eth0', self.tmp), 0)
+        # not lexical - Ethernet10 must sort after Ethernet9
+        self.assertEqual(port_label_index('eth1', self.tmp), 10)
+
+    def test_labels_physical_servers_use_are_not_adapter_numbers(self):
+        for i, label in enumerate(['NIC1', 'Integrated NIC 1', 'LAN1',
+                                   'Embedded LOM 1 Port 1',
+                                   'PCIe Slot 1 Port 1', 'Ethernet',
+                                   'Ethernet0 Port 2', '']):
+            name = self._make(f'eth{i}', label=label)
+            self.assertEqual(port_label_index(name, self.tmp), _LABEL_UNKNOWN,
+                              f'{label!r} was taken for an adapter number')
+
+    def test_no_label_at_all(self):
+        self._make('eth0')
+        self.assertEqual(port_label_index('eth0', self.tmp), _LABEL_UNKNOWN)
+
+    def test_a_vmware_nic_is_recognised_by_its_pci_vendor_alone(self):
+        # DMI says Dell - smbios.reflectHost does exactly this, and a gate on
+        # DMI alone would switch itself off
+        self._make('eth0', vendor='0x15ad')                  # vmxnet3
+        self._make('eth1', subsystem_vendor='0x15ad')        # emulated e1000
+        self.assertTrue(is_vmware_nic('eth0', self.tmp))
+        self.assertTrue(is_vmware_nic('eth1', self.tmp))
+
+    def test_dmi_still_catches_a_model_whose_pci_ids_are_unknown(self):
+        self._make('eth0', vendor='0x1af4')
+        self._dmi('VMware, Inc.')
+        self.assertTrue(is_vmware_nic('eth0', self.tmp))
+
+    def test_a_physical_nic_is_left_alone(self):
+        self._make('eth0', label='Ethernet0',
+                   vendor='0x8086', subsystem_vendor='0x8086')
+        self.assertFalse(is_vmware_nic('eth0', self.tmp))
 
 
 class TestPermanentMac(unittest.TestCase):
