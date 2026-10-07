@@ -25,6 +25,7 @@ from vyos import ConfigError
 from vyos.base import Warning
 from vyos.utils.dict import dict_search
 
+
 def get_pools_in_order(data: dict) -> list:
     """Return a list of dictionaries representing pool data in the order
     in which they should be allocated. Pool must be defined before we can
@@ -121,8 +122,7 @@ def verify_accel_ppp_name_servers(config):
 
 def verify_accel_ppp_wins_servers(config):
     if 'wins_server' in config and len(config['wins_server']) > 2:
-        raise ConfigError(
-            'Not more then two WINS name-servers can be configured')
+        raise ConfigError('Not more then two WINS name-servers can be configured')
 
 
 def verify_accel_ppp_authentication(config, local_users=True):
@@ -138,8 +138,9 @@ def verify_accel_ppp_authentication(config, local_users=True):
 
     # verify auth settings
     if local_users and dict_search("authentication.mode", config) == "local":
-        local_users_config = dict_search('authentication.local_users.username',
-                                         config, default={})
+        local_users_config = dict_search(
+            'authentication.local_users.username', config, default={}
+        )
 
         if not local_users_config and not any_login:
             raise ConfigError(
@@ -162,13 +163,28 @@ def verify_accel_ppp_authentication(config, local_users=True):
         if not dict_search("authentication.radius.server", config):
             raise ConfigError("RADIUS authentication requires at least one server")
 
+        ma_include_request = dict_search(
+            'authentication.radius.message_authenticator.include_access_request', config
+        )
+        ma_require_response = dict_search(
+            'authentication.radius.message_authenticator.require_access_response',
+            config,
+        )
+        if ma_require_response is not None and ma_include_request is None:
+            Warning(
+                'Message-Authenticator is not included in Access-Request packets; '
+                'so the RADIUS server might omit it from Access response packets'
+            )
+
         for server in dict_search("authentication.radius.server", config):
             radius_config = config["authentication"]["radius"]["server"][server]
             if "key" not in radius_config:
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
-    if dict_search("server_type", config) == 'ipoe' and dict_search(
-            "authentication.mode", config) == "local":
+    if (
+        dict_search("server_type", config) == 'ipoe'
+        and dict_search("authentication.mode", config) == "local"
+    ):
         if not dict_search("authentication.interface", config):
             raise ConfigError(
                 "Authentication mode local requires authentication interface to be configured!"
@@ -177,7 +193,8 @@ def verify_accel_ppp_authentication(config, local_users=True):
             user_config = config["authentication"]["interface"][interface]
             if "mac" not in user_config:
                 raise ConfigError(
-                    f'Users MAC addresses are not configured for interface "{interface}"')
+                    f'Users MAC addresses are not configured for interface "{interface}"'
+                )
 
     if dict_search('authentication.radius.dynamic_author.server', config):
         if not dict_search('authentication.radius.dynamic_author.key', config):
@@ -195,8 +212,7 @@ def verify_accel_ppp_ip_pool(vpn_config):
             next_pool = dict_search(f"next_pool", pool_config)
             if next_pool:
                 if next_pool not in vpn_config["client_ip_pool"]:
-                    raise ConfigError(
-                        f'Next pool "{next_pool}" does not exist')
+                    raise ConfigError(f'Next pool "{next_pool}" does not exist')
                 if not dict_search(f"range", pool_config):
                     raise ConfigError(
                         f'Pool "{pool_name}" does not contain range but next-pool exists'
@@ -206,20 +222,22 @@ def verify_accel_ppp_ip_pool(vpn_config):
 
     default_pool = dict_search("default_pool", vpn_config)
     if default_pool:
-        if not dict_search('client_ip_pool',
-                           vpn_config) or default_pool not in dict_search(
-                'client_ip_pool', vpn_config):
+        if not dict_search(
+            'client_ip_pool', vpn_config
+        ) or default_pool not in dict_search('client_ip_pool', vpn_config):
             raise ConfigError(f'Default pool "{default_pool}" does not exists')
 
     if 'client_ipv6_pool' in vpn_config:
         for ipv6_pool, ipv6_pool_config in vpn_config['client_ipv6_pool'].items():
             if 'delegate' in ipv6_pool_config and 'prefix' not in ipv6_pool_config:
                 raise ConfigError(
-                    f'IPv6 delegate-prefix requires IPv6 prefix to be configured in "{ipv6_pool}"!')
+                    f'IPv6 delegate-prefix requires IPv6 prefix to be configured in "{ipv6_pool}"!'
+                )
 
     if dict_search('authentication.mode', vpn_config) in ['local', 'noauth']:
         if not dict_search('client_ip_pool', vpn_config) and not dict_search(
-                'client_ipv6_pool', vpn_config):
+            'client_ipv6_pool', vpn_config
+        ):
             if dict_search('server_type', vpn_config) == 'ipoe':
                 if 'interface' in vpn_config:
                     for interface, interface_config in vpn_config['interface'].items():
@@ -230,15 +248,17 @@ def verify_accel_ppp_ip_pool(vpn_config):
                     else:
                         raise ConfigError(
                             'Local auth and noauth mode requires local client-ip-pool \
-                             or client-ipv6-pool or client-subnet or dhcp-relay to be configured!')
+                             or client-ipv6-pool or client-subnet or dhcp-relay to be configured!'
+                        )
             else:
-                raise ConfigError(
-                    "Local auth mode requires local client-ip-pool \
+                raise ConfigError("Local auth mode requires local client-ip-pool \
                     or client-ipv6-pool to be configured!")
 
         if dict_search('client_ip_pool', vpn_config) and not dict_search(
-                'default_pool', vpn_config):
+            'default_pool', vpn_config
+        ):
             Warning("'default-pool' is not defined")
         if dict_search('client_ipv6_pool', vpn_config) and not dict_search(
-                'default_ipv6_pool', vpn_config):
+            'default_ipv6_pool', vpn_config
+        ):
             Warning("'default-ipv6-pool' is not defined")
