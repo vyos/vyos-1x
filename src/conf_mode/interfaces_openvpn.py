@@ -80,9 +80,8 @@ group = 'openvpn'
 cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
 # Ciphers implemented by the in-tree "ovpn" Kernel module. Any other cipher
-# must be handled in userspace and thus rules out DCO. The module also does
-# ChaCha20-Poly1305, which the CLI does not offer.
-dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm']
+# must be handled in userspace and thus rules out DCO.
+dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm', 'chacha20poly1305']
 # Raw options that make OpenVPN fall back to the userspace data path, taken
 # from dco_check_option() and dco_check_option_ce()
 dco_incompatible_options = [
