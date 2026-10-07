@@ -314,7 +314,7 @@ def resolve(devices: list, store: dict) -> tuple:
     seen = store.get('hardware', {})
 
     assigned = {}  # final name -> device
-    report = {'matched': {}, 'bootstrapped': {}}
+    report = {'matched': {}, 'moved': {}, 'replaced': {}, 'bootstrapped': {}}
 
     # A recorded name stays off-limits even while its slot is empty, so new
     # hardware cannot inherit an absent interface's name and configuration.
@@ -326,11 +326,51 @@ def resolve(devices: list, store: dict) -> tuple:
         report[bucket][name] = device['mac']
         remaining.remove(device)
 
-    # whatever card occupies the recorded slot is this interface
+    # the recorded card in its recorded slot. A name with no card on record
+    # counts too - a store written before addresses were kept has nothing to
+    # disagree with, and this is as certain as it gets.
     for name, key in entries.items():
         for device in remaining:
-            if device_matches(device['properties'], key):
+            if (device_matches(device['properties'], key)
+                    and seen.get(name, device['mac']) == device['mac']):
                 claim(device, name, 'matched')
+                break
+
+    # a card the store already knows about, sitting in this name's slot. The
+    # cards were rearranged among themselves, or the map was edited by hand -
+    # either way the map is what decides names, so the slot wins and the
+    # address on record simply follows.
+    known = {mac for mac in seen.values() if mac}
+    for name, key in entries.items():
+        if name in assigned:
+            continue
+        for device in remaining:
+            if (device_matches(device['properties'], key)
+                    and device['mac'] in known):
+                claim(device, name, 'matched')
+                break
+
+    # the card moved, and nothing the store knows took its place. Its address
+    # identifies it, so the name follows the card rather than being handed to
+    # a stranger that happens to have landed in the slot it left.
+    for name in entries:
+        if name in assigned or not seen.get(name):
+            continue
+        for device in remaining:
+            if device['mac'] == seen[name]:
+                claim(device, name, 'moved')
+                break
+
+    # a different card in the recorded slot: an in-place replacement, or an
+    # unrelated card that happened to land there once the original was pulled.
+    # Nothing on the device tells those apart, so the slot decides and it is
+    # reported and warned about rather than taken silently.
+    for name, key in entries.items():
+        if name in assigned:
+            continue
+        for device in remaining:
+            if device_matches(device['properties'], key):
+                claim(device, name, 'replaced')
                 break
 
     # unknown hardware: lowest free name of its type, in hardware order
@@ -350,11 +390,6 @@ def resolve(devices: list, store: dict) -> tuple:
     for name, device in assigned.items():
         if device['mac']:
             new_hardware[name] = device['mac']
-
-    # a slot which kept its name but changed card hands that interface's
-    # addresses to different hardware - never silently
-    report['replaced'] = {name: mac for name, mac in report['matched'].items()
-                          if seen.get(name) and seen[name] != mac}
 
     plan = {device['name']: name for name, device in assigned.items()
             if device['name'] != name}
