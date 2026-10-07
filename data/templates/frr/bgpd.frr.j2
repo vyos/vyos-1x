@@ -619,7 +619,8 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {# Doesn't work in current FRR configuration; vtysh (bgp dampening 16 751 2001 61) #}
  bgp dampening {{ parameters.dampening.half_life }} {{ parameters.dampening.re_use if parameters.dampening.re_use is vyos_defined }} {{ parameters.dampening.start_suppress_time if parameters.dampening.start_suppress_time is vyos_defined }} {{ parameters.dampening.max_suppress_time if parameters.dampening.max_suppress_time is vyos_defined }}
 {% endif %}
-{% if parameters.default.local_pref is vyos_defined %}
+{# xml_default_local_pref is the XML default of parameters default local-pref, added to the dict by frrender #}
+{% if parameters.default.local_pref is vyos_defined and parameters.default.local_pref != xml_default_local_pref %}
  bgp default local-preference {{ parameters.default.local_pref }}
 {% endif %}
 {% if parameters.deterministic_med is vyos_defined %}
