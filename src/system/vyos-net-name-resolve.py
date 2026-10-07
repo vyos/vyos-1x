@@ -100,6 +100,36 @@ def get_ifindex(name: str) -> str:
         return name
 
 
+def interface_in_use(name: str, sys_class_net: str = '/sys/class/net') -> bool:
+    """Is the running system relying on this name? Renaming it then leaves
+    the configuration pointing at a name nothing answers to.
+
+    At boot this is false for everything - the pass runs before the
+    configuration is applied, so the ports are still down. Afterwards, which
+    is the only time the hot-plug unit runs, it is true for every port the
+    configuration touched and for a card which just arrived it is not.
+    """
+    try:
+        flags = int((Path(sys_class_net) / name / 'flags').read_text(), 16)
+    except (OSError, ValueError):
+        return False
+    IFF_UP = 0x1
+    return (bool(flags & IFF_UP)
+            or (Path(sys_class_net) / name / 'master').exists())
+
+
+def refuse_renames_in_use(plan: dict,
+                          sys_class_net: str = '/sys/class/net') -> tuple:
+    """Split a rename plan into what may be applied and what must not."""
+    allowed, refused = {}, {}
+    for old, target in plan.items():
+        if interface_in_use(old, sys_class_net):
+            refused[old] = target
+        else:
+            allowed[old] = target
+    return allowed, refused
+
+
 def rename_interface(old: str, new: str) -> bool:
     run(f'ip link set dev {old} down')
     code = run(f'ip link set dev {old} name {new}')
@@ -139,7 +169,7 @@ def safe_bulk_rename(plan: dict) -> dict:
 
 
 def write_status(store: dict, devices: list, applied: dict, report: dict,
-                 persisted: bool) -> None:
+                 persisted: bool, refused: dict = None) -> None:
     """Publish what this pass decided, to warn about and to inspect later."""
     absent = _unmatched(set(store['interfaces'].values()), devices)
     status = {
@@ -149,6 +179,8 @@ def write_status(store: dict, devices: list, applied: dict, report: dict,
             if key in absent
         },
         'renamed': applied,
+        # in use, so left alone until the next boot
+        'rename_refused': refused or {},
         # everything recognised from the store, however it was recognised
         'matched': {**report.get('matched', {}),
                     **report.get('reassigned', {}),
@@ -210,6 +242,12 @@ def main():
             f"'{name}' was matched to new hardware {mac} by slot - verify it "
             'is the port you expect before relying on its configuration'
         )
+    plan, refused = refuse_renames_in_use(plan)
+    for old, target in sorted(refused.items()):
+        logger.warning(
+            f"'{old}' is in use and was not renamed to '{target}' - the map "
+            'and the running system disagree until the next boot'
+        )
     applied = safe_bulk_rename(plan)
 
     persisted = save_store(store)
@@ -225,7 +263,7 @@ def main():
             'resolved for this boot but could not be persisted'
         )
 
-    write_status(store, devices, applied, report, persisted)
+    write_status(store, devices, applied, report, persisted, refused)
 
 
 if __name__ == '__main__':

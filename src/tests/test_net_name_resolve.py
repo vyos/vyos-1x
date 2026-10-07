@@ -149,6 +149,57 @@ class TestSafeBulkRename(unittest.TestCase):
         self.assertEqual(applied.get('eth9'), 'eth1')
 
 
+class TestRefuseRenamesInUse(unittest.TestCase):
+    """A name the running system answers to must not move. The map is only
+    free to change a name while nothing is using it, which at boot is every
+    interface and afterwards is only a card which has just arrived.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def _make(self, name, up=False, enslaved=False):
+        path = os.path.join(self.tmp, name)
+        os.mkdir(path)
+        # IFF_UP is bit 0; 0x1002 is a down interface with IFF_BROADCAST
+        with open(os.path.join(path, 'flags'), 'w') as f:
+            f.write('0x1003\n' if up else '0x1002\n')
+        if enslaved:
+            master = os.path.join(self.tmp, f'{name}_master')
+            os.mkdir(master)
+            os.symlink(master, os.path.join(path, 'master'))
+
+    def _split(self, plan):
+        return resolver.refuse_renames_in_use(plan, self.tmp)
+
+    def test_a_card_which_just_arrived_is_renamed(self):
+        self._make('eth8')
+        allowed, refused = self._split({'eth8': 'eth2'})
+        self.assertEqual(allowed, {'eth8': 'eth2'})
+        self.assertEqual(refused, {})
+
+    def test_an_interface_carrying_traffic_is_left_alone(self):
+        # what an edited map plus an unrelated hot-plug used to do: rename a
+        # running port out from under the configuration still naming it
+        self._make('eth1', up=True)
+        allowed, refused = self._split({'eth1': 'eth23'})
+        self.assertEqual(allowed, {})
+        self.assertEqual(refused, {'eth1': 'eth23'})
+
+    def test_a_bridge_member_is_left_alone(self):
+        self._make('eth1', enslaved=True)
+        allowed, refused = self._split({'eth1': 'eth23'})
+        self.assertEqual(refused, {'eth1': 'eth23'})
+
+    def test_one_refusal_does_not_hold_up_the_rest(self):
+        self._make('eth1', up=True)
+        self._make('eth8')
+        allowed, refused = self._split({'eth1': 'eth23', 'eth8': 'eth2'})
+        self.assertEqual(allowed, {'eth8': 'eth2'})
+        self.assertEqual(refused, {'eth1': 'eth23'})
+
+
 class TestMainInContainer(unittest.TestCase):
     """A container owns no NIC: its interfaces are runtime-created veth pairs
     with no backing bus device in sysfs and a host-assigned MAC that changes
