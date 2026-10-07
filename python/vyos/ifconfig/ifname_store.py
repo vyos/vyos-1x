@@ -325,6 +325,13 @@ def _prefix_for(device: dict) -> str:
     return 'wlan' if device.get('wireless') else 'eth'
 
 
+def _name_fits(name: str, device: dict) -> bool:
+    """A name belongs to the namespace the CLI reads it under, so a modem
+    can not take an ethernet name nor an ethernet card a modem's.
+    """
+    return name.startswith(_prefix_for(device))
+
+
 def _next_free(taken: set, prefix: str) -> str:
     index = 0
     while f'{prefix}{index}' in taken:
@@ -376,7 +383,8 @@ def resolve(devices: list, store: dict) -> tuple:
     for name, key in entries.items():
         for device in remaining:
             if (device_matches(device['properties'], key)
-                    and seen.get(name, device['mac']) == device['mac']):
+                    and seen.get(name, device['mac']) == device['mac']
+                    and _name_fits(name, device)):
                 claim(device, name, 'matched')
                 break
 
@@ -391,7 +399,8 @@ def resolve(devices: list, store: dict) -> tuple:
             continue
         for device in remaining:
             if (device_matches(device['properties'], key)
-                    and device['mac'] in known):
+                    and device['mac'] in known
+                    and _name_fits(name, device)):
                 claim(device, name, 'reassigned')
                 break
 
@@ -402,7 +411,7 @@ def resolve(devices: list, store: dict) -> tuple:
         if name in assigned or not seen.get(name):
             continue
         for device in remaining:
-            if device['mac'] == seen[name]:
+            if device['mac'] == seen[name] and _name_fits(name, device):
                 claim(device, name, 'moved')
                 break
 
@@ -414,7 +423,8 @@ def resolve(devices: list, store: dict) -> tuple:
         if name in assigned:
             continue
         for device in remaining:
-            if device_matches(device['properties'], key):
+            if (device_matches(device['properties'], key)
+                    and _name_fits(name, device)):
                 claim(device, name, 'replaced')
                 break
 
