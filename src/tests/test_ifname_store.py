@@ -20,6 +20,7 @@
 # physical wire. Under the store-based design none of them have a code path
 # to travel, and these tests exist to keep it that way.
 
+import json
 import os
 import shutil
 import tempfile
@@ -400,13 +401,23 @@ class TestResolveBasics(unittest.TestCase):
                       'ID_PATH': 'pci-0000:00:12.0'}
         self.assertEqual(hardware_key(properties), 'ID_NET_NAME_SLOT=ens18')
 
-    def test_wireless_uses_its_own_namespace(self):
-        devices = [dev('eth0', 'pci-0000:00:12.0', 'aa:aa:aa:aa:aa:aa'),
-                   dev('wlan5', 'pci-0000:00:14.0', 'cc:cc:cc:cc:cc:cc',
-                       wireless=True)]
-        _, new_store, _ = resolve(devices, empty_store())
-        self.assertIn('eth0', new_store['interfaces'])
-        self.assertIn('wlan0', new_store['interfaces'])
+    def test_a_radio_recorded_by_an_older_version_is_dropped(self):
+        # Wireless is no longer named here: every interface on a phy carries
+        # that phy's address, so an entry recorded against one of them would
+        # be applied to whichever appeared next - renaming an interface the
+        # operator had just created by name. Drop what an older version wrote
+        # so the entry, and the .link file made from it, go away on upgrade.
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'interface-mapping.json'
+            p.write_text(json.dumps({
+                'version': STORE_VERSION,
+                'interfaces': {'eth0': 'ID_PATH=pci-0000:00:12.0',
+                               'wlan0': 'ID_NET_NAME_MAC=wlx020000000000'},
+                'hardware': {'eth0': 'aa:aa:aa:aa:aa:aa',
+                             'wlan0': '02:00:00:00:00:00'}}))
+            store = load_store(p)
+        self.assertEqual(list(store['interfaces']), ['eth0'])
+        self.assertNotIn('wlan0', store['hardware'])
 
 
 class TestPR5417Regressions(unittest.TestCase):
@@ -529,27 +540,18 @@ class TestLinkFiles(unittest.TestCase):
         self.assertIn('Name=eth1', body)
         self.assertIn('Type=ether', body)
 
-    def test_link_for_a_radio_matches_the_wireless_type(self):
-        # a .link naming a type the device is not never applies, so a radio
-        # rendered as 'ether' would silently keep its probe-order name
-        body = render_link('wlan0', 'ID_PATH=pci-0000:00:14.0')
-        self.assertIn('Type=wlan', body)
-        self.assertNotIn('Type=ether', body)
-        self.assertIn('Name=wlan0', body)
-
-    def test_radio_named_by_resolve_gets_a_wireless_link(self):
-        # end to end: resolve() names by type, and the file written for that
-        # name has to agree with it
-        devices = [dev('wlan5', 'pci-0000:00:14.0', 'aa:aa:aa:aa:aa:01',
-                        wireless=True),
-                   dev('eth9', 'pci-0000:00:12.0', 'bb:bb:bb:bb:bb:02')]
-        _, store, _ = resolve(devices, empty_store())
-        self.assertIn('wlan0', store['interfaces'])
+    def test_no_link_file_is_written_for_a_radio(self):
+        # a .link keyed on a phy's address matches every interface created on
+        # that phy, so writing one renamed the interface the operator had just
+        # asked for. Wireless is named from the configuration instead.
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'eth0': 'ID_PATH=pci-0000:00:12.0',
+                                'wlan0': 'ID_NET_NAME_MAC=wlx020000000000'},
+                 'hardware': {}}
         with tempfile.TemporaryDirectory() as d:
             written = sync_link_files(store, Path(d))
-            bodies = {p.name: p.read_text() for p in written}
-        self.assertIn('Type=wlan', bodies['10-vyos-wlan0.link'])
-        self.assertIn('Type=ether', bodies['10-vyos-eth0.link'])
+            names = [p.name for p in written]
+        self.assertEqual(names, ['10-vyos-eth0.link'])
 
     def test_one_file_per_interface(self):
         with tempfile.TemporaryDirectory() as d:

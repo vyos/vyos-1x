@@ -150,6 +150,13 @@ def discover_devices(sys_class_net: str = '/sys/class/net') -> list:
 
     Skips virtual interfaces, enslaved ones, SR-IOV virtual functions and
     hypervisor VF datapaths - the latter share another interface's MAC.
+
+    Wireless is skipped too, and not because it is uninteresting: a radio's
+    interfaces are created from the configuration on a given phy, and every
+    one of them carries that phy's address. They are indistinguishable here,
+    so a name recorded against one would be applied to whichever appeared
+    next - renaming an interface the operator had just asked for by name.
+    Wireless names come from the configuration; nothing to anchor.
     """
     devices = []
     net_dir = Path(sys_class_net)
@@ -164,6 +171,8 @@ def discover_devices(sys_class_net: str = '/sys/class/net') -> list:
         if (entry / 'device' / 'physfn').exists():
             continue
         if entry.name.startswith('vf_'):
+            continue
+        if is_wireless(entry.name, sys_class_net):
             continue
 
         mac = permanent_mac(entry.name, sys_class_net)
@@ -204,7 +213,8 @@ def load_store(path: Path = None) -> dict:
         return empty_store()
 
     interfaces = {name: key for name, key in data['interfaces'].items()
-                  if isinstance(key, str) and key}
+                  if isinstance(key, str) and key
+                  and not name.startswith('wlan')}
 
     # the card each name last sat on. Absent from a store written before this
     # was recorded, which just means the first pass has nothing to compare
@@ -431,7 +441,10 @@ def sync_link_files(store: dict, link_dir: Path = None) -> list:
 
     written = {}
     for name, key in store.get('interfaces', {}).items():
-        if key:
+        # never for a radio: the key is the phy's address, which every
+        # interface created on that phy shares, so the file would rename
+        # whichever of them udev saw next
+        if key and not name.startswith('wlan'):
             written[link_dir / f'{LINK_PREFIX}{name}.link'] = render_link(name, key)
 
     for path, body in written.items():
