@@ -357,7 +357,8 @@ def resolve(devices: list, store: dict) -> tuple:
         seen = {n: m for n, m in seen.items() if n not in misfiled}
 
     assigned = {}  # final name -> device
-    report = {'matched': {}, 'moved': {}, 'replaced': {}, 'bootstrapped': {}}
+    report = {'matched': {}, 'reassigned': {}, 'moved': {},
+              'replaced': {}, 'bootstrapped': {}}
 
     # A recorded name stays off-limits even while its slot is empty, so new
     # hardware cannot inherit an absent interface's name and configuration.
@@ -382,7 +383,8 @@ def resolve(devices: list, store: dict) -> tuple:
     # a card the store already knows about, sitting in this name's slot. The
     # cards were rearranged among themselves, or the map was edited by hand -
     # either way the map is what decides names, so the slot wins and the
-    # address on record simply follows.
+    # address on record simply follows. The name changes hands, so it is
+    # reported apart from a card which simply stayed where it was.
     known = {mac for mac in seen.values() if mac}
     for name, key in entries.items():
         if name in assigned:
@@ -390,7 +392,7 @@ def resolve(devices: list, store: dict) -> tuple:
         for device in remaining:
             if (device_matches(device['properties'], key)
                     and device['mac'] in known):
-                claim(device, name, 'matched')
+                claim(device, name, 'reassigned')
                 break
 
     # the card moved, and nothing the store knows took its place. Its address

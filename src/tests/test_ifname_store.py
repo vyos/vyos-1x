@@ -181,7 +181,8 @@ class TestMovedHardware(unittest.TestCase):
         _, store, report = resolve([self._at(3, self.A), self._at(2, self.B)],
                                     self.store)
         self.assertEqual(report['moved'], {})
-        self.assertEqual(report['matched'], {'eth0': self.B, 'eth1': self.A})
+        self.assertEqual(report['matched'], {})
+        self.assertEqual(report['reassigned'], {'eth0': self.B, 'eth1': self.A})
         self.assertEqual(store['interfaces']['eth0'], 'ID_PATH=pci-0000:00:02.0')
         self.assertEqual(store['hardware']['eth0'], self.B)
 
@@ -194,7 +195,8 @@ class TestMovedHardware(unittest.TestCase):
                          {'eth0': self.A, 'eth1': self.B})
         _, _, report = resolve([self._at(2, self.A), self._at(3, self.B)],
                                 store)
-        self.assertEqual(report['matched'], {'eth0': self.B, 'eth1': self.A})
+        self.assertEqual(report['matched'], {})
+        self.assertEqual(report['reassigned'], {'eth0': self.B, 'eth1': self.A})
         self.assertEqual(report['moved'], {})
 
     def test_identity_wins_over_the_slot(self):
