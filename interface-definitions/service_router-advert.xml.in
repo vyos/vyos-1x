@@ -83,6 +83,12 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="no-flush-dnssl">
+                <properties>
+                  <help>Do not announce the DNS search list with a zero second lifetime upon shutdown</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="link-mtu">
                 <properties>
                   <help>Link MTU value placed in RAs, excluded in RAs if unset</help>
@@ -152,6 +158,12 @@
                     <validator name="numeric" argument="--range 0-7200"/>
                   </constraint>
                   <constraintErrorMessage>RDNSS lifetime must be 0 or between 1 and 7200 seconds</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="no-flush-name-server">
+                <properties>
+                  <help>Do not announce name-servers with a zero second lifetime upon shutdown</help>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="other-config-flag">
@@ -422,6 +434,12 @@
               <leafNode name="no-send-interval">
                 <properties>
                   <help>Do not send Advertisement Interval option in RAs</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="no-remove-on-exit">
+                <properties>
+                  <help>Do not send a final router advertisement with zero router lifetime upon shutdown (recommended with VRRP)</help>
                   <valueless/>
                 </properties>
               </leafNode>

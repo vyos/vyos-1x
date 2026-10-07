@@ -272,6 +272,49 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('AdvIntervalOpt')
         self.assertEqual(tmp, 'off')
 
+    def test_remove_on_exit_flush(self):
+        nameserver = '2001:db8::1'
+        dnssl = 'vyos.net'
+
+        self.cli_set(base_path + ['prefix', prefix])
+        self.cli_set(base_path + ['name-server', nameserver])
+        self.cli_set(base_path + ['dnssl', dnssl])
+        # commit changes
+        self.cli_commit()
+
+        # radvd defaults (on) are used when the options are not set
+        config = read_file(RADVD_CONF)
+        self.assertNotIn('RemoveAdvOnExit', config)
+        self.assertNotIn('FlushRDNSS', config)
+        self.assertNotIn('FlushDNSSL', config)
+
+        self.cli_set(base_path + ['no-remove-on-exit'])
+        self.cli_set(base_path + ['no-flush-name-server'])
+        self.cli_set(base_path + ['no-flush-dnssl'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        tmp = get_config_value('RemoveAdvOnExit')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('FlushRDNSS')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('FlushDNSSL')
+        self.assertEqual(tmp, 'off')
+
+        self.cli_delete(base_path + ['no-remove-on-exit'])
+        self.cli_delete(base_path + ['no-flush-name-server'])
+        self.cli_delete(base_path + ['no-flush-dnssl'])
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        self.assertNotIn('RemoveAdvOnExit', config)
+        self.assertNotIn('FlushRDNSS', config)
+        self.assertNotIn('FlushDNSSL', config)
+
     def test_auto_ignore(self):
         isp_prefix = '2001:db8::/64'
         ula_prefixes = ['fd00::/64', 'fd01::/64']
