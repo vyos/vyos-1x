@@ -198,6 +198,15 @@ def main():
 
     for name, mac in sorted(report.get('bootstrapped', {}).items()):
         logger.info(f"new hardware {mac} named '{name}'")
+
+    # A card which took over a slot also took over the addresses configured
+    # under that name. vyos-router says so for a boot, but a card swapped on
+    # a running system is only ever seen here.
+    for name, mac in sorted(report.get('replaced', {}).items()):
+        logger.warning(
+            f"'{name}' was matched to new hardware {mac} by slot - verify it "
+            'is the port you expect before relying on its configuration'
+        )
     applied = safe_bulk_rename(plan)
 
     persisted = save_store(store)
