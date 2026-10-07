@@ -29,6 +29,7 @@ from unittest import mock
 
 from vyos.ifconfig.ifname_store import STORE_VERSION
 from vyos.ifconfig.ifname_store import canonical_sort_key
+from vyos.ifconfig.ifname_store import config_dir_is_mounted
 from vyos.ifconfig.ifname_store import device_matches
 from vyos.ifconfig.ifname_store import ambiguous_keys
 from vyos.ifconfig.ifname_store import hardware_key
@@ -136,8 +137,7 @@ class TestReplacedHardware(unittest.TestCase):
 class TestStoreIO(unittest.TestCase):
     @staticmethod
     def _config_dir(d):
-        """A directory that looks like a properly mounted config volume."""
-        (Path(d) / '.vyatta_config').touch()
+        """An ordinary, unencrypted config directory - the common case."""
         return Path(d) / 'interface-mapping.json'
 
     def test_roundtrip(self):
@@ -147,13 +147,36 @@ class TestStoreIO(unittest.TestCase):
             self.assertTrue(save_store(s, p))
             self.assertEqual(load_store(p), s)
 
-    def test_refuses_to_write_when_config_volume_is_not_mounted(self):
+    def test_refuses_to_write_when_the_encrypted_volume_is_not_mounted(self):
         # TPM/LUKS unlock failed: vyos-router continues, but persisting here
         # would write a shadow store that the real volume masks later
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / 'interface-mapping.json'   # no .vyatta_config marker
+        with tempfile.TemporaryDirectory() as d, \
+             mock.patch('vyos.ifconfig.ifname_store.encrypted_config_volume',
+                        return_value=True):
+            p = Path(d) / 'interface-mapping.json'   # a plain dir, not a mount
             self.assertFalse(save_store(store_of({'eth0': 'x'}), p))
             self.assertFalse(p.exists())
+
+    def test_writes_on_the_first_boot_of_a_prebuilt_image(self):
+        # T3871: the check used to key on '.vyatta_config', which an
+        # activation script writes only AFTER interface naming has run. On a
+        # qcow2 that marker is absent on the first boot, so no store was ever
+        # written and the next boot named the hardware from scratch - pull a
+        # card and every name below it moved onto the wrong port.
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'interface-mapping.json'
+            self.assertFalse((Path(d) / '.vyatta_config').exists())
+            self.assertTrue(save_store(store_of({'eth0': 'pci-0000:00:12.0'}), p))
+            self.assertTrue(p.exists())
+
+    def test_unencrypted_config_needs_no_mount_point(self):
+        # the config directory of an ordinary install is not a mount of its
+        # own - only an encrypted one is
+        with tempfile.TemporaryDirectory() as d, \
+             mock.patch('vyos.ifconfig.ifname_store.encrypted_config_volume',
+                        return_value=False):
+            self.assertTrue(config_dir_is_mounted(
+                Path(d) / 'interface-mapping.json'))
 
     def test_missing_file_is_empty_store(self):
         with tempfile.TemporaryDirectory() as d:
@@ -170,7 +193,7 @@ class TestStoreIO(unittest.TestCase):
             p = self._config_dir(d)
             save_store(store_of({'eth0': 'pci-0000:00:12.0'}), p)
             self.assertEqual(sorted(f.name for f in Path(d).iterdir()),
-                             ['.vyatta_config', 'interface-mapping.json'])
+                             ['interface-mapping.json'])
 
 
 def final_names(report):
