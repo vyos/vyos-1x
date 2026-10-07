@@ -289,7 +289,9 @@ def config_dir_is_mounted(path: Path = None) -> bool:
 
 
 def save_store(store: dict, path: Path = None) -> bool:
-    """Write atomically, so an interrupted boot leaves no half-written file.
+    """Write atomically and durably, so a boot cut short leaves either the
+    previous names or the new ones, never a half-written file and never a
+    rename the disk has not seen.
 
     Returns False without writing on a degraded boot: names are still
     resolved for this boot, they just must not be persisted.
@@ -305,6 +307,8 @@ def save_store(store: dict, path: Path = None) -> bool:
         with os.fdopen(fd, 'w') as f:
             json.dump(store, f, indent=2, sort_keys=True)
             f.write('\n')
+            f.flush()
+            os.fsync(f.fileno())
         os.chmod(tmp, 0o664)
         try:
             os.chown(tmp, -1, get_cfg_group_id())
@@ -312,6 +316,13 @@ def save_store(store: dict, path: Path = None) -> bool:
             # not fatal, the store is read by root at boot
             pass
         os.replace(tmp, path)
+        # the rename itself has to reach the disk, or a boot cut short here
+        # comes back to the name it had before
+        dir_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except Exception:
         Path(tmp).unlink(missing_ok=True)
         raise
