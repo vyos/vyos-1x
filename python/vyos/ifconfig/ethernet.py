@@ -156,21 +156,18 @@ class EthernetIf(Interface):
         if not self.exists(self.ifname):
             return
 
-        # undo what the configuration changed about the hardware itself.
-        #
-        # While the port is still enslaved its address belongs to the bond -
-        # most modes need every member to carry the bond's one, and set_mac()
-        # would bounce the link underneath it. BondIf.update() releases the
-        # member and then runs this cleanup again, which is where the address
-        # is put back.
+        # undo what the configuration changed about the hardware itself, but
+        # not while the port is still enslaved: a bond owns its members'
+        # address and MTU, so resetting them here would leave the member out
+        # of step with the bond it is still in. Releasing it runs this again.
         tmp = get_interface_config(self.ifname)
         if dict_search('linkinfo.info_slave_kind', tmp) != 'bond':
             mac = permanent_mac(self.ifname)
             if mac:
                 self.set_mac(mac)
 
-        mtu = min(int(EthernetIf.DEFAULT_MTU), int(self.get_max_mtu()))
-        self.set_mtu(str(mtu))
+            mtu = min(int(EthernetIf.DEFAULT_MTU), int(self.get_max_mtu()))
+            self.set_mtu(str(mtu))
 
         self.set_admin_state('up')
 

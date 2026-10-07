@@ -160,17 +160,65 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         # T3871: deleting a member's whole ethernet node while it is enslaved,
         # then re-adding it, must leave the port present and usable - the
         # hardware never went anywhere.
-        member = self._members[0]
+        #
+        # A bond also owns its members' address and MTU
+        # (BondIf.get_inherit_bond_options()), and it goes on using this one
+        # after the node is gone. Putting the Kernel defaults back here left
+        # the member out of step with the bond it was still an active slave
+        # of: on a jumbo bond every frame the bond was sized for was silently
+        # discarded, and with the address reset the replies addressed to the
+        # bond were dropped by the port. Both have to wait until the bond has
+        # released it - which is asserted at the end.
+        if len(self._members) < 2:
+            self.skipTest('need a second member - the bond adopts the first '
+                          "member's address, so that one cannot show an "
+                          'address reset at all')
+
+        bond = self._interfaces[0]
+        # deliberately not _members[0]: the bond takes its address from that
+        # one, so it could not tell a reset apart from a no-op
+        member = self._members[-1]
+        own_mac = Interface(member).get_mac()
+        # any MTU the bond does not share with the Kernel default will do.
+        # Staying below it keeps this runnable on ports which cannot carry
+        # jumbo frames, which is every port the smoketests run on.
+        bond_mtu = '1400'
 
         for interface in self._interfaces:
             for option in self._options.get(interface, []):
                 self.cli_set(self._base_path + [interface] + option.split())
+            self.cli_set(self._base_path + [interface, 'mtu', bond_mtu])
         self.cli_commit()
+
+        bond_mac = Interface(bond).get_mac()
+        self.assertNotEqual(own_mac, bond_mac,
+                            f'{member} was picked as the address donor - it '
+                            'cannot show an address reset')
+        self.assertEqual(Interface(member).get_mac(), bond_mac)
 
         self.cli_delete(['interfaces', 'ethernet', member])
         self.cli_commit()
+
         self.assertTrue(interface_exists(member),
                         f'{member} disappeared after its configuration was deleted')
+        self.assertEqual(read_file(f'/sys/class/net/{member}/mtu'), bond_mtu,
+                         f'{member} left out of step with the bond it is still in')
+        self.assertEqual(Interface(member).get_mac(), bond_mac,
+                         f'{member} no longer carries the address of the bond '
+                         'it is still a member of')
+
+        # released: now, and only now, the port goes back to what the Kernel
+        # gave it - which is what makes the skip above a deferral and not a
+        # permanent exemption
+        self.cli_delete(self._base_path + [bond, 'member', 'interface', member])
+        self.cli_commit()
+
+        self.assertEqual(Interface(member).get_mac(), own_mac,
+                         f'{member} did not get its own address back once the '
+                         'bond released it')
+        self.assertEqual(read_file(f'/sys/class/net/{member}/mtu'), '1500',
+                         f'{member} did not get the default MTU back once the '
+                         'bond released it')
 
         self.cli_set(['interfaces', 'ethernet', member, 'description', 'readded'])
         self.cli_commit()
