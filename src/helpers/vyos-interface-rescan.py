@@ -97,8 +97,7 @@ def get_interface_type(intf: str) -> str:
     return intf_type
 
 def get_new_interfaces() -> dict:
-    """ Read any new interface data left in /run/udev/vyos by
-    vyos-net-name-resolve.py for interfaces without a configured hw-id
+    """ Read any new interface data left in /run/udev/vyos by vyos_net_name
     """
     interfaces = {}
 
