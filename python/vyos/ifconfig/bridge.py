@@ -113,8 +113,8 @@ class BridgeIf(Interface):
         'del_port': {
             'shellcmd': 'ip link set dev {value} nomaster',
         },
-        'add_local_fdb_entry': {
-            'shellcmd': 'bridge fdb add {value} dev {ifname} self local',
+        'replace_local_fdb_entry': {
+            'shellcmd': 'bridge fdb replace {value} dev {ifname} self local',
         },
         'del_local_fdb_entry': {
             'shellcmd': 'bridge fdb del {value} dev {ifname} self local',
@@ -292,25 +292,33 @@ class BridgeIf(Interface):
         """
         return self.get_interface('fdb_entries')
 
-    def add_local_fdb_entry(self, mac_address: str):
+    def replace_local_fdb_entry(self, mac_address: str, vlan=None):
         """
-        Add a local FDB entry for the given MAC address on the bridge interface.
+        Add or replace a local FDB entry for the given MAC address on the bridge
+        interface, optionally bound to a VLAN.
 
         Example:
         >>> from vyos.ifconfig import BridgeIf
-        >>> BridgeIf('br0').add_local_fdb_entry('cc:38:2e:bf:7b:0d')
+        >>> BridgeIf('br0').replace_local_fdb_entry('cc:38:2e:bf:7b:0d', 100)
         """
-        self.set_interface('add_local_fdb_entry', mac_address.lower())
+        value = [mac_address.lower()]
+        if vlan:
+            value += ['vlan', str(vlan)]
+        self.set_interface('replace_local_fdb_entry', ' '.join(value))
 
-    def del_local_fdb_entry(self, mac_address: str):
+    def del_local_fdb_entry(self, mac_address: str, vlan=None):
         """
-        Remove a local FDB entry for the given MAC address on the bridge interface.
+        Remove a local FDB entry for the given MAC address on the bridge interface,
+        optionally bound to a VLAN.
 
         Example:
         >>> from vyos.ifconfig import BridgeIf
-        >>> BridgeIf('br0').del_local_fdb_entry('cc:38:2e:bf:7b:0d')
+        >>> BridgeIf('br0').del_local_fdb_entry('cc:38:2e:bf:7b:0d', 100)
         """
-        self.set_interface('del_local_fdb_entry', mac_address.lower())
+        value = [mac_address.lower()]
+        if vlan:
+            value += ['vlan', str(vlan)]
+        self.set_interface('del_local_fdb_entry', ' '.join(value))
 
     def update(self, config):
         """ General helper function which works on a dictionary retrieved by
