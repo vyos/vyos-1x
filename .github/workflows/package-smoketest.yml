@@ -47,6 +47,7 @@ jobs:
       test_tpm_tests: ${{ steps.config.outputs.test_tpm_tests }}
       test_vpp: ${{ steps.config.outputs.test_vpp }}
       test_vpp_runner: ${{ steps.config.outputs.test_vpp_runner }}
+      test_ifname: ${{ steps.config.outputs.test_ifname }}
       install_build_deps: ${{ steps.config.outputs.install_build_deps }}
       mirror_enabled: ${{ steps.config.outputs.mirror_enabled }}
       vyos_build_ref: ${{ steps.determine-ref.outputs.vyos_build_ref }}
@@ -81,6 +82,7 @@ jobs:
           echo "test_tpm_tests=$(echo $CONFIG | jq -r .test_tpm_tests)" >> $GITHUB_OUTPUT
           echo "test_vpp=$(echo $CONFIG | jq -r .test_vpp)" >> $GITHUB_OUTPUT
           echo "test_vpp_runner=$(echo $CONFIG | jq -c .test_vpp_runner)" >> $GITHUB_OUTPUT
+          echo "test_ifname=$(echo $CONFIG | jq -r .test_ifname)" >> $GITHUB_OUTPUT
           echo "install_build_deps=$(echo $CONFIG | jq -r .install_build_deps)" >> $GITHUB_OUTPUT
           echo "mirror_enabled=$(echo $CONFIG | jq -r .mirror_enabled)" >> $GITHUB_OUTPUT
 
@@ -311,6 +313,40 @@ jobs:
             exit 1
           fi
 
+  test_interface_naming:
+    needs: [build_iso, set_config]
+    if: needs.set_config.outputs.test_ifname == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ${{ needs.set_config.outputs.container_image }}
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    outputs:
+      exit_code: ${{ steps.test.outputs.exit_code }}
+    steps:
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ needs.set_config.outputs.vyos_build_repo }}
+          token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: vyos-${{ needs.build_iso.outputs.build_version }}
+          path: build
+
+      - name: VyOS interface naming tests
+        id: test
+        shell: bash
+        run: |
+          if sudo make test-ifname; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
   test_config_load:
     needs: [build_iso, set_config]
     runs-on: ubuntu-24.04
@@ -467,6 +503,7 @@ jobs:
       - test_smoketest_cli
       - test_smoketest_cli_vpp
       - test_interfaces_cli
+      - test_interface_naming
       - test_config_load
       - test_config_load_vpp
       - test_raid1_install
@@ -482,7 +519,7 @@ jobs:
           echo "${{ github.event.pull_request.number }}" > pr-report/pr_number.txt
 
           cat > pr-report/message.md << 'EOF'
-          CI integration ${{ (needs.test_smoketest_cli.outputs.exit_code == 'success' && needs.test_interfaces_cli.outputs.exit_code == 'success' && needs.test_config_load.outputs.exit_code == 'success' && needs.test_raid1_install.outputs.exit_code == 'success' && (needs.test_smoketest_cli_vpp.outputs.exit_code != 'fail') && (needs.test_config_load_vpp.outputs.exit_code != 'fail') && (needs.test_encrypted_config_tpm.outputs.exit_code != 'fail')) && '👍 passed!' || '❌ failed!' }}
+          CI integration ${{ (needs.test_smoketest_cli.outputs.exit_code == 'success' && needs.test_interfaces_cli.outputs.exit_code == 'success' && needs.test_config_load.outputs.exit_code == 'success' && needs.test_raid1_install.outputs.exit_code == 'success' && (needs.test_smoketest_cli_vpp.outputs.exit_code != 'fail') && (needs.test_config_load_vpp.outputs.exit_code != 'fail') && (needs.test_encrypted_config_tpm.outputs.exit_code != 'fail') && (needs.test_interface_naming.outputs.exit_code != 'fail')) && '👍 passed!' || '❌ failed!' }}
 
           ### Details
 
@@ -495,6 +532,7 @@ jobs:
           * CLI Smoketests VPP ${{ needs.test_smoketest_cli_vpp.outputs.exit_code == 'success' && '👍 passed' || needs.test_smoketest_cli_vpp.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
           * Config tests VPP ${{ needs.test_config_load_vpp.outputs.exit_code == 'success' && '👍 passed' || needs.test_config_load_vpp.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
           * TPM tests ${{ needs.test_encrypted_config_tpm.outputs.exit_code == 'success' && '👍 passed' || needs.test_encrypted_config_tpm.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
+          * Interface naming tests ${{ needs.test_interface_naming.outputs.exit_code == 'success' && '👍 passed' || needs.test_interface_naming.outputs.exit_code == 'fail' && '❌ failed' || '⏭️ skipped' }}
           EOF
 
       - uses: actions/upload-artifact@v7
