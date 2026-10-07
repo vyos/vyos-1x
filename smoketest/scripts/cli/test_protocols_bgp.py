@@ -1805,6 +1805,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(
             base_path + ['address-family', 'ipv4-unicast', 'route-map',
                          'vrf', 'import',  route_map_in])
+        self.cli_set(
+            base_path + ['address-family', 'ipv6-unicast', 'import',
+                         'vrf', vrf])
+        self.cli_set(
+            base_path + ['address-family', 'ipv6-unicast', 'route-map',
+                         'vrf', 'import',  route_map_in])
 
         self.cli_commit()
 
@@ -1816,6 +1822,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.assertIn(f'  import vrf {vrf}', frrconfig)
         self.assertIn(f'  import vrf route-map {route_map_in}', frrconfig)
+
+        # The same filter under IPv6 unicast
+        frr_ipv6 = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit',
+                                     start_subsection=' address-family ipv6 unicast',
+                                     stop_subsection='^ exit-address-family')
+        self.assertIn(f'  import vrf {vrf}', frr_ipv6)
+        self.assertIn(f'  import vrf route-map {route_map_in}', frr_ipv6)
 
         # Verify FRR bgpd configuration
         frr_vrf_config = self.getFRRconfig(
