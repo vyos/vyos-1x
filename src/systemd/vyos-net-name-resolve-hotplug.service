@@ -1,0 +1,13 @@
+[Unit]
+Description=VyOS persistent interface naming for hot-plugged hardware
+
+# Pulled in by 60-vyos-net-hotplug.rules when a network device appears.
+# Held off until the boot-time configuration has been applied, otherwise the
+# boot storm of "add" events would each queue a redundant run.
+ConditionPathExists=/tmp/vyos-config-status
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/vyos/system/vyos-net-name-resolve.py
+TimeoutStartSec=90
+StandardOutput=journal
