@@ -285,6 +285,19 @@ def _wwan_dial_wanted(ifname: str) -> bool:
 
     return True
 
+def _wwan_reapply(ifname: str) -> None:
+    """ Re-apply the addressing of a freshly re-dialled WWAN interface """
+    from vyos.config import Config
+    from vyos.configdict import get_interface_dict
+    from vyos.ifconfig import WWANIf
+
+    _, config = get_interface_dict(Config(), ['interfaces', 'wwan'], ifname)
+    if WWANIf(ifname).reapply_bearer(config):
+        # The default route is rendered from the gateway of the bearer, so FRR
+        # is reconciled the way a DHCP lease event does it
+        cmdl(['systemd-run', '--no-block', '--collect', '--quiet',
+              '/usr/libexec/vyos/vyos-frr-render.py', '--after-commit'])
+
 def _wwan_dial(ifname: str, config: dict) -> None:
     """ Re-establish a lost WWAN session. Runs on a worker thread - dialling
     blocks for as long as the modem takes to answer, and the event loop must
@@ -314,6 +327,12 @@ def _wwan_dial(ifname: str, config: dict) -> None:
 
             syslog.syslog(syslog.LOG_INFO, f'Re-dialled WWAN interface {ifname}')
             _wwan_clear_backoff(ifname)
+
+            # The new session can come back with a different address or
+            # gateway, so a static bearer has to be applied again - unless a
+            # commit started meanwhile, which applies it itself.
+            if _wwan_dial_wanted(ifname):
+                _wwan_reapply(ifname)
             return None
 
         _wwan_defer(ifname, f'Failed to re-dial WWAN interface {ifname}')
