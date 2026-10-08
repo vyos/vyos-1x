@@ -6,6 +6,7 @@ SHIM_DIR := src/shim
 LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
+NPROC := $(shell nproc)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
 
 config_xml_src = $(wildcard interface-definitions/*.xml.in)
@@ -22,20 +23,21 @@ libvyosconfig:
 	fi
 
 %.xml: %.xml.in
-	@echo Generating $(BUILD_DIR)/$@ from $<
-	mkdir -p $(BUILD_DIR)/$(dir $@)
+	@mkdir -p $(BUILD_DIR)/$(dir $@)
 	$(CURDIR)/scripts/transclude-template $< > $(BUILD_DIR)/$@
 
 .PHONY: interface_definitions
 .ONESHELL:
-interface_definitions: libvyosconfig $(config_xml_obj)
+interface_definitions: libvyosconfig
+	@echo "Building conf-mode templates ($(words $(config_xml_src)) files)"
+	$(MAKE) --no-print-directory -j$(NPROC) $(config_xml_obj) || exit 1
 	rm -rf $(TMPL_DIR); mkdir -p $(TMPL_DIR)
 
 	$(CURDIR)/scripts/override-default $(BUILD_DIR)/interface-definitions
 	$(CURDIR)/scripts/override-help $(BUILD_DIR)/interface-definitions
 	$(CURDIR)/scripts/check-properties-collision $(BUILD_DIR)/interface-definitions
 
-	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
+	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -P $(NPROC) -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
 	# IPSec VPN EAP-RADIUS does not support source-address
@@ -58,10 +60,12 @@ interface_definitions: libvyosconfig $(config_xml_obj)
 
 .PHONY: op_mode_definitions
 .ONESHELL:
-op_mode_definitions: $(op_xml_obj)
+op_mode_definitions:
+	@echo "Building op-mode templates ($(words $(op_xml_src)) files)"
+	$(MAKE) --no-print-directory -j$(NPROC) $(op_xml_obj) || exit 1
 	rm -rf $(OP_TMPL_DIR); mkdir -p $(OP_TMPL_DIR)
 
-	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
+	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -P $(NPROC) -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
 	$(CURDIR)/python/vyos/xml_ref/generate_op_cache.py --xml-dir $(BUILD_DIR)/op-mode-definitions --export-json $(DATA_DIR)/op_cache.json || exit 1
 
