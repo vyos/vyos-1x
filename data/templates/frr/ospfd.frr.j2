@@ -212,7 +212,7 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
  ospf abr-type {{ parameters.abr_type }}
 {% endif %}
 {% if parameters.rfc1583_compatibility is vyos_defined %}
- ospf rfc1583compatibility
+ compatible rfc1583
 {% endif %}
 {% if parameters.router_id is vyos_defined %}
  ospf router-id {{ parameters.router_id }}
