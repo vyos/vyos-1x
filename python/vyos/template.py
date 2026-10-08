@@ -454,6 +454,15 @@ def get_dhcp_router(interface):
             address = address.split()[0]
             return address
 
+
+@register_filter('get_wwan_router')
+def get_wwan_router(interface, family):
+    """Default router of the static bearer of a WWAN interface for the given
+    address family ("ipv4" or "ipv6"), or None if it does not have one."""
+    from vyos.utils.wwan import get_bearer_router
+
+    return get_bearer_router(interface, family)
+
 @register_filter('natural_sort')
 def natural_sort(iterable):
     import re

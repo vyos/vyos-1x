@@ -86,12 +86,21 @@ WWAN_RECONCILE_INTERVAL = 30
 WWAN_BACKOFF_MIN = 30
 WWAN_BACKOFF_MAX = 900
 
+# How often a static bearer which could not be applied completely after a
+# re-dial is tried again, one reconcile pass apart. The settings of a family
+# can arrive late, or the network may never supply it.
+WWAN_REAPPLY_RETRIES = 10
+
 _wwan_next_attempt: dict[str, float] = {}
 _wwan_backoff: dict[str, int] = {}
 
 # Interfaces with a dial in flight. Dialling blocks for tens of seconds, so it
 # runs on a worker thread and must not be started twice for one interface.
 _wwan_dialing: set[str] = set()
+
+# Interfaces whose bearer is still to be applied completely, with the number of
+# attempts left.
+_wwan_reapply_pending: dict[str, int] = {}
 _wwan_lock = threading.Lock()
 
 # Legacy re-dial cron job, superseded by _reconcile_wwan(). Only present on a
@@ -285,6 +294,50 @@ def _wwan_dial_wanted(ifname: str) -> bool:
 
     return True
 
+def _wwan_reapply(ifname: str) -> None:
+    """ Re-apply the addressing of a re-dialled WWAN interface. An incomplete
+    result is left pending for _reconcile_wwan() to try again. """
+    from vyos.config import Config
+    from vyos.configdict import get_interface_dict
+    from vyos.ifconfig import WWANIf
+
+    left = _wwan_reapply_pending.get(ifname, WWAN_REAPPLY_RETRIES)
+    try:
+        _, config = get_interface_dict(Config(), ['interfaces', 'wwan'], ifname)
+        complete = WWANIf(ifname).reapply_bearer(config)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_ERR, f'Error applying the bearer of {ifname}: {e}')
+        complete = False
+
+    if complete:
+        _wwan_reapply_pending.pop(ifname, None)
+    elif left > 1:
+        _wwan_reapply_pending[ifname] = left - 1
+    else:
+        _wwan_reapply_pending.pop(ifname, None)
+        syslog.syslog(syslog.LOG_WARNING,
+                      f'Giving up applying the bearer of {ifname}, '
+                      'its settings stayed incomplete')
+
+def _wwan_retry_reapply(ifname: str) -> None:
+    """ One more attempt at a bearer which was left incomplete. Runs on a
+    worker thread, as the bearer is polled for its settings. """
+    try:
+        if _wwan_dial_wanted(ifname):
+            _wwan_reapply(ifname)
+    finally:
+        with _wwan_lock:
+            _wwan_dialing.discard(ifname)
+
+def _wwan_retry_reapply_async(ifname: str) -> None:
+    with _wwan_lock:
+        if ifname in _wwan_dialing:
+            return None
+        _wwan_dialing.add(ifname)
+
+    threading.Thread(target=_wwan_retry_reapply, args=(ifname,),
+                     name=f'wwan-reapply-{ifname}', daemon=True).start()
+
 def _wwan_dial(ifname: str, config: dict) -> None:
     """ Re-establish a lost WWAN session. Runs on a worker thread - dialling
     blocks for as long as the modem takes to answer, and the event loop must
@@ -314,6 +367,13 @@ def _wwan_dial(ifname: str, config: dict) -> None:
 
             syslog.syslog(syslog.LOG_INFO, f'Re-dialled WWAN interface {ifname}')
             _wwan_clear_backoff(ifname)
+
+            # The new session can come back with a different address or
+            # gateway, so a static bearer has to be applied again - unless a
+            # commit started meanwhile, which applies it itself.
+            _wwan_reapply_pending[ifname] = WWAN_REAPPLY_RETRIES
+            if _wwan_dial_wanted(ifname):
+                _wwan_reapply(ifname)
             return None
 
         _wwan_defer(ifname, f'Failed to re-dial WWAN interface {ifname}')
@@ -362,7 +422,15 @@ def _reconcile_wwan() -> None:
         ['interfaces', 'wwan'], key_mangling=('-', '_'), get_first_key=True
     )
     if not config_dict:
+        _wwan_reapply_pending.clear()
         return None
+
+    # Nothing left to apply for an interface which is gone, disabled or
+    # administratively disconnected
+    for ifname in list(_wwan_reapply_pending):
+        if (ifname not in config_dict or 'disable' in config_dict[ifname]
+                or is_admin_disconnected(ifname)):
+            _wwan_reapply_pending.pop(ifname, None)
 
     for ifname, config in config_dict.items():
         # Do not dial an interface the user has explicitly disabled, but let it
@@ -380,6 +448,9 @@ def _reconcile_wwan() -> None:
 
         if is_wwan_connected(ifname):
             _wwan_clear_backoff(ifname)
+            # The session is up but its bearer was not applied completely
+            if ifname in _wwan_reapply_pending:
+                _wwan_retry_reapply_async(ifname)
             continue
 
         if monotonic() < _wwan_next_attempt.get(ifname, 0):
