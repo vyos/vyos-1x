@@ -100,6 +100,24 @@ vrf {{ vrf }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
+{# IPv4 and IPv6 default routes from WWAN interfaces with a static bearer #}
+{% if wwan is vyos_defined %}
+{%     for interface, interface_config in wwan.items() %}
+{%         set distance = interface_config.default_route_distance if interface_config.default_route_distance is vyos_defined else '' %}
+{%         if interface_config.ipv4 is vyos_defined and interface_config.no_default_route is not vyos_defined %}
+{%             set next_hop = interface | get_wwan_router('ipv4') %}
+{%             if next_hop is vyos_defined %}
+{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 {{ distance }}
+{%             endif %}
+{%         endif %}
+{%         if interface_config.ipv6 is vyos_defined %}
+{%             set next_hop = interface | get_wwan_router('ipv6') %}
+{%             if next_hop is vyos_defined %}
+{{ ipv6_prefix }} route ::/0 {{ next_hop }} {{ interface }} tag 210 {{ distance }}
+{%             endif %}
+{%         endif %}
+{%     endfor %}
+{% endif %}
 {# IPv6 routing #}
 {% if route6 is vyos_defined %}
 {%     for prefix, prefix_config in route6.items() %}

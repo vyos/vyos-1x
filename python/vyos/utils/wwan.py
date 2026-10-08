@@ -190,6 +190,38 @@ def connect_options(config: dict) -> str:
 
     return options
 
+# The gateway of a static bearer, per interface and address family, for the FRR
+# renderer to build the default route from. Same /run directory as above.
+bearer_router_dir = admin_disconnect_dir
+
+
+def _bearer_router_file(ifname: str, family: str) -> str:
+    return os.path.join(bearer_router_dir, f'{ifname}.{family}-router')
+
+
+def set_bearer_router(ifname: str, family: str, router) -> None:
+    """Record the gateway of the static bearer of a WWAN interface, or forget
+    it when router is empty - the bearer is gone or does not have one"""
+    path = _bearer_router_file(ifname, family)
+    if not router:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        return None
+    os.makedirs(bearer_router_dir, exist_ok=True)
+    with open(path, 'w') as f:
+        f.write(router)
+
+
+def get_bearer_router(ifname: str, family: str):
+    """Return the recorded gateway of a static bearer, or None"""
+    try:
+        with open(_bearer_router_file(ifname, family)) as f:
+            return f.read().strip() or None
+    except FileNotFoundError:
+        return None
+
 def _admin_disconnect_marker(ifname: str) -> str:
     return os.path.join(admin_disconnect_dir, f'{ifname}.disconnected')
 
