@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from pathlib import Path
 from sys import exit
 
 from vyos.config import Config
@@ -40,6 +41,8 @@ from vyos.utils.wwan import start_modem_manager
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+rt_proto_wwan = Path('/etc/iproute2/rt_protos.d/wwan.conf')
 
 def get_config(config=None):
     """
@@ -113,9 +116,12 @@ def verify(wwan):
     return None
 
 def generate(wwan):
-    # Nothing to render - re-dialling a session that was lost (e.g. during RF
-    # signal loss) is owned by vyos-netlinkd, which reconciles every configured
-    # WWAN interface against ModemManager on its own.
+    # Add own rt_proto 'wwan' - helps to detect all own routes 'proto wwan'
+    rt_proto_wwan.write_text('112  wwan\n')
+
+    # Re-dialling a session that was lost (e.g. during RF signal loss) is
+    # owned by vyos-netlinkd, which reconciles every configured WWAN interface
+    # against ModemManager on its own.
     return None
 
 def apply(wwan):
