@@ -2095,7 +2095,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(ipsec_path)
         self.cli_commit()
 
-    def test_26_1_vpp_exporter_default_groups(self):
+    def test_28_1_vpp_exporter_default_groups(self):
         self.cli_set(prometheus_base_path + ['vpp-exporter'])
         self.cli_commit()
 
@@ -2127,7 +2127,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(os.path.exists(vpp_exporter_service_file))
         self.assertFalse(os.path.lexists(vpp_exporter_enable_link))
 
-    def test_26_2_vpp_exporter_selected_groups(self):
+    def test_28_2_vpp_exporter_selected_groups(self):
         exporter_path = prometheus_base_path + ['vpp-exporter']
         self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
         self.cli_set(exporter_path)
@@ -2162,7 +2162,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('nodes_calls{', output)
         self.assertIn('sys_num_worker_threads', output)
 
-    def test_26_3_vpp_exporter_vrf(self):
+    def test_28_3_vpp_exporter_vrf(self):
         self.cli_set(['vrf', 'name', vpp_exporter_vrf, 'table', '1001'])
         self.cli_set(prometheus_base_path + ['vpp-exporter', 'vrf', vpp_exporter_vrf])
         self.cli_commit()
@@ -2179,6 +2179,59 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.cli_delete(['vrf', 'name', vpp_exporter_vrf])
         self.cli_commit()
+
+    def test_28_4_vpp_exporter_requires_vpp(self):
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_delete(interfaces_path)
+        with self.assertRaisesRegex(
+            ConfigSessionError,
+            wrapped_error_regex(
+                'VPP cannot be removed while the VPP Prometheus exporter is configured.'
+            ),
+        ):
+            self.cli_commit()
+
+    def test_28_5_vpp_exporter_node_counter_warnings(self):
+        exporter_path = prometheus_base_path + ['vpp-exporter']
+        self.cli_set(exporter_path)
+        self.cli_set(exporter_path + ['stat-group', 'nodes'])
+
+        output = self.cli_commit().strip()
+        warning = 'WARNING: VPP node metrics requested but per-node-counters setting is not enabled.'
+        self.assertRegex(output, wrapped_error_regex(warning))
+
+        per_node_counters_path = resource_path + [
+            'memory',
+            'stats',
+            'per-node-counters',
+        ]
+        self.cli_set(per_node_counters_path)
+        output = self.cli_commit().strip()
+        self.assertNotRegex(output, wrapped_error_regex(warning))
+
+        self.cli_delete(per_node_counters_path)
+        output = self.cli_commit().strip()
+        self.assertRegex(output, wrapped_error_regex(warning))
+
+    def test_28_6_vpp_exporter_removal_preserves_node_counters(self):
+        per_node_counters_path = resource_path + [
+            'memory',
+            'stats',
+            'per-node-counters',
+        ]
+        self.cli_set(per_node_counters_path)
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_commit()
+
+        self.cli_delete(prometheus_base_path)
+        self.cli_commit()
+
+        config = get_vpp_config()
+        self.assertEqual(config['statseg']['per-node-counters'], 'on')
+        self.assertFalse(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
 
 if __name__ == '__main__':

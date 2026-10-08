@@ -165,15 +165,16 @@ def get_config(config=None):
     if 'vpp_exporter' in monitoring:
         vpp_exporter = monitoring['vpp_exporter']
         vpp_exporter['patterns'] = build_vpp_stat_patterns(vpp_exporter)
+        vpp_per_node_counters_path = [
+            'vpp',
+            'settings',
+            'resource-allocation',
+            'memory',
+            'stats',
+            'per-node-counters',
+        ]
         vpp_exporter['vpp_per_node_counters_enabled'] = conf.exists(
-            [
-                'vpp',
-                'settings',
-                'resource-allocation',
-                'memory',
-                'stats',
-                'per-node-counters',
-            ]
+            vpp_per_node_counters_path
         )
         vpp_exporter['vpp_configured'] = conf.exists(['vpp'])
 
@@ -184,8 +185,11 @@ def get_config(config=None):
 
         nodes_requested = 'nodes' in configured_groups
         nodes_requested_effective = 'nodes' in effective_groups
-        vpp_exporter['nodes_selection_newly_enabled'] = (
-            nodes_requested and not nodes_requested_effective
+        counters_were_enabled = conf.exists_effective(vpp_per_node_counters_path)
+        vpp_exporter['nodes_counters_warning_required'] = (
+            nodes_requested
+            and not vpp_exporter['vpp_per_node_counters_enabled']
+            and (not nodes_requested_effective or counters_were_enabled)
         )
 
     tmp = is_node_changed(conf, base + ['node-exporter', 'vrf'])
@@ -251,18 +255,21 @@ def verify(monitoring):
             )
 
         port = int(vpp_exporter['port'])
-        if not check_port_availability(
-            None, port, 'tcp', vrf=vpp_exporter.get('vrf')
-        ) and not is_listen_port_bind_service(port, vpp_exporter_process_name):
-            raise ConfigError(f'TCP port "{port}" is used by another service!')
+        vrf = vpp_exporter.get('vrf')
+        vrf_error_msg = f' in vrf "{vrf}"' if vrf else ''
+        if (
+            not check_port_availability(None, port, 'tcp', vrf=vrf)
+            and not is_listen_port_bind_service(port, vpp_exporter_process_name)
+        ):
+            raise ConfigError(
+                f'TCP port "{port}"{vrf_error_msg} is used by another service!'
+            )
 
         for group_name in vpp_exporter.get('stat_group', []):
             if group_name not in vpp_stat_group_patterns:
                 raise ConfigError(f'Invalid stat-group "{group_name}"')
 
-        if vpp_exporter.get('nodes_selection_newly_enabled') and not vpp_exporter.get(
-            'vpp_per_node_counters_enabled'
-        ):
+        if vpp_exporter.get('nodes_counters_warning_required'):
             Warning(
                 'VPP node metrics requested but per-node-counters setting is not '
                 'enabled. Enable it using the following command for "nodes" metrics '
