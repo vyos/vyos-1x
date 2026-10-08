@@ -85,7 +85,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['auto-cost', 'reference-bandwidth', bandwidth])
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'abr-type', abr_type])
-        self.cli_set(base_path + ['parameters', 'opaque-lsa'])
+        self.cli_set(base_path + ['capability', 'opaque'])
         self.cli_set(base_path + ['parameters', 'rfc1583-compatibility'])
         self.cli_set(base_path + ['log-adjacency-changes', 'detail'])
         self.cli_set(base_path + ['default-metric', metric])
@@ -711,6 +711,35 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.cli_set(path + ['metric-type', '2'])
         self.cli_commit()
         verify('')
+
+    def test_ospf_21_capability_opaque(self):
+        # "capability opaque" is the only CLI node for FRR's "capability opaque"
+        # (T9441: "parameters opaque-lsa" was migrated to it). The generated
+        # FRR config file must hold the line once, and no alias form of it.
+        #
+        # This reads the generated FRR config file: FRR accepts the alias
+        # "ospf opaque-lsa", so vtysh cannot tell which form was rendered.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        capability = base_path + ['capability', 'opaque']
+
+        # the router-id keeps "router ospf" configured when the node is
+        # deleted below, so the delete is tested against a running instance
+        self.cli_set(base_path + ['parameters', 'router-id', '192.0.2.1'])
+        self.cli_set(capability)
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertEqual(frrconfig.count('\n capability opaque\n'), 1)
+        self.assertNotRegex(frrconfig, r'(?m)^ ospf opaque-lsa')
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+        self.assertIn(' capability opaque', frrconfig)
+
+        self.cli_delete(capability)
+        self.cli_commit()
+        self.assertNotIn('capability opaque', read_file(frr_conf))
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+        self.assertNotIn(' capability opaque', frrconfig)
+        self.assertIn(' ospf router-id 192.0.2.1', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
