@@ -18,6 +18,7 @@
 
 import os
 import re
+import socket
 import unittest
 from collections import defaultdict
 
@@ -50,7 +51,9 @@ interfaces_path = ['interfaces', 'vpp']
 interface = 'eth1'
 vpp_exporter_service_file = '/etc/systemd/system/vpp_exporter.service'
 vpp_exporter_enable_link = '/etc/systemd/system/vpp.service.wants/vpp_exporter.service'
-vpp_exporter_vrf = 'vpp-exporter'
+vpp_exporter_vrf = 'vpp-exp-vrf'
+vpp_exporter_test_interface = 'dum9482'
+vpp_exporter_test_address = '2001:db8::9482'
 vpp_system_stat_patterns = (
     '^/sys/heartbeat$',
     '^/sys/last_stats_clear$',
@@ -156,7 +159,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             # Ensure these cleanup operations always run
             self.cli_delete(base_path)
             self.cli_delete(interfaces_path)
-            self.cli_delete(prometheus_base_path)
+            self.cli_delete(prometheus_base_path + ['vpp-exporter'])
+            self.cli_delete(['interfaces', 'dummy', vpp_exporter_test_interface])
             self.cli_delete(['vrf', 'name', vpp_exporter_vrf])
             self.cli_commit()
 
@@ -2102,7 +2106,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(ipsec_path)
         self.cli_commit()
 
-    def test_26_1_vpp_exporter_default_groups(self):
+    def test_28_1_vpp_exporter_default_groups(self):
         self.cli_set(prometheus_base_path + ['vpp-exporter'])
         self.cli_commit()
 
@@ -2127,14 +2131,14 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.islink(vpp_exporter_enable_link))
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
-        self.cli_delete(prometheus_base_path)
+        self.cli_delete(prometheus_base_path + ['vpp-exporter'])
         self.cli_commit()
 
         self.assertFalse(process_named_running(VPP_EXPORTER_PROCESS_NAME))
         self.assertFalse(os.path.exists(vpp_exporter_service_file))
         self.assertFalse(os.path.lexists(vpp_exporter_enable_link))
 
-    def test_26_2_vpp_exporter_selected_groups(self):
+    def test_28_2_vpp_exporter_selected_groups(self):
         exporter_path = prometheus_base_path + ['vpp-exporter']
         self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
         self.cli_set(exporter_path)
@@ -2169,7 +2173,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('nodes_calls{', output)
         self.assertIn('sys_num_worker_threads', output)
 
-    def test_26_3_vpp_exporter_vrf(self):
+    def test_28_3_vpp_exporter_vrf(self):
         self.cli_set(['vrf', 'name', vpp_exporter_vrf, 'table', '1001'])
         self.cli_set(prometheus_base_path + ['vpp-exporter', 'vrf', vpp_exporter_vrf])
         self.cli_commit()
@@ -2182,10 +2186,116 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         )
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
-        self.cli_delete(prometheus_base_path)
+        self.cli_delete(prometheus_base_path + ['vpp-exporter'])
         self.cli_commit()
         self.cli_delete(['vrf', 'name', vpp_exporter_vrf])
         self.cli_commit()
+
+    def test_28_4_vpp_exporter_requires_vpp(self):
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_delete(interfaces_path)
+        with self.assertRaisesRegex(
+            ConfigSessionError,
+            wrapped_error_regex(
+                'VPP cannot be removed while the VPP Prometheus exporter is configured.'
+            ),
+        ):
+            self.cli_commit()
+
+    def test_28_5_vpp_exporter_node_counter_warnings(self):
+        exporter_path = prometheus_base_path + ['vpp-exporter']
+        self.cli_set(exporter_path)
+        self.cli_set(exporter_path + ['stat-group', 'nodes'])
+
+        output = self.cli_commit().strip()
+        warning = 'WARNING: VPP node metrics requested but per-node-counters setting is not enabled.'
+        self.assertRegex(output, wrapped_error_regex(warning))
+
+        per_node_counters_path = resource_path + [
+            'memory',
+            'stats',
+            'per-node-counters',
+        ]
+        self.cli_set(per_node_counters_path)
+        output = self.cli_commit().strip()
+        self.assertNotRegex(output, wrapped_error_regex(warning))
+
+        self.cli_delete(per_node_counters_path)
+        output = self.cli_commit().strip()
+        self.assertRegex(output, wrapped_error_regex(warning))
+
+    def test_28_6_vpp_exporter_removal_preserves_node_counters(self):
+        per_node_counters_path = resource_path + [
+            'memory',
+            'stats',
+            'per-node-counters',
+        ]
+        self.cli_set(per_node_counters_path)
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_commit()
+
+        self.cli_delete(prometheus_base_path + ['vpp-exporter'])
+        self.cli_commit()
+
+        config = get_vpp_config()
+        self.assertEqual(config['statseg']['per-node-counters'], 'on')
+        self.assertFalse(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+    def test_28_7_vpp_exporter_rejects_port_conflict_in_new_vrf(self):
+        exporter_path = prometheus_base_path + ['vpp-exporter']
+        self.cli_set(['vrf', 'name', vpp_exporter_vrf, 'table', '1001'])
+        self.cli_set(
+            [
+                'interfaces',
+                'dummy',
+                vpp_exporter_test_interface,
+                'address',
+                f'{vpp_exporter_test_address}/128',
+            ]
+        )
+        self.cli_set(
+            [
+                'interfaces',
+                'dummy',
+                vpp_exporter_test_interface,
+                'vrf',
+                vpp_exporter_vrf,
+            ]
+        )
+        self.cli_commit()
+
+        self.cli_set(exporter_path)
+        self.cli_commit()
+
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as listener:
+            listener.setsockopt(
+                socket.SOL_SOCKET,
+                socket.SO_BINDTODEVICE,
+                f'{vpp_exporter_vrf}\0'.encode(),
+            )
+            listener.bind((vpp_exporter_test_address, 9482))
+            listener.listen()
+
+            self.cli_set(exporter_path + ['vrf', vpp_exporter_vrf])
+            with self.assertRaisesRegex(
+                ConfigSessionError,
+                wrapped_error_regex(
+                    f'TCP port "9482" in vrf "{vpp_exporter_vrf}" is used by another service!'
+                ),
+            ):
+                self.cli_commit()
+
+            self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+            file_content = read_file(vpp_exporter_service_file)
+            self.assertNotIn(f'ip vrf exec {vpp_exporter_vrf}', file_content)
+
+        self.cli_commit()
+        file_content = read_file(vpp_exporter_service_file)
+        self.assertIn(f'ip vrf exec {vpp_exporter_vrf}', file_content)
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
 
 if __name__ == '__main__':
