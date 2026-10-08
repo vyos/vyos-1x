@@ -21,8 +21,10 @@ frr-reload.py, if the configuration has no errors.
 Will fail early if the rendered configuration has any errors.
 """
 
+import fcntl
 import os
 
+from contextlib import contextmanager
 from copy import deepcopy
 from time import sleep
 
@@ -33,6 +35,7 @@ from vyos.configdict import get_pppoe_interfaces
 from vyos.defaults import frr_debug_enable
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_set_nested
+from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import rc_cmd
 from vyos.template import get_dhcp_router
@@ -43,6 +46,21 @@ def debug(message):
     if not os.path.exists(frr_debug_enable):
         return
     print(message)
+
+frr_config_file: str = '/run/frr/config/vyos.frr.conf'
+# Configuration of the last successful reload, for consumers which have no
+# cached configuration of their own
+frr_applied_config_file: str = '/run/frr/config/vyos.frr.applied.conf'
+frr_render_lock_file: str = '/run/vyos-frr-render.lock'
+
+@contextmanager
+def frr_render_lock():
+    """Serialize everything which renders FRR. The rendered configuration is a
+    single file handed to frr-reload.py, so a second renderer would rewrite it
+    while FRR is being reloaded from it."""
+    with open(frr_render_lock_file, 'w') as lock_file:
+        fcntl.lockf(lock_file, fcntl.LOCK_EX)
+        yield
 
 ERROR_RELOAD_TEST: str = 'The system encountered an error while rendering the ' \
     'new routing daemon configuration. To ensure network stability and avoid ' \
@@ -747,7 +765,7 @@ class FRRender:
     cached_config_dict = {}
     cached_dhcp_gateways = {}
     def __init__(self):
-        self._frr_conf = '/run/frr/config/vyos.frr.conf'
+        self._frr_conf = frr_config_file
 
     def generate(self, config_dict) -> None:
         """
@@ -934,6 +952,8 @@ class FRRender:
 
         if count >= count_max:
             raise ConfigError(emsg)
+
+        write_file(frr_applied_config_file, read_file(self._frr_conf))
 
         # frr-reload.py --reload has already saved the configuration to
         # /etc/frr/frr.conf (bind-mounted from /run/frr/config/frr.conf): it

@@ -53,6 +53,8 @@
 #define COMMIT_MARKER "/var/tmp/initial_in_commit"
 #define QUEUE_MARKER "/var/tmp/last_in_queue"
 
+#define FRR_RENDER "/usr/libexec/vyos/vyos-frr-render.py"
+
 enum {
     SUCCESS =      1 << 0,
     ERROR_COMMIT = 1 << 1,
@@ -66,6 +68,7 @@ volatile int timeout = 0;
 
 int initialization(void *, char *);
 int pass_through(char **, int);
+int frr_render(char *);
 void timer_handler(int);
 void leave_hint(char *);
 
@@ -107,6 +110,13 @@ int main(int argc, char* argv[])
     strsep(&pid_str, "_");
     debug_print("config session pid: %s\n", pid_str);
 
+    // Consume the marker before talking to the daemon, else it is left behind
+    // for the next commit when the daemon can not be used here
+    if (access(QUEUE_MARKER, F_OK) != -1) {
+        last = 1;
+        remove(QUEUE_MARKER);
+    }
+
     if (access(COMMIT_MARKER, F_OK) != -1) {
         init_timeout = initialization(requester, pid_str);
         if (!init_timeout) remove(COMMIT_MARKER);
@@ -115,12 +125,10 @@ int main(int argc, char* argv[])
     // if initial communication failed, pass through execution of script
     if (init_timeout) {
         int ret = pass_through(argv, ex_index);
+        // The conf-mode scripts do not render FRR, only the daemon does -
+        // without this the FRR reload of this commit is silently skipped
+        if (last && frr_render(pid_str) != 0) ret = -1;
         return ret;
-    }
-
-    if (access(QUEUE_MARKER, F_OK) != -1) {
-        last = 1;
-        remove(QUEUE_MARKER);
     }
 
     char error_code[1];
@@ -157,6 +165,11 @@ int main(int argc, char* argv[])
     if (err & ERROR_DAEMON) {
         debug_print("Received ERROR_DAEMON\n");
         ret = pass_through(argv, ex_index);
+    }
+
+    // The daemon renders FRR only for a last script it handled itself
+    if (last && (err & (PASS | ERROR_DAEMON))) {
+        if (frr_render(pid_str) != 0) ret = -1;
     }
 
     if (err & ERROR_COMMIT) {
@@ -342,6 +355,46 @@ int pass_through(char **argv, int ex_index)
     }
 
     return 0;
+}
+
+int frr_render(char *pid_val)
+{
+    pid_t child_pid;
+    int status;
+
+    // Nothing to fall back to, e.g. during a partial package upgrade
+    if (access(FRR_RENDER, X_OK) == -1) {
+        debug_print("%s is not available\n", FRR_RENDER);
+        return 0;
+    }
+
+    debug_print("rendering FRR configuration without the daemon\n");
+
+    if ((child_pid=fork()) < 0) {
+        debug_print("frr_render fork() failed\n");
+        return -1;
+    } else if (child_pid == 0) {
+        char *newargv[] = { FRR_RENDER, NULL };
+        if (-1 == execv(FRR_RENDER, newargv)) {
+            fprintf(stderr, "frr_render execv failed %s: %s\n",
+                    FRR_RENDER, strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (waitpid(child_pid, &status, 0) != child_pid) {
+        debug_print("frr_render waitpid() failed\n");
+        return -1;
+    }
+
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        return 0;
+    }
+
+    // Same treatment as an apply error reported by the daemon
+    leave_hint(pid_val);
+
+    return -1;
 }
 
 void timer_handler(int signum)

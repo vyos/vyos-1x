@@ -45,6 +45,7 @@ from vyos.configsource import ConfigSourceError
 from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
 from vyos.frrender import FRRender
+from vyos.frrender import frr_render_lock
 from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
 
@@ -293,11 +294,12 @@ def call_frr_render(frr, config):
     def _call_frr_render(frr, config):
         # pylint: disable=broad-exception-caught
         try:
-            tmp = get_frrender_dict(config)
-            if frr.generate(tmp):
-                # only apply a new FRR configuration if anything changed
-                # in comparison to the previous applied configuration
-                frr.apply()
+            with frr_render_lock():
+                tmp = get_frrender_dict(config)
+                if frr.generate(tmp):
+                    # only apply a new FRR configuration if anything changed
+                    # in comparison to the previous applied configuration
+                    frr.apply()
 
         except ConfigError as e:
             logger.error(e)

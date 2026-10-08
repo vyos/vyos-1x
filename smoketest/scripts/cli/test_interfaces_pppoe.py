@@ -37,6 +37,9 @@ base_path: list = ['interfaces', 'pppoe']
 veth_path: list = ['interfaces', 'virtual-ethernet']
 pppoe_server_path = ['service', 'pppoe-server']
 connect_timeout: int = 20
+# A SLAAC address only shows up once the peer answers the Router Solicitation.
+# That is best effort and takes its own time after the link itself is up
+autoconf_timeout: int = 60
 name_servers: list = ['1.1.1.1', '2.2.2.2']
 ipv4_pool: str = '100.64.0.0/18'
 ipv6_pool: str = '2001:db8:8000::/48'
@@ -88,6 +91,11 @@ def get_interface_addresses(interface, family) -> list:
 def has_global_ipv6_address(interface) -> bool:
     """ Check if the interface got a non link-local IPv6 address assigned """
     return any(not IPv6Address(addr).is_link_local
+               for addr in get_interface_addresses(interface, 'inet6'))
+
+def has_link_local_address(interface) -> bool:
+    """ Check if the interface got a link-local IPv6 address assigned """
+    return any(IPv6Address(addr).is_link_local
                for addr in get_interface_addresses(interface, 'inet6'))
 
 # add a classmethod to setup a temporaray PPPoE server for "proper" validation
@@ -373,13 +381,21 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(wait_for_interface(interface),
                             msg=f'Interface {interface} not found after {connect_timeout} seconds!')
 
-            # The link-local address is assigned before the router
-            # solicitation is sent out - once a global IPv6 address is present
-            # we know we are not testing too early
-            self.assertTrue(wait_for(has_global_ipv6_address, interface,
+            # pppd assigns the address once IPV6CP is done, which is not implied
+            # by the interface being there - that already happens for IPCP
+            self.assertTrue(wait_for(has_link_local_address, interface,
                                      interval=0.250, timeout=connect_timeout),
-                            msg=f'Interface {interface} got no global IPv6 address!')
+                            msg=f'Interface {interface} got no link-local address!')
 
+        # An option which does not require a reconnect is applied to the
+        # established session within the commit itself. Any address VyOS adds on
+        # its own is thus on the interface by the time the commit returns - we
+        # are no longer racing the hooks called when the link came up
+        for interface in self._interfaces:
+            self.cli_set(base_path + [interface, 'description', 'T9060'])
+        self.cli_commit()
+
+        for interface in self._interfaces:
             link_local = [addr for addr in get_interface_addresses(interface, 'inet6')
                           if IPv6Address(addr).is_link_local]
 
@@ -393,6 +409,32 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertNotIn(eui64, link_local)
 
             # Validate and verify assigned IP addresses
+            self._verify_interface_address(interface)
+
+    def test_pppoe_ipv6_autoconf_global_address(self):
+        # A link with IPv6 autoconf picks up a global address from the Router
+        # Advertisement of the BRAS. This is the only test depending on the
+        # peer answering, thus it carries its own, more generous timeout
+        for interface in self._interfaces:
+            (user, passwd) = self.u_p_dict[interface]
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertTrue(wait_for_interface(interface),
+                            msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+            self.assertTrue(wait_for(has_global_ipv6_address, interface,
+                                     interval=0.250, timeout=autoconf_timeout),
+                            msg=f'Interface {interface} got no global IPv6 address!')
+
+            # The address must come from the pool of the BRAS
             self._verify_interface_address(interface)
 
     def test_pppoe_ipv6_autoconf_without_router_advertisement(self):
