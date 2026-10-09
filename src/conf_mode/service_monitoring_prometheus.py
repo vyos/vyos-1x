@@ -409,12 +409,10 @@ def apply(monitoring):
     call_dependents()
     if 'vpp_exporter' in monitoring:
         call(f'systemctl enable {vpp_exporter_systemd_service}')
-
-        systemd_action = 'reload-or-restart'
         if 'vpp_exporter_restart_required' in monitoring:
-            systemd_action = 'restart'
-
-        call(f'systemctl {systemd_action} {vpp_exporter_systemd_service}')
+            call(f'systemctl restart {vpp_exporter_systemd_service}')
+        elif not is_systemd_service_active(vpp_exporter_systemd_service):
+            call(f'systemctl start {vpp_exporter_systemd_service}')
 
 
 if __name__ == '__main__':
