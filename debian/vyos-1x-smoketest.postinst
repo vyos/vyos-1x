@@ -6,13 +6,13 @@ if [[ ! -f $BUSYBOX_PATH ]]; then
     skopeo copy --additional-tag "$BUSYBOX_TAG" "docker://$BUSYBOX_TAG" "docker-archive:/$BUSYBOX_PATH"
 fi
 
-TACPLUS_TAG="docker.io/lfkeitel/tacacs_plus:alpine"
+TACPLUS_TAG="docker.io/vyos/tacacs_plus:alpine-slim"
 TACPLUS_PATH="/usr/share/vyos/tacplus-alpine.tar"
 if [[ ! -f $TACPLUS_PATH ]]; then
     skopeo copy --additional-tag "$TACPLUS_TAG" "docker://$TACPLUS_TAG" "docker-archive:/$TACPLUS_PATH"
 fi
 
-RADIUS_TAG="docker.io/dchidell/radius-web:latest"
+RADIUS_TAG="docker.io/vyos/radius_server:latest"
 RADIUS_PATH="/usr/share/vyos/radius-latest.tar"
 if [[ ! -f $RADIUS_PATH ]]; then
     skopeo copy --additional-tag "$RADIUS_TAG" "docker://$RADIUS_TAG" "docker-archive:/$RADIUS_PATH"
