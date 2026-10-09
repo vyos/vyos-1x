@@ -25,6 +25,9 @@ from vyos.utils.file import read_file
 
 swanctl_file = '/etc/swanctl/swanctl.conf'
 
+dummy_if = ['interfaces', 'dummy', 'dum669']
+outside_address = ['203.0.113.1', '203.0.113.2']
+
 class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -39,8 +42,34 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
     def tearDownClass(cls):
         super(TestVPNL2TPServer, cls).tearDownClass()
 
+    def tearDown(self):
+        self.cli_delete(dummy_if)
+        # always forward to base class
+        super().tearDown()
+
     def basic_protocol_specific_config(self):
         pass
+
+    def reconfigure_prepare(self):
+        for address in outside_address:
+            self.cli_set(dummy_if + ['address', f'{address}/32'])
+
+    def steps_server_specific(self):
+        first, second = outside_address
+        return [
+            {'name': 'add outside-address', 'set': [['outside-address', first]],
+             'check': lambda: self.assert_listening('udp', 1701, first)},
+            {'name': 'change outside-address', 'set': [['outside-address', second]],
+             'check': lambda: (self.assert_listening('udp', 1701, second),
+                               self.assert_listening('udp', 1701, first, present=False))},
+            {'name': 'delete outside-address', 'delete': [['outside-address']],
+             'check': lambda: self.assert_listening('udp', 1701, second, present=False)},
+            {'name': 'add lns shared-secret', 'set': [['lns', 'shared-secret', 'lns-secret']]},
+            {'name': 'change lns shared-secret', 'set': [['lns', 'shared-secret', 'lns-secret-new']]},
+            {'name': 'add lns host-name', 'set': [['lns', 'host-name', 'lns.vyos.io']]},
+            {'name': 'change lns host-name', 'set': [['lns', 'host-name', 'lns2.vyos.io']]},
+            {'name': 'delete lns', 'delete': [['lns']]},
+        ]
 
     def test_l2tp_server_authentication_protocols(self):
         # Test configuration of local authentication protocols
