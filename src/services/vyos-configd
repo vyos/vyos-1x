@@ -38,6 +38,7 @@ from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
 from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
+from vyos.configdep import clear_dependents_initial
 from vyos.frrender import FRRender
 from vyos.frrender import frr_render_lock
 from vyos.frrender import get_frrender_dict
@@ -204,6 +205,7 @@ def process_node_data(config_manager: ConfigManager, data) -> tuple[Response, st
     os.environ['VYOS_TAGNODE_VALUE'] = ''
     args = []
     config.dependency_list.clear()
+    clear_dependents_initial()
 
     res = re.match(r'^(VYOS_TAGNODE_VALUE=[^/]+)?.*\/([^/]+).py(.*)', data)
     if res.group(1):

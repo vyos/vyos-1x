@@ -257,6 +257,12 @@ def set_dependents_initial(
     )
 
 
+def clear_dependents_initial():
+    """Drop initial dependents left over from a failed commit, so the next
+    commit does not run them."""
+    dependency_list_initial.clear()
+
+
 def call_dependents_initial():
     # pylint: disable=global-statement
     global dependency_list_initial
