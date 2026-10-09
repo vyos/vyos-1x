@@ -36,5 +36,5 @@ elif [ "$reason" != "BOUND" ] && [ "$reason" != "EXPIRE" ] && [ "$reason" != "RE
     return 0
 fi
 
-# Re-generate the static routes config
-sudo /usr/libexec/vyos/vyos-request-configd-update.py
+# Reconcile the rendered FRR configuration with the current lease
+sudo /usr/libexec/vyos/vyos-frr-render.py

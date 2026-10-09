@@ -91,7 +91,7 @@
                 <properties>
                   <help>Cipher negotiation list for use in server or client mode</help>
                   <completionHelp>
-                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm chacha20poly1305</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
@@ -125,8 +125,12 @@
                     <format>aes256gcm</format>
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>chacha20poly1305</format>
+                    <description>ChaCha20 stream cipher with Poly1305 authenticator</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm|chacha20poly1305)</regex>
                   </constraint>
                   <multi/>
                 </properties>
@@ -135,7 +139,7 @@
                 <properties>
                   <help>Fallback cipher to use for site-to-site tunnels</help>
                   <completionHelp>
-                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm chacha20poly1305</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
@@ -169,8 +173,12 @@
                     <format>aes256gcm</format>
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>chacha20poly1305</format>
+                    <description>ChaCha20 stream cipher with Poly1305 authenticator</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm|chacha20poly1305)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -313,6 +321,20 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="mtu">
+            <properties>
+              <help>Maximum Transmission Unit (MTU) - with DCO the default is 1420</help>
+              <valueHelp>
+                <format>u32:68-16000</format>
+                <description>Maximum Transmission Unit in byte</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 68-16000"/>
+              </constraint>
+              <constraintErrorMessage>MTU must be between 68 and 16000</constraintErrorMessage>
+            </properties>
+            <defaultValue>1500</defaultValue>
+          </leafNode>
           <node name="offload">
             <properties>
               <help>Configurable offload options</help>
@@ -328,7 +350,7 @@
           </node>
           <leafNode name="openvpn-option">
             <properties>
-              <help>Additional OpenVPN options. You must use the syntax of openvpn.conf in this text-field. Using this without proper knowledge may result in a crashed OpenVPN server. Check system log to look for errors.</help>
+              <help>Additional OpenVPN options. You must use the syntax of openvpn.conf in this text-field. Using this without proper knowledge may result in a crashed OpenVPN server, or in data channel offload being declined. Check system log to look for errors.</help>
               <multi/>
             </properties>
           </leafNode>

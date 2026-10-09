@@ -24,10 +24,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import has_frr_protocol_in_dict
-from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.frrender import pim_daemon
-from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
 from vyos.utils.process import call
 from vyos import ConfigError
@@ -87,8 +85,6 @@ def verify(config_dict):
                 unique.append(gr_addr)
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
@@ -98,14 +94,16 @@ def apply(config_dict):
     pim_pid = process_named_running(pim_daemon)
     pim = config_dict['pim']
     if 'deleted' in pim:
-        os.kill(int(pim_pid), SIGTERM)
+        if pim_pid:
+            try:
+                os.kill(int(pim_pid), SIGTERM)
+            except ProcessLookupError:
+                pass
         return None
 
     if not pim_pid:
         call('/usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1')
 
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

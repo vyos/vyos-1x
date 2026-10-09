@@ -36,6 +36,7 @@ remote {{ remote }}
 {% endif %}
 {% if shared_secret_key is vyos_defined %}
 secret /run/openvpn/{{ ifname }}_shared.key
+allow-deprecated-insecure-static-crypto
 {% endif %}
 {% if persistent_tunnel is vyos_defined %}
 persist-tun
@@ -50,6 +51,9 @@ compress lzo
 {% endif %}
 {% if offload.dco is not vyos_defined %}
 disable-dco
+{% endif %}
+{% if tun_mtu is vyos_defined %}
+tun-mtu {{ tun_mtu }}
 {% endif %}
 
 {% if mode is vyos_defined('client') %}
@@ -69,12 +73,12 @@ bind ipv6only
 mode server
 tls-server
 {%     if server is vyos_defined %}
-{%         if server.subnet is vyos_defined %}
-{%             if server.topology is vyos_defined('point-to-point') %}
+{%         if server.topology is vyos_defined('point-to-point') %}
 topology p2p
-{%             elif server.topology is vyos_defined %}
+{%         elif server.topology is vyos_defined %}
 topology {{ server.topology }}
-{%             endif %}
+{%         endif %}
+{%         if server.subnet is vyos_defined %}
 {%             for subnet in server.subnet %}
 {%                 if subnet | is_ipv4 %}
 server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} {{ 'nopool' if server.client_ip_pool is vyos_defined and server.client_ip_pool.disable is not vyos_defined else '' }}
@@ -106,7 +110,9 @@ max-clients {{ server.max_connections }}
 client-config-dir /run/openvpn/ccd/{{ ifname }}
 {%         endif %}
 {%     endif %}
+{%     if keep_alive.interval | int > 0 %}
 keepalive {{ keep_alive.interval }} {{ keep_alive.interval | int * keep_alive.failure_count | int }}
+{%     endif %}
 management /run/openvpn/openvpn-mgmt-intf unix
 {%     if server is vyos_defined %}
 {%         if server.reject_unconfigured_clients is vyos_defined %}
@@ -137,8 +143,10 @@ plugin "{{ plugin_dir }}/openvpn-otp.so" "otp_secrets=/config/auth/openvpn/{{ if
 {%     if ip_version is vyos_defined('ipv6') %}
 bind ipv6only
 {%     endif %}
+{%     if keep_alive.interval | int > 0 %}
 ping {{ keep_alive.interval }}
-ping-restart {{ keep_alive.failure_count }}
+ping-restart {{ keep_alive.interval | int * keep_alive.failure_count | int }}
+{%     endif %}
 
 {%     if device_type == 'tap' %}
 {%         if local_address is vyos_defined %}

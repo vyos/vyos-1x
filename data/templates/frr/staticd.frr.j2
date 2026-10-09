@@ -98,10 +98,14 @@ vrf {{ vrf }}
 {%         endfor %}
 {%     endfor %}
 {% endif %}
-{# IPv4 default routes from PPPoE interfaces #}
+{# IPv4 and IPv6 default routes from PPPoE interfaces #}
 {% if pppoe is vyos_defined %}
 {%     for interface, interface_config in pppoe.items() if interface_config.no_default_route is not vyos_defined %}
-{{ ip_prefix }} route 0.0.0.0/0 {{ interface }} tag 210 {{ interface_config.default_route_distance if interface_config.default_route_distance is vyos_defined }}
+{%         set distance = interface_config.default_route_distance if interface_config.default_route_distance is vyos_defined else '' %}
+{{ ip_prefix }} route 0.0.0.0/0 {{ interface }} tag 210 {{ distance }}
+{%         if interface_config.ipv6 is vyos_defined %}
+{{ ipv6_prefix }} route ::/0 {{ interface }} tag 210 {{ distance }}
+{%         endif %}
 {%     endfor %}
 {% endif %}
 {# IPv6 routing #}

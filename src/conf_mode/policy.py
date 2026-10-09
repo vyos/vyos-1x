@@ -19,11 +19,9 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configverify import has_frr_protocol_in_dict
-from vyos.frrender import FRRender
 from vyos.frrender import frr_protocols
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
-from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos.base import Warning
 from vyos import airbag
@@ -133,7 +131,7 @@ def verify(config_dict):
 
             # human readable instance name (hyphen instead of underscore)
             policy_hr = policy_type.replace('_', '-')
-            entries = []
+            entries = set()
             for rule, rule_config in instance_config['rule'].items():
                 mandatory_error = f'must be specified for "{policy_hr} {instance} rule {rule}"!'
                 if 'action' not in rule_config:
@@ -187,10 +185,11 @@ def verify(config_dict):
                             f'"le" ({le})'
                         )
 
-                    if rule_config in entries:
+                    key = tuple(sorted(rule_config.items()))
+                    if key in entries:
                         raise ConfigError(
                             f'Rule "{rule}" contains a duplicate prefix definition!')
-                    entries.append(rule_config)
+                    entries.add(key)
 
     # route-maps tend to be a bit more complex so they get their own verify() section
     if 'route_map' in policy:
@@ -299,13 +298,9 @@ def verify(config_dict):
 
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

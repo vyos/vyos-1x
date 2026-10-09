@@ -453,6 +453,7 @@
         </tagNode>
         #include <include/bgp/afi-rd.xml.i>
         #include <include/bgp/afi-route-map-vpn.xml.i>
+        #include <include/bgp/afi-route-map-vrf.xml.i>
         #include <include/bgp/afi-route-target-vpn.xml.i>
         #include <include/bgp/afi-nexthop-vpn-export.xml.i>
         <node name="redistribute">
@@ -963,6 +964,12 @@
             <valueless/>
           </properties>
         </leafNode>
+        <leafNode name="l3vpn-multi-domain-switching">
+          <properties>
+            <help>Redistribute labeled L3VPN routes from AS to neighboring AS</help>
+            <valueless/>
+          </properties>
+        </leafNode>
       </children>
     </node>
   </children>
@@ -1421,6 +1428,7 @@
               <validator name="numeric" argument="--range 0-4294967295"/>
             </constraint>
           </properties>
+          <defaultValue>100</defaultValue>
         </leafNode>
       </children>
     </node>

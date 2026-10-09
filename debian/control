@@ -171,10 +171,9 @@ Depends:
 # For "interfaces wwan"
   modemmanager,
   usb-modeswitch,
-  libqmi-utils,
 # End "interfaces wwan"
 # For "interfaces openvpn"
-  openvpn,
+  openvpn (>= 2.7),
   openvpn-auth-ldap,
   openvpn-auth-radius,
   openvpn-otp,

@@ -316,5 +316,25 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_07_squidguard_rule_local_block_url(self):
+        # T9371: "local-block-url" as the first entry of a rule used to be
+        # rendered as "!ocal-block-url-<rule>", which silently blocked nothing
+        sg_path = base_path + ['url-filtering', 'squidguard']
+
+        self.cli_set(base_path + ['listen-address', listen_ip])
+        self.cli_set(sg_path + ['source-group', 'sg1', 'address', '192.0.2.0/24'])
+        self.cli_set(sg_path + ['rule', '10', 'source-group', 'sg1'])
+        self.cli_set(sg_path + ['rule', '10', 'local-block-url', 'foo.com/bar.html'])
+
+        # commit changes
+        self.cli_commit()
+
+        sg_config = read_file('/etc/squidguard/squidGuard.conf')
+        self.assertIn('pass !local-block-url-10', sg_config)
+        self.assertNotIn('!ocal-block-url', sg_config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -112,26 +112,38 @@ def encode_dh_parameters(dh_parameters):
 # EC Helper
 
 def get_elliptic_curve(size):
-    curve_func = None
     name = f'SECP{size}R1'
-    if hasattr(ec, name):
-        curve_func = getattr(ec, name)
-    else:
-        curve_func = ec.SECP256R1() # Default to SECP256R1
+    # getattr() must yield the class, not an instance - the caller below is the
+    # one that instantiates it
+    curve_func = getattr(ec, name, ec.SECP256R1)  # Default to SECP256R1
     return curve_func()
+
 
 # Creation functions
 
+
+def create_ec_private_key(curve_size=256):
+    """An elliptic curve key is chosen by curve, not by modulus size: 256 here
+    selects SECP256R1 and says nothing about the strength a 256 bit RSA modulus
+    would have. Elliptic curve keys are built only here, so that number can
+    never reach the RSA and DSA generators - neither by accident nor in the
+    eyes of a static analyser."""
+    return ec.generate_private_key(get_elliptic_curve(curve_size))
+
+
 def create_private_key(key_type, key_size=None):
-    private_key = None
+    """Build an RSA or DSA key of key_size bits. Elliptic curve keys are
+    deliberately not built here - see create_ec_private_key()."""
     if key_type == 'rsa':
-        private_key = rsa.generate_private_key(public_exponent=65537, key_size=key_size)
-    elif key_type == 'dsa':
-        private_key = dsa.generate_private_key(key_size=key_size)
-    elif key_type == 'ec':
-        curve = get_elliptic_curve(key_size)
-        private_key = ec.generate_private_key(curve)
-    return private_key
+        return rsa.generate_private_key(public_exponent=65537, key_size=key_size)
+    if key_type == 'dsa':
+        return dsa.generate_private_key(key_size=key_size)
+    if key_type == 'ec':
+        raise ValueError(
+            'Elliptic curve keys are built by create_ec_private_key() - its '
+            'argument selects a curve, not a modulus size'
+        )
+    raise ValueError(f'Unsupported key type "{key_type}"')
 
 def create_certificate_request(subject, private_key, subject_alt_names=[]):
     subject_obj = x509.Name([

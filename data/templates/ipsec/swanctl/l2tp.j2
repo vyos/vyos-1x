@@ -1,15 +1,15 @@
-{% macro conn(l2tp, l2tp_outside_address, l2tp_ike_default, l2tp_esp_default, ike_group, esp_group, uniqreqids) %}
+{% macro conn(l2tp, l2tp_outside_address, l2tp_ike_default, l2tp_esp_default, ike_group, esp_group, global_unique) %}
 {% set l2tp_ike = ike_group[l2tp.ike_group] if l2tp.ike_group is vyos_defined else None %}
 {% set l2tp_esp = esp_group[l2tp.esp_group] if l2tp.esp_group is vyos_defined else None %}
     l2tp_remote_access {
-        proposals = {{ l2tp_ike | get_esp_ike_cipher | join(',') if l2tp_ike else l2tp_ike_default }}
+        proposals = {{ l2tp_ike | get_ike_cipher | join(',') if l2tp_ike else l2tp_ike_default }}
         local_addrs = {{ l2tp_outside_address }}
         dpd_delay = 15s
         dpd_timeout = 45s
         rekey_time = {{ l2tp_ike.lifetime if l2tp_ike else l2tp.ike_lifetime }}s
         reauth_time = 0
-{% if uniqreqids is vyos_defined %}
-        unique = {{ uniqreqids }}
+{% if global_unique is vyos_defined %}
+        unique = {{ global_unique }}
 {% endif %}
         local {
             auth = {{ 'psk' if l2tp.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
@@ -23,7 +23,7 @@
         children {
             l2tp_remote_access_esp {
                 mode = transport
-                esp_proposals = {{ l2tp_esp | get_esp_ike_cipher(l2tp_ike) | join(',') if l2tp_esp else l2tp_esp_default }}
+                esp_proposals = {{ l2tp_esp | get_esp_cipher(l2tp_ike) | join(',') if l2tp_esp else l2tp_esp_default }}
                 life_time = {{ l2tp_esp.lifetime if l2tp_esp else l2tp.lifetime }}s
                 local_ts = dynamic[/1701]
                 remote_ts = dynamic

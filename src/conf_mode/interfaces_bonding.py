@@ -32,15 +32,12 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ethtool import Ethtool
-from vyos.frrender import FRRender
-from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
 from vyos.utils.assertion import assert_mac
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.network import interface_exists
-from vyos.utils.process import is_systemd_service_running
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents
@@ -95,9 +92,6 @@ def get_config(config=None):
 
     tmp = is_node_changed(conf, base + [ifname, 'lacp-rate'])
     if tmp: bond.update({'shutdown_required' : {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: bond.update({'frr_dict' : get_frrender_dict(conf)})
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
@@ -290,14 +284,9 @@ def verify(bond):
     return None
 
 def generate(bond):
-    if 'frr_dict' in bond and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(bond['frr_dict'])
     return None
 
 def apply(bond):
-    if 'frr_dict' in bond and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
-
     b = BondIf(bond['ifname'])
     if 'deleted' in bond:
         b.remove()

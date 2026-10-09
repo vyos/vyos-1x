@@ -20,7 +20,6 @@ from psutil import process_iter
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmdl
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 from vyos.template import is_ipv6
@@ -140,8 +139,7 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
         self.assertIn('--create --umask 000', config)
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-        self.assertIn(PROCESS_NAME, tmp)
+        self.verify_process_in_vrf(PROCESS_NAME, vrf)
 
         # delete VRF
         self.cli_delete(dummy_if_path + ['vrf'])

@@ -371,8 +371,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for process in VRF
-        proc = cmdl(['ip', 'vrf', 'pids', vrf_name])
-        self.assertIn(DDCLIENT_PNAME, proc)
+        self.verify_process_in_vrf(DDCLIENT_PNAME, vrf_name)
 
         # Cleanup VRF
         self.cli_delete(['vrf', 'name', vrf_name])

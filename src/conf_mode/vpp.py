@@ -76,9 +76,16 @@ service_name = 'vpp'
 service_conf = Path(f'/run/vpp/{service_name}.conf')
 systemd_override = '/run/systemd/system/vpp.service.d/10-override.conf'
 
-vpp_log = getLogger(
-    service_name, format='%(filename)s[%(process)d]: %(message)s', address='/dev/log'
-)
+try:
+    vpp_log = getLogger(
+        service_name,
+        format='%(filename)s[%(process)d]: %(message)s',
+        address='/dev/log',
+    )
+except ValueError:
+    # vpp.py is re-executed when run as a config dependency (T9146); the named
+    # logger is created only once, so reuse the existing instance on re-import.
+    vpp_log = getLogger(service_name)
 
 dependency_interface_type_map = {
     'vpp_interfaces_bonding': 'bonding',
@@ -207,6 +214,24 @@ def _normalize_buffers(config: dict):
         config['settings']['resource_allocation']['buffers']['buffers_per_numa'] = str(
             buffers
         )
+
+
+def _set_no_multi_seg(config: dict):
+    """Enable 'no-multi-seg' when the largest VPP interface MTU fits one buffer.
+
+    Disabling multi-segment buffers boosts throughput, but a received frame must
+    then fit a single buffer - i.e. the largest interface MTU (plus L2 framing)
+    must fit within the buffer 'data-size'. When it does, set the flag so the
+    template emits 'no-multi-seg'; otherwise leave it unset so VPP keeps
+    multi-seg and can still carry Jumbo frames without a bigger buffer (T9146).
+    """
+    max_mtu = max(
+        (int(c['mtu']) for c in config['settings'].get('interface', {}).values()),
+        default=1500,
+    )
+    data_size = config['settings']['resource_allocation']['buffers']['data_size']
+    if memory.no_multi_seg_fits(max_mtu, data_size):
+        config['settings']['no_multi_seg'] = True
 
 
 def _get_max_xdp_rx_queues(config: dict):
@@ -381,6 +406,11 @@ def get_config(config=None):
 
             for iface, iface_config in config['settings']['interface'].items():
                 iface_config['driver'] = 'dpdk'
+                # configured MTU, used to set no_multi_seg option
+                iface_config['mtu'] = (
+                    conf.return_value(['interfaces', 'ethernet', iface, 'mtu'])
+                    or '1500'
+                )
 
                 # old_driver = leaf_node_changed(
                 #     conf, base_settings + ['interface', iface, 'driver']
@@ -477,6 +507,11 @@ def get_config(config=None):
                     ):
                         xdp_api_params['flags'] = 'no_syscall_lock'
                     iface_config['xdp_api_params'] = xdp_api_params
+
+        # Enable 'no-multi-seg' only when the buffer data-size can hold the
+        # largest interface MTU in a single segment (T9146); otherwise VPP keeps
+        # multi-seg so Jumbo frames still work.
+        _set_no_multi_seg(config)
 
         # Buffer normalization (auto → computed)
         _normalize_buffers(config)

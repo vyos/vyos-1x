@@ -24,8 +24,12 @@ from ipaddress import IPv6Network
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import PPPoEIf
+from vyos.ifconfig.interface import link_local_prefix
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_address
+from vyos.utils.network import mac2eui64
 from vyos.xml_ref import default_value
 
 config_file: str = '/etc/ppp/peers/{}'
@@ -33,6 +37,9 @@ base_path: list = ['interfaces', 'pppoe']
 veth_path: list = ['interfaces', 'virtual-ethernet']
 pppoe_server_path = ['service', 'pppoe-server']
 connect_timeout: int = 20
+# A SLAAC address only shows up once the peer answers the Router Solicitation.
+# That is best effort and takes its own time after the link itself is up
+autoconf_timeout: int = 60
 name_servers: list = ['1.1.1.1', '2.2.2.2']
 ipv4_pool: str = '100.64.0.0/18'
 ipv6_pool: str = '2001:db8:8000::/48'
@@ -72,6 +79,24 @@ def wait_for_interface(interface: str, timeout=connect_timeout) -> bool:
         if time() - start_time >= timeout:
             return False
     return True
+
+def get_interface_addresses(interface, family) -> list:
+    """ Return the list of addresses of a given family assigned to interface """
+    tmp = get_interface_address(interface)
+    if not tmp or 'addr_info' not in tmp:
+        return []
+    return [addr['local'] for addr in tmp['addr_info']
+            if 'family' in addr and addr['family'] == family]
+
+def has_global_ipv6_address(interface) -> bool:
+    """ Check if the interface got a non link-local IPv6 address assigned """
+    return any(not IPv6Address(addr).is_link_local
+               for addr in get_interface_addresses(interface, 'inet6'))
+
+def has_link_local_address(interface) -> bool:
+    """ Check if the interface got a link-local IPv6 address assigned """
+    return any(IPv6Address(addr).is_link_local
+               for addr in get_interface_addresses(interface, 'inet6'))
 
 # add a classmethod to setup a temporaray PPPoE server for "proper" validation
 class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
@@ -137,14 +162,20 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
     def _verify_interface_address(self, interface):
         # Verify that the assigned IPv4/IPv6 addresses from the BRAS (PPPoE
-        # server) are from the assigned pools
-        for address in get_interface_address(interface):
-            if 'family' in address and address['family'] == 'inet':
+        # server) are from the assigned pools - 'local' is our own address
+        tmp = get_interface_address(interface)
+        self.assertIn('addr_info', tmp)
+
+        for addr_info in tmp['addr_info']:
+            if 'family' not in addr_info:
+                continue
+
+            if addr_info['family'] == 'inet':
                 # The PPPoE assigned IPv4 address must be from our pool
-                self.assertIn(IPv4Address(address['address']), IPv4Network(ipv4_pool))
-            elif 'family' in address and address['family'] == 'inet6':
+                self.assertIn(IPv4Address(addr_info['local']), IPv4Network(ipv4_pool))
+            elif addr_info['family'] == 'inet6':
                 # The PPPoE assigned IPv6 address must be from our pool
-                ipv6 = IPv6Address(address['address'])
+                ipv6 = IPv6Address(addr_info['local'])
                 if not ipv6.is_link_local:
                     self.assertIn(ipv6, IPv6Network(ipv6_pool))
 
@@ -327,6 +358,139 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             self.cli_delete(['interfaces', 'dummy', delegate_if])
 
+    def test_pppoe_ipv6_link_local(self):
+        # T9060: the IPv6 interface identifier of a PPP link is negotiated
+        # with the peer via IPV6CP (RFC 5072). A second, EUI-64 derived
+        # link-local address is unknown to the BRAS, and RFC 6724 source
+        # address selection may pick it for e.g. DHCPv6-PD.
+        for interface in self._interfaces:
+            (user, passwd) = self.u_p_dict[interface]
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            # Only with the "ipv6" node present pppd is told to negotiate
+            # IPV6CP - without it the peer config contains "noipv6"
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        # commit changes
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertTrue(wait_for_interface(interface),
+                            msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+            # pppd assigns the address once IPV6CP is done, which is not implied
+            # by the interface being there - that already happens for IPCP
+            self.assertTrue(wait_for(has_link_local_address, interface,
+                                     interval=0.250, timeout=connect_timeout),
+                            msg=f'Interface {interface} got no link-local address!')
+
+        # An option which does not require a reconnect is applied to the
+        # established session within the commit itself. Any address VyOS adds on
+        # its own is thus on the interface by the time the commit returns - we
+        # are no longer racing the hooks called when the link came up
+        for interface in self._interfaces:
+            self.cli_set(base_path + [interface, 'description', 'T9060'])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            link_local = [addr for addr in get_interface_addresses(interface, 'inet6')
+                          if IPv6Address(addr).is_link_local]
+
+            # There must be exactly one link-local address - the one negotiated
+            # via IPV6CP
+            self.assertEqual(len(link_local), 1)
+
+            # ... and it must not be the one derived from the synthetic MAC
+            # address of the interface
+            eui64 = mac2eui64(PPPoEIf(interface).get_mac(), link_local_prefix)
+            self.assertNotIn(eui64, link_local)
+
+            # Validate and verify assigned IP addresses
+            self._verify_interface_address(interface)
+
+    def test_pppoe_ipv6_autoconf_global_address(self):
+        # A link with IPv6 autoconf picks up a global address from the Router
+        # Advertisement of the BRAS. This is the only test depending on the
+        # peer answering, thus it carries its own, more generous timeout
+        for interface in self._interfaces:
+            (user, passwd) = self.u_p_dict[interface]
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertTrue(wait_for_interface(interface),
+                            msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+            self.assertTrue(wait_for(has_global_ipv6_address, interface,
+                                     interval=0.250, timeout=autoconf_timeout),
+                            msg=f'Interface {interface} got no global IPv6 address!')
+
+            # The address must come from the pool of the BRAS
+            self._verify_interface_address(interface)
+
+    def test_pppoe_ipv6_autoconf_without_router_advertisement(self):
+        # T9354: When the link comes up with IPv6 autoconf enabled a Router
+        # Solicitation is sent out. This is best effort - if the BRAS never
+        # answers, rdisc6(8) blocks for the duration of all its retries and
+        # then exits non-zero. Neither may stall or fail a commit.
+
+        # Take the IPv6 pool away from the BRAS, so it neither assigns an
+        # address to the link nor ever answers a Router Solicitation
+        self.cli_delete(pppoe_server_path + ['default-ipv6-pool'])
+        self.cli_commit()
+
+        # Restore the BRAS IPv6 pool for the remaining tests - also when this
+        # test fails. Cleanups run after tearDown(), so all clients are gone
+        def restore_ipv6_pool():
+            self.cli_set(pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
+            self.cli_commit()
+        self.addCleanup(restore_ipv6_pool)
+
+        for interface in self._interfaces:
+            (user, passwd) = self.u_p_dict[interface]
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'no-peer-dns'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertTrue(wait_for_interface(interface),
+                            msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+
+            # The BRAS has no IPv6 to offer, so the link carries no global
+            # address. IPV6CP is still negotiated, thus a link-local address
+            # may show up at any time
+            self.assertFalse(has_global_ipv6_address(interface))
+
+        # Changing an option that does not require a reconnect updates the
+        # established session in the very commit that changes it - this is
+        # where the Router Solicitation is sent from, and this commit must
+        # not fail although no Router Advertisement will be received
+        for interface in self._interfaces:
+            self.cli_set(base_path + [interface, 'address', 'dhcpv6'])
+
+        self.cli_commit()
+
+        # rdisc6(8) is still soliciting in the background - it must have been
+        # detached from the commit into a transient systemd unit, thus it is
+        # re-parented to PID 1 and none of our children
+        for process in process_iter(['name', 'ppid']):
+            if process.info['name'] == 'rdisc6':
+                self.assertEqual(process.info['ppid'], 1)
+
     def test_pppoe_options(self):
         # Verify access-concentrator and service-name CLI options
 
@@ -420,6 +584,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # T6991/T9054: The PPPoE default route must not be withdrawn from FRR
         # when "protocols static" is deleted - only the statically configured
         # routes must disappear, the PPPoE-sourced default route must stay.
+        # Both IPv4 and IPv6 default routes are rendered by vyos.frrender, so
+        # they also survive any other FRR re-render.
         interface = self._interfaces[0]
         (user, passwd) = self.u_p_dict[interface]
         static_base_path = ['protocols', 'static']
@@ -427,14 +593,17 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + [interface, 'authentication', 'username', user])
         self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
         self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+        self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
         self.cli_commit()
 
         self.assertTrue(wait_for_interface(interface),
                         msg=f'Interface {interface} not found after {connect_timeout} seconds!')
 
         default_route = rf'ip route 0.0.0.0/0 {interface} tag 210'
+        default_route6 = rf'ipv6 route ::/0 {interface} tag 210'
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
 
         # Add an unrelated static route - this is what triggers "protocols
         # static" to exist on the CLI in the first place
@@ -443,6 +612,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
         self.assertIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
 
         # Now delete "protocols static" entirely - the PPPoE default route
@@ -453,6 +623,15 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('')
         self.assertNotIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
+
+        # Deleting the PPPoE interface withdraws both default routes
+        self.cli_delete(base_path + [interface])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('')
+        self.assertNotIn(default_route, frrconfig)
+        self.assertNotIn(default_route6, frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

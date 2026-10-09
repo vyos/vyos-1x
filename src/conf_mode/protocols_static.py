@@ -23,12 +23,10 @@ from vyos.config import Config
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
-from vyos.frrender import FRRender
 from vyos.frrender import get_dhcp_route_interfaces
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
-from vyos.utils.process import is_systemd_service_running
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -115,13 +113,9 @@ def generate(config_dict):
     # Put routing table names in /etc/iproute2/rt_tables
     render(config_file, 'iproute2/static.conf.j2', static)
 
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

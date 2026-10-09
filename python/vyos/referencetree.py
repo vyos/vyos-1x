@@ -18,6 +18,7 @@ from pathlib import Path
 from vyos.defaults import reference_tree_cache
 from vyos.configtree import LIBPATH
 from vyos.configtree import get_lib
+from vyos.configtree import check_path
 
 
 class ReferenceTreeError(Exception):
@@ -61,6 +62,13 @@ class ReferenceTree:
 
     def to_json(self):
         return self.__lib.to_json_reference_tree(self.__pointer).decode()
+
+    def exists(self, path):
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        res = self.__lib.exists(self.__pointer, path_str)
+        return bool(res)
 
     def get_owner(self, path):
         return self.__lib.get_owner(self.__pointer, path.encode()).decode()
@@ -107,3 +115,21 @@ class ReferenceTree:
         ).decode()
         sort = sorted(json.loads(res))
         return list(map(tuple, sort)) if as_tuple else sort
+
+    def reference_path_from_config_path(self, path):
+        import json
+
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        path = self.__lib.reference_path_from_config_path(self.__pointer, path_str)
+        return json.loads(path)
+
+    def reference_path_from_partial_path(self, path):
+        import json
+
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        path = self.__lib.reference_path_from_partial_path(self.__pointer, path_str)
+        return json.loads(path)

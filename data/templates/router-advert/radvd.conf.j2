@@ -24,6 +24,9 @@ interface {{ iface }} {
 {%         endif %}
     AdvIntervalOpt {{ 'off' if iface_config.no_send_interval is vyos_defined else 'on' }};
     AdvSendAdvert {{ 'off' if iface_config.no_send_advert is vyos_defined else 'on' }};
+{%         if iface_config.no_remove_on_exit is vyos_defined %}
+    RemoveAdvOnExit off;
+{%         endif %}
 {%         if iface_config.default_lifetime is vyos_defined %}
     AdvDefaultLifetime {{ iface_config.default_lifetime }};
 {%         endif %}
@@ -95,10 +98,16 @@ interface {{ iface }} {
 {%             if iface_config.name_server_lifetime is vyos_defined %}
         AdvRDNSSLifetime {{ iface_config.name_server_lifetime }};
 {%             endif %}
+{%             if iface_config.no_flush_name_server is vyos_defined %}
+        FlushRDNSS off;
+{%             endif %}
     };
 {%         endif %}
 {%         if iface_config.dnssl is vyos_defined %}
     DNSSL {{ iface_config.dnssl | join(" ") }} {
+{%             if iface_config.no_flush_dnssl is vyos_defined %}
+        FlushDNSSL off;
+{%             endif %}
     };
 {%         endif %}
 };

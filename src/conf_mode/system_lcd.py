@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sysconfig
 
 from sys import exit
 
@@ -59,6 +60,10 @@ def generate(lcd):
 
     if 'device' in lcd:
         lcd['device'] = find_device_file(lcd['device'])
+
+    # LCDd driver modules are installed into the architecture dependent
+    # multiarch library path - resolve it at runtime
+    lcd['driver_path'] = f'/usr/lib/{sysconfig.get_config_var("MULTIARCH")}/lcdproc/'
 
     # Render config file for daemon LCDd
     render(lcdd_conf, 'lcd/LCDd.conf.j2', lcd)

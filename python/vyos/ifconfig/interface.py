@@ -58,6 +58,7 @@ from vyos.ifconfig.control import Control
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
+from vyos import ConfigError
 
 link_local_prefix = 'fe80::/64'
 
@@ -93,6 +94,11 @@ class Interface(Control):
         'bridgeable':  False,
         'eternal': '',
     }
+
+    # T9060: Interfaces negotiating their IPv6 interface identifier with the
+    # remote end - PPP links via IPV6CP (RFC 5072) - must not receive an
+    # additional EUI-64 derived link-local address unknown to the peer.
+    _ipv6_default_link_local = True
 
     _command_get = {
         'admin_state': {
@@ -393,6 +399,20 @@ class Interface(Control):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
+        # T7813: VLAN sub-interfaces must be de-configured before this interface
+        # is torn down, otherwise a running DHCP client can neither talk to the
+        # server nor return its lease. Deleting an interface implicitly deletes
+        # all its VLAN children in the Kernel, thus start with the deepest
+        # interface (vif-c) and work the way up to the vif interfaces.
+        for vlan in sorted(
+            Section.sub_interfaces(self.ifname), key=lambda x: x.count('.'), reverse=True
+        ):
+            # A previous iteration may have already removed this interface as a
+            # side effect - do not re-create it when instantiating Interface()
+            if not Interface.exists(vlan):
+                continue
+            Interface(vlan).remove()
+
         # Stop WPA supplicant if EAPoL was in use
         netns = self.config['netns'] if 'netns' in self.config else None
         stop_systemd_unit(f'wpa_supplicant-wired@{self.ifname}', netns=netns)
@@ -403,6 +423,12 @@ class Interface(Control):
         #
         # This will internally stop DHCP(v6) if running
         self.flush_addrs()
+
+        # Remove reverse-path filter entries before the interface is deleted.
+        # Map keys are interface indexes resolved from ifname, so this must
+        # happen while the interface still exists.
+        self.set_ipv4_source_validation('disable')
+        self.set_ipv6_source_validation('disable')
 
         # remove interface from conntrack VRF interface map
         self._del_interface_from_ct_iface_map()
@@ -868,13 +894,58 @@ class Interface(Control):
             return None
         return self.set_interface('ipv4_directed_broadcast', forwarding)
 
-    def _cleanup_ipv4_source_validation_rules(self, ifname):
-        results = self._cmdl(['nft', '-a', 'list', 'chain', 'ip', 'raw', 'vyos_rpfilter']).split("\n")
-        for line in results:
-            if f'iifname "{ifname}"' in line:
-                handle_search = re.search('handle (\d+)', line)
-                if handle_search:
-                    self._cmdl(['nft', 'delete', 'rule', 'ip', 'raw', 'vyos_rpfilter', 'handle', handle_search[1]])
+    def _get_nft_set_elements(self, family, table, set_name):
+        """Return elements of an nftables set, or [] if none are present."""
+        tmp = json.loads(self._cmdl(['nft', '-j', 'list', 'set', family, table, set_name]))
+        elems = dict_search('set.elem', tmp['nftables'][1], []) or []
+        # nft may return a bare value for a single element instead of a list
+        if not isinstance(elems, list):
+            elems = [elems]
+        return elems
+
+    def _get_nft_rule_handles(self, family, table, chain, set_name):
+        """Return handles of all rules referencing set_name."""
+        handles = []
+        tmp = json.loads(self._cmdl(['nft', '-j', 'list', 'chain', family, table, chain]))
+        for entry in tmp.get('nftables', []):
+            rule = entry.get('rule')
+            if not rule:
+                continue
+            if set_name in json.dumps(rule.get('expr', [])):
+                handles.append(str(rule['handle']))
+        return handles
+
+    def _get_rpf_interface_rules(self, family):
+        return self._get_nft_set_elements(family, 'raw', 'rpfilter_strict_ifaces'), self._get_nft_set_elements(family, 'raw', 'rpfilter_loose_ifaces')
+
+    def _set_rpf_rule_deletes(self, family, rpf_dict, strict_needs_rule, loose_needs_rule):
+        if strict_needs_rule:
+            handles = self._get_nft_rule_handles(family, 'raw', 'vyos_rpfilter', 'rpfilter_strict_ifaces')
+            if handles:
+                rpf_dict['strict_handles'] = handles
+        if loose_needs_rule:
+            handles = self._get_nft_rule_handles(family, 'raw', 'vyos_rpfilter', 'rpfilter_loose_ifaces')
+            if handles:
+                rpf_dict['loose_handles'] = handles
+
+    def _apply_rpf_nft_config(self, rpf_dict):
+        from subprocess import STDOUT
+
+        rpf_template = '/run/nftables-source-validation.conf'
+        render(rpf_template, 'firewall/nftables-source-validation.j2', rpf_dict)
+
+        cmdl(
+            ['nft', '-c', '--file', rpf_template],
+            stderr=STDOUT,
+            raising=ConfigError,
+            message='Source validation nftables check failed',
+        )
+        cmdl(
+            ['nft', '-f', rpf_template],
+            stderr=STDOUT,
+            raising=ConfigError,
+            message='Failed to apply source validation nftables config',
+        )
 
     def set_ipv4_source_validation(self, mode):
         """
@@ -888,23 +959,27 @@ class Interface(Control):
         if 'netns' in self.config:
             return None
 
-        self._cleanup_ipv4_source_validation_rules(self.ifname)
-        nft_prefix = ['nft', 'insert', 'rule', 'ip', 'raw', 'vyos_rpfilter',
-                      'iifname', f'"{self.ifname}"']
-        if mode in ['strict', 'loose']:
-            self._cmdl(nft_prefix + ['counter', 'return'])
-        if mode == 'strict':
-            self._cmdl(nft_prefix + ['fib', 'saddr', '.', 'iif', 'oif', '0', 'counter', 'drop'])
-        elif mode == 'loose':
-            self._cmdl(nft_prefix + ['fib', 'saddr', 'oif', '0', 'counter', 'drop'])
+        strict_ifaces, loose_ifaces = self._get_rpf_interface_rules('ip')
 
-    def _cleanup_ipv6_source_validation_rules(self, ifname):
-        results = self._cmdl(['nft', '-a', 'list', 'chain', 'ip6', 'raw', 'vyos_rpfilter']).split("\n")
-        for line in results:
-            if f'iifname "{ifname}"' in line:
-                handle_search = re.search('handle (\d+)', line)
-                if handle_search:
-                    self._cmdl(['nft', 'delete', 'rule', 'ip6', 'raw', 'vyos_rpfilter', 'handle', handle_search[1]])
+        rpf_dict = {
+            'family': 'ip',
+            'iface': self.ifname,
+            'mode': mode
+        }
+
+        strict_needs_rule = (len(strict_ifaces) == 0 or
+                             (len(strict_ifaces) == 1 and self.ifname in strict_ifaces))
+        loose_needs_rule = (len(loose_ifaces) == 0 or
+                            (len(loose_ifaces) == 1 and self.ifname in loose_ifaces))
+
+        self._set_rpf_rule_deletes('ip', rpf_dict, strict_needs_rule, loose_needs_rule)
+
+        if mode == 'strict' and strict_needs_rule:
+            rpf_dict['strict_add'] = True
+        if mode == 'loose' and loose_needs_rule:
+            rpf_dict['loose_add'] = True
+
+        self._apply_rpf_nft_config(rpf_dict)
 
     def set_ipv6_source_validation(self, mode):
         """
@@ -918,15 +993,27 @@ class Interface(Control):
         if 'netns' in self.config:
             return None
 
-        self._cleanup_ipv6_source_validation_rules(self.ifname)
-        nft_prefix = ['nft', 'insert', 'rule', 'ip6', 'raw', 'vyos_rpfilter',
-                      'iifname', f'"{self.ifname}"']
-        if mode in ['strict', 'loose']:
-            self._cmdl(nft_prefix + ['counter', 'return'])
-        if mode == 'strict':
-            self._cmdl(nft_prefix + ['fib', 'saddr', '.', 'iif', 'oif', '0', 'counter', 'drop'])
-        elif mode == 'loose':
-            self._cmdl(nft_prefix + ['fib', 'saddr', 'oif', '0', 'counter', 'drop'])
+        strict_ifaces, loose_ifaces = self._get_rpf_interface_rules('ip6')
+
+        rpf_dict = {
+            'family': 'ip6',
+            'iface': self.ifname,
+            'mode': mode
+        }
+
+        strict_needs_rule = (len(strict_ifaces) == 0 or
+                             (len(strict_ifaces) == 1 and self.ifname in strict_ifaces))
+        loose_needs_rule = (len(loose_ifaces) == 0 or
+                            (len(loose_ifaces) == 1 and self.ifname in loose_ifaces))
+
+        self._set_rpf_rule_deletes('ip6', rpf_dict, strict_needs_rule, loose_needs_rule)
+
+        if mode == 'strict' and strict_needs_rule:
+            rpf_dict['strict_add'] = True
+        if mode == 'loose' and loose_needs_rule:
+            rpf_dict['loose_add'] = True
+
+        self._apply_rpf_nft_config(rpf_dict)
 
     def set_ipv6_accept_ra(self, accept_ra):
         """
@@ -969,7 +1056,8 @@ class Interface(Control):
         with the given prefix to the interface.
         """
         # T2863: only add a link-local IPv6 address if the interface returns
-        # a MAC address. This is not the case on e.g. WireGuard interfaces.
+        # a MAC address. Interface types without one either provide a
+        # synthetic MAC or opt out via _ipv6_default_link_local.
         mac = self.get_mac()
         if mac:
             eui64 = mac2eui64(mac, prefix)
@@ -1928,12 +2016,12 @@ class Interface(Control):
 
         # IPv4 source-validation
         tmp = dict_search('ip.source_validation', config)
-        value = tmp if (tmp != None) else '0'
+        value = tmp if (tmp != None) else 'disable'
         self.set_ipv4_source_validation(value)
 
         # IPv6 source-validation
         tmp = dict_search('ipv6.source_validation', config)
-        value = tmp if (tmp != None) else '0'
+        value = tmp if (tmp != None) else 'disable'
         self.set_ipv6_source_validation(value)
 
         # MTU - Maximum Transfer Unit has a default value. It must ALWAYS be set
@@ -1997,7 +2085,8 @@ class Interface(Control):
             self.del_ipv6_eui64_address(addr)
 
         # Manage IPv6 link-local addresses
-        if dict_search('ipv6.address.no_default_link_local', config) != None:
+        if (not self._ipv6_default_link_local or
+                dict_search('ipv6.address.no_default_link_local', config) != None):
             self.del_ipv6_eui64_address(link_local_prefix)
         else:
             self.add_ipv6_eui64_address(link_local_prefix)

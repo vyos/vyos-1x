@@ -253,8 +253,7 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-        self.assertIn(PROCESS_NAME, tmp)
+        self.verify_process_in_vrf(PROCESS_NAME, vrf)
 
     def test_ssh_vrf_multi(self):
         # Check if SSH service can be bound to multiple VRFs
@@ -276,8 +275,7 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
 
         # Check for process in VRF
         for vrf in vrfs:
-            tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-            self.assertIn(PROCESS_NAME, tmp)
+            self.verify_process_in_vrf(PROCESS_NAME, vrf)
 
     def test_ssh_login(self):
         # Perform SSH login and command execution with a predefined user. The

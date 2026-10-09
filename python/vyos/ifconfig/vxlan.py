@@ -67,6 +67,7 @@ class VXLANIf(Interface):
         # arguments used by iproute2. For more information please refer to:
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         mapping = {
+            'gbp'                        : 'gbp',
             'group'                      : 'group',
             'gpe'                        : 'gpe',
             'parameters.external'        : 'external',

@@ -14,9 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
+from vyos.template import is_ipv6
 from vyos.utils.assertion import assert_range
 from vyos.utils.dict import dict_search
-from vyos.utils.network import get_interface_config
+from vyos.utils.process import cmdl
+from vyos.utils.process import get_wrapper
+from vyos.utils.network import mac2eui64
 
 @Interface.register
 class PPPoEIf(Interface):
@@ -27,6 +30,10 @@ class PPPoEIf(Interface):
             'prefixes': ['pppoe', ],
         },
     }
+
+    # T9060: the IPv6 interface identifier of a PPP link is negotiated with
+    # the peer via IPV6CP (RFC 5072) - see Interface._ipv6_default_link_local
+    _ipv6_default_link_local = False
 
     _sysfs_get = {
         **Interface._sysfs_get,**{
@@ -43,31 +50,6 @@ class PPPoEIf(Interface):
         },
     }}
 
-    def _remove_routes(self, vrf=None):
-        # Always delete default routes when interface is removed
-        vrf_cmd = ['-c', f'vrf {vrf}'] if vrf else []
-        self._cmdl(['vtysh', '-c', 'conf t'] + vrf_cmd + ['-c', f'no ip route 0.0.0.0/0 {self.ifname} tag 210'])
-        self._cmdl(['vtysh', '-c', 'conf t'] + vrf_cmd + ['-c', f'no ipv6 route ::/0 {self.ifname} tag 210'])
-
-    def remove(self):
-        """
-        Remove interface from operating system. Removing the interface
-        deconfigures all assigned IP addresses and clear possible DHCP(v6)
-        client processes.
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> i = Interface('pppoe0')
-        >>> i.remove()
-        """
-        vrf = None
-        tmp = get_interface_config(self.ifname)
-        if 'master' in tmp:
-            vrf = tmp['master']
-        self._remove_routes(vrf)
-
-        # remove bond master which places members in disabled state
-        super().remove()
-
     def _create(self):
         # we cannot create this interface as it is managed outside
         pass
@@ -79,6 +61,17 @@ class PPPoEIf(Interface):
     def del_addr(self, addr):
         # we cannot create this interface as it is managed outside
         pass
+
+    def del_ipv6_eui64_address(self, prefix):
+        """
+        del_addr() is a NOOP as the addresses are managed by pppd. The EUI-64
+        link-local address was added by VyOS itself, so use the generic
+        implementation to clean it off an already established session.
+        """
+        if is_ipv6(prefix):
+            eui64 = mac2eui64(self.get_mac(), prefix)
+            prefixlen = prefix.split('/')[1]
+            super().del_addr(f'{eui64}/{prefixlen}')
 
     def get_mac(self):
         """ Get a synthetic MAC address. """
@@ -122,23 +115,23 @@ class PPPoEIf(Interface):
 
         super().update(config)
 
-        # generate proper configuration string when VRFs are in use
-        vrf = []
-        if 'vrf' in config:
-            tmp = config['vrf']
-            vrf = ['-c', f'vrf {tmp}']
+        vrf = config.get('vrf')
 
         # learn default router in Router Advertisement.
         tmp = '0' if 'no_default_route' in config else '1'
         self.set_accept_ra_defrtr(tmp)
 
-        if 'no_default_route' not in config:
-            # Set default route(s) pointing to PPPoE interface
-            distance = config['default_route_distance']
-            self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ip route 0.0.0.0/0 {self.ifname} tag 210 {distance}'])
-            if 'ipv6' in config:
-                self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ipv6 route ::/0 {self.ifname} tag 210 {distance}'])
+        # Default route(s) pointing to the PPPoE interface are rendered by
+        # vyos.frrender.get_pppoe_interfaces() at the end of every commit
 
-        # kick RS when IPv6 is up.
+        # Kick a Router Solicitation when IPv6 is up. This is best effort -
+        # the peer may answer late or not at all
         if dict_search('ipv6.address.autoconf', config) is not None:
-            self._cmdl(['rdisc6', '--single', '--retry', '3', self.ifname])
+            # systemd-run(1) only asks PID 1 to start the transient unit, so
+            # rdisc6(8) does not inherit our VRF context - it has to be entered
+            # inside the unit itself
+            wrapper = get_wrapper(vrf, None)
+            description = f'VyOS IPv6 Router Solicitation on {self.ifname}'
+            cmdl(['systemd-run', '--quiet', '--collect',
+                  f'--description={description}'] + wrapper +
+                 ['rdisc6', '--single', '--retry', '3', self.ifname], self.debug)

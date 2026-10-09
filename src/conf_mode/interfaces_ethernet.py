@@ -22,10 +22,14 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
+from vyos.configdep import set_dependents_initial
+from vyos.configdep import call_dependents_initial
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configdict import is_vrf_changed
+from vyos.configdict import node_changed
 from vyos.configdict import get_flowtable_interfaces
+from vyos.configdiff import Diff
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_interface_exists
@@ -38,17 +42,18 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_eapol
 from vyos.ethtool import Ethtool
 from vyos.netlink import coalesce
-from vyos.frrender import FRRender
-from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import BondIf
+from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.process import is_systemd_service_running
+from vyos.utils.file import read_file
 from vyos.vpp.config_deps import deps_bond_dict
+from vyos.vpp.config_resource_checks.memory import no_multi_seg_fits
 from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.config_verify import verify_vpp_mac_change_supported
 from vyos.vpp.control_vpp import VPPControl
@@ -140,6 +145,51 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
     eth_conf['bond_blocked_changes'] = blocked_list
     return None
 
+def _vpp_no_multi_seg_change(conf: Config) -> bool:
+    """Whether VPP must be reconfigured to flip 'no-multi-seg' (T9146)
+
+    True only when the flag the current config requires differs from the one VPP
+    is running with
+    """
+    # VPP is down: nothing to reconfigure now; the flag is recomputed the next
+    # time vpp.py runs (a 'vpp' commit or boot).
+    if not is_systemd_service_running('vpp.service'):
+        return False
+
+    # Largest MTU across all VPP-bound interfaces - the flag depends on the max,
+    # not just the interface being changed, so a change that leaves a bigger
+    # interface in place does not needlessly flip it.
+    vpp_ifaces = conf.list_nodes(['vpp', 'settings', 'interface'], default=[])
+    max_mtu = max(
+        (
+            int(conf.return_value(['interfaces', 'ethernet', iface, 'mtu']) or 1500)
+            for iface in vpp_ifaces
+        ),
+        default=1500,
+    )
+    # buffer data-size (default 2048) that the frame must fit under 'no-multi-seg'
+    data_size = int(
+        conf.return_value(
+            ['vpp', 'settings', 'resource-allocation', 'buffers', 'data-size']
+        )
+        or 2048
+    )
+    # what the new config requires after MTU change
+    desired = no_multi_seg_fits(max_mtu, data_size)
+
+    # read the flag VPP is actually running with from its generated startup.conf
+    try:
+        current = 'no-multi-seg' in read_file('/run/vpp/vpp.conf')
+    except OSError:
+        # Running state unknown: reconfigure only when 'no-multi-seg' must be
+        # off (an oversized frame would drop otherwise). When it should be on,
+        # multi-seg is a safe fallback, so skip the restart.
+        return not desired
+
+    # reconfigure VPP only when the flag actually flips
+    return current != desired
+
+
 def get_config(config=None):
     """
     Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -165,6 +215,15 @@ def get_config(config=None):
                 ethernet['mtu'] = str(max_mtu)
         except Exception:
             pass
+        # For a VPP-bound interface the max MTU read above is the LCP tap's, not
+        # the dataplane NIC's, so clamp the default to the real NIC limit instead
+        # - otherwise the default would be rejected at commit.
+        if conf.exists(['vpp', 'settings', 'interface', ifname]) and (
+            is_systemd_service_running('vpp.service')
+        ):
+            vpp_max_mtu = VPPControl().get_iface_max_mtu(ifname)
+            if vpp_max_mtu is not None and vpp_max_mtu < int(ethernet['mtu']):
+                ethernet['mtu'] = str(vpp_max_mtu)
 
     if 'is_bond_member' in ethernet:
         update_bond_options(conf, ethernet)
@@ -175,8 +234,30 @@ def get_config(config=None):
     tmp = is_node_changed(conf, base + [ifname, 'duplex'])
     if tmp: ethernet.update({'speed_duplex_changed': {}})
 
-    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
+    # T9228: Some NIC drivers do not support changing all settings we offer on
+    # the CLI. The warning telling the user about the missing driver support is
+    # emitted while applying the configuration - which happens on every commit
+    # touching this interface. Record which nodes have been changed so the
+    # warning is only displayed if the node in question was altered, and not on
+    # any unrelated change like an interface description or IP address.
+    tmp = node_changed(
+        conf,
+        base + [ifname, 'offload'],
+        key_mangling=('-', '_'),
+        expand_nodes=Diff.ADD | Diff.DELETE,
+    )
+    if tmp:
+        ethernet.update({'offload_changed': tmp})
+
+    for node, key in {
+        'disable-flow-control': 'flow_control_changed',
+        'ring-buffer': 'ring_buffer_changed',
+        'interrupt-coalescing': 'coalesce_changed',
+        'switchdev': 'switchdev_changed',
+    }.items():
+        tmp = is_node_changed(conf, base + [ifname, node])
+        if tmp:
+            ethernet.update({key: {}})
 
     ethernet['flowtable_interfaces'] = get_flowtable_interfaces(conf)
 
@@ -203,6 +284,14 @@ def get_config(config=None):
     # Check vrf membership, to ensure firewall is updated
     if is_vrf_changed(conf, ifname):
         set_dependents('firewall', conf)
+
+    # T9146: An MTU change on a VPP-bound interface can flip 'no-multi-seg';
+    # reconfigure VPP only when it actually flips. An initial dependency is
+    # used because a normal ethernet -> vpp one would cycle with the existing
+    # vpp -> ethernet dependency.
+    if vpp_config and is_node_changed(conf, base + [ifname, 'mtu']):
+        if _vpp_no_multi_seg_change(conf):
+            set_dependents_initial('vpp', conf)
 
     return ethernet
 
@@ -385,6 +474,31 @@ def verify_vpp_remove_vif(ethernet: dict):
     for vlan in vlan_names:
         verify_vpp_remove_interface(vlan, vpp_config)
 
+def verify_vpp_mtu(ethernet: dict):
+    """Reject an MTU larger than the NIC can handle on a VPP-bound interface.
+
+    Otherwise, the kernel accepts the MTU while the VPP dataplane caps it at the
+    NIC limit, leaving the two out of sync (T9161).
+    """
+    ifname = ethernet['ifname']
+    if 'mtu' not in ethernet:
+        return
+    if dict_search(f'vpp.settings.interface.{ifname}', ethernet) is None:
+        return
+    if not is_systemd_service_running('vpp.service'):
+        return
+
+    max_mtu = VPPControl().get_iface_max_mtu(ifname)
+    if max_mtu is None:
+        return
+
+    mtu = int(ethernet['mtu'])
+    if mtu > max_mtu:
+        raise ConfigError(
+            f'Interface MTU {mtu} exceeds the maximum {max_mtu} '
+            'supported by the VPP dataplane'
+        )
+
 def verify(ethernet):
     verify_flowtable(ethernet)
     verify_vpp_remove_vif(ethernet)
@@ -408,6 +522,7 @@ def verify(ethernet):
         and dict_search(f'vpp.settings.interface.{ifname}', ethernet) is not None
     ):
         verify_vpp_mac_change_supported(ifname)
+    verify_vpp_mtu(ethernet)
     verify_coalesce(ethernet, ethtool)
 
     if 'is_bond_member' in ethernet:
@@ -442,13 +557,9 @@ def verify_ethernet(ethernet: dict, ethtool: Ethtool) -> None:
     return None
 
 def generate(ethernet):
-    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().generate(ethernet['frr_dict'])
     return None
 
 def apply(ethernet):
-    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
-        FRRender().apply()
     ifname = ethernet['ifname']
     e = EthernetIf(ifname)
     if 'deleted' in ethernet:
@@ -458,6 +569,7 @@ def apply(ethernet):
 
     # run the dependents
     call_dependents()
+    call_dependents_initial()
 
     vpp_iface_config = dict_search(f'vpp.settings.interface.{ifname}', ethernet)
     if vpp_iface_config is not None and is_systemd_service_running('vpp.service'):
@@ -491,14 +603,10 @@ def apply(ethernet):
                 vpp_api.disable_icmpv6_ra_punt(dhcp_ifname)
 
         # If the interface is managed by the VPP DPDK driver, synchronize runtime
-        # parameters between Linux and the corresponding VPP LCP interface
-        # Find LCP pair
-        lcp_pair = vpp_api.lcp_pair_find(vpp_name_hw=ifname)
-        # Sync MTU to VPP LCP pair interface
-        if lcp_pair:
-            lcp_name = lcp_pair.get('vpp_name_kernel')
-            mtu = e.get_mtu()
-            vpp_api.set_iface_mtu(lcp_name, mtu)
+        # parameters between Linux and the corresponding VPP LCP interfaces.
+        # Sync MTU to the VPP LCP taps for the parent and its VLAN
+        # sub-interfaces (linux-cp creates sub-interface taps with MTU 0).
+        sync_vpp_lcp_mtu(ethernet, vpp_api)
 
         sync_vpp_lcp_vrf_tables(ethernet, vpp_api)
 
@@ -512,6 +620,36 @@ def apply(ethernet):
         vpp_api.set_promisc(ifname, enable=needs_promisc)
 
     return None
+
+
+def sync_vpp_lcp_mtu(ethernet: dict, vpp_api: VPPControl) -> None:
+    """Sync each VPP interface's MTU to its dataplane sub-interface and LCP tap.
+
+    A VPP VLAN sub-interface keeps the parent MTU on the dataplane, and its
+    LCP tap is created with MTU 0. Neither matches the real kernel MTU (the
+    sub-interface's own if set, else the parent's). Read the kernel MTU and
+    set it on both, so the kernel, dataplane and tap agree. Q-in-Q (vif-c)
+    is skipped, because VPP does not support it (T9161).
+    """
+    ifnames = [ethernet['ifname']]
+    ifnames += [vlan_conf['ifname'] for vlan_conf in ethernet.get('vif', {}).values()]
+    ifnames += [vlan_conf['ifname'] for vlan_conf in ethernet.get('vif_s', {}).values()]
+
+    # Fetch all LCP pairs once and index by VPP (hardware) name; lcp_pair_find()
+    # dumps every pair on each call, so avoid calling it per interface.
+    lcp_tap_map = {
+        pair.get('vpp_name_hw'): pair.get('vpp_name_kernel')
+        for pair in vpp_api.lcp_pairs_list()
+    }
+    for iface in ifnames:
+        lcp_name = lcp_tap_map.get(iface)
+        if not lcp_name:
+            continue
+        mtu = Interface(iface).get_mtu()
+        # The dataplane sub-interface and the tap both need setting: the former
+        # otherwise keeps the parent-inherited MTU, the latter stays at 0.
+        vpp_api.set_iface_mtu(iface, mtu)
+        vpp_api.set_iface_mtu(lcp_name, mtu)
 
 
 def sync_vpp_lcp_vrf_tables(ethernet: dict, vpp_api: VPPControl) -> None:

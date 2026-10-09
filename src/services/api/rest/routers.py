@@ -74,6 +74,7 @@ from .models import GenerateModel
 from .models import ShowModel
 from .models import RebootModel
 from .models import ResetModel
+from .models import ReconnectModel
 from .models import RenewModel
 from .models import ImportPkiModel
 from .models import PingModel
@@ -923,6 +924,28 @@ def reset_op(data: ResetModel):
     try:
         if op == 'reset':
             res = session.reset(path)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception:
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occurred. Check the logs for details.')
+
+    return success(res)
+
+
+@router.post('/reconnect')
+def reconnect_op(data: ReconnectModel):
+    state = SessionState()
+    session = state.session
+
+    op = data.op
+    path = data.path
+
+    try:
+        if op == 'reconnect':
+            res = session.reconnect(path)
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:

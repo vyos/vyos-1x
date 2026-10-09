@@ -65,6 +65,24 @@ def tar_gz_paths(archive_path: pathlib.Path, max_depth: int = 5) -> set:
     return out
 
 
+def nested_mount_points(parent: pathlib.Path) -> set:
+    """
+    Return the directory mount points below `parent`, as member paths inside a
+    tar archive - file bind mounts such as /run/netns/<name> are not returned,
+    those are still archived.
+    """
+
+    mount_points = set()
+
+    for line in pathlib.Path('/proc/self/mountinfo').read_text().splitlines():
+        # 36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw
+        mount = pathlib.Path(line.split()[4])
+        if parent in mount.parents and mount.is_dir():
+            mount_points.add(str(mount).lstrip('/'))
+
+    return mount_points
+
+
 @contextlib.contextmanager
 def stub_files(file_paths: list[str]):
     """
@@ -229,6 +247,95 @@ class TestTechSupportArchive(VyOSUnitTestSHIM.TestCase):
 
         if archive_path.exists():
             call(f'sudo rm -f {archive_path}')
+
+    def test_run_archive_excludes_mount_points(self):
+        # live-boot mounts the boot medium and the persistence partition below
+        # /run/live/{medium,persistence,rootfs,overlay} - archiving those would
+        # pull in every installed image and fill up /tmp. Daemon configuration
+        # rendered into /run must still be archived.
+        run = pathlib.Path('/run')
+        nested_mounts = nested_mount_points(run)
+
+        # Daemon configuration and PID files rendered into /run itself - which
+        # can never be a nested mount point - must still be archived
+        run_files = {path.name for path in run.iterdir() if path.is_file()}
+
+        output = self.op_mode(base_path)
+
+        # Only assert on what is there before and after the run: a PID file may
+        # come and go, and so may a mount point - /run/netns for instance only
+        # exists as a bind mount while a network namespace is around
+        nested_mounts = sorted(nested_mounts & nested_mount_points(run))
+        run_files = sorted(
+            f'run/{name}' for name in run_files if (run / name).is_file()
+        )
+        self.assertTrue(run_files, 'no regular file in /run to verify against')
+
+        archive_path = self._extract_archive_path(output)
+        self.assertPathExists(archive_path)
+
+        prefix = self._extract_archive_inner_path_prefix(archive_path)
+        self.assertExpectedArcPaths(
+            archive_path,
+            [f'{prefix}/run.tar.gz::run']
+            + [f'{prefix}/run.tar.gz::{file}' for file in run_files],
+        )
+        # Cross-check the live-boot paths with a second mechanism, but only
+        # where they really are mount points: /run/live/rootfs is a plain
+        # directory holding the squashfs mounts one level deeper, and on a
+        # container or a live CD not all of them exist to begin with
+        live_mounts = sorted(
+            str(run / 'live' / directory).lstrip('/')
+            for directory in ('medium', 'persistence', 'rootfs', 'overlay')
+            if (run / 'live' / directory).is_mount()
+        )
+
+        self.assertNotExpectedArcPaths(
+            archive_path,
+            [
+                f'{prefix}/run.tar.gz::{mount}'
+                for mount in nested_mounts + live_mounts
+            ],
+        )
+
+        if archive_path.exists():
+            call(f'sudo rm -f {archive_path}')
+
+    def test_run_archive_excludes_bind_mount(self):
+        # A bind mount below /run shares its device with /run, which is why the
+        # mount points are read from /proc/self/mountinfo instead of relying on
+        # os.path.ismount()
+        source = pathlib.Path('/run/_test_techsupport_source')
+        target = pathlib.Path('/run/_test_techsupport_mount')
+        archive_path = None
+
+        call(f'sudo mkdir -p {source} {target}')
+        call(f'sudo touch {source}/canary')
+        call(f'sudo mount --bind {source} {target}')
+
+        try:
+            output = self.op_mode(base_path)
+
+            archive_path = self._extract_archive_path(output)
+            self.assertPathExists(archive_path)
+
+            prefix = self._extract_archive_inner_path_prefix(archive_path)
+            # the bind mount source is a regular directory and is archived ...
+            self.assertExpectedArcPaths(
+                archive_path,
+                [f'{prefix}/run.tar.gz::{str(source).lstrip("/")}/canary'],
+            )
+            # ... while its mount point is not descended into
+            self.assertNotExpectedArcPaths(
+                archive_path,
+                [f'{prefix}/run.tar.gz::{str(target).lstrip("/")}/canary'],
+            )
+        finally:
+            call(f'sudo umount {target}')
+            call(f'sudo rm -rf {source} {target}')
+
+            if archive_path is not None and archive_path.exists():
+                call(f'sudo rm -f {archive_path}')
 
     def test_custom_archive_path(self):
         output = self.op_mode(base_path + [str(testdir / 'foo')])

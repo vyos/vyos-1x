@@ -89,6 +89,12 @@ def get_address(interface):
             return ip_address
 
 
+def wrapped_error_regex(message):
+    # Commit errors are line-wrapped when printed, so build a regex that
+    # matches the message across arbitrary whitespace including newlines
+    return r'\s+'.join(re.escape(word) for word in message.split())
+
+
 def get_isolated_cpus():
     isolated = read_file('/sys/devices/system/cpu/isolated')
     return range_str_to_list(isolated)
@@ -183,9 +189,51 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         normalized_out = re.sub(r'\s+', ' ', out)
         self.assertIn(f'tap4096 2 up {mtu}/0/0/0', normalized_out)
 
+        # VLAN sub-interface's MTU must reach both the VPP dataplane
+        # sub-interface and its LCP tap
+        vlan = '10'
+        vlan_mtu = '1400'
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        self.assertRegex(normalized_out, rf'{interface}.{vlan} \d+ \S+ {mtu}/0/0/0')
+        self.assertRegex(normalized_out, rf'tap4096.{vlan} \d+ \S+ {mtu}/0/0/0')
+
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'mtu', vlan_mtu]
+        )
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        self.assertRegex(
+            normalized_out, rf'{interface}.{vlan} \d+ \S+ {vlan_mtu}/0/0/0'
+        )
+        self.assertRegex(normalized_out, rf'tap4096.{vlan} \d+ \S+ {vlan_mtu}/0/0/0')
+
         # delete mtu settings
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
         self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
         self.cli_commit()
+
+        # An MTU larger than the NIC's maximum must be rejected at verify.
+        # The NIC maximum is driver-specific, so read it from VPP and set
+        # one above it. Skip when VPP does not report a maximum (a build without
+        # the 'max mtu' hardware-interface field cannot enforce the limit) or
+        # when it exceeds the CLI range, which has its own validation.
+        nic_max_mtu = VPPControl().get_iface_max_mtu(interface)
+        if nic_max_mtu is not None and nic_max_mtu < 16000:
+            over_mtu = nic_max_mtu + 1
+            self.cli_set(['interfaces', 'ethernet', interface, 'mtu', str(over_mtu)])
+            with self.assertRaisesRegex(
+                ConfigSessionError,
+                f'MTU {over_mtu} exceeds the maximum {nic_max_mtu}',
+            ):
+                self.cli_commit()
+            self.cli_discard()
 
         # A custom MAC address must reach the VPP dataplane, and removing it must
         # restore the hardware address (hw-id). Rejection of drivers that cannot
@@ -447,6 +495,70 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'Ethernet address {mac}', out)
         self.assertEqual(mac, Interface(interface_loopback).get_mac())
 
+        # Without a configured MTU the loopback keeps VPP's default, and its
+        # vif inherits it (sub-interface and tap, which linux-cp creates with
+        # MTU 0)
+        self.cli_set(loopback_path + [interface_loopback, 'vif', '10'])
+        self.cli_commit()
+
+        # Read VPP's default from the kernel interface instead of hardcoding it
+        default_mtu = Interface(interface_loopback).get_mtu()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # parent loopback and its lcp tap carry the default MTU
+        self.assertRegex(normalized_out, rf'loop11 \d+ \S+ {default_mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097 \d+ \S+ {default_mtu}/')
+        # vif without its own MTU inherits it (sub-interface and tap, so the
+        # tap is no longer left at MTU 0)
+        self.assertRegex(normalized_out, rf'loop11.10 \d+ \S+ {default_mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.10 \d+ \S+ {default_mtu}/')
+
+        # A vif MTU bigger than the parent's must raise a ConfigError
+        self.cli_set(
+            loopback_path
+            + [interface_loopback, 'vif', '10', 'mtu', str(int(default_mtu) + 100)]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # A configured MTU replaces VPP's default on the loopback and is
+        # inherited by its vif; a vif with its own MTU uses that instead
+        mtu = '2500'
+        vif_mtu = '1400'
+
+        self.cli_set(loopback_path + [interface_loopback, 'mtu', mtu])
+        self.cli_set(loopback_path + [interface_loopback, 'vif', '10'])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # parent loopback and its lcp carries its configured MTU
+        self.assertRegex(normalized_out, rf'loop11 \d+ \S+ {mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097 \d+ \S+ {mtu}/')
+        # vif without its own MTU inherits the parent's (sub-interface and tap)
+        self.assertRegex(normalized_out, rf'loop11.10 \d+ \S+ {mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.10 \d+ \S+ {mtu}/')
+
+        # Set the vif MTU bigger than the parent's MTU.
+        # This must raise a ConfigError.
+        self.cli_set(
+            loopback_path
+            + [interface_loopback, 'vif', '10', 'mtu', str(int(mtu) + 100)]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(loopback_path + [interface_loopback, 'vif', '10', 'mtu', vif_mtu])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # vif with an explicit MTU uses it (sub-interface and tap)
+        self.assertRegex(normalized_out, rf'loop11.10 \d+ \S+ {vif_mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.10 \d+ \S+ {vif_mtu}/')
+
         # delete loopback interface
         self.cli_delete(loopback_path + [interface_loopback])
         self.cli_commit()
@@ -524,6 +636,27 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             r'BondEthernet23\s+\d+\s+up',
             "Interface BondEthernet23 is not in the expected state 'up'.",
         )
+
+        # MTU must be set on VLAN sub-interfaces and taps (vif inherits parent
+        # unless set).
+        mtu = '2500'
+        vif_mtu = '1400'
+        self.cli_set(bond_path + [interface_bond, 'mtu', mtu])
+        self.cli_set(bond_path + [interface_bond, 'vif', vlans[1], 'mtu', vif_mtu])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show interface')
+        normalized_out = re.sub(r'\s+', ' ', out)
+        # parent bond carries its configured MTU
+        self.assertRegex(normalized_out, rf'BondEthernet23 \d+ \S+ {mtu}/')
+        # vif without its own MTU inherits the parent's (sub-interface and tap)
+        self.assertRegex(normalized_out, rf'BondEthernet23.{vlans[0]} \d+ \S+ {mtu}/')
+        self.assertRegex(normalized_out, rf'tap4097.123 \d+ \S+ {mtu}/')
+        # vif with an explicit MTU uses it (sub-interface and tap)
+        self.assertRegex(
+            normalized_out, rf'BondEthernet23.{vlans[1]} \d+ \S+ {vif_mtu}/'
+        )
+        self.assertRegex(normalized_out, rf'tap4097.456 \d+ \S+ {vif_mtu}/')
 
         # delete vpp interface vlan
         self.cli_delete(bond_path + [interface_bond, 'vif'])
@@ -1834,6 +1967,98 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
         self.assertNotRegex(out, r'flags:.*\bpromisc\b')
 
+    def test_26_vpp_no_multi_seg(self):
+        # 'no-multi-seg' is auto-computed (T9146): enabled while the largest
+        # VPP-interface MTU fits the buffer data-size, dropped otherwise (VPP
+        # falls back to multi-seg so Jumbo frames still work)
+        mtu = '2500'
+
+        self.cli_commit()
+
+        # Check no-multi-seg option
+        # Default 1500 MTU fits the default 2048 buffer -> enabled
+        config = read_file(VPP_CONF)
+        self.assertIn('no-multi-seg', config)
+
+        # Raising the MTU beyond the buffer drops it; the interface change
+        # triggers a VPP reconfigure on its own
+        self.cli_set(['interfaces', 'ethernet', interface, 'mtu', mtu])
+        self.cli_commit()
+
+        config = read_file(VPP_CONF)
+        self.assertNotIn('no-multi-seg', config)
+
+        # Sizing the buffer to fit the MTU brings it back
+        self.cli_set(
+            base_path
+            + ['settings', 'resource-allocation', 'buffers', 'data-size', '4096']
+        )
+        self.cli_commit()
+
+        config = read_file(VPP_CONF)
+        self.assertIn('no-multi-seg', config)
+
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
+
+    def test_27_vpp_ipsec_incompatible_algorithms(self):
+        # T9303: VPP IPsec acceleration must reject unsupported IKE/ESP
+        # algorithms, as the crypto plugin for VPP does not support every
+        # algorithm strongSwan offers. This lives here and not in
+        # test_vpn_ipsec.py as the validation requires VPP to be enabled.
+        ipsec_path = ['vpn', 'ipsec']
+        peer = 'main-branch'
+        peer_path = ipsec_path + ['site-to-site', 'peer', peer]
+        ike_group = 'MyIKEGroup'
+        esp_group = 'MyESPGroup'
+        local_address = '192.0.2.10'
+        peer_ip = '203.0.113.45'
+        secret = 'MYSECRETKEY'
+
+        self.cli_set(base_path + ['settings', 'ipsec-acceleration'])
+
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes256'])
+        self.cli_set(ipsec_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', '3des'])
+
+        self.cli_set(ipsec_path + ['authentication', 'psk', peer, 'id', local_address])
+        self.cli_set(ipsec_path + ['authentication', 'psk', peer, 'id', peer_ip])
+        self.cli_set(ipsec_path + ['authentication', 'psk', peer, 'secret', secret])
+
+        self.cli_set(peer_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_path + ['ike-group', ike_group])
+        self.cli_set(peer_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_path + ['local-address', local_address])
+        self.cli_set(peer_path + ['remote-address', peer_ip])
+        self.cli_set(peer_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24'])
+        self.cli_set(peer_path + ['tunnel', '1', 'remote', 'prefix', '172.17.10.0/24'])
+
+        # 3des is not supported for ESP when VPP is used
+        err_msg = wrapped_error_regex(
+            f'Encryption algorithm 3des cannot be used for ESP proposal 1 '
+            f'on tunnel 1 for site-to-site peer {peer} with VPP'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        self.cli_set(ipsec_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes256'])
+
+        # serpent128 is not supported for IKE when VPP is used
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'serpent128'])
+        err_msg = wrapped_error_regex(
+            f'Encryption algorithm serpent128 cannot be used for IKE proposal 1 '
+            f'for site-to-site peer {peer} with VPP'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # supported algorithms on both IKE and ESP commit just fine
+        self.cli_set(ipsec_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes256'])
+        self.cli_commit()
+
+        # cleanup - the IPsec configuration is not covered by tearDown()
+        self.cli_delete(ipsec_path)
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

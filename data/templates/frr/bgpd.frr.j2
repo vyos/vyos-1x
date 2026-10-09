@@ -205,10 +205,11 @@
 {%         if afi_config.attribute_unchanged is vyos_defined %}
   neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if afi_config.attribute_unchanged.as_path is vyos_defined }}{{ 'med ' if afi_config.attribute_unchanged.med is vyos_defined }}{{ 'next-hop ' if afi_config.attribute_unchanged.next_hop is vyos_defined }}
 {%         endif %}
-{%         if afi_config.capability.orf.prefix_list.send is vyos_defined %}
+{%         if afi_config.capability.orf.prefix_list.send is vyos_defined and afi_config.capability.orf.prefix_list.receive is vyos_defined %}
+  neighbor {{ neighbor }} capability orf prefix-list both
+{%         elif afi_config.capability.orf.prefix_list.send is vyos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list send
-{%         endif %}
-{%         if afi_config.capability.orf.prefix_list.receive is vyos_defined %}
+{%         elif afi_config.capability.orf.prefix_list.receive is vyos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list receive
 {%         endif %}
 {%         if afi_config.default_originate is vyos_defined %}
@@ -618,7 +619,8 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {# Doesn't work in current FRR configuration; vtysh (bgp dampening 16 751 2001 61) #}
  bgp dampening {{ parameters.dampening.half_life }} {{ parameters.dampening.re_use if parameters.dampening.re_use is vyos_defined }} {{ parameters.dampening.start_suppress_time if parameters.dampening.start_suppress_time is vyos_defined }} {{ parameters.dampening.max_suppress_time if parameters.dampening.max_suppress_time is vyos_defined }}
 {% endif %}
-{% if parameters.default.local_pref is vyos_defined %}
+{# xml_default_local_pref is the XML default of parameters default local-pref, added to the dict by frrender #}
+{% if parameters.default.local_pref is vyos_defined and parameters.default.local_pref != xml_default_local_pref %}
  bgp default local-preference {{ parameters.default.local_pref }}
 {% endif %}
 {% if parameters.deterministic_med is vyos_defined %}
@@ -671,9 +673,11 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {% if parameters.no_suppress_duplicates is vyos_defined %}
  no bgp suppress-duplicates
 {% endif %}
-{% if parameters.reject_as_sets is vyos_defined %}
- bgp reject-as-sets
-{% else %}
+{# FRR 10.5+ defaults to "bgp reject-as-sets" and does not print the default
+   in show running-config. frr-reload would find the line missing on every
+   reload and send it again, and FRR resets every peer for each application.
+   Only the non-default form is rendered. #}
+{% if parameters.reject_as_sets is not vyos_defined %}
  no bgp reject-as-sets
 {% endif %}
 {% if parameters.router_id is vyos_defined and parameters.router_id is not none %}
@@ -709,6 +713,9 @@ exit
 interface {{ iface }}
 {%         if iface_config.mpls.forwarding is vyos_defined %}
  mpls bgp forwarding
+{%         endif %}
+{%         if iface_config.mpls.l3vpn_multi_domain_switching is vyos_defined %}
+ mpls bgp l3vpn-multi-domain-switching
 {%         endif %}
 exit
 !

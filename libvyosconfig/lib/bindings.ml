@@ -487,13 +487,14 @@ let tree_merge destructive c_ptr_l c_ptr_r =
         | TA.Nonexistent_child -> error_message := "Nonexistent child"; Ctypes.null
         | TA.Incompatible_union -> error_message := "Trees must have equivalent root"; Ctypes.null
 
-let reference_tree_to_json internal_cache from_dir to_file =
+let reference_tree_to_json internal_cache exclude_paths from_dir to_file =
     (* alert exn Generate.reference_tree_to_json:
         [Generate.Load_error] caught
         [Generate.Write_error] caught
      *)
     try
-        (Generate.reference_tree_to_json[@alert "-exn"]) ~internal_cache:internal_cache from_dir to_file;
+        (Generate.reference_tree_to_json[@alert "-exn"])
+        ~internal_cache:internal_cache ~exclude_paths:exclude_paths from_dir to_file;
         0
     with
         | Generate.Load_error msg ->
@@ -606,6 +607,16 @@ let subtree_values_of_path c_ptr_rt c_ptr_ct path =
             let msg = Printf.sprintf "Malformed path: \'%s\'" s in
             error_message := msg; "#1@"
 
+let reference_path_from_config_path c_ptr_rt path =
+    let rt = Root.get c_ptr_rt in
+    let path = split_on_whitespace path in
+    Util_rt.get_refpath_from_config_path rt path
+
+let reference_path_from_partial_path c_ptr_rt path =
+    let rt = Root.get c_ptr_rt in
+    let path = split_on_whitespace path in
+    Util_rt.get_refpath_from_partial_path rt path
+
 module Stubs(I : Cstubs_inverted.INTERNAL) =
 struct
 
@@ -649,7 +660,7 @@ struct
   let () = I.internal "diff_show" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning string) diff_show
   let () = I.internal "tree_union" ((ptr void) @-> (ptr void) @-> returning (ptr void)) tree_union
   let () = I.internal "tree_merge" (bool @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) tree_merge
-  let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> returning int) reference_tree_to_json
+  let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> string @-> returning int) reference_tree_to_json
   let () = I.internal "mask_inclusive" ((ptr void) @-> (ptr void) @-> returning (ptr void)) mask_inclusive
   let () = I.internal "mask_exclusive" ((ptr void) @-> (ptr void) @-> returning (ptr void)) mask_exclusive
   let () = I.internal "subtree_from_partial" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning (ptr void)) subtree_from_partial
@@ -662,4 +673,6 @@ struct
   let () = I.internal "get_rdeps_of_kind" ((ptr void) @-> string @-> string @-> returning string) get_rdeps_of_kind
   let () = I.internal "get_rdeps_of_kind_data" ((ptr void) @-> string @-> string @-> returning string) get_rdeps_of_kind_data
   let () = I.internal "subtree_values_of_path" ((ptr void) @-> (ptr void) @-> string @-> returning string) subtree_values_of_path
+  let () = I.internal "reference_path_from_config_path" ((ptr void) @-> string @-> returning string) reference_path_from_config_path
+  let () = I.internal "reference_path_from_partial_path" ((ptr void) @-> string @-> returning string) reference_path_from_partial_path
 end

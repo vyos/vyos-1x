@@ -21,5 +21,6 @@ if [ "$1" == 'disable' ]; then
   bind '"?": self-insert'
 else
   sed -i "/^bind '\"?\": .* # vyatta key binding$/d" $HOME/.bashrc
-  bind '"?": possible-completions'
+  # default binding: quote-aware help handler from bash_completion.d/vyatta-op
+  bind -x '"?": _vyatta_question_mark'
 fi

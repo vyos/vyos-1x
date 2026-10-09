@@ -453,6 +453,9 @@ def get_pppoe_interfaces(conf, vrf=None):
             options.update({'default_route_distance' : ifconfig['default_route_distance']})
         if 'no_default_route' in ifconfig:
             options.update({'no_default_route' : {}})
+        # IPv6 default route is only installed when IPv6 is enabled on the link
+        if 'ipv6' in ifconfig:
+            options.update({'ipv6' : {}})
         if 'vrf' in ifconfig:
             if vrf == ifconfig['vrf']: pppoe_interfaces.update({ifname : options})
         else:

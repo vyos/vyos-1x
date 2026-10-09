@@ -42,7 +42,16 @@ user {{ user }}
 {%         if config.pool is vyos_defined %}
 {%             set association = 'pool' %}
 {%         endif %}
-{{ association }} {{ server | replace('_', '-') }} iburst {{- ' nts' if config.nts is vyos_defined }} {{- ' noselect' if config.noselect is vyos_defined }} {{- ' prefer' if config.prefer is vyos_defined }} {{- ' xleave' if config.interleave is vyos_defined }} {{- ' port ' ~ ptp.port if ptp.port is vyos_defined and config.ptp is vyos_defined }}
+{{ association }} {{ server | replace('_', '-') }} iburst
+  {{- ' nts' if config.nts is vyos_defined }}
+  {{- ' noselect' if config.noselect is vyos_defined }}
+  {{- ' prefer' if config.prefer is vyos_defined }}
+  {{- ' xleave' if config.interleave is vyos_defined }}
+  {{- ' port ' ~ ptp.port if ptp.port is vyos_defined and config.ptp is vyos_defined }}
+  {{- ' minpoll ' ~ config.minpoll if config.minpoll is vyos_defined }}
+  {{- ' maxpoll ' ~ config.maxpoll if config.maxpoll is vyos_defined }}
+  {{- ' presend ' ~ config.presend if config.presend is vyos_defined }}
+  {{- ' extfield F323' if config.extfield_f323 is vyos_defined }}
 {%     endfor %}
 {% endif %}
 

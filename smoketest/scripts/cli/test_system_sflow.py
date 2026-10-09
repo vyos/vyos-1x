@@ -20,7 +20,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -148,8 +147,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'pcap {{ dev=eth0 }}', hsflowd)
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-        self.assertIn(PROCESS_NAME, tmp)
+        self.verify_process_in_vrf(PROCESS_NAME, vrf)
 
     def test_sflow_egress(self):
         interface = 'eth0'

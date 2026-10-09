@@ -26,6 +26,10 @@ class SSTPCIf(Interface):
         },
     }
 
+    # T9060: the IPv6 interface identifier of a PPP link is negotiated with
+    # the peer via IPV6CP (RFC 5072) - see Interface._ipv6_default_link_local
+    _ipv6_default_link_local = False
+
     def _create(self):
         # we cannot create this interface as it is managed outside
         pass
