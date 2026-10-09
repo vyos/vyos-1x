@@ -224,5 +224,34 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertIn('accept-blank-service=1', config)
 
 
+    def steps_server_specific(self):
+        dummy = ['interface', local_if[-1]]
+        return [
+            {'name': 'add interface', 'set': [dummy]},
+            {'name': 'add vlan', 'set': [dummy + ['vlan', '100']]},
+            {'name': 'add vlan-mon', 'set': [dummy + ['vlan-mon']]},
+            {'name': 'delete vlan', 'delete': [dummy + ['vlan-mon'], dummy + ['vlan']]},
+            {'name': 'combined', 'set': [dummy + ['combined']]},
+            {'name': 'delete interface', 'delete': [dummy]},
+            {'name': 'change access-concentrator', 'set': [['access-concentrator', 'VyOS-AC']]},
+            {'name': 'add service-name', 'set': [['service-name', 'svc1']]},
+            {'name': 'add second service-name', 'set': [['service-name', 'svc2']]},
+            {'name': 'accept any and blank service', 'set': [['accept-any-service'],
+                                                             ['accept-blank-service']]},
+            {'name': 'delete service-name', 'delete': [['service-name'], ['accept-any-service'],
+                                                       ['accept-blank-service']]},
+            {'name': 'add pado-delay', 'set': [['pado-delay', '10']]},
+            {'name': 'add pado-delay with sessions', 'set': [['pado-delay', '20', 'sessions', '100']]},
+            {'name': 'delete pado-delay', 'delete': [['pado-delay']]},
+            {'name': 'session-control deny', 'set': [['session-control', 'deny']]},
+            {'name': 'session-control disable', 'set': [['session-control', 'disable']]},
+            {'name': 'delete session-control', 'delete': [['session-control']]},
+            {'name': 'add any-login', 'set': [['authentication', 'any-login']]},
+            {'name': 'delete any-login', 'delete': [['authentication', 'any-login']]},
+            {'name': 'add called-sid-format',
+             'set': [['authentication', 'radius', 'called-sid-format', 'ifname:mac']]},
+            {'name': 'delete called-sid-format', 'delete': [['authentication', 'radius']]},
+        ]
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
