@@ -232,7 +232,10 @@
                   #include <include/interface/vrf.xml.i>
                   <leafNode name="stat-group">
                     <properties>
-                      <help>VPP stat groups to be exported</help>
+                      <help>VPP stat groups to export (selecting any groups replaces the default set: interfaces, err, buffer-pools, system, workers, memory)</help>
+                      <completionHelp>
+                        <list>interfaces err buffer-pools system workers nodes memory nat44 acl</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>interfaces</format>
                         <description>Interface counters</description>
