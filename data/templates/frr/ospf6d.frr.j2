@@ -107,9 +107,10 @@ router ospf6 {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.router_id is vyos_defined %}
  ospf6 router-id {{ parameters.router_id }}
 {% endif %}
+{# xml_default_metric_type is the XML default of metric-type, added to the dict by frrender. FRR does not print the default metric-type back #}
 {% if redistribute is vyos_defined %}
 {%     for protocol, options in redistribute.items() %}
- redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
+ redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined and options.metric_type != xml_default_metric_type }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
 {%     endfor %}
 {% endif %}
 exit
