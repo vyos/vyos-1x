@@ -43,6 +43,7 @@ from ftplib import error_reply
 from ftplib import parse150
 from requests import Session
 from requests.adapters import HTTPAdapter
+from urllib.parse import unquote
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 from urllib3 import PoolManager
@@ -60,6 +61,15 @@ from vyos.base import Warning
 from vyos.defaults import directories
 
 CHUNK_SIZE = 8192
+
+
+def _decode(value):
+    """Percent-decode a URL userinfo component so the real credentials reach
+    the server (they are stored plain and encoded into the URL, which may turn
+    characters like '@' into '%40'). Returns None when it is unset so the
+    caller falls back to the environment."""
+    return unquote(value) if value else None
+
 
 class InteractivePolicy(MissingHostKeyPolicy):
     """
@@ -243,9 +253,11 @@ class FtpC:
                  vrf=None):
         self.secure = url.scheme == 'ftps'
         self.hostname = url.hostname
-        self.path = url.path
-        self.username = url.username or os.getenv('REMOTE_USERNAME', 'anonymous')
-        self.password = url.password or os.getenv('REMOTE_PASSWORD', '')
+        self.path = unquote(url.path)
+        self.username = _decode(url.username) or os.getenv(
+            'REMOTE_USERNAME', 'anonymous'
+        )
+        self.password = _decode(url.password) or os.getenv('REMOTE_PASSWORD', '')
         self.port = url.port or 21
         self.source = (source_host, source_port)
         self.progressbar = progressbar
@@ -308,9 +320,9 @@ class SshC:
                  timeout=10.0,
                  vrf=None):
         self.hostname = url.hostname
-        self.path = url.path
-        self.username = url.username or os.getenv('REMOTE_USERNAME')
-        self.password = url.password or os.getenv('REMOTE_PASSWORD')
+        self.path = unquote(url.path)
+        self.username = _decode(url.username) or os.getenv('REMOTE_USERNAME')
+        self.password = _decode(url.password) or os.getenv('REMOTE_PASSWORD')
         self.port = url.port or 22
         self.source = (source_host, source_port)
         self.progressbar = progressbar
@@ -393,8 +405,8 @@ class HttpC:
         self.progressbar = progressbar
         self.check_space = check_space
         self.source_pair = (source_host, source_port)
-        self.username = url.username or os.getenv('REMOTE_USERNAME')
-        self.password = url.password or os.getenv('REMOTE_PASSWORD')
+        self.username = _decode(url.username) or os.getenv('REMOTE_USERNAME')
+        self.password = _decode(url.password) or os.getenv('REMOTE_PASSWORD')
         self.timeout = timeout
         self.vrf = vrf
 
@@ -636,8 +648,10 @@ def upload(local_path, urlstring, progressbar=False,
         print_error(f'Unable to upload "{redacted_location}": {err}')
         sys.exit(1)
     except KeyboardInterrupt:
+        # a user interrupt is not an upload failure; re-raise instead of exiting
+        # so callers can tell the two apart and stop rather than carry on
         print_error('\nUpload aborted by user.')
-        sys.exit(1)
+        raise
 
 def get_remote_config(urlstring, source_host='', source_port=0):
     """

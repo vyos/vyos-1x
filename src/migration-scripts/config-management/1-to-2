@@ -1,0 +1,161 @@
+# Copyright (C) VyOS Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T6304: rework 'system config-management commit-archive' from a flat list of
+# URLs ('location <url>') into a structured, per-destination tagNode carrying
+# an explicit transport protocol, server, path, port and authentication.
+
+import re
+
+from urllib.parse import unquote
+from urllib.parse import urlsplit
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'config-management', 'commit-archive']
+
+# URL schemes that map 1:1 onto a transport protocol node of the same name;
+# git schemes are handled separately below.
+direct_schemes = {'scp', 'sftp', 'ssh', 'ftp', 'ftps', 'http', 'https', 'tftp'}
+# transports the new 'git transport' leaf accepts ('file' is a local repo)
+git_transports = {'https', 'http', 'ssh', 'file'}
+
+
+def _decode_path(path: str) -> str:
+    """Percent-decode a URL path, keeping an escaped slash (%2F) intact so it
+    is not turned into a path separator (the URL builder re-encodes it).
+    """
+    return ''.join(
+        part if part.lower() == '%2f' else unquote(part)
+        for part in re.split('(%2[fF])', path)
+    )
+
+
+def scheme_to_target(scheme: str):
+    """Map a URL scheme to a (protocol node, git transport) tuple, or None if
+    unsupported. A git scheme maps to the 'git' node carrying its transport
+    ('git' alone carries none); every other scheme maps to a node of its name.
+    """
+    protocol, _, transport = scheme.partition('+')
+    if protocol == 'git':
+        # the old regex accepted any git+<transport>; the new schema only
+        # allows https/http/ssh/file, so reject others (e.g. git+rsync)
+        if transport and transport not in git_transports:
+            return None
+        return 'git', (transport or None)
+    if scheme in direct_schemes:
+        return scheme, None
+    return None
+
+
+def migrate(config: ConfigTree) -> None:
+    location_base = base + ['location']
+    if not config.exists(location_base):
+        return
+
+    # already migrated: 'location' is a tagNode, not a leaf of URLs - a forced
+    # re-run must not delete and rebuild it
+    if config.is_tag(location_base):
+        return
+
+    migratable = []
+    for value in config.return_values(location_base):
+        url = urlsplit(value)
+        target = scheme_to_target(url.scheme)
+        if target is None:
+            # drop unsupported schemes with a warning; log only the scheme, not
+            # the URL, which may contain credentials
+            print(
+                f'Warning: commit-archive: dropping location with unsupported scheme "{url.scheme}"'
+            )
+            continue
+        proto, transport = target
+        local_git = proto == 'git' and transport == 'file'
+        if not local_git and not url.hostname:
+            # every remote protocol uploads to a host, so a URL with no server
+            # was never a usable target - drop it instead of writing an invalid
+            # location (git+file is local and legitimately has no host)
+            print(
+                f'Warning: commit-archive: dropping location with no server (scheme "{url.scheme}")'
+            )
+            continue
+        if local_git and not unquote(url.path):
+            # git+file has no server: the path IS the repository, and an empty
+            # one cannot be represented (an empty leaf cannot be set).
+            print(
+                'Warning: commit-archive: dropping git file location with no repository path'
+            )
+            continue
+        try:
+            # a non-numeric port (the old regex allowed it) raises here; keep
+            # the rest of the location and fall back to the protocol default
+            port = url.port
+        except ValueError:
+            print(
+                f'Warning: commit-archive: ignoring invalid port for location with scheme "{url.scheme}"'
+            )
+            port = None
+        migratable.append((url, target, port))
+
+    config.delete(location_base)
+
+    for index, (url, (proto, transport), port) in enumerate(migratable, start=1):
+        name = f'archive-{index}'
+        proto_base = location_base + [name, proto]
+
+        # git over file:// is a local repository: only a path and the 'file'
+        # transport, no server/port/credentials.
+        if proto == 'git' and transport == 'file':
+            config.set(proto_base + ['path'], value=unquote(url.path))
+            config.set(proto_base + ['transport'], value='file')
+            continue
+
+        config.set(proto_base + ['server'], value=url.hostname)
+        if port:
+            config.set(proto_base + ['port'], value=str(port))
+
+        # store the decoded path, the builder re-encodes it; keep an escaped
+        # slash (%2F) encoded so it is not turned into a path separator
+        path = _decode_path(url.path)
+        if path and path != '/':
+            config.set(proto_base + ['path'], value=path)
+
+        # urlsplit keeps the userinfo percent-encoded; store it decoded, as the
+        # URL builder re-encodes when assembling the upload URL
+        if proto != 'tftp':
+            if url.username:
+                config.set(
+                    proto_base + ['authentication', 'username'],
+                    value=unquote(url.username),
+                )
+            # ftp/ftps accept a password on its own (they fall back to the
+            # REMOTE_USERNAME/anonymous user); every other protocol needs a
+            # username, so a lone password is dropped to keep the config valid
+            allows_lone_password = proto in ('ftp', 'ftps')
+            if url.password and (url.username or allows_lone_password):
+                config.set(
+                    proto_base + ['authentication', 'password'],
+                    value=unquote(url.password),
+                )
+
+        # record the git transport whenever the URL specified one explicitly
+        # (git+https/git+http/git+ssh) - preserve the user's choice even if it
+        # matches the https default. A bare 'git' scheme carries none.
+        if proto == 'git' and transport:
+            config.set(proto_base + ['transport'], value=transport)
+
+    # mark 'location' as a tagNode
+    if migratable:
+        config.set_tag(location_base)
