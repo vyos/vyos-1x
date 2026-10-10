@@ -112,6 +112,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # drop any pre-existing custom MAC so the MAC test baseline is the
         # interface hardware address (hw-id)
         cls.cli_delete(cls, ['interfaces', 'ethernet', interface, 'mac'])
+        # drop any pre-existing MTU so tests start from the default MTU
+        cls.cli_delete(cls, ['interfaces', 'ethernet', interface, 'mtu'])
 
     def setUp(self):
         # always forward to base class
@@ -130,9 +132,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(interfaces_path)
             self.cli_commit()
 
-            # delete address and any custom MAC for the Ethernet interface
+            # delete address and any custom MAC and MTU for the Ethernet interface
             self.cli_delete(['interfaces', 'ethernet', interface, 'address'])
             self.cli_delete(['interfaces', 'ethernet', interface, 'mac'])
+            self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
             self.cli_commit()
 
         self.assertFalse(os.path.exists(VPP_CONF))
@@ -142,7 +145,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
     def test_01_vpp_basic(self):
         poll_sleep = '0'
-        mtu = '2500'
+        # below 1500 so it fits any NIC limit (CI NICs are capped at 1500)
+        mtu = '1450'
         isolated_cores = get_isolated_cpus()
 
         self.cli_set(base_path + ['settings', 'poll-sleep-usec', poll_sleep])
@@ -639,7 +643,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # MTU must be set on VLAN sub-interfaces and taps (vif inherits parent
         # unless set).
-        mtu = '2500'
+        mtu = '1450'
         vif_mtu = '1400'
         self.cli_set(bond_path + [interface_bond, 'mtu', mtu])
         self.cli_set(bond_path + [interface_bond, 'vif', vlans[1], 'mtu', vif_mtu])
@@ -1971,7 +1975,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # 'no-multi-seg' is auto-computed (T9146): enabled while the largest
         # VPP-interface MTU fits the buffer data-size, dropped otherwise (VPP
         # falls back to multi-seg so Jumbo frames still work)
-        mtu = '2500'
+        # MTUs stay at or below 1500 so they fit any NIC limit (CI NICs are
+        # capped at 1500); the buffer data-size is reduced instead
+        mtu = '1400'
+        data_size = '1500'
 
         self.cli_commit()
 
@@ -1980,19 +1987,19 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         config = read_file(VPP_CONF)
         self.assertIn('no-multi-seg', config)
 
-        # Raising the MTU beyond the buffer drops it; the interface change
-        # triggers a VPP reconfigure on its own
-        self.cli_set(['interfaces', 'ethernet', interface, 'mtu', mtu])
+        # Reducing the buffer below the default MTU frame drops it
+        self.cli_set(
+            base_path
+            + ['settings', 'resource-allocation', 'buffers', 'data-size', data_size]
+        )
         self.cli_commit()
 
         config = read_file(VPP_CONF)
         self.assertNotIn('no-multi-seg', config)
 
-        # Sizing the buffer to fit the MTU brings it back
-        self.cli_set(
-            base_path
-            + ['settings', 'resource-allocation', 'buffers', 'data-size', '4096']
-        )
+        # Lowering the MTU so the frame fits the buffer brings it back; the
+        # interface change triggers a VPP reconfigure on its own
+        self.cli_set(['interfaces', 'ethernet', interface, 'mtu', mtu])
         self.cli_commit()
 
         config = read_file(VPP_CONF)
