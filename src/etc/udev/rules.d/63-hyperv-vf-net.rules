@@ -1,3 +1,12 @@
+# Azure/Hyper-V VF interfaces must be kept out of the ethN namespace that
+# VyOS manages. A VF is the acceleration datapath of an existing synthetic
+# NIC, not an interface in its own right, and it shares that NIC's MAC - so
+# left alone it would be taken for a second, independent interface.
+#
+# Renaming it to vf_ethN here, at device-add, is what keeps it out of the
+# way; vyos-net-name-resolve.py then skips anything named vf_* (as well as
+# anything with an SR-IOV physfn link, which is the general case).
+
 ATTR{[dmi/id]sys_vendor}!="Microsoft Corporation", GOTO="end_hyperv_nic"
 
 # Primary rename path for Azure VF.
@@ -5,5 +14,12 @@ ATTR{[dmi/id]sys_vendor}!="Microsoft Corporation", GOTO="end_hyperv_nic"
 # collide with already assigned vf_ethN names. Also, prevent renaming of
 # the interfaces already renamed to vf_ethN
 ACTION=="add", SUBSYSTEM=="net", DRIVERS=="hv_pci", KERNEL=="eth*", PROGRAM="vyos_vf_name %k", NAME="%c"
+
+# Fallback path: a VF that still appears as a plain ethN, which happens
+# when it is seen in an intermediate state before the hv_pci match above
+# applies. Scoped to Azure on purpose - bare-metal Mellanox NICs are
+# ordinary interfaces and must not be caught here.
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="mlx*_core", KERNEL=="eth*", PROGRAM="vyos_vf_name %k", NAME="%c"
+ACTION=="add", SUBSYSTEM=="net", DRIVERS=="mana", KERNEL=="eth*", PROGRAM="vyos_vf_name %k", NAME="%c"
 
 LABEL="end_hyperv_nic"

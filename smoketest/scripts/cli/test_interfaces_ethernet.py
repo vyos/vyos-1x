@@ -32,7 +32,10 @@ from vyos.ethtool import Ethtool
 from vyos.netlink import coalesce
 from vyos.frrender import mgmt_daemon
 from vyos.ifconfig import Section
+from vyos.ifconfig.interface import Interface
 from vyos.utils.file import read_file
+from vyos.utils.network import get_interface_config
+from vyos.utils.network import interface_exists
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import cmdl
@@ -52,10 +55,6 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             for tmp in Section.interfaces('ethernet', vlan=False):
                 cls._interfaces.append(tmp)
 
-        cls._macs = {}
-        for interface in cls._interfaces:
-            cls._macs[interface] = read_file(f'/sys/class/net/{interface}/address')
-
         # call base-classes classmethod
         super(EthernetInterfaceTest, cls).setUpClass()
 
@@ -67,7 +66,6 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_delete(self._base_path + [interface])
             self.cli_set(self._base_path + [interface, 'duplex', 'auto'])
             self.cli_set(self._base_path + [interface, 'speed', 'auto'])
-            self.cli_set(self._base_path + [interface, 'hw-id', self._macs[interface]])
 
         self.cli_commit()
 
@@ -167,6 +165,43 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         # we need to remove this wrong interface from the configuration
         # manually, else tearDown() will have problem in commit()
         self.cli_delete(self._base_path + [unknonw_interface])
+
+    def test_delete_and_readd_interface(self):
+        # T3871: deleting an ethernet interface removes its configuration, but
+        # the port itself is "eternal" - it must still be present afterwards,
+        # keep its name, and be configurable again. An unconfigured port is
+        # not a deleted one.
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'description', 'before'])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            # an ethernet port belongs to the kernel - deleting its
+            # configuration returns it to the state the kernel gave it, it
+            # does not take the port away or leave it stranded admin-down
+            self.assertTrue(interface_exists(interface),
+                            f'{interface} disappeared after its configuration '
+                            'was deleted')
+            self.assertEqual(Interface(interface).get_admin_state(), 'up',
+                             f'{interface} was left admin-down after its '
+                             'configuration was deleted')
+            tmp = get_interface_config(interface)
+            self.assertEqual(tmp['mtu'], 1500,
+                             f'{interface} kept a stale MTU after its '
+                             'configuration was deleted')
+
+        # re-adding must work and take effect
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'description', 'after'])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            self.assertEqual(
+                read_file(f'/sys/class/net/{interface}/ifalias'), 'after')
 
     def test_speed_duplex_verify(self):
         for interface in self._interfaces:
