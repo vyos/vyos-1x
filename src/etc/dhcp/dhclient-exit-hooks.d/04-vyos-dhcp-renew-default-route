@@ -1,0 +1,205 @@
+# T9085: reinstall missing IPv4 default on RENEW/REBIND
+#
+# Stock dhclient-script only installs option-3 defaults on BOUND/REBOOT (or
+# when the leased IP changes). The RENEW/REBIND same-IP path only runs
+# "ip addr change" and never rechecks the default. If the kernel default was
+# flushed while the lease remained valid (staged valid_lft expiry, manual
+# delete, remetric races), RENEW leaves the interface with a live address and
+# no default via $new_routers.
+#
+# Kernel leftover / post-add checks MUST use /usr/sbin/ip, not the
+# enter-hook ip() wrapper. That wrapper sends any `ip … route` that is not
+# `del` through vtysh as an add, so `ip -4 route show` both misses the
+# kernel table and writes a staticd duplicate. Use `ip -j` so a multipath
+# default (two DHCP WANs at the same distance) is visible. Do not match
+# kernel .metric to IF_METRIC: FRR distance is IF_METRIC, the kernel row
+# is typically proto static metric 20. A backup option-3 router at
+# distance 211 is FRR-only and will not appear in the kernel while 210 is
+# installed — do not warn "still missing after add" for those.
+#
+# Skip restoration only when FRR already has this gw+dev at the requested
+# distance (running-config, same string iptovtysh writes). A kernel
+# default via the same gw (operator static, or another distance) must not
+# hide a missing DHCP route at IF_METRIC.
+#
+# If option 3 changes across a same-IP RENEW, drop defaults via gateways
+# that disappeared from $new_routers. Delete with the same per-router
+# metric 01-vyos-cleanup uses.
+#
+# RFC3442 classless routes: stock ignores option 3, but VyOS BOUND still
+# installs the option-3 default (enter-hook wrapper). Keepers are the
+# union of RFC3442 *default* gateways (net_length 0) and $new_routers.
+# Treating RFC3442 as an empty option-3 set deleted that default:
+# prefix-only option 121 + option 3 lost 0/0 at the first renew, and an
+# FRR-touching commit can drop the RFC3442 0/0 and leave only option 3
+# — deleting that blackholes off-link traffic (alexk37). Do not mutate
+# $new_routers. Truncated or unknown option-121 encodings fail closed
+# (same return 1 as 01-vyos-cleanup / 02-vyos-dhcp-renew-rfc3442): skip
+# stale-delete rather than treat a partial parse as "no keepers".
+#
+# 06-vyos-nodefaultroute sets VYOS_NO_DEFAULT_ROUTE. Skip stale-delete
+# entirely: a force-sent option 3 plus an operator static default via the
+# same nexthop must not be touched.
+#
+# Adds still use the enter-hook ip() wrapper so FRR gets tag/distance.
+# After a stale-gateway delete, re-check the kernel with /usr/sbin/ip: if
+# that default is still present, skip the replacement add (otherwise the
+# new nexthop ECMP-joins the leftover). ip/jq inspect failure is the same
+# skip — do not treat "could not read the table" as "route gone".
+
+RUN="yes"
+
+if [ "$RUN" != "yes" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+case "$reason" in
+    RENEW|REBIND) ;;
+    *) return 0 2>/dev/null || exit 0 ;;
+esac
+
+# Kernel default via $1 on $interface? Real ip(8) JSON — never the wrapper.
+# 0 = present, 1 = confirmed absent, 2 = ip/jq inspect failed.
+_default_via_present() {
+    local gw="$1"
+    local json
+    local jq_status
+    json=$(/usr/sbin/ip -j -4 route show default ${VRF_OPTION} 2>/dev/null) || return 2
+    [ -n "$json" ] || return 2
+    echo "$json" | jq -e --arg gw "$gw" --arg dev "$interface" \
+        'any(.[];
+            (.gateway == $gw and .dev == $dev)
+            or any(.nexthops[]?; .gateway == $gw and .dev == $dev)
+        )' >/dev/null 2>&1
+    jq_status=$?
+    [ "$jq_status" -le 1 ] && return "$jq_status"
+    return 2
+}
+
+# FRR staticd already has 0/0 via $1 at distance $2 on $interface?
+# Same string as 03-vyos-ipwrapper iptovtysh. Kernel .metric is not this.
+_frr_default_present() {
+    local gw="$1"
+    local distance="$2"
+    local needle="ip route 0.0.0.0/0 ${gw} ${interface} tag 210 ${distance}"
+    if [ -n "$VRF_OPTION" ]; then
+        needle="${needle} ${VRF_OPTION}"
+    fi
+    vtysh -c "show running-config no-header" 2>/dev/null | grep -Fqx "$needle"
+}
+
+# Gateways of RFC3442 0.0.0.0/0 entries (option 121). Shared decoder:
+# /etc/dhcp/vyos-rfc3442-classless (same table as 01-vyos-cleanup /
+# 02-vyos-dhcp-renew-rfc3442). Truncated/unknown/out-of-range return 1;
+# a valid list with no default returns 0 and no output.
+. /etc/dhcp/vyos-rfc3442-classless
+
+_rfc3442_emit_default_gw() {
+    if [ "$1" = 0 ]; then
+        echo "$3"
+    fi
+}
+
+_rfc3442_default_gws() {
+    _rfc3442_walk "$1" _rfc3442_emit_default_gw
+}
+
+rfc3442_parse_ok=1
+rfc3442_default_gws=""
+effective_new_routers="$new_routers"
+if [ -n "$new_rfc3442_classless_static_routes" ]; then
+    # Capture status from the parser, not from `tr` in a pipeline.
+    if rfc3442_gws=$(_rfc3442_default_gws "$new_rfc3442_classless_static_routes"); then
+        rfc3442_default_gws=$(printf '%s' "$rfc3442_gws" | tr '\n' ' ')
+        rfc3442_default_gws=${rfc3442_default_gws%" "}
+        # Prefix-only option 121: keep $new_routers (BOUND installed option 3).
+        # RFC3442 0/0 present: union with option 3 so a later FRR rewrite
+        # that leaves only the option-3 default is not deleted on renew.
+        if [ -n "$rfc3442_default_gws" ]; then
+            effective_new_routers="$rfc3442_default_gws $new_routers"
+        fi
+    else
+        rfc3442_parse_ok=
+        logmsg warn \
+            "RENEW/REBIND: malformed RFC3442 classless routes; skipping stale default cleanup"
+    fi
+fi
+
+# no-default-route: do not delete operator statics or force-sent option 3.
+# Malformed option 121: do not delete on a partial/empty keeper set.
+stale_still_present=
+if [ -n "$rfc3442_parse_ok" ] &&
+    [ -z "$VYOS_NO_DEFAULT_ROUTE" ] &&
+    [ -n "$old_routers" ] &&
+    [ "$old_routers" != "$effective_new_routers" ]; then
+    if_metric="${IF_METRIC:-210}"
+    for router in $old_routers; do
+        skip=
+        for keep in $effective_new_routers; do
+            if [ "$router" = "$keep" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ -n "$skip" ]; then
+            if_metric=$((if_metric + 1))
+            continue
+        fi
+        logmsg info \
+            "RENEW/REBIND: removing stale default via ${router} dev ${interface} metric ${if_metric}"
+        ip -4 route del default via "${router}" dev "${interface}" \
+            metric "${if_metric}" >/dev/null 2>&1
+        # Wrapper exit is not a gate (vtysh "no ip route" fails if already
+        # gone). Kernel table is: leftover still present → do not add a
+        # replacement (ECMP over old+new). Inspect failure is the same skip.
+        _default_via_present "${router}"
+        present_st=$?
+        if [ "$present_st" -eq 0 ]; then
+            logmsg warn \
+                "RENEW/REBIND: stale default still present via ${router} dev ${interface}"
+            stale_still_present=1
+        elif [ "$present_st" -eq 2 ]; then
+            logmsg warn \
+                "RENEW/REBIND: failed to inspect stale default via ${router} dev ${interface}"
+            stale_still_present=1
+        fi
+        if_metric=$((if_metric + 1))
+    done
+fi
+
+# RFC3442 0/0: the rfc3442 hook owns that default. Prefix-only option 121
+# still uses option 3 (VyOS BOUND installs it). Parse failure: do not add.
+if [ -z "$rfc3442_parse_ok" ] ||
+    [ -n "$rfc3442_default_gws" ] ||
+    [ -z "$new_routers" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+if [ -n "$stale_still_present" ]; then
+    logmsg warn \
+        "RENEW/REBIND: skipping default reinstall; stale gateway still present or unverifiable"
+    return 0 2>/dev/null || exit 0
+fi
+
+base_metric="${IF_METRIC:-210}"
+if_metric="$base_metric"
+for router in $new_routers; do
+    if _frr_default_present "${router}" "${if_metric}"; then
+        if_metric=$((if_metric + 1))
+        continue
+    fi
+
+    logmsg info \
+        "RENEW/REBIND: reinstalling missing default via ${router} dev ${interface} metric ${if_metric}"
+
+    ip -4 route add default via "${router}" dev "${interface}" \
+        metric "${if_metric}" >/dev/null 2>&1
+
+    # Kernel only has the best distance. A 211 backup stays FRR-only.
+    if [ "$if_metric" = "$base_metric" ] && ! _default_via_present "${router}"; then
+        logmsg warn \
+            "RENEW/REBIND: default still missing via ${router} dev ${interface} after add"
+    fi
+
+    if_metric=$((if_metric + 1))
+done
