@@ -37,6 +37,7 @@ if [ "$RUN" = "yes" ]; then
                         alias_ip_address new_ip_address new_broadcast_address \
                         new_subnet_mask new_domain_name new_network_number \
                         new_domain_name_servers new_routers new_static_routes \
+                        new_rfc3442_classless_static_routes \
 			new_dhcp_server_identifier new_dhcp_message_type \
                         old_ip_address old_subnet_mask old_domain_name \
                         old_domain_name_servers old_routers \
