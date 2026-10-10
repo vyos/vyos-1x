@@ -22,6 +22,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.frrender import ospf_daemon
+from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -659,6 +660,88 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertNotRegex(r'^ ip ospf authentication$', frrconfig)
         self.assertNotIn(f' ip ospf authentication-key {plaintext_key}', frrconfig)
         self.assertIn(' ip ospf authentication null', frrconfig)
+
+    def test_ospf_20_opaque_lsa_rfc1583_canonical_form(self):
+        # FRR prints "capability opaque" and "compatible rfc1583". The CLI
+        # options "parameters opaque-lsa" and "parameters rfc1583-compatibility"
+        # must be rendered in this form: if the alias forms "ospf opaque-lsa"
+        # and "ospf rfc1583compatibility" are rendered, frr-reload finds the
+        # line missing on every reload, removes the setting and adds it again.
+        # That resets all OSPF adjacencies (opaque) and runs an extra SPF
+        # (rfc1583) on each FRR reload, whatever it changed.
+        #
+        # This reads the generated FRR config file: FRR accepts both forms, so
+        # vtysh cannot tell which one we rendered.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        alias_forms = r'(?m)^ ospf (opaque-lsa|rfc1583compatibility)'
+        opaque = base_path + ['parameters', 'opaque-lsa']
+        capability = base_path + ['capability', 'opaque']
+        rfc1583 = base_path + ['parameters', 'rfc1583-compatibility']
+
+        # the router-id keeps "router ospf" configured when the last node is
+        # deleted below, so the delete is tested against a running instance
+        self.cli_set(base_path + ['parameters', 'router-id', '192.0.2.1'])
+        self.cli_set(opaque)
+        self.cli_set(rfc1583)
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertEqual(frrconfig.count('\n capability opaque\n'), 1)
+        self.assertEqual(frrconfig.count('\n compatible rfc1583\n'), 1)
+        self.assertNotRegex(frrconfig, alias_forms)
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+        self.assertIn(' capability opaque', frrconfig)
+        self.assertIn(' compatible rfc1583', frrconfig)
+
+        # "capability opaque" is the same FRR setting: the line is rendered
+        # once, and it stays while one of the two nodes is still configured
+        self.cli_set(capability)
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertEqual(frrconfig.count('\n capability opaque\n'), 1)
+
+        self.cli_delete(opaque)
+        self.cli_commit()
+        self.assertIn(' capability opaque', read_file(frr_conf))
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+        self.assertIn(' capability opaque', frrconfig)
+
+        self.cli_set(opaque)
+        self.cli_delete(capability)
+        self.cli_commit()
+        self.assertIn(' capability opaque', read_file(frr_conf))
+
+        # removing the last node removes the setting again
+        self.cli_delete(opaque)
+        self.cli_delete(rfc1583)
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertNotIn('capability opaque', frrconfig)
+        self.assertNotIn('rfc1583', frrconfig)
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+        self.assertNotIn(' capability opaque', frrconfig)
+        self.assertNotIn(' compatible rfc1583', frrconfig)
+        self.assertIn(' ospf router-id 192.0.2.1', frrconfig)
+
+        # a VRF instance renders the same form, in the VRF block only (FRR
+        # supports opaque LSAs only in the default VRF, so only rfc1583 here)
+        vrf = 'blue'
+        vrf_base = ['vrf', 'name', vrf]
+        vrf_header = f'router ospf vrf {vrf}'
+        self.cli_set(vrf_base + ['table', '1000'])
+        vrf_params = vrf_base + ['protocols', 'ospf', 'parameters']
+        self.cli_set(vrf_params + ['router-id', '1.1.1.1'])
+        self.cli_set(vrf_params + ['rfc1583-compatibility'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertNotRegex(frrconfig, alias_forms)
+        _, _, vrf_block = frrconfig.partition(vrf_header)
+        self.assertIn(' compatible rfc1583', vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(' compatible rfc1583', frrconfig)
+
+        self.cli_delete(vrf_base)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
