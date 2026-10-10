@@ -199,6 +199,24 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
+    def test_config_session_overlayfs(self):
+        # Every CLI configuration session is a kernel overlayfs mount, which
+        # unions the active configuration (lowerdir) with the changes made in
+        # that session (upperdir). Without overlayfs there is no way to enter
+        # configuration mode at all.
+        for option in ['CONFIG_OVERLAY_FS']:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp, msg='overlayfs is required for CLI config sessions')
+
+        # The session directories live on the tmpfs mounted at
+        # /opt/vyatta/config. overlayfs records whiteouts and opaque
+        # directories as trusted.overlay.* extended attributes on the upper
+        # layer, so that tmpfs must support xattrs - the mount is rejected
+        # outright otherwise.
+        for option in ['CONFIG_TMPFS', 'CONFIG_TMPFS_XATTR']:
+            tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp, msg='config session upperdir requires tmpfs xattr support')
+
     def test_wireguard(self):
         options_to_check = ['CONFIG_WIREGUARD']
         for option in options_to_check:
