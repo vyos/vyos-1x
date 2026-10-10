@@ -82,6 +82,8 @@ cfg_file = '/run/openvpn/{ifname}.conf'
 # Ciphers implemented by the in-tree "ovpn" Kernel module. Any other cipher
 # must be handled in userspace and thus rules out DCO.
 dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm', 'chacha20poly1305']
+# AEAD ciphers, which OpenVPN's static key mode does not support
+aead_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm', 'chacha20poly1305']
 # Raw options that make OpenVPN fall back to the userspace data path, taken
 # from dco_check_option() and dco_check_option_ce()
 dco_incompatible_options = [
@@ -823,8 +825,15 @@ def verify(openvpn):
     # TLS/encryption
     #
     if 'shared_secret_key' in openvpn:
-        if dict_search('encryption.cipher', openvpn) in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
-            raise ConfigError('GCM encryption with shared-secret-key not supported')
+        # the fallback cipher is the data channel cipher in static key mode, so
+        # it is just as much refused at startup as "encryption cipher"
+        for option in ['cipher', 'data_ciphers_fallback']:
+            if dict_search(f'encryption.{option}', openvpn) in aead_ciphers:
+                option = option.replace('_', '-')
+                raise ConfigError(
+                    f'AEAD cipher in "encryption {option}" is not supported '
+                    'with "shared-secret-key"'
+                )
 
     if 'tls' in openvpn:
         if {'auth_key', 'crypt_key'} <= set(openvpn['tls']):

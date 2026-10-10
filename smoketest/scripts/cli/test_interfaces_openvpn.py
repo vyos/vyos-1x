@@ -399,6 +399,41 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn('data-ciphers-fallback CHACHA20-POLY1305', config)
         self.assertDcoDataPath(interface, multipoint=False)
 
+    def test_openvpn_site2site_shared_secret_aead(self):
+        # OpenVPN's static key mode only does CBC and exits on an AEAD cipher,
+        # which in site-to-site mode can also come in as the fallback cipher
+        interface = 'vtun5000'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+
+        # check validate() - the static cipher is refused just the same
+        self.cli_set(path + ['encryption', 'cipher', 'aes256gcm'])
+        with self.assertRaisesRegex(ConfigSessionError, r'encryption\s+cipher'):
+            self.cli_commit()
+        self.cli_delete(path + ['encryption', 'cipher'])
+
+        # check validate() - every AEAD cipher the CLI offers
+        for cipher in ['aes128gcm', 'aes192gcm', 'aes256gcm', 'chacha20poly1305']:
+            self.cli_set(path + ['encryption', 'data-ciphers-fallback', cipher])
+            with self.assertRaisesRegex(
+                ConfigSessionError, r'encryption\s+data-ciphers-fallback'
+            ):
+                self.cli_commit()
+
+        # a CBC cipher is what static key mode runs with
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256'])
+        self.cli_commit()
+
+        for _ in range(10):
+            if is_systemd_service_running(f'openvpn@{interface}.service'):
+                break
+            sleep(1)
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+
     # OVPN_CMD_PEER_GET carries GENL_ADMIN_PERM, hence the detour through
     # sudo. The probe swallows its own errors so a missing interface or a
     # refused dump reads as "no peer" with the reason attached, instead of
