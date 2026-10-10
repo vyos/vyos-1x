@@ -725,11 +725,39 @@ def kea_get_server_leases(
     return data
 
 
-def _build_relay_hex_condition(sub_option_index, value):
+def _kea_hex_literal(value):
     if value.startswith('0x'):
-        return f'relay4[{sub_option_index}].hex == {value}'
-    else:
-        return f'relay4[{sub_option_index}].hex == 0x{value.encode().hex().lower()}'
+        return value
+    return f'0x{value.encode().hex().lower()}'
+
+
+def _build_hex_condition(kea_path, value):
+    return f'{kea_path}.hex == {_kea_hex_literal(value)}'
+
+
+def _build_relay_hex_condition(sub_option_index, value):
+    return _build_hex_condition(f'relay4[{sub_option_index}]', value)
+
+
+# characters with special meaning in Kea's (PCRE-like) match() regex syntax
+_KEA_REGEX_SPECIAL = re.compile(r'([.^$*+?()\[\]{}|\\])')
+
+
+def _build_contains_condition(kea_path, value):
+    # match() searches case-sensitively, so both sides are lower-cased;
+    # the option content is unknown at config-render time, so it has to be
+    # lower-cased by the expression itself via lcase()
+    pattern = _KEA_REGEX_SPECIAL.sub(r'\\\1', value.lower())
+    return f"match('.*{pattern}.*', lcase({kea_path}.hex))"
+
+
+def _build_option_match_condition(option_number, match_config):
+    kea_path = f'option[{option_number}]'
+
+    if 'substring' in match_config:
+        return _build_contains_condition(kea_path, match_config['substring']['value'])
+
+    return _build_hex_condition(kea_path, match_config['value'])
 
 
 def kea_build_client_class_test(config):
@@ -748,6 +776,12 @@ def kea_build_client_class_test(config):
                     2, config['relay_agent_information']['remote_id']
                 )
             )
+
+    if 'hostname' in config:
+        conditions.append(_build_option_match_condition(12, config['hostname']))
+
+    if 'vendor_class_id' in config:
+        conditions.append(_build_option_match_condition(60, config['vendor_class_id']))
 
     test = ' and '.join(conditions)
 
