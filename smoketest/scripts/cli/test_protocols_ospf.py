@@ -22,6 +22,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.frrender import ospf_daemon
+from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -122,8 +123,8 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
         self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
         self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'destination', 'any'])
-        for ptotocol in protocols:
-            self.cli_set(base_path + ['access-list', acl, 'export', ptotocol])
+        for protocol in protocols:
+            self.cli_set(base_path + ['access-list', acl, 'export', protocol])
 
         # commit changes
         self.cli_commit()
@@ -132,8 +133,10 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
-        for ptotocol in protocols:
-            self.assertIn(f' distribute-list {acl} out {ptotocol}', frrconfig) # defaults
+        for protocol in protocols:
+            self.assertIn(
+                f' distribute-list {acl} out {protocol}', frrconfig
+            )  # defaults
         self.cli_delete(['policy', 'access-list', acl])
 
     def test_ospf_04_default_originate(self):
@@ -659,6 +662,55 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertNotRegex(r'^ ip ospf authentication$', frrconfig)
         self.assertNotIn(f' ip ospf authentication-key {plaintext_key}', frrconfig)
         self.assertIn(' ip ospf authentication null', frrconfig)
+
+    def test_ospf_20_metric_type_idempotency(self):
+        # ospfd only writes "metric-type 1" back to its running config, type 2
+        # is the default and is never printed. The generated config must use
+        # the same form, otherwise frr-reload deletes and re-adds these lines
+        # on every commit, which flushes and re-originates the external LSAs.
+        #
+        # Read the generated FRR config file as well as getFRRconfig()/vtysh:
+        # vtysh never prints "metric-type 2", so it can not detect us emitting it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        metric = '10'
+        table_id = '21'
+        lines = [
+            f'default-information originate metric {metric}',
+            f'redistribute connected metric {metric}',
+            f'redistribute table-direct {table_id} metric {metric}',
+        ]
+        paths = [
+            base_path + ['default-information', 'originate'],
+            base_path + ['redistribute', 'connected'],
+            base_path + ['redistribute', 'table', table_id],
+        ]
+
+        def verify(suffix):
+            generated = [
+                ' '.join(line.split()) for line in read_file(frr_conf).splitlines()
+            ]
+            frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+            running = [' '.join(line.split()) for line in frrconfig.splitlines()]
+            for line in lines:
+                self.assertIn(line + suffix, generated)
+                self.assertIn(line + suffix, running)
+
+        # metric-type not set, the CLI default is 2
+        for path in paths:
+            self.cli_set(path + ['metric', metric])
+        self.cli_commit()
+        verify('')
+
+        for path in paths:
+            self.cli_set(path + ['metric-type', '1'])
+        self.cli_commit()
+        verify(' metric-type 1')
+
+        # back to type 2, ospfd must drop "metric-type 1"
+        for path in paths:
+            self.cli_set(path + ['metric-type', '2'])
+        self.cli_commit()
+        verify('')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

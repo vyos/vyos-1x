@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.frrender import ospf6_daemon
+from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'ospfv3']
@@ -339,6 +340,59 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' graceful-restart helper supported-grace-time {supported_grace_time}', frrconfig)
         for router_id in router_ids:
             self.assertIn(f' graceful-restart helper enable {router_id}', frrconfig)
+
+    def test_ospfv3_10_metric_type_idempotency(self):
+        # ospf6d writes "metric-type 1" back to its running config for
+        # redistribute only when it is 1, type 2 is the default and is never
+        # printed. For default-information it always prints the metric-type.
+        # The generated config must use the same form, otherwise frr-reload
+        # deletes and re-adds these lines on every commit.
+        #
+        # Read the generated FRR config file as well as getFRRconfig()/vtysh:
+        # vtysh never prints "metric-type 2" for redistribute, so it can not
+        # detect us emitting it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        metric = '10'
+        redistribute = base_path + ['redistribute', 'connected']
+        originate = base_path + ['default-information', 'originate']
+
+        def verify(metric_type):
+            if metric_type == '1':
+                expected = [
+                    f'redistribute connected metric {metric} metric-type 1',
+                    f'default-information originate metric {metric} metric-type 1',
+                ]
+            else:
+                expected = [
+                    f'redistribute connected metric {metric}',
+                    f'default-information originate metric {metric} metric-type 2',
+                ]
+            generated = [
+                ' '.join(line.split()) for line in read_file(frr_conf).splitlines()
+            ]
+            frrconfig = self.getFRRconfig('router ospf6', stop_section='^exit')
+            running = [' '.join(line.split()) for line in frrconfig.splitlines()]
+            for line in expected:
+                self.assertIn(line, generated)
+                self.assertIn(line, running)
+
+        # metric-type not set, the CLI default is 2
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(redistribute + ['metric', metric])
+        self.cli_set(originate + ['metric', metric])
+        self.cli_commit()
+        verify('2')
+
+        self.cli_set(redistribute + ['metric-type', '1'])
+        self.cli_set(originate + ['metric-type', '1'])
+        self.cli_commit()
+        verify('1')
+
+        # back to type 2, ospf6d must drop "metric-type 1" from redistribute
+        self.cli_set(redistribute + ['metric-type', '2'])
+        self.cli_set(originate + ['metric-type', '2'])
+        self.cli_commit()
+        verify('2')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
