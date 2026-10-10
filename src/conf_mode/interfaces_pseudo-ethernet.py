@@ -63,6 +63,16 @@ def get_config(config=None):
         tmp = is_source_interface(conf, peth['source_interface'], ['macsec'])
         if tmp and tmp != ifname: peth.update({'is_source_interface' : tmp})
 
+    if 'anycast_gateway' in peth:
+        # anycast-gateways with the same MAC and source-interface would share
+        # one bridge FDB entry - collect them for verify()
+        tmp = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                   get_first_key=True,
+                                   no_tag_node_value_mangle=True)
+        tmp.pop(ifname, None)
+        peth['anycast_gateway_peers'] = {
+            name: cfg for name, cfg in tmp.items() if 'anycast_gateway' in cfg}
+
     # Protocols static arp dependency
     if 'static_arp' in peth:
         set_dependents('static_arp', conf)
@@ -101,6 +111,16 @@ def _verify_anycast_gateway(peth: dict):
             'or a bridge vlan interface (e.g. br0 or br0.100), but '
             f'"{source_iface}" is neither of these two.'
         )
+
+    # Requirement 3: one anycast-gateway per MAC and source-interface
+    mac = peth['mac'].lower()
+    for peer, peer_config in peth.get('anycast_gateway_peers', {}).items():
+        if (peer_config.get('source_interface') == source_iface and
+                peer_config.get('mac', '').lower() == mac):
+            raise ConfigError(
+                f'Anycast-gateway MAC "{mac}" on source-interface "{source_iface}" '
+                f'is already used by interface {peer}'
+            )
 
 def verify(peth):
     if 'deleted' in peth:
