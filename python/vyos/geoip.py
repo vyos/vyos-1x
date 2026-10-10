@@ -266,13 +266,13 @@ def geoip_update(firewall=None, policy=None):
 
                 version = 6 if path[0] == 'ipv6' else 4
                 vprefix = '6' if version == 6 else ''
-                set_name = f'GEOIP_CC{vprefix}_{path[1]}_{path[2]}_{path[4]}'
+                set_name = f'GEOIP_CC{vprefix}_{path[1]}_{path[2]}_{path[4]}_{path[5][0]}'
                 firewall_sets[f'v{version}'][set_name] = db_return_cc_ranges(codes, version)
 
             for asns, path in dict_search_recursive(firewall, 'asn'):
                 version = 6 if path[0] == 'ipv6' else 4
                 vprefix = '6' if version == 6 else ''
-                set_name = f'GEOIP_ASN{vprefix}_{path[1]}_{path[2]}_{path[4]}'
+                set_name = f'GEOIP_ASN{vprefix}_{path[1]}_{path[2]}_{path[4]}_{path[5][0]}'
                 firewall_sets[f'v{version}'][set_name] = db_return_asn_ranges(asns, version)
 
         if policy:
@@ -282,13 +282,13 @@ def geoip_update(firewall=None, policy=None):
 
                 version = 6 if path[0] == 'route6' else 4
                 vprefix = '6' if version == 6 else ''
-                set_name = f'GEOIP_CC{vprefix}_{path[0]}_{path[1]}_{path[3]}'
+                set_name = f'GEOIP_CC{vprefix}_{path[0]}_{path[1]}_{path[3]}_{path[4][0]}'
                 policy_sets[f'v{version}'][set_name] = db_return_cc_ranges(codes, version)
 
             for asns, path in dict_search_recursive(policy, 'asn'):
                 version = 6 if path[0] == 'route6' else 4
                 vprefix = '6' if version == 6 else ''
-                set_name = f'GEOIP_ASN{vprefix}_{path[0]}_{path[1]}_{path[3]}'
+                set_name = f'GEOIP_ASN{vprefix}_{path[0]}_{path[1]}_{path[3]}_{path[4][0]}'
                 policy_sets[f'v{version}'][set_name] = db_return_asn_ranges(asns, version)
 
         render(

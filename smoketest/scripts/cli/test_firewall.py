@@ -98,18 +98,36 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '4', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '4', 'source', 'geoip', 'asn', '15169'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '4', 'source', 'geoip', 'inverse-match'])
+        # T9332: source and destination geoip on the same rule must resolve to
+        # distinct sets rather than colliding on a shared name
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '5', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '5', 'source', 'geoip', 'country-code', 'us'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '5', 'destination', 'geoip', 'country-code', 'cn'])
+        # T9332: same check on the ipv6 side
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'us'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'destination', 'geoip', 'country-code', 'cn'])
 
         self.cli_commit()
 
         nftables_search = [
-            ['ip saddr @GEOIP_CC_name_smoketest_1', 'drop'],
-            ['ip saddr != @GEOIP_CC_name_smoketest_2', 'accept'],
-            ['ip saddr @GEOIP_ASN_name_smoketest_3', 'drop'],
-            ['ip saddr != @GEOIP_ASN_name_smoketest_4', 'accept']
+            ['ip saddr @GEOIP_CC_name_smoketest_1_s', 'drop'],
+            ['ip saddr != @GEOIP_CC_name_smoketest_2_s', 'accept'],
+            ['ip saddr @GEOIP_ASN_name_smoketest_3_s', 'drop'],
+            ['ip saddr != @GEOIP_ASN_name_smoketest_4_s', 'accept'],
+            # T9332: distinct per-side sets, not a shared/collided name
+            ['ip daddr @GEOIP_CC_name_smoketest_5_d', 'ip saddr @GEOIP_CC_name_smoketest_5_s', 'drop'],
         ]
 
         # -t prevents 1000+ GeoIP elements being returned
         self.verify_nftables(nftables_search, 'ip vyos_filter', args='-t')
+
+        nftables_search_v6 = [
+            # T9332: distinct per-side sets on the ipv6 side too
+            ['ip6 daddr @GEOIP_CC6_name_smoketest_1_d', 'ip6 saddr @GEOIP_CC6_name_smoketest_1_s', 'drop'],
+        ]
+
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter', args='-t')
 
     def test_fib_type(self):
         self.cli_set(
