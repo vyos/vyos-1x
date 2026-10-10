@@ -171,8 +171,14 @@ jobs:
 
       - name: Generate ISO version string
         id: version
+        env:
+          BUILD_VERSION_FORMAT: ${{ needs.set_config.outputs.build_version_format }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo "build_version=$(date -u +'${{ needs.set_config.outputs.build_version_format }}')" >> $GITHUB_OUTPUT
+          if [[ -n "$PR_NUMBER" ]]; then
+            BUILD_VERSION_FORMAT="${BUILD_VERSION_FORMAT//integration/GitHub-PR${PR_NUMBER}}"
+          fi
+          echo "build_version=$(date -u +"$BUILD_VERSION_FORMAT")" >> $GITHUB_OUTPUT
 
       - name: Build custom ISO image
         shell: bash
