@@ -41,9 +41,12 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import is_systemd_unit_live
+from vyos.utils.process import process_named_running
 from vyos.utils.process import stop_systemd_unit
 from vyos.utils.process import run
 from vyos.utils.process import cmdl
+from vyos.utils.process import rc_cmd
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.network import is_intf_addr_assigned
@@ -61,6 +64,183 @@ from vyos.ifconfig import Section
 from vyos import ConfigError
 
 link_local_prefix = 'fe80::/64'
+
+def _mask_to_prefixlen(mask: str):
+    try:
+        from ipaddress import IPv4Network
+        return IPv4Network(f'0.0.0.0/{mask}').prefixlen
+    except ValueError:
+        return None
+
+
+def _isc_lease_info(path: str) -> dict:
+    """Lease addr/prefix/router/server from ISC `lease { }` or script env dump."""
+    info: dict = {}
+    try:
+        with open(path) as f:
+            text = f.read()
+    except OSError:
+        return info
+    if 'lease {' in text:
+        body = text.split('lease {')[-1]
+        for line in body.splitlines():
+            line = line.strip().rstrip(';')
+            if line.startswith('fixed-address '):
+                info['addr'] = line.split()[1]
+            elif line.startswith('option subnet-mask '):
+                pfx = _mask_to_prefixlen(line.split()[2])
+                if pfx is not None:
+                    info['prefixlen'] = pfx
+            elif line.startswith('option routers '):
+                info['router'] = line.split()[2].split(',')[0]
+            elif line.startswith('option dhcp-server-identifier '):
+                info['server'] = line.split()[2]
+        return info
+    # VyOS dhclient-script env dump (reason='BOUND', new_ip_address=...)
+    kv = {}
+    for line in text.splitlines():
+        if '=' not in line:
+            continue
+        k, v = line.split('=', 1)
+        kv[k.strip()] = v.strip().strip('\'"')
+    if kv.get('new_ip_address'):
+        info['addr'] = kv['new_ip_address']
+    if kv.get('new_subnet_mask'):
+        pfx = _mask_to_prefixlen(kv['new_subnet_mask'])
+        if pfx is not None:
+            info['prefixlen'] = pfx
+    if kv.get('new_routers'):
+        info['router'] = kv['new_routers'].split()[0]
+    if kv.get('new_dhcp_server_identifier'):
+        info['server'] = kv['new_dhcp_server_identifier']
+    return info
+
+
+def _write_temp_isc_lease(path: str, info: dict, interface: str) -> None:
+    addr = info.get('addr')
+    if not addr:
+        raise ValueError('no lease address')
+    lines = ['lease {', f'  interface "{interface}";', f'  fixed-address {addr};']
+    pfx = info.get('prefixlen')
+    if pfx is not None:
+        from ipaddress import IPv4Network
+        mask = str(IPv4Network(f'0.0.0.0/{pfx}').netmask)
+        lines.append(f'  option subnet-mask {mask};')
+    if info.get('router'):
+        lines.append(f'  option routers {info["router"]};')
+    if info.get('server'):
+        lines.append(f'  option dhcp-server-identifier {info["server"]};')
+    lines.append('}')
+    with open(path, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+
+def _iface_admin_up(ifname, netns=None) -> bool:
+    code, out = rc_cmd(['ip', '-j', 'link', 'show', 'dev', ifname], netns=netns)
+    if code != 0 or not out:
+        return False
+    try:
+        data = json.loads(out)
+        return 'UP' in data[0].get('flags', [])
+    except (json.JSONDecodeError, IndexError, TypeError, KeyError):
+        return False
+
+
+def _dhcp_if_metric(ifname, config=None):
+    """IF_METRIC for dhclient -r. Op-mode Interface() has no config dict."""
+    if config:
+        metric = dict_search('dhcp_options.default_route_distance', config)
+        if metric:
+            return str(metric)
+    override = (
+        f'/run/systemd/system/dhclient@{ifname}.service.d/10-override.conf'
+    )
+    try:
+        with open(override) as f:
+            text = f.read()
+    except OSError:
+        return None
+    match = re.search(r'IF_METRIC=(\d+)', text)
+    return match.group(1) if match else None
+
+
+def _wait_dhcp_neigh(ifname, target, vrf=None, netns=None, timeout=5.0) -> bool:
+    """Nudge ARP/ND and wait until the neigh is usable.
+
+    Do not wait for ICMP success: a dropped echo still costs ping -W, and
+    RELEASE only needs L2. Background ping is the probe; we poll neigh.
+    """
+    import time
+    from subprocess import DEVNULL
+    from subprocess import Popen
+    from vyos.utils.process import get_wrapper
+
+    cmd = get_wrapper(vrf, netns) + [
+        'ping', '-c', '1', '-W', '1', '-I', ifname, target,
+    ]
+    probe = Popen(cmd, stdout=DEVNULL, stderr=DEVNULL, start_new_session=True)
+    usable = ('REACHABLE', 'STALE', 'DELAY', 'PROBE', 'PERMANENT')
+    start = time.monotonic()
+    deadline = start + timeout
+    arp_in_flight = False
+    try:
+        while time.monotonic() < deadline:
+            code, out = rc_cmd(
+                ['ip', '-j', 'neigh', 'show', 'to', target, 'dev', ifname],
+                netns=netns,
+            )
+            if code == 0 and out:
+                try:
+                    rows = json.loads(out)
+                except json.JSONDecodeError:
+                    rows = []
+                for row in rows:
+                    states = row.get('state') or []
+                    if any(state in usable for state in states):
+                        return True
+                    if states:
+                        arp_in_flight = True
+            # No ARP on this iface (nexthop resolved elsewhere): do not
+            # stall the full timeout. INCOMPLETE/FAILED keeps waiting.
+            if not arp_in_flight and (time.monotonic() - start) >= 1.0:
+                return False
+            time.sleep(0.2)
+        return False
+    finally:
+        try:
+            os.killpg(probe.pid, 9)
+        except OSError:
+            try:
+                probe.kill()
+            except OSError:
+                pass
+
+
+def _dhclient_release_run(argv, vrf=None, netns=None, timeout=8) -> None:
+    """Run dhclient -r. On hang, kill the process group so dhclient-script
+    cannot flush an address a replacement client has already bound."""
+    from subprocess import PIPE
+    from subprocess import Popen
+    from subprocess import TimeoutExpired
+    from vyos.utils.process import get_wrapper
+
+    cmd = get_wrapper(vrf, netns) + list(argv)
+    proc = Popen(cmd, stdout=PIPE, stderr=PIPE, start_new_session=True)
+    try:
+        proc.communicate(timeout=timeout)
+    except TimeoutExpired:
+        try:
+            os.killpg(proc.pid, 9)
+        except OSError:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+        try:
+            proc.communicate(timeout=1)
+        except Exception:
+            pass
+
 
 def _jmes_search(expression, data):
     """jmespath.search with a deferred import.
@@ -676,7 +856,8 @@ class Interface(Control):
         if 'netns' in self.config:
             return False
 
-        tmp = self.get_vrf()
+        tmp = self.get_vrf() or ''
+        vrf = vrf or ''
         if tmp == vrf:
             return False
 
@@ -1380,7 +1561,8 @@ class Interface(Control):
         """
         return self.get_addr_v4() + self.get_addr_v6()
 
-    def add_addr(self, addr: str, vrf_changed: bool=False) -> bool:
+    def add_addr(self, addr: str, vrf_changed: bool=False,
+                 mac_changed: bool=False) -> bool:
         """
         Add IP(v6) address to interface. Address is only added if it is not
         already assigned to that interface. Address format must be validated
@@ -1413,7 +1595,8 @@ class Interface(Control):
 
         # add to interface
         if addr == 'dhcp':
-            self.set_dhcp(True, vrf_changed=vrf_changed)
+            self.set_dhcp(True, vrf_changed=vrf_changed,
+                          mac_changed=mac_changed)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True, vrf_changed=vrf_changed)
         elif not is_intf_addr_assigned(self.ifname, addr, netns=netns):
@@ -1461,7 +1644,7 @@ class Interface(Control):
 
         # remove from interface
         if addr == 'dhcp':
-            self.set_dhcp(False)
+            self.set_dhcp(False, release=True)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(False)
         elif is_intf_addr_assigned(self.ifname, addr, netns=netns):
@@ -1481,8 +1664,8 @@ class Interface(Control):
 
         Will raise an exception on error.
         """
-        # stop DHCP(v6) if running
-        self.set_dhcp(False)
+        # stop DHCP(v6) if running; RELEASE the v4 lease (ExecStop is -x)
+        self.set_dhcp(False, release=True)
         self.set_dhcpv6(False)
 
         if not self.exists(self.ifname):
@@ -1610,9 +1793,210 @@ class Interface(Control):
                 if native_vlan_id:
                     self._cmdl(['bridge', 'vlan', 'add', 'dev', self.ifname, 'vid', str(native_vlan_id), 'pvid', 'untagged', 'master'])
 
-    def set_dhcp(self, enable: bool, vrf_changed: bool=False):
+    def release_dhcp_lease(self) -> bool:
+        """Send DHCPv4 RELEASE without racing systemd ExecStop / Restart=always.
+
+        Sequence: runtime-mask so Restart=always cannot start a replacement;
+        SIGKILL the unit (no ExecStop — systemctl stop would run dhclient -x
+        and can block DefaultTimeoutStopSec after SIGKILL). Stock
+        dhclient-script on -r; CONTROLLED_STOP skips the configd wait in
+        98-vyos-static-routes when a commit already holds the lock. Restore
+        the lease address (subnet-mask prefix, not /32) and a host route to
+        the DHCP server so unicast RELEASE works after disable. Unmask last.
+
+        Returns True if RELEASE was attempted or there was no lease to send.
+        No lease skips dhclient -r. Mask and SIGKILL still run when the unit
+        is live or a dhclient process matches the interface, so Restart=always
+        cannot respawn. If neither is true, return without mask/unmask — those
+        daemon-reload, and update() calls this for every non-DHCP interface.
+        """
+        from vyos.utils.network import get_interface_vrf
+
+        interface = self.ifname
+        systemd_service = f'dhclient@{interface}.service'
+        lease_dir = directories['isc_dhclient_dir']
+        conf = f'{lease_dir}/dhclient_{interface}.conf'
+        release_pid = f'{lease_dir}/dhclient_{interface}.release.pid'
+        temp_lf = f'{lease_dir}/dhclient_{interface}.release.leases'
+        netns = self.config.get('netns')
+
+        source_lease = None
+        info = {}
+        for path in (
+            f'{lease_dir}/dhclient_{interface}.leases',
+            f'{lease_dir}/dhclient_{interface}.lease',
+        ):
+            if os.path.isfile(path) and os.path.getsize(path) > 0:
+                info = _isc_lease_info(path)
+                if info.get('addr'):
+                    source_lease = path
+                    break
+        has_lease = bool(info.get('addr'))
+        # Nothing to release and nothing Restart=always can respawn. Skip
+        # mask/unmask (two daemon-reloads per non-DHCP interface per commit).
+        # Live includes activating, so auto-restart during RestartSec is not
+        # treated as already stopped.
+        if (not has_lease
+                and not is_systemd_unit_live(systemd_service, netns=netns)
+                and not process_named_running('dhclient', cmdline=interface)):
+            return True
+        if has_lease:
+            _write_temp_isc_lease(temp_lf, info, interface)
+
+        vrf = get_interface_vrf(interface)
+        if vrf == 'default':
+            vrf = None
+
+        released = False
+        restored_link = False
+        restored_cidr = None
+        restored_route = None
+        prev_route = None
+        try:
+            mask_code, _ = rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
+                                  netns=netns)
+            if mask_code == 0:
+                # Mask first so Restart=always cannot replace the client. Kill
+                # even if ActiveState is still activating — Type=exec dhclient@
+                # can already have a live process that would race dhclient -r.
+                # Kill exit is not a gate: systemctl kill fails when already
+                # inactive. Do not systemctl stop: ExecStop is dhclient -x and
+                # waits DefaultTimeoutStopSec after SIGKILL (smoketest hang).
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
+
+                if not has_lease:
+                    # No DHCPRELEASE to send. Still masked+killed so
+                    # Restart=always cannot respawn after address dhcp is gone.
+                    released = True
+                else:
+                    lease_ip = info.get('addr')
+                    pfx = info.get('prefixlen', 32)
+                    server = info.get('server')
+                    router = info.get('router')
+                    link_code, _ = rc_cmd(['ip', 'link', 'show', 'dev', interface],
+                                          netns=netns)
+                    if link_code == 0:
+                        if not _iface_admin_up(interface, netns=netns):
+                            rc_cmd(['ip', 'link', 'set', 'dev', interface, 'up'],
+                                   netns=netns)
+                            restored_link = True
+                        if (lease_ip and
+                                not is_intf_addr_assigned(interface, lease_ip,
+                                                          netns=netns)):
+                            cidr = f'{lease_ip}/{pfx}'
+                            rc_cmd(['ip', 'addr', 'add', cidr, 'dev', interface],
+                                   netns=netns)
+                            restored_cidr = cidr
+                        if server:
+                            # Same VRF as dhclient -r. If a route already exists
+                            # (FRR static), do not replace it — restore would leave
+                            # an unowned proto boot copy (alexk37).
+                            code, out = rc_cmd(['ip', '-j', 'route', 'show',
+                                                f'{server}/32'],
+                                               vrf=vrf, netns=netns)
+                            if code == 0 and out and out.strip() not in ('', '[]'):
+                                try:
+                                    prev = json.loads(out)
+                                    if prev:
+                                        prev_route = prev[0]
+                                except (json.JSONDecodeError, IndexError, TypeError):
+                                    prev_route = None
+                            if prev_route is None:
+                                if router:
+                                    rcode, _ = rc_cmd(
+                                        ['ip', 'route', 'replace', f'{server}/32',
+                                         'via', router, 'dev', interface],
+                                        vrf=vrf, netns=netns)
+                                else:
+                                    rcode, _ = rc_cmd(
+                                        ['ip', 'route', 'replace', f'{server}/32',
+                                         'dev', interface],
+                                        vrf=vrf, netns=netns)
+                                if rcode == 0:
+                                    restored_route = server
+
+                    # Stock dhclient-script removes the address, default, and
+                    # nameservers and runs user RELEASE hooks. Skip configd wait
+                    # only when a commit already holds the lock (CONTROLLED_STOP).
+                    from vyos.utils.commit import commit_in_progress
+                    dhclient_r = ['/sbin/dhclient', '-4', '-r']
+                    if commit_in_progress():
+                        dhclient_r += ['-e', 'CONTROLLED_STOP=yes']
+                    metric = _dhcp_if_metric(interface, self.config)
+                    if metric:
+                        dhclient_r += ['-e', f'IF_METRIC={metric}']
+                    dhclient_r += [
+                        '-cf',
+                        conf,
+                        '-pf',
+                        release_pid,
+                        '-lf',
+                        temp_lf,
+                        interface,
+                    ]
+                    target = router or server
+                    if target:
+                        _wait_dhcp_neigh(interface, target, vrf=vrf, netns=netns)
+                    # Hang cap 8s. Kill the process group so a leftover
+                    # dhclient-script cannot flush an address the replacement
+                    # client already bound (alexk37).
+                    _dhclient_release_run(dhclient_r, vrf=vrf, netns=netns,
+                                          timeout=8)
+                    released = True
+        except Exception:
+            released = False
+        finally:
+            if restored_route and prev_route is None:
+                rc_cmd(['ip', 'route', 'del', f'{restored_route}/32', 'dev',
+                        interface], vrf=vrf, netns=netns)
+            if restored_cidr:
+                rc_cmd(['ip', 'addr', 'del', restored_cidr, 'dev', interface],
+                       netns=netns)
+            if restored_link:
+                rc_cmd(['ip', 'link', 'set', 'dev', interface, 'down'],
+                       netns=netns)
+            if os.path.isfile(release_pid):
+                try:
+                    with open(release_pid) as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, 9)
+                except (ValueError, ProcessLookupError, OSError):
+                    pass
+                try:
+                    os.remove(release_pid)
+                except FileNotFoundError:
+                    pass
+            try:
+                os.remove(temp_lf)
+            except FileNotFoundError:
+                pass
+            if released:
+                for path in (
+                    f'{lease_dir}/dhclient_{interface}.leases',
+                    f'{lease_dir}/dhclient_{interface}.lease',
+                ):
+                    try:
+                        os.remove(path)
+                    except FileNotFoundError:
+                        pass
+            rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
+            # Kill while still masked so Restart=always cannot start a
+            # replacement that would reacquire the lease (CodeRabbit).
+            rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                    systemd_service], netns=netns)
+            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
+        return released
+
+    def set_dhcp(self, enable: bool, vrf_changed: bool = False,
+                 release: bool = False, mac_changed: bool = False):
         """
         Enable/Disable DHCP client on a given interface.
+
+        release=True sends DHCPRELEASE (op-mode, delete address dhcp, VRF
+        delete). Restart, disable, and VRF move pass release=False so the
+        lease survives for INIT-REBOOT. mac_changed restarts the client so
+        chaddr matches the new MAC.
         """
         if enable not in [True, False]:
             raise ValueError()
@@ -1651,32 +2035,75 @@ class Interface(Control):
             # the old lease is released a new one is acquired (T4203). We will
             # only restart DHCP client if it's option changed, or if it's not
             # running, but it should be running (e.g. on system startup)
-            if (vrf_changed or
+            if (vrf_changed or mac_changed or
                 ('dhcp_options_changed' in self.config) or
                 (not is_systemd_service_active(systemd_service, netns=netns))):
                 return self._cmdl(['systemctl', 'restart', systemd_service])
         else:
             netns = self.config['netns'] if 'netns' in self.config else None
-            stop_systemd_unit(systemd_service, netns=netns)
+            released = False
+            if release:
+                released = self.release_dhcp_lease()
+            else:
+                # Already stopped: skip mask/unmask (two daemon-reloads per
+                # disabled address-dhcp iface on every later commit).
+                # Live includes activating/auto-restart, not ActiveState=active
+                # only, so Restart=always cannot slip the skip.
+                if (not is_systemd_unit_live(systemd_service, netns=netns)
+                        and not process_named_running('dhclient',
+                                                      cmdline=self.ifname)):
+                    return None
+                # Stop-only: mask then SIGKILL (not systemctl stop). ExecStop
+                # is dhclient -x and can block after SIGKILL. Mask so
+                # Restart=always cannot start a replacement.
+                rc_cmd(['systemctl', 'mask', '--runtime', systemd_service],
+                       netns=netns)
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
+            try:
+                # Exact cmdline match (eth0 is not eth0.100). Kill every
+                # remaining client, not only the first PID.
+                for _ in range(8):
+                    pid = process_named_running('dhclient', cmdline=self.ifname)
+                    if not pid:
+                        break
+                    try:
+                        os.kill(pid, 9)
+                    except ProcessLookupError:
+                        pass
 
-            # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
-            # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
-            # 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 2: [{'addr': '192.0.2.103', 'netmask': '255.255.255.0',
-            #
-            # We will force removal of any dynamic IPv4 address from the interface
-            tmp = get_interface_address(self.ifname)
-            if tmp and 'addr_info' in tmp:
-                for address_dict in tmp['addr_info']:
-                    # Only remove dynamic assigned addresses
-                    if address_dict['family'] == 'inet' and 'dynamic' in address_dict:
-                        address = address_dict['local']
-                        prefixlen = address_dict['prefixlen']
-                        self.del_addr(f'{address}/{prefixlen}')
+                # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
+                # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
+                # 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 2: [{'addr': '192.0.2.103', 'netmask': '255.255.255.0',
+                #
+                # We will force removal of any dynamic IPv4 address from the interface
+                tmp = get_interface_address(self.ifname)
+                if tmp and 'addr_info' in tmp:
+                    for address_dict in tmp['addr_info']:
+                        # Only remove dynamic assigned addresses
+                        if address_dict['family'] == 'inet' and 'dynamic' in address_dict:
+                            address = address_dict['local']
+                            prefixlen = address_dict['prefixlen']
+                            self.del_addr(f'{address}/{prefixlen}')
 
-            # cleanup old config files
-            for file in [dhclient_config_file, systemd_override_file, dhclient_lease_file]:
-                if os.path.isfile(file):
-                    os.remove(file)
+                # Keep the ISC lease DB on the stop-only path (VRF move, disable)
+                # so the next start can INIT-REBOOT. Delete it only after an
+                # explicit RELEASE.
+                cleanup_files = [dhclient_config_file, systemd_override_file]
+                if released:
+                    cleanup_files.append(dhclient_lease_file)
+                    cleanup_files.append(f'{config_base}_{self.ifname}.lease')
+                for file in cleanup_files:
+                    if os.path.isfile(file):
+                        os.remove(file)
+            finally:
+                if not release:
+                    try:
+                        rc_cmd(['systemctl', 'reset-failed', systemd_service],
+                               netns=netns)
+                    finally:
+                        rc_cmd(['systemctl', 'unmask', '--runtime',
+                                systemd_service], netns=netns)
 
         return None
 
@@ -1886,12 +2313,25 @@ class Interface(Control):
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed. Skip if bond member.
+        mac_changed = False
         if 'is_bond_member' not in config:
             mac = config.get('hw_id')
             if 'mac' in config:
                 mac = config.get('mac')
             if mac:
+                if mac != self.get_mac():
+                    mac_changed = True
                 self.set_mac(mac)
+
+        if mac_changed:
+            # New chaddr: drop the ISC DB so the next start DISCOVERs instead
+            # of INIT-REBOOT with the old hardware address.
+            lease_dir = directories['isc_dhclient_dir']
+            for suffix in ('leases', 'lease'):
+                try:
+                    os.remove(f'{lease_dir}/dhclient_{self.ifname}.{suffix}')
+                except FileNotFoundError:
+                    pass
 
         # If interface is connected to NETNS we don't have to check all other
         # settings like MTU/IPv6/sysctl values, etc.
@@ -1917,6 +2357,9 @@ class Interface(Control):
         # always ensure DHCP client is stopped (when not configured explicitly)
         if 'dhcp' not in new_addr:
             self.del_addr('dhcp')
+        elif 'disable' in config:
+            # address dhcp still configured: stop-only so INIT-REBOOT works.
+            self.set_dhcp(False, release=False)
 
         # always ensure DHCPv6 client is stopped (when not configured as client
         # for IPv6 address or prefix delegation)
@@ -1962,7 +2405,10 @@ class Interface(Control):
 
         # Add this section after vrf T4331
         for addr in new_addr:
-            self.add_addr(addr, vrf_changed=vrf_changed)
+            if addr == 'dhcp' and 'disable' in config:
+                continue
+            self.add_addr(addr, vrf_changed=vrf_changed,
+                          mac_changed=mac_changed)
 
         # Configure MSS value for IPv4 TCP connections
         tmp = dict_search('ip.adjust_mss', config)
