@@ -14,10 +14,6 @@
 
 import re
 
-from socket import AF_INET
-from socket import AF_INET6
-from socket import getaddrinfo
-
 from vyos.template import is_ipv4
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
@@ -74,13 +70,6 @@ def fqdn_config_parse(config, node):
             suffix = path[3][0]
             set_name = f'{nat_direction}_{nat_rule}_{suffix}'
             config['ip_fqdn'][set_name] = domain
-
-def fqdn_resolve(fqdn, ipv6=False):
-    try:
-        res = getaddrinfo(fqdn, None, AF_INET6 if ipv6 else AF_INET)
-        return set(item[4][0] for item in res)
-    except OSError:
-        return None
 
 def find_nftables_rule(table, chain, rule_matches=[]):
     # Find rule in table/chain that matches all criteria and return the handle

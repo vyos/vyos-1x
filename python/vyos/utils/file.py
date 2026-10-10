@@ -99,6 +99,33 @@ def read_json(fname, defaultonfailure=None):
         raise e
 
 
+def write_json(fname, data, defaultonfailure=_unset, atomic=False):
+    """
+    Write the provided data to a file in JSON format.
+    If defaultonfailure is not None and writing fails, it returns the default value.
+    """
+
+    import json
+
+    default_indent = 4  # Indent for pretty printing
+
+    def _dump_json(path):
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=default_indent)
+
+    try:
+        if atomic:  # Atomic, avoids readers seeing a partial write
+            fname_tmp = f'{fname}.tmp'
+            _dump_json(fname_tmp)
+            os.replace(fname_tmp, fname)
+        else:
+            _dump_json(fname)
+    except Exception as e:
+        if defaultonfailure is not _unset:
+            return defaultonfailure
+        raise e
+
+
 def chmod(path, bitmask):
     # path may also be an open file descriptor
     if not isinstance(path, int) and not os.path.exists(path):
