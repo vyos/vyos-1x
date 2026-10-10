@@ -26,6 +26,7 @@ import os
 import argparse
 import copy
 import functools
+import tempfile
 
 from lxml import etree as ET
 from textwrap import fill
@@ -81,6 +82,22 @@ def make_path(l):
     if debug:
         print(path)
     return path
+
+def write_node_def(path, content):
+    # Templates are built in parallel and XML files share paths. Never
+    # truncate an existing file, and replace atomically so a concurrent
+    # writer cannot leave an empty or partial node.def behind.
+    if os.path.exists(path) and os.path.getsize(path) > 0:
+        return
+    if not content:
+        open(path, 'a').close()
+        return
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path))
+    with os.fdopen(fd, 'w') as f:
+        f.write(content)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, path)
+
 
 def get_properties(p):
     props = {}
@@ -201,9 +218,7 @@ def process_node(n, tmpl_dir):
 
         # Only create the "node.def" file if it exists but is empty, or if it
         # does not exist at all.
-        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
-            with open(nodedef_path, "w") as f:
-                f.write(make_node_def(props, command))
+        write_node_def(nodedef_path, make_node_def(props, command))
 
         if children is not None:
             inner_nodes = children.iterfind("*")
@@ -217,12 +232,12 @@ def process_node(n, tmpl_dir):
 
         # Only create the "node.def" file if it exists but is empty, or if it
         # does not exist at all.
-        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
-            with open(nodedef_path, "w") as f:
-                if standalone:
-                    f.write(make_node_def(standalone, standalone["command"]))
-                else:
-                    f.write('help: {0}\n'.format(props['help']))
+        node_def = ''
+        if standalone:
+            node_def = make_node_def(standalone, standalone["command"])
+        elif 'help' in props:
+            node_def = 'help: {0}\n'.format(props['help'])
+        write_node_def(nodedef_path, node_def)
 
         # Create the inner node.tag part
         my_tmpl_dir.append("node.tag")
@@ -234,9 +249,7 @@ def process_node(n, tmpl_dir):
         nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
         # Only create the "node.def" file if it exists but is empty, or if it
         # does not exist at all.
-        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
-            with open(nodedef_path, "w") as f:
-                f.write(make_node_def(props, command))
+        write_node_def(nodedef_path, make_node_def(props, command))
 
         if children is not None:
             inner_nodes = children.iterfind("*")
@@ -255,9 +268,7 @@ def process_node(n, tmpl_dir):
         nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
         # Only create the "node.def" file if it exists but is empty, or if it
         # does not exist at all.
-        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
-            with open(nodedef_path, "w") as f:
-                f.write(make_node_def(props, command))
+        write_node_def(nodedef_path, make_node_def(props, command))
 
         if children is not None:
             inner_nodes = children.iterfind("*")
@@ -268,9 +279,7 @@ def process_node(n, tmpl_dir):
         if debug:
             print(f"Processing leaf node {name}")
 
-        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
-            with open(nodedef_path, "w") as f:
-                f.write(make_node_def(props, command))
+        write_node_def(nodedef_path, make_node_def(props, command))
     else:
         print(f"Unknown node_type: {node_type}")
 
