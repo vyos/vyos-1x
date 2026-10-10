@@ -126,7 +126,14 @@ def load_kernel_module(module_name: str) -> None:
         module_name (str): module name
     """
     # check if a module already loaded
-    if Path(f'/sys/module/{module_name}').exists():
+    # T9306
+    # Sysfs module directories always use underscores (e.g. /sys/module/vfio_pci),
+    # even for a driver whose canonical/modprobe name has a hyphen (e.g.
+    # 'vfio-pci'). Checking the unmodified name here means this guard never matches
+    # for such modules, so load_kernel_module() always falls through to modprobe(8)
+    # even when the module is already loaded -- which is needlessly fragile anywhere
+    # modprobe execution itself is restricted (e.g. inside a container).
+    if Path(f"/sys/module/{module_name.replace('-', '_')}").exists():
         return
 
     # execute modprobe with the specified module name
