@@ -3,5 +3,7 @@
   driver = "overlay"
   graphroot = "/usr/lib/live/mount/persistence/container/storage"
   runroot = "/var/run/containers/storage"
+{% if storage_mount_program is vyos_defined %}
   [storage.options]
-    mount_program = "/usr/bin/fuse-overlayfs"
+    mount_program = "{{ storage_mount_program }}"
+{% endif %}

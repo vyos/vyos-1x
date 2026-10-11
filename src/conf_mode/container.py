@@ -27,6 +27,8 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
+from vyos.defaults import directories
+from vyos.defaults import podman_mount_program
 from vyos.container import get_container_host_ifname
 from vyos.container import restart_network
 from vyos.utils.configfs import delete_cli_node
@@ -67,6 +69,17 @@ def network_exists(name):
     return bool(c)
 
 
+def storage_on_overlayfs() -> bool:
+    """podman refuses native overlay on top of overlayfs, which is the case
+    on live boot where there is no persistence partition. Only then is
+    fuse-overlayfs required as mount_program (T5003)."""
+    path = os.path.realpath(directories['podman_storage'])
+    mounts = {p.mountpoint: p.fstype for p in psutil.disk_partitions(all=True)}
+    while path not in mounts and path != '/':
+        path = os.path.dirname(path)
+    return mounts.get(path) == 'overlay'
+
+
 # Common functions
 def get_config(config=None):
     if config:
@@ -105,6 +118,9 @@ def get_config(config=None):
 
     tmp = node_changed(conf, base + ['name'])
     if tmp: container.update({'container_remove': tmp})
+
+    if container and storage_on_overlayfs():
+        container['storage_mount_program'] = podman_mount_program
 
     return container
 
