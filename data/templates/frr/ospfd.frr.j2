@@ -145,8 +145,9 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if capability.opaque is vyos_defined %}
  capability opaque
 {% endif %}
+{# xml_default_metric_type is the XML default of metric-type, added to the dict by frrender. FRR does not print the default metric-type back #}
 {% if default_information.originate is vyos_defined %}
- default-information originate {{ 'always' if default_information.originate.always is vyos_defined }} {{ 'metric ' + default_information.originate.metric if default_information.originate.metric is vyos_defined }} {{ 'metric-type ' + default_information.originate.metric_type if default_information.originate.metric_type is vyos_defined }} {{ 'route-map ' + default_information.originate.route_map if default_information.originate.route_map is vyos_defined }}
+ default-information originate {{ 'always' if default_information.originate.always is vyos_defined }} {{ 'metric ' + default_information.originate.metric if default_information.originate.metric is vyos_defined }} {{ 'metric-type ' + default_information.originate.metric_type if default_information.originate.metric_type is vyos_defined and default_information.originate.metric_type != xml_default_metric_type }} {{ 'route-map ' + default_information.originate.route_map if default_information.originate.route_map is vyos_defined }}
 {% endif %}
 {% if default_metric is vyos_defined %}
  default-metric {{ default_metric }}
@@ -222,14 +223,15 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if passive_interface is vyos_defined('default') %}
  passive-interface default
 {% endif %}
+{# xml_default_metric_type is the XML default of metric-type, added to the dict by frrender. FRR does not print the default metric-type back #}
 {% if redistribute is vyos_defined %}
 {%     for protocol, options in redistribute.items() %}
 {%         if protocol == 'table' %}
 {%             for table, table_options in options.items() %}
- redistribute table-direct {{ table }} {{ 'metric ' ~ table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' ~ table_options.metric_type if table_options.metric_type is vyos_defined }} {{ 'route-map ' ~ table_options.route_map if table_options.route_map is vyos_defined }}
+ redistribute table-direct {{ table }} {{ 'metric ' ~ table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' ~ table_options.metric_type if table_options.metric_type is vyos_defined and table_options.metric_type != xml_default_metric_type }} {{ 'route-map ' ~ table_options.route_map if table_options.route_map is vyos_defined }}
 {%             endfor %}
 {%         else %}
- redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
+ redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined and options.metric_type != xml_default_metric_type }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
 {%         endif %}
 {%     endfor %}
 {% endif %}

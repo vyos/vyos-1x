@@ -120,6 +120,12 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
         # options which we need to update into the dictionary retrieved.
         default_values = conf.get_config_defaults(path, key_mangling=('-', '_'),
                                                   get_first_key=True, recursive=True)
+        # The XML default of metric-type (shared by default-information and
+        # redistribute) is added to the dict, the template cannot query it
+        # while rendering.
+        xml_default_metric_type = dict_search(
+            'default_information.originate.metric_type', default_values
+        )
 
         # We have to cleanup the default dict, as default values could enable features
         # which are not explicitly enabled on the CLI. Example: default-information
@@ -151,6 +157,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                 del default_values['interface'][interface]['dead_interval']
 
         ospf = config_dict_merge(default_values, ospf)
+        ospf['xml_default_metric_type'] = xml_default_metric_type
         return ospf
 
     def dict_helper_ospfv3_defaults(ospfv3, path):
@@ -158,6 +165,11 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
         # options which we need to update into the dictionary retrieved.
         default_values = conf.get_config_defaults(path, key_mangling=('-', '_'),
                                                   get_first_key=True, recursive=True)
+        # The XML default of metric-type is added to the dict, the template
+        # cannot query it while rendering.
+        xml_default_metric_type = dict_search(
+            'default_information.originate.metric_type', default_values
+        )
 
         # We have to cleanup the default dict, as default values could enable features
         # which are not explicitly enabled on the CLI. Example: default-information
@@ -179,6 +191,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
         # merge in remaining default values
         ospfv3 = config_dict_merge(default_values, ospfv3)
+        ospfv3['xml_default_metric_type'] = xml_default_metric_type
         return ospfv3
 
     def dict_helper_pim_defaults(pim, path):
