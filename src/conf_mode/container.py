@@ -576,7 +576,14 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
         for tmpfs_config in container_config['tmpfs'].values():
             dest = tmpfs_config['destination']
             size = tmpfs_config['size']
-            out.append(f'Mount=type=tmpfs,tmpfs-size={size}M,destination={dest}')
+            mount = f'type=tmpfs,tmpfs-size={size}M,destination={dest}'
+            # A tmpfs mounted over a directory that already exists in the image
+            # is owned by root:root 0755 with runc, whatever the image intended,
+            # so a container running as a non-root user cannot write to it.
+            # The `U` option chowns the mount to the container user.
+            if 'chown' in tmpfs_config:
+                mount += ',U'
+            out.append(f'Mount={mount}')
 
     if 'uid' in container_config:
         uid = container_config['uid']
