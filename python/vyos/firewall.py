@@ -259,7 +259,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 # for policy
                 if hook == 'route' or hook == 'route6':
                     hook_name = hook
-                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_{geoip_prefix}{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
+                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_{geoip_prefix}{def_suffix}_{hook_name}_{fw_name}_{rule_id}_{prefix}')
 
             if 'mac_address' in side_conf:
                 suffix = side_conf['mac_address']

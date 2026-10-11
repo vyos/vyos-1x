@@ -86,15 +86,15 @@ def geoip_sets(firewall):
 
     for _, path in dict_search_recursive(firewall, 'country_code'):
         if (path[0] == 'ipv4'):
-            out['name'].append(f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}')
+            out['name'].append(f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}_{path[5][0]}')
         elif (path[0] == 'ipv6'):
-            out['ipv6_name'].append(f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}')
+            out['ipv6_name'].append(f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}_{path[5][0]}')
 
     for _, path in dict_search_recursive(firewall, 'asn'):
         if (path[0] == 'ipv4'):
-            out['name'].append(f'GEOIP_ASN_{path[1]}_{path[2]}_{path[4]}')
+            out['name'].append(f'GEOIP_ASN_{path[1]}_{path[2]}_{path[4]}_{path[5][0]}')
         elif (path[0] == 'ipv6'):
-            out['ipv6_name'].append(f'GEOIP_ASN6_{path[1]}_{path[2]}_{path[4]}')
+            out['ipv6_name'].append(f'GEOIP_ASN6_{path[1]}_{path[2]}_{path[4]}_{path[5][0]}')
 
     return out
 

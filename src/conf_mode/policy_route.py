@@ -68,15 +68,15 @@ def geoip_sets(policy):
 
     for _, path in dict_search_recursive(policy, 'country_code'):
         if (path[0] == 'route'):
-            out['name'].append(f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}')
+            out['name'].append(f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}_{path[4][0]}')
         elif (path[0] == 'route6'):
-            out['ipv6_name'].append(f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}')
+            out['ipv6_name'].append(f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}_{path[4][0]}')
 
     for _, path in dict_search_recursive(policy, 'asn'):
         if (path[0] == 'route'):
-            out['name'].append(f'GEOIP_ASN_{path[0]}_{path[1]}_{path[3]}')
+            out['name'].append(f'GEOIP_ASN_{path[0]}_{path[1]}_{path[3]}_{path[4][0]}')
         elif (path[0] == 'route6'):
-            out['ipv6_name'].append(f'GEOIP_ASN6_{path[0]}_{path[1]}_{path[3]}')
+            out['ipv6_name'].append(f'GEOIP_ASN6_{path[0]}_{path[1]}_{path[3]}_{path[4][0]}')
 
     return out
 
