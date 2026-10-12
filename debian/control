@@ -444,7 +444,6 @@ Depends:
   bgpq4,
   dnsdist,
   dnsutils,
-  exfat-fuse,
   exfatprogs,
   fancontrol,
   grepcidr,

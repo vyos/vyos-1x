@@ -223,6 +223,13 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
+    def test_exfat(self):
+        # exFAT is provided by the Kernel, no userspace FUSE implementation
+        options_to_check = ['CONFIG_EXFAT_FS']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
     @cpu_arch('arm64')
     def test_arm64(self):
         # Marvell CN9130: CONFIG_MVPP2, CN10308
