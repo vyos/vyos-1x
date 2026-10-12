@@ -45,40 +45,45 @@ class MACVLANIf(Interface):
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
 
-    def _get_bridge_by_source(self, source_interface: str) -> BridgeIf | None:
+    def _get_bridge_by_source(self, source_interface: str) -> tuple:
         """
-        Resolve a source interface name to its root BridgeIf object.
+        Resolve a source interface name to its root BridgeIf object and the
+        bridge VLAN the anycast MAC belongs to.
 
         Handles plain bridge names (e.g. 'br0') and bridge sub-interfaces
-        with one or two VLAN suffixes (e.g. 'br0.100', 'br0.100.200').
+        with one or two VLAN suffixes (e.g. 'br0.100', 'br0.100.200'). The
+        first suffix is the bridge VLAN. It is only returned for VLAN-aware
+        bridges, the kernel rejects VLAN FDB entries on any other bridge.
+
+        Returns (bridge, vlan), bridge is None if it does not exist.
         """
 
-        bridge = None
+        bridge = vlan = None
         if source_interface.startswith('br'):
-            # We only need the root bridge name, so unpack with *_ to
-            # discard the VLAN parts.
-            bridge_ifname, *_ = split_interface_vlans(source_interface)
+            bridge_ifname, vlan, _ = split_interface_vlans(source_interface)
             if interface_exists(bridge_ifname):
                 bridge = BridgeIf(bridge_ifname)
+                if not int(bridge.get_vlan_filter()):
+                    vlan = None
 
-        return bridge
+        return bridge, vlan
 
     def _create_anycast_gateway(self, source_interface, mac):
         """Install a local FDB entry on the parent bridge for the anycast MAC"""
 
         if source_interface and mac:
-            bridge = self._get_bridge_by_source(source_interface)
+            bridge, vlan = self._get_bridge_by_source(source_interface)
             if bridge:
-                bridge.add_local_fdb_entry(mac)
+                bridge.replace_local_fdb_entry(mac, vlan)
 
     def _delete_anycast_gateway(self, source_interface, mac):
         """Remove the local FDB entry from the parent bridge for the anycast MAC"""
 
         if source_interface and mac:
-            bridge = self._get_bridge_by_source(source_interface)
+            bridge, vlan = self._get_bridge_by_source(source_interface)
             if bridge:
                 try:
-                    bridge.del_local_fdb_entry(mac)
+                    bridge.del_local_fdb_entry(mac, vlan)
                 except OSError:
                     pass  # Bridge may already be gone, that is fine
 

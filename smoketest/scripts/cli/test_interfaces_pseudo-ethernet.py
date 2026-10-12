@@ -80,20 +80,65 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
 
                 # Verify FDB entry exists with flag
                 fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
-                self.assertIn(f'{mac_address} master {br} permanent', fdb)
-                self.assertIn(f'{mac_address} self permanent', fdb)
+                self.assertIn(f'{mac_address} vlan {vlan} master {br} permanent', fdb)
 
                 # Then remove just the anycast-gateway flag
                 self.cli_delete(self._base_path + [peth, 'anycast-gateway'])
                 self.cli_commit()
 
                 fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
-                self.assertNotIn(f'{mac_address} master {br} permanent', fdb)
+                self.assertNotIn(f'{mac_address} vlan {vlan} master {br} permanent', fdb)
 
                 # Clean up temp bridge and peth
                 self.cli_delete(self._base_path + [peth])
                 self.cli_delete(base_bridge_path)
                 self.cli_commit()
+
+    def test_anycast_gateway_shared_mac(self):
+        # EVPN anycast gateway: same MAC on several VLANs of one bridge
+        if not self._interfaces:
+            self.skipTest('No Ethernet interface available')
+
+        br = 'br0'
+        eth = self._interfaces[0][1:]
+        mac_address = '00:aa:aa:aa:aa:aa'
+        vlans = ['200', '201', '202']
+        base_bridge_path = ['interfaces', 'bridge', br]
+
+        self.cli_set(base_bridge_path + ['enable-vlan'])
+        self.cli_set(base_bridge_path + ['member', 'interface', eth, 'allowed-vlan', '200-202'])
+        for vlan in vlans:
+            self.cli_set(base_bridge_path + ['vif', vlan])
+            peth = f'peth{vlan}'
+            self.cli_set(self._base_path + [peth, 'source-interface', f'{br}.{vlan}'])
+            self.cli_set(self._base_path + [peth, 'mac', mac_address])
+            self.cli_set(self._base_path + [peth, 'anycast-gateway'])
+        self.cli_commit()
+
+        fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
+        for vlan in vlans:
+            self.assertIn(f'{mac_address} vlan {vlan} master {br} permanent', fdb)
+
+        # A second anycast-gateway with the same MAC on the same VLAN is invalid
+        self.cli_set(self._base_path + ['peth999', 'source-interface', f'{br}.{vlans[0]}'])
+        self.cli_set(self._base_path + ['peth999', 'mac', mac_address])
+        self.cli_set(self._base_path + ['peth999', 'anycast-gateway'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + ['peth999'])
+
+        # Removing one gateway must leave the other VLANs untouched
+        self.cli_delete(self._base_path + [f'peth{vlans[0]}'])
+        self.cli_commit()
+
+        fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
+        self.assertNotIn(f'{mac_address} vlan {vlans[0]} master {br} permanent', fdb)
+        for vlan in vlans[1:]:
+            self.assertIn(f'{mac_address} vlan {vlan} master {br} permanent', fdb)
+
+        self.cli_delete(self._base_path)
+        self.cli_delete(base_bridge_path)
+        self.cli_commit()
 
 
 if __name__ == '__main__':
