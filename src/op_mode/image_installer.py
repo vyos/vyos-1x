@@ -384,7 +384,7 @@ def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
 def read_ids(path: str) -> dict[str, int]:
     """Return {name: id} from a passwd or group file"""
     ids = {}
-    for line in Path(path).read_text().splitlines():
+    for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
         fields = line.split(':')
         if len(fields) > 2 and fields[2].isdigit():
             ids.setdefault(fields[0], int(fields[2]))
