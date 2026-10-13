@@ -1,3 +1,3 @@
 <!-- include start from include/version/policy-version.xml.i -->
-<syntaxVersion component='policy' version='9'></syntaxVersion>
+<syntaxVersion component='policy' version='10'></syntaxVersion>
 <!-- include end -->

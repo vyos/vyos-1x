@@ -1,0 +1,162 @@
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T9346: VyOS 1.3 allowed any character (e.g. '.', '+', ',') in the names of
+# "policy prefix-list" and "policy prefix-list6". Since VyOS 1.4 the
+# names are restricted to "[-_a-zA-Z0-9]+", so a 1.3 configuration using
+# such names can not be committed after an upgrade.
+#
+# Every character outside the regex is replaced by '_'. If the result
+# clashes with a name that already exists (or was allocated earlier in this
+# run), a numeric suffix is added: '_1', '_2', ... Names are processed in
+# sorted order, so the result is deterministic. IPv4 (prefix-list) and IPv6
+# (prefix-list6) names are separate namespaces and are renamed independently.
+#
+# From
+#   set policy prefix-list 1.2.3.4-EXPORT rule 10 ...
+#   set protocols bgp 65001 neighbor 192.0.2.1 address-family
+#       ipv4-unicast prefix-list export '1.2.3.4-EXPORT'
+# To
+#   set policy prefix-list 1_2_3_4-EXPORT rule 10 ...
+#   set protocols bgp 65001 neighbor 192.0.2.1 address-family
+#       ipv4-unicast prefix-list export '1_2_3_4-EXPORT'
+
+import re
+
+from vyos.configtree import ConfigTree
+
+IPV4 = 'prefix-list'
+IPV6 = 'prefix-list6'
+
+_invalid_chars = re.compile(r'[^-_a-zA-Z0-9]')
+
+# VyOS 1.3 leaf nodes holding the name of a 'prefix-list'.
+# '*' matches every tagNode value at that position.
+_references = [
+    (IPV4, 'policy route-map * rule * match ip address prefix-list'),
+    (IPV4, 'policy route-map * rule * match ip nexthop prefix-list'),
+    (IPV4, 'policy route-map * rule * match ip route-source prefix-list'),
+    (IPV6, 'policy route-map * rule * match ipv6 address prefix-list'),
+    (IPV4, 'protocols rip distribute-list prefix-list *'),
+    (IPV4, 'protocols rip distribute-list interface * prefix-list *'),
+    (IPV6, 'protocols ripng distribute-list prefix-list *'),
+    (IPV6, 'protocols ripng distribute-list interface * prefix-list *'),
+]
+
+# "protocols bgp <ASN>" - only valid while BGP is still a tagNode (VyOS 1.3)
+_bgp_references = [
+    (IPV4, 'protocols bgp * neighbor * address-family ipv4-unicast prefix-list *'),
+    (IPV4, 'protocols bgp * peer-group * address-family ipv4-unicast prefix-list *'),
+    (IPV6, 'protocols bgp * neighbor * address-family ipv6-unicast prefix-list *'),
+    (IPV6, 'protocols bgp * peer-group * address-family ipv6-unicast prefix-list *'),
+]
+
+
+def _load_references(references: list):
+    return [(family, pattern.split()) for family, pattern in references]
+
+
+def _is_valid(name: str) -> bool:
+    return _invalid_chars.search(name) is None
+
+
+def _expand(config: ConfigTree, pattern: list) -> list:
+    """Return all existing config paths matching pattern ('*' = any child)"""
+
+    paths = [[]]
+    for element in pattern:
+        next_paths = []
+        for path in paths:
+            if element == '*':
+                # Retrieve all child nodes of the current path
+                for child in config.list_nodes(path, path_must_exist=False):
+                    next_paths.append(path + [child])
+            elif config.exists(path + [element]):
+                next_paths.append(path + [element])
+
+        paths = next_paths
+        if not paths:
+            break
+
+    return paths
+
+
+def _build_rename_map(defined: list, referenced: set) -> dict:
+    """
+    Compute {old_name: new_name} for all invalid names of one family.
+
+    All valid names - defined or referenced - are reserved, so an invalid
+    name is never mapped onto another existing list.
+    """
+
+    used = set(filter(_is_valid, defined))
+    used = used.union(set(filter(_is_valid, referenced)))
+
+    # References to a list that does not exist are renamed as well, to a
+    # unique name: they stay dangling instead of binding to another list.
+    invalid_def = list(filter(lambda n: not _is_valid(n), defined))
+    invalid_ref = list(
+        filter(lambda n: not _is_valid(n) and n not in defined, referenced)
+    )
+    invalid = sorted(invalid_def + invalid_ref)
+
+    result = {}
+    for old_name in invalid:
+        base_name = _invalid_chars.sub('_', old_name)
+        new_name = base_name
+
+        suffix = 1
+        while new_name in used:
+            new_name = f'{base_name}_{suffix}'
+            suffix += 1
+
+        result[old_name] = new_name
+        used.add(new_name)
+
+    return result
+
+
+def migrate(config: ConfigTree) -> None:
+    patterns = _load_references(_references)
+
+    if config.exists(['protocols', 'bgp']) and config.is_tag(['protocols', 'bgp']):
+        patterns += _load_references(_bgp_references)
+
+    refs = []
+    for family, pattern in patterns:
+        for path in _expand(config, pattern):
+            refs.append((family, path))
+
+    rename_maps = {}
+    for family in (IPV4, IPV6):
+        defined = config.list_nodes(['policy', family], path_must_exist=False)
+        referenced = {config.return_value(path) for fam, path in refs if fam == family}
+        rename_maps[family] = _build_rename_map(defined, referenced)
+
+    if not any(rename_maps.values()):
+        # Nothing to do - also the case for every config created on 1.4+
+        return
+
+    # Rename the prefix-list definitions
+    for family in (IPV4, IPV6):
+        for old_name, new_name in rename_maps[family].items():
+            if config.exists(['policy', family, old_name]):
+                config.rename(['policy', family, old_name], new_name)
+
+    # Rewrite references
+    for family, path in refs:
+        old_name = config.return_value(path)
+        new_name = rename_maps[family].get(old_name)
+        if new_name:
+            config.set(path, value=new_name)
