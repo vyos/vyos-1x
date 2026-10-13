@@ -792,5 +792,29 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(vrf_base)
 
+    def test_ospf_23_vrf_capability_opaque(self):
+        # FRR refuses opaque LSAs outside the default VRF (T9441's migration
+        # drops a saved "capability opaque" there for the same reason); a new
+        # "set" must be rejected before FRR is reloaded, not left to FRR's
+        # own refusal
+        vrf = 'blue'
+        vrf_base = ['vrf', 'name', vrf]
+        vrf_ospf = vrf_base + ['protocols', 'ospf']
+        self.cli_set(vrf_base + ['table', '1000'])
+        self.cli_set(vrf_ospf + ['parameters', 'router-id', '1.1.1.1'])
+        self.cli_set(vrf_ospf + ['capability', 'opaque'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(vrf_ospf + ['capability'])
+        self.cli_commit()
+
+        vrf_header = f'router ospf vrf {vrf}'
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(' ospf router-id 1.1.1.1', frrconfig)
+        self.assertNotIn('capability opaque', frrconfig)
+
+        self.cli_delete(vrf_base)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
