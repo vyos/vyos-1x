@@ -1246,7 +1246,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         out = vpp.api.nat44_show_running_config().forwarding_enabled
         self.assertTrue(out)
 
-    def test_15_vpp_sflow(self):
+    def test_15_1_vpp_sflow(self):
         base_sflow = ['system', 'sflow']
         sampling_rate = '1500'
         polling_interval = '55'
@@ -1313,6 +1313,35 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Check interfaces are deleted from VPP sFlow
         _, out = rc_cmd('sudo vppctl show sflow')
         self.assertIn('interfaces enabled: 0', out)
+
+    def test_15_2_vpp_sflow_bonding_member(self):
+        # T9312: enabling sFlow on a bonding member (a physical port) is
+        # allowed, but on the bond interface itself it is rejected.
+        bond_path = interfaces_path + ['bonding']
+        interface_bond = 'vppbond23'
+        base_sflow = ['system', 'sflow']
+
+        self.cli_set(base_sflow + ['server', '127.0.0.1'])
+        self.cli_set(base_sflow + ['vpp'])
+
+        # enable sFlow on a bonding member - it must be accepted
+        self.cli_set(bond_path + [interface_bond, 'member', 'interface', interface])
+        self.cli_set(bond_path + [interface_bond, 'mode', '802.3ad'])
+        self.cli_set(base_path + ['sflow', 'interface', interface])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show sflow')
+        self.assertIn(f'sflow enable {interface}', out)
+        self.assertIn('interfaces enabled: 1', out)
+
+        # enabling sFlow on the bond interface itself must be rejected
+        self.cli_set(base_path + ['sflow', 'interface', interface_bond])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # cleanup system sFlow
+        self.cli_delete(base_sflow)
 
     def test_16_resource_limits(self):
         max_map_count = '100000'

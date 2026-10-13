@@ -54,7 +54,6 @@ _VPP_FEATURE_INTERFACE_REFS = [
     ('acl.ip.interface', None, 'VPP IP ACL'),
     ('acl.mac.interface', None, 'VPP MAC ACL'),
     ('ipfix.interface', None, 'IPFIX monitoring'),
-    ('sflow.interface', None, 'VPP sFlow'),
 ]
 # VPP member configuration paths that reference interfaces
 _VPP_MEMBER_INTERFACE_REFS = [
@@ -62,8 +61,18 @@ _VPP_MEMBER_INTERFACE_REFS = [
     ('interfaces_vpp.bridge', 'member.interface', 'VPP bridge member'),
     ('interfaces_vpp.xconnect', 'member.interface', 'VPP xconnect member'),
 ]
+# VPP features that may share an interface with a forwarding role (e.g. a
+# bonding member). The interface is still checked on removal, but excluded
+# from the member and feature mutual-exclusion checks below.
+_VPP_SHARED_INTERFACE_REFS = [
+    ('sflow.interface', None, 'VPP sFlow'),
+]
 
-_VPP_INTERFACE_REFS = _VPP_FEATURE_INTERFACE_REFS + _VPP_MEMBER_INTERFACE_REFS
+_VPP_INTERFACE_REFS = (
+    _VPP_FEATURE_INTERFACE_REFS
+    + _VPP_MEMBER_INTERFACE_REFS
+    + _VPP_SHARED_INTERFACE_REFS
+)
 
 # Line width used by ConfigError for message formatting
 LINE_WIDTH = 72
