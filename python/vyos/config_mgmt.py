@@ -221,19 +221,24 @@ class ConfigMgmt:
 
         if self.reboot_unconfirmed:
             prompt_str = f"""
-commit-confirm will automatically reboot in {minutes} minutes unless changes
-are confirmed.
+commit-confirm will automatically reboot {minutes} minutes after commit
+completes, unless changes are confirmed.
 Proceed ?"""
         else:
             prompt_str = f"""
-commit-confirm will automatically reload previous config in {minutes} minutes
-unless changes are confirmed.
+commit-confirm will automatically reload previous config {minutes} minutes
+after commit completes, unless changes are confirmed.
 Proceed ?"""
 
         prompt_str = W + prompt_str
         if not no_prompt and not ask_yes_no(prompt_str, default=True):
             msg = 'commit-confirm canceled'
             return msg, 1
+
+        return '', 0
+
+    def commit_confirm_start_timer(self):
+        minutes = os.getenv('COMMIT_CONFIRM_TIME', str(DEFAULT_COMMIT_CONFIRM_MINUTES))
 
         if self.reboot_unconfirmed:
             action = 'sg vyattacfg "/usr/bin/config-mgmt revert"'
@@ -243,7 +248,8 @@ Proceed ?"""
         cmd = f'sudo systemd-run --quiet --on-active={minutes}m --unit={timer_name} {action}'
         rc, out = rc_cmd(cmd)
         if rc != 0:
-            raise ConfigMgmtError(out)
+            msg = f'commit-confirm timer error: {out}'
+            return msg
 
         # start notify
         if self.reboot_unconfirmed:
@@ -267,7 +273,7 @@ Proceed ?"""
         else:
             msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reload'
 
-        return msg, 0
+        return msg
 
     def confirm(self) -> Tuple[str, int]:
         """Do not reboot/reload to saved/completed config following 'commit-confirm'.
@@ -496,8 +502,11 @@ Proceed ?"""
         commit_revision is called in post-commit-hooks, if
         ['commit-archive', 'commit-revisions'] is configured.
         """
+
         if os.getenv('IN_COMMIT_CONFIRM', ''):
             self._new_log_entry(tmp_file=tmp_log_entry)
+            msg = self.commit_confirm_start_timer()
+            print(msg)
             return
 
         if self._archive_active_config():
