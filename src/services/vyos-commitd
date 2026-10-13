@@ -44,6 +44,7 @@ from vyos.configsource import ConfigSourceCache
 from vyos.configsource import ConfigSourceError
 from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
+from vyos.configdep import clear_dependents_initial
 from vyos.frrender import FRRender
 from vyos.frrender import frr_render_lock
 from vyos.frrender import get_frrender_dict
@@ -334,6 +335,7 @@ def process_call_data(call: Call, config: Config, last: bool = False) -> None:
         return
 
     config.dependency_list.clear()
+    clear_dependents_initial()
 
     tag_value = call.tag_value if call.tag_value is not None else ''
     os.environ['VYOS_TAGNODE_VALUE'] = tag_value
