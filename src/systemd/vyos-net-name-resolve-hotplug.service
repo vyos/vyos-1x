@@ -8,6 +8,6 @@ ConditionPathExists=/tmp/vyos-config-status
 
 [Service]
 Type=oneshot
-ExecStart=/usr/libexec/vyos/system/vyos-net-name-resolve.py
+ExecStart=/usr/libexec/vyos/system/vyos-net-name-resolve.py --hotplug
 TimeoutStartSec=90
 StandardOutput=journal

@@ -18,10 +18,12 @@
 # The naming decision and hardware discovery both live in
 # vyos.ifconfig.ifname_store and are covered by test_ifname_store.py.
 
+import json
 import os
 import shutil
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from helper import prepare_module
@@ -200,6 +202,33 @@ class TestRefuseRenamesInUse(unittest.TestCase):
         self.assertEqual(refused, {'eth1': 'eth23'})
 
 
+class TestStatusAdopted(unittest.TestCase):
+    """A Hyper-V NIC re-created with a new MAC takes the vacant name. That is
+    neither a card found in its recorded slot nor anything the slot says, so
+    it is reported under its own key - vyos-router warns about it from there.
+    """
+
+    def test_an_adoption_is_reported_apart_from_slot_matches(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        status = os.path.join(tmp, 'status.json')
+        store = {
+            'version': 1,
+            'hardware': {},
+            'interfaces': {'eth3': 'ID_NET_NAME_MAC=enx000d3a47aa01'},
+        }
+        report = {'adopted': {'eth3': '00:0d:3a:47:aa:01'}}
+        devices = [device('eth3', '00:0d:3a:47:aa:01')]
+        devices[0]['properties'] = {'ID_NET_NAME_MAC': 'enx000d3a47aa01'}
+        with mock.patch.object(resolver, 'status_file', Path(status)):
+            resolver.write_status(store, devices, {}, report, True)
+        with open(status) as f:
+            data = json.load(f)
+        self.assertEqual(data['adopted'], {'eth3': '00:0d:3a:47:aa:01'})
+        self.assertEqual(data['matched_by_path'], {})
+        self.assertIn('eth3', data['matched'])
+
+
 class TestMainInContainer(unittest.TestCase):
     """A container owns no NIC: its interfaces are runtime-created veth pairs
     with no backing bus device in sysfs and a host-assigned MAC that changes
@@ -228,6 +257,134 @@ class TestMainInContainer(unittest.TestCase):
         save.assert_not_called()
         run.assert_not_called()
         self.assertFalse(resolver.status_file.exists())
+
+
+class TestHotplugPass(unittest.TestCase):
+    """A pass for hardware added to a running system hands no vacant name
+    over: the configuration under it would not be applied until the next boot.
+    """
+
+    def _unit(self, name):
+        with open(os.path.join(_here, '../systemd', name)) as f:
+            return f.read()
+
+    def test_only_the_hotplug_unit_says_so(self):
+        self.assertIn('vyos-net-name-resolve.py --hotplug\n',
+                      self._unit('vyos-net-name-resolve-hotplug.service'))
+        exec_start = [line for line in
+                      self._unit('vyos-net-name-resolve.service').splitlines()
+                      if line.startswith('ExecStart=')]
+        self.assertEqual(len(exec_start), 1)
+        self.assertNotIn('--hotplug', exec_start[0])
+
+    def _main(self, hotplug):
+        status_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, status_dir, ignore_errors=True)
+        store = {'interfaces': {}, 'hardware': {}}
+        with mock.patch.object(resolver, 'is_running_as_container',
+                               return_value=False), \
+             mock.patch.object(resolver, 'status_file',
+                               resolver.Path(status_dir) / 'status.json'), \
+             mock.patch.object(resolver, 'load_store', return_value=store), \
+             mock.patch.object(resolver, 'wait_for_hardware',
+                               return_value=([], set())), \
+             mock.patch.object(resolver, 'wait_for_settle', return_value=[]), \
+             mock.patch.object(resolver, 'resolve',
+                               return_value=({}, store, {})) as resolve, \
+             mock.patch.object(resolver, 'save_store', return_value=False):
+            resolver.main(hotplug=hotplug)
+        return resolve.call_args
+
+    def test_the_flag_is_read_from_the_command_line(self):
+        self.assertTrue(resolver.hotplug_requested(['--hotplug']))
+        self.assertFalse(resolver.hotplug_requested([]))
+
+    def test_a_hotplug_pass_keeps_the_boot_adoption_on_record(self):
+        # the boot pass gave eth2 to a new NIC; a later VF re-add starts a
+        # hotplug pass, which must neither forget nor repeat that
+        status_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, status_dir, ignore_errors=True)
+        status = resolver.Path(status_dir) / 'status.json'
+        status.write_text(json.dumps({'adopted': {'eth2': '60:45:bd:00:00:01',
+                                                  'eth3': '60:45:bd:00:00:02'}}))
+        store = {'interfaces': {'eth2': 'ID_NET_NAME_MAC=enx6045bd000001',
+                                'eth3': 'ID_NET_NAME_MAC=enx6045bd000002'},
+                 'hardware': {'eth2': '60:45:bd:00:00:01',
+                              'eth3': '60:45:bd:00:00:09'}}
+        with mock.patch.object(resolver, 'is_running_as_container',
+                               return_value=False), \
+             mock.patch.object(resolver, 'status_file', status), \
+             mock.patch.object(resolver, 'load_store', return_value=store), \
+             mock.patch.object(resolver, 'wait_for_hardware',
+                               return_value=([], set())), \
+             mock.patch.object(resolver, 'wait_for_settle', return_value=[]), \
+             mock.patch.object(resolver, 'resolve',
+                               return_value=({}, store, {})), \
+             mock.patch.object(resolver, 'save_store', return_value=False), \
+             mock.patch.object(resolver.logger, 'warning') as warning:
+            resolver.main(hotplug=True)
+        # eth3's NIC changed since: that record no longer holds
+        self.assertEqual(json.loads(status.read_text())['adopted'],
+                         {'eth2': '60:45:bd:00:00:01'})
+        self.assertFalse(any('had no NIC this boot' in str(c)
+                             for c in warning.call_args_list))
+
+    def test_the_boot_pass_reports_only_its_own_adoptions(self):
+        # a status left from an earlier pass is not carried by a boot pass
+        status_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, status_dir, ignore_errors=True)
+        status = resolver.Path(status_dir) / 'status.json'
+        status.write_text(json.dumps({'adopted': {'eth2': '60:45:bd:00:00:01'}}))
+        store = {'interfaces': {'eth2': 'ID_NET_NAME_MAC=enx6045bd000001'},
+                 'hardware': {'eth2': '60:45:bd:00:00:01'}, 'hyperv': ['eth2']}
+        with mock.patch.object(resolver, 'is_running_as_container',
+                               return_value=False), \
+             mock.patch.object(resolver, 'status_file', status), \
+             mock.patch.object(resolver, 'load_store', return_value=store), \
+             mock.patch.object(resolver, 'wait_for_hardware',
+                               return_value=([], set())), \
+             mock.patch.object(resolver, 'wait_for_settle', return_value=[]), \
+             mock.patch.object(resolver, 'resolve',
+                               return_value=({}, store, {})), \
+             mock.patch.object(resolver, 'save_store', return_value=False):
+            resolver.main(hotplug=False)
+        self.assertEqual(json.loads(status.read_text())['adopted'], {})
+
+    def _unrecorded_map_logs(self, present):
+        store = {'interfaces': {'eth0': 'ID_NET_NAME_MAC=enx000d3a000001'},
+                 'hardware': {'eth0': '00:0d:3a:00:00:01'}}
+        devices = [{'properties': {'ID_NET_NAME_MAC': 'enx000d3a000001'},
+                    'mac': '00:0d:3a:00:00:01', 'name': 'eth0'}] if present else []
+        status_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, status_dir, ignore_errors=True)
+        with mock.patch.object(resolver, 'is_running_as_container',
+                               return_value=False), \
+             mock.patch.object(resolver, 'status_file',
+                               resolver.Path(status_dir) / 'status.json'), \
+             mock.patch.object(resolver, 'load_store', return_value=store), \
+             mock.patch.object(resolver, 'wait_for_hardware',
+                               return_value=(devices, set())), \
+             mock.patch.object(resolver, 'wait_for_settle',
+                               return_value=devices), \
+             mock.patch.object(resolver, 'resolve',
+                               return_value=({}, store, {})), \
+             mock.patch.object(resolver, 'save_store', return_value=False), \
+             mock.patch.object(resolver.logger, 'info') as info:
+            resolver.main(hotplug=False)
+        return any('does not say which interfaces' in str(c)
+                   for c in info.call_args_list)
+
+    def test_an_unrecorded_map_is_mentioned_only_when_a_name_is_vacant(self):
+        # a fresh Azure deployment: cloud-init wrote the map, every NIC is
+        # there - nothing is held back, so nothing is said (5479.0.9 G1)
+        self.assertFalse(self._unrecorded_map_logs(present=True))
+        self.assertTrue(self._unrecorded_map_logs(present=False))
+
+    def test_the_boot_pass_may_adopt(self):
+        self.assertTrue(self._main(False).kwargs['adopt'])
+
+    def test_the_hotplug_pass_does_not(self):
+        self.assertFalse(self._main(True).kwargs['adopt'])
 
 
 class TestBootOrdering(unittest.TestCase):

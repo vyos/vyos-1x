@@ -199,7 +199,9 @@ def keyed(devices):
 class TestHyperV(unittest.TestCase):
     """Azure, four NICs, measured on a fresh deployment of this series: every
     Hyper-V NIC shares one ID_PATH and has no slot, so its MAC is its key.
-    The order Azure lists the NICs in is cloud-init's to record.
+    The order Azure lists the NICs in is cloud-init's to record; what is left
+    here is a NIC deleted and created again on the same VM, where cloud-init
+    does not run again.
     """
 
     AZURE = [
@@ -231,6 +233,162 @@ class TestHyperV(unittest.TestCase):
             ),
         )
 
+    def test_a_recreated_nic_takes_the_name_of_the_one_it_replaced(self):
+        # LAN3's NIC deleted and created again: new MAC. It came up as eth4,
+        # eth3 stayed reserved and the boot commit failed on it every boot.
+        store = self.stored()
+        devices = self.nics()
+        devices[3] = keyed([hv('eth3', '00:0d:3a:47:aa:01')] + devices[:3])[0]
+        plan, store, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {'eth3': '00:0d:3a:47:aa:01'})
+        self.assertEqual(report['bootstrapped'], {})
+        self.assertEqual(plan, {})
+        self.assertEqual(store['interfaces']['eth3'], 'ID_NET_NAME_MAC=enx000d3a47aa01')
+
+    def test_two_recreated_nics_are_not_paired_by_guess(self):
+        # nothing here says which new NIC replaced which, and pairing them by
+        # the order they came up in can swap two subnets' configuration
+        store = self.stored()
+        devices = self.nics()[:2] + keyed(
+            [hv('eth3', '00:0d:3a:99:00:11'), hv('eth2', '00:0d:3a:99:00:33')]
+        )
+        _, store, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(set(report['bootstrapped']), {'eth4', 'eth5'})
+        self.assertIn('eth2', store['interfaces'])
+        self.assertIn('eth3', store['interfaces'])
+
+    def test_two_vacancies_and_one_new_nic_are_not_paired(self):
+        # which of two gone NICs the one new NIC replaced is not known
+        store = self.stored()
+        devices = self.nics()[:2] + keyed(
+            [hv('eth3', '00:0d:3a:99:00:11')] + self.nics()[:2])[:1]
+        _, store, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth4': '00:0d:3a:99:00:11'})
+        self.assertEqual(store.get('absent'), ['eth2', 'eth3'])
+
+    def test_a_new_nic_with_no_vacancy_takes_a_new_name(self):
+        store = self.stored()
+        devices = self.nics() + keyed([hv('eth4', '00:0d:3a:48:00:09')])
+        _, _, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth4': '00:0d:3a:48:00:09'})
+
+    def test_one_vacancy_and_two_new_nics_are_not_paired(self):
+        store = self.stored()
+        devices = self.nics()[:3] + keyed(
+            [hv('eth3', '00:0d:3a:48:00:01'), hv('eth4', '00:0d:3a:48:00:02')]
+        )
+        _, _, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+
+    def test_a_disk_on_all_new_nics_is_not_handed_over_here(self):
+        # every recorded NIC gone at once: the platform's order is cloud-init's
+        # to supply (it runs again on a new instance); guessing it here could
+        # put the WAN's configuration on a LAN
+        store = self.stored()
+        new = keyed([hv(f'eth{i}', f'00:0d:3a:48:00:0{i}') for i in range(4)])
+        _, _, report = resolve(new, store)
+        self.assertEqual(report.get('adopted', {}), {})
+
+    def test_a_slot_keyed_name_is_never_adopted(self):
+        # a PCI card has a slot to come back to; its name stays reserved
+        devices = [dev('eth0', 'pci-0000:00:03.0', 'aa:00')]
+        _, store, _ = resolve(devices, empty_store())
+        other = keyed([hv('eth1', '00:0d:3a:48:00:09')])
+        _, store, report = resolve(other, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth1': '00:0d:3a:48:00:09'})
+
+    def test_a_nic_added_after_one_was_removed_is_not_its_replacement(self):
+        # P8, measured on Azure: LAN3's NIC deleted for good (one boot), a NIC
+        # on another subnet added later (the next boot). Taking the vacant
+        # name put LAN3's configuration on the other subnet.
+        store = self.stored()
+        devices = self.nics()[:3]
+        _, store, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        later = devices + keyed([hv('eth4', '38:33:c5:cc:a3:3e')])
+        _, store, report = resolve(later, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth4': '38:33:c5:cc:a3:3e'})
+        self.assertEqual(store.get('absent'), ['eth3'])
+
+    def test_a_nic_replaced_on_a_running_system_is_not_adopted(self):
+        # measured on Hyper-V: a NIC hot-added after another was hot-removed
+        # took its name at once, while the configuration under that name
+        # stayed unapplied until the next boot
+        store = self.stored()
+        devices = self.nics()
+        devices[3] = keyed([hv('eth3', '00:0d:3a:47:aa:01')] + devices[:3])[0]
+        _, store, report = resolve(devices, store, adopt=False)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth4': '00:0d:3a:47:aa:01'})
+        self.assertEqual(store.get('absent'), ['eth3'])
+        # nor at the next boot: the name was already missing at the last pass
+        _, store, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['matched'].get('eth4'), '00:0d:3a:47:aa:01')
+
+    def test_a_name_whose_nic_was_not_hyperv_is_not_handed_over(self):
+        # a MAC-keyed name can belong to other hardware sharing the VMBus
+        # path; only a Hyper-V NIC's name goes to a Hyper-V replacement
+        other = hv('eth1', '00:0d:3a:47:3b:29')
+        other['properties']['ID_NET_DRIVER'] = 'mlx5_core'
+        devices = keyed([hv('eth0', '00:0d:3a:47:38:1d'), other])
+        _, store, _ = resolve(devices, empty_store())
+        self.assertEqual(store.get('hyperv'), ['eth0'])
+        later = keyed([hv('eth0', '00:0d:3a:47:38:1d'),
+                       hv('eth1', '00:0d:3a:48:00:09')])
+        _, _, report = resolve(later, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth2': '00:0d:3a:48:00:09'})
+
+    def test_only_a_hyperv_nic_takes_a_vacant_name(self):
+        store = self.stored()
+        new = hv('eth3', '00:0d:3a:48:00:09')
+        new['properties']['ID_NET_DRIVER'] = 'virtio_net'
+        devices = self.nics()[:3] + keyed([new] + self.nics()[:3])[:1]
+        _, _, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth4': '00:0d:3a:48:00:09'})
+
+    def test_a_new_nic_takes_no_name_of_another_namespace(self):
+        store = self.stored()
+        new = keyed([hv('wlan0', '00:0d:3a:48:00:09')] + self.nics()[:3])[0]
+        new['wireless'] = True
+        _, _, report = resolve(self.nics()[:3] + [new], store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'wlan0': '00:0d:3a:48:00:09'})
+
+    def test_a_store_that_does_not_say_which_nics_were_hyperv_hands_nothing_over(self):
+        # written by code that did not record it: whether the vacant name
+        # was a Hyper-V NIC's, or how long it has been vacant, is unknown
+        store = self.stored()
+        store.pop('hyperv')
+        devices = self.nics()
+        devices[3] = keyed([hv('eth3', '00:0d:3a:47:aa:01')] + devices[:3])[0]
+        _, store, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {})
+        self.assertEqual(report['bootstrapped'], {'eth4': '00:0d:3a:47:aa:01'})
+        self.assertEqual(store.get('absent'), ['eth3'])
+
+    def test_the_hyperv_record_survives_a_load_and_follows_the_nics(self):
+        store = self.stored()
+        self.assertEqual(store['hyperv'], ['eth0', 'eth1', 'eth2', 'eth3'])
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / 'map.json'
+            with mock.patch('vyos.ifconfig.ifname_store.config_dir_is_mounted',
+                            return_value=True), \
+                 mock.patch('vyos.ifconfig.ifname_store.get_cfg_group_id',
+                            return_value=0):
+                save_store(store, path)
+            self.assertEqual(load_store(path)['hyperv'], store['hyperv'])
+        # an absent NIC keeps its record, so its replacement is recognised
+        _, store, _ = resolve(self.nics()[:3], store)
+        self.assertEqual(store['hyperv'], ['eth0', 'eth1', 'eth2', 'eth3'])
+
     def test_a_lone_hyperv_nic_keyed_on_its_path_still_pins_its_driver(self):
         # one NIC has the VMBus path to itself, so it is keyed on it; its VF
         # must not match its file any more than with a MAC key
@@ -241,6 +399,37 @@ class TestHyperV(unittest.TestCase):
             sync_link_files(store, link_dir=Path(d), devices=devices)
             body = (Path(d) / '10-vyos-eth0.link').read_text()
         self.assertIn('Driver=hv_netvsc\n', body)
+
+    def test_a_store_without_the_record_still_adopts(self):
+        # written before names missing at a pass were recorded: nothing was
+        # missing then, as far as it can say, so a one-step replacement holds
+        store = self.stored()
+        store.pop('absent', None)
+        devices = self.nics()
+        devices[3] = keyed([hv('eth3', '00:0d:3a:47:aa:01')] + devices[:3])[0]
+        _, _, report = resolve(devices, store)
+        self.assertEqual(report.get('adopted', {}), {'eth3': '00:0d:3a:47:aa:01'})
+
+    def test_the_record_clears_when_the_nic_is_back(self):
+        store = self.stored()
+        _, store, _ = resolve(self.nics()[:3], store)
+        self.assertEqual(store.get('absent'), ['eth3'])
+        _, store, report = resolve(self.nics(), store)
+        self.assertNotIn('absent', store)
+        self.assertEqual(report['matched']['eth3'], self.AZURE[3][1])
+
+    def test_the_record_survives_a_load(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        path = tmp / 'interface-mapping.json'
+        store = self.stored()
+        _, store, _ = resolve(self.nics()[:3], store)
+        path.write_text(json.dumps(store))
+        self.assertEqual(load_store(path).get('absent'), ['eth3'])
+        # a name the map no longer has is dropped from it
+        store['absent'] = ['eth3', 'eth9']
+        path.write_text(json.dumps(store))
+        self.assertEqual(load_store(path).get('absent'), ['eth3'])
 
     def test_link_file_pins_the_driver_for_a_mac_key(self):
         # the accelerated-networking VF carries its NIC's MAC

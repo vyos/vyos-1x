@@ -26,6 +26,7 @@
 import json
 import logging
 import logging.handlers
+import sys
 import time
 from pathlib import Path
 
@@ -182,16 +183,21 @@ def write_status(store: dict, devices: list, applied: dict, report: dict,
         # in use, so left alone until the next boot
         'rename_refused': refused or {},
         # everything recognised from the store, however it was recognised
-        'matched': {**report.get('matched', {}),
-                    **report.get('reassigned', {}),
-                    **report.get('moved', {}),
-                    **report.get('replaced', {})},
+        'matched': {
+            **report.get('matched', {}),
+            **report.get('reassigned', {}),
+            **report.get('moved', {}),
+            **report.get('replaced', {}),
+            **report.get('adopted', {}),
+        },
         # the name changed hands between cards the store already knows
         'reassigned': report.get('reassigned', {}),
         # the card was found in a different slot - certain, it is the same card
         'moved': report.get('moved', {}),
         # a different card took the slot - the one case that needs verifying
         'matched_by_path': report.get('replaced', {}),
+        # a recorded Hyper-V NIC was gone and its one replacement took its name
+        'adopted': report.get('adopted', {}),
         'new_hardware': report.get('bootstrapped', {}),
         'persisted': persisted,
     }
@@ -201,7 +207,25 @@ def write_status(store: dict, devices: list, applied: dict, report: dict,
         logger.error(f'could not write status file: {e}')
 
 
-def main():
+def boot_adoptions(store: dict) -> dict:
+    """The adoptions the boot pass reported that still hold. A pass for
+    hot-plugged hardware adopts nothing, and must not wipe the record of
+    what this boot did."""
+    try:
+        adopted = json.loads(status_file.read_text()).get('adopted') or {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+    hardware = store.get('hardware', {})
+    return {name: mac for name, mac in adopted.items()
+            if hardware.get(name) == mac}
+
+
+def hotplug_requested(argv: list) -> bool:
+    """--hotplug: started for hardware added to a running system"""
+    return '--hotplug' in argv
+
+
+def main(hotplug: bool = False):
     if is_running_as_container():
         # a container owns no NIC - its veth pairs have no backing bus device
         logger.info('running inside a container - skipping interface naming')
@@ -229,7 +253,16 @@ def main():
                 'reserved.'
             )
 
-    plan, store, report = resolve(devices, store)
+    if not hotplug and 'hyperv' not in store and any(
+            key.startswith('ID_NET_NAME_MAC=') and key in absent
+            for key in store['interfaces'].values()):
+        # a name is vacant, and the map was written by code that did not
+        # record which NICs were Hyper-V ones: the name is not handed over.
+        # Each pass records the Hyper-V NICs it finds, but never a vacant name
+        logger.info('the interface map does not say which interfaces were '
+                    'Hyper-V NICs - no vacant name is given to a new NIC '
+                    'this boot')
+    plan, store, report = resolve(devices, store, adopt=not hotplug)
 
     for name, mac in sorted(report.get('bootstrapped', {}).items()):
         logger.info(f"new hardware {mac} named '{name}'")
@@ -241,6 +274,12 @@ def main():
         logger.warning(
             f"'{name}' was matched to new hardware {mac} by slot - verify it "
             'is the port you expect before relying on its configuration'
+        )
+    for name, mac in sorted(report.get('adopted', {}).items()):
+        logger.warning(
+            f"'{name}' had no NIC this boot and was given to the new Hyper-V "
+            f'NIC {mac}, which took its place - verify it is the port you '
+            'expect before relying on its configuration'
         )
     plan, refused = refuse_renames_in_use(plan)
     for old, target in sorted(refused.items()):
@@ -263,6 +302,9 @@ def main():
             'resolved for this boot but could not be persisted'
         )
 
+    if hotplug:
+        # reported once, by the boot pass; kept on record until the next boot
+        report = {**report, 'adopted': boot_adoptions(store)}
     write_status(store, devices, applied, report, persisted, refused)
 
 
@@ -274,4 +316,4 @@ if __name__ == '__main__':
     logger.addHandler(syslog_handler)
     logger.setLevel(logging.DEBUG)
 
-    main()
+    main(hotplug=hotplug_requested(sys.argv[1:]))
