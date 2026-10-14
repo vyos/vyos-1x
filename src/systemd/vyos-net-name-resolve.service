@@ -4,8 +4,8 @@ Documentation=man:vyos-net-name-resolve.py(8)
 
 # Started by vyos-router once the config directory is mounted - for an
 # encrypted volume that is only after it has been unlocked - so this can not
-# be ordered independently. Started again for hot-plugged hardware, hence no
-# RemainAfterExit, which would make every later start a no-op.
+# be ordered independently. This is the boot pass; hot-plugged hardware is
+# named by vyos-net-name-resolve-hotplug.service, which passes --hotplug.
 DefaultDependencies=no
 
 [Service]

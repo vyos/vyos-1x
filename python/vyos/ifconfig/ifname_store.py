@@ -302,8 +302,25 @@ def load_store(path: Path = None) -> dict:
                 if isinstance(mac, str) and mac and name in interfaces
                 } if isinstance(seen, dict) else {}
 
-    return {'version': STORE_VERSION, 'interfaces': interfaces,
-            'hardware': hardware}
+    store = {'version': STORE_VERSION, 'interfaces': interfaces, 'hardware': hardware}
+
+    # names whose hardware was missing at the last pass - kept only while
+    # there are any, so a store without them reads as it always did
+    absent = data.get('absent')
+    if isinstance(absent, list):
+        absent = sorted({n for n in absent if n in interfaces})
+        if absent:
+            store['absent'] = absent
+
+    # names whose NIC was a Hyper-V one when last seen - the only names a new
+    # Hyper-V NIC may take over. A store without them (written before they
+    # were recorded) has none.
+    hyperv = data.get('hyperv')
+    if isinstance(hyperv, list):
+        hyperv = sorted({n for n in hyperv if n in interfaces})
+        if hyperv:
+            store['hyperv'] = hyperv
+    return store
 
 
 def encrypted_config_volume() -> bool:
@@ -411,12 +428,15 @@ def _next_free(taken: set, prefix: str) -> str:
     return f'{prefix}{index}'
 
 
-def resolve(devices: list, store: dict) -> tuple:
+def resolve(devices: list, store: dict, adopt: bool = True) -> tuple:
     """Name every physical interface present this boot.
 
     Returns (plan, new_store, report); plan is {current: new} for the
     interfaces which have to be renamed. The slot decides the name - nothing
     here looks at the configuration, so there is nothing to guess.
+
+    adopt=False keeps a vacant Hyper-V name from going to a new NIC, for a
+    pass on a running system (see the adoption block below).
     """
     entries = store.get('interfaces', {})
     seen = store.get('hardware', {})
@@ -436,13 +456,23 @@ def resolve(devices: list, store: dict) -> tuple:
         seen = {n: m for n, m in seen.items() if n not in misfiled}
 
     assigned = {}  # final name -> device
-    report = {'matched': {}, 'reassigned': {}, 'moved': {},
-              'replaced': {}, 'bootstrapped': {}}
+    report = {
+        'matched': {},
+        'reassigned': {},
+        'moved': {},
+        'replaced': {},
+        'adopted': {},
+        'bootstrapped': {},
+    }
 
     # A recorded name stays off-limits even while its slot is empty, so new
     # hardware cannot inherit an absent interface's name and configuration.
     reserved = set(entries)
     remaining = list(devices)
+    # what the last pass recorded: names already missing then, and names
+    # whose NIC was a Hyper-V one
+    missing_before = set(store.get('absent', []))
+    hyperv_before = set(store.get('hyperv', []))
 
     def claim(device, name, bucket):
         assigned[name] = device
@@ -500,6 +530,36 @@ def resolve(devices: list, store: dict) -> tuple:
                 claim(device, name, 'replaced')
                 break
 
+    # a Hyper-V NIC is known by its MAC alone, and one deleted and created
+    # again comes back with a new MAC, so nothing on it could match. When one
+    # recorded NIC is gone and one new NIC took its place the pairing is not in
+    # doubt, and the name goes to it. With more of either it is: the order the
+    # NICs come up in here does not say which replaced which, so nothing is
+    # handed over and the names stay reserved.
+    # Only on the pass the NIC first went missing: a replacement is one change
+    # to the VM. A name already missing at the last pass belongs to a NIC that
+    # was removed, and a NIC added later is not its replacement.
+    # Only at boot: on a running system the configuration under the name is
+    # not applied to the NIC that takes it, so the name would point at a port
+    # that is down and unaddressed until the next boot. The new NIC gets a new
+    # name there, and the vacant one is recorded as missing, so the next boot
+    # does not hand it over either.
+    # Only a name whose own NIC was a Hyper-V one: a MAC-keyed name can
+    # belong to other hardware too, and a store that does not say (written
+    # before this was recorded) hands nothing over.
+    vacant = [
+        name
+        for name, key in entries.items()
+        if name not in assigned
+        and name not in missing_before
+        and name in hyperv_before
+        and key.startswith('ID_NET_NAME_MAC=')
+    ]
+    adoptable = [device for device in remaining if is_hyperv_nic(device)]
+    if (adopt and len(vacant) == 1 and len(adoptable) == 1
+            and _name_fits(vacant[0], adoptable[0])):
+        claim(adoptable[0], vacant[0], 'adopted')
+
     # unknown hardware: lowest free name of its type, in hardware order
     for device in sorted(remaining, key=canonical_sort_key):
         name = _next_free(reserved | set(assigned), _prefix_for(device))
@@ -521,8 +581,23 @@ def resolve(devices: list, store: dict) -> tuple:
     plan = {device['name']: name for name, device in assigned.items()
             if device['name'] != name}
 
-    return plan, {'version': STORE_VERSION, 'interfaces': new_interfaces,
-                  'hardware': new_hardware}, report
+    new_store = {
+        'version': STORE_VERSION,
+        'interfaces': new_interfaces,
+        'hardware': new_hardware,
+    }
+    absent = sorted(name for name in new_interfaces if name not in assigned)
+    if absent:
+        new_store['absent'] = absent
+    # what each name's NIC was, kept for an absent one like its address
+    hyperv = sorted(
+        {name for name, device in assigned.items() if is_hyperv_nic(device)}
+        | (hyperv_before & set(absent))
+    )
+    if hyperv:
+        new_store['hyperv'] = hyperv
+
+    return plan, new_store, report
 
 
 LINK_DIR = Path('/etc/systemd/network')
