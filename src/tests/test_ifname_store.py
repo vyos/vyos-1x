@@ -173,6 +173,122 @@ class TestHypervisorAdapterOrder(unittest.TestCase):
         self.assertNotIn('label', hardware_key(properties))
 
 
+def hv(name, mac):
+    """A Hyper-V NIC as udev reports it on Azure: every one shares the ACPI
+    VMBus node as its ID_PATH and has no slot, so its MAC is its key."""
+    return {
+        'name': name,
+        'mac': mac,
+        'wireless': False,
+        'properties': {
+            'ID_PATH': 'acpi-MSFT1000:00',
+            'ID_NET_NAME_MAC': 'enx' + mac.replace(':', ''),
+            'ID_NET_DRIVER': 'hv_netvsc',
+        },
+    }
+
+
+def keyed(devices):
+    """Keys as discover_devices() computes them, shared ID_PATH passed over"""
+    ambiguous = ambiguous_keys([d['properties'] for d in devices])
+    for device in devices:
+        device['key'] = hardware_key(device['properties'], ambiguous)
+    return devices
+
+
+class TestHyperV(unittest.TestCase):
+    """Azure, four NICs, measured on a fresh deployment of this series: every
+    Hyper-V NIC shares one ID_PATH and has no slot, so its MAC is its key.
+    The order Azure lists the NICs in is cloud-init's to record.
+    """
+
+    AZURE = [
+        ('eth0', '00:0d:3a:47:38:1d'),  # WAN, the primary NIC
+        ('eth1', '00:0d:3a:47:3b:29'),
+        ('eth2', '00:0d:3a:47:33:ad'),
+        ('eth3', '00:0d:3a:47:3b:f8'),
+    ]
+
+    def nics(self):
+        return keyed([hv(name, mac) for name, mac in self.AZURE])
+
+    def stored(self):
+        """the map as cloud-init records it on Azure: the names it gave"""
+        store = empty_store()
+        for name, mac in self.AZURE:
+            store['interfaces'][name] = 'ID_NET_NAME_MAC=enx' + mac.replace(':', '')
+            store['hardware'][name] = mac
+        plan, store, report = resolve(self.nics(), store)
+        assert plan == {} and len(report['matched']) == 4
+        return store
+
+    def test_each_nic_is_keyed_on_its_own_mac(self):
+        store = self.stored()
+        self.assertEqual(
+            sorted(store['interfaces'].values()),
+            sorted(
+                'ID_NET_NAME_MAC=enx' + mac.replace(':', '') for _, mac in self.AZURE
+            ),
+        )
+
+    def test_a_lone_hyperv_nic_keyed_on_its_path_still_pins_its_driver(self):
+        # one NIC has the VMBus path to itself, so it is keyed on it; its VF
+        # must not match its file any more than with a MAC key
+        devices = keyed([hv('eth0', '00:0d:3a:47:38:1d')])
+        _, store, _ = resolve(devices, empty_store())
+        self.assertTrue(store['interfaces']['eth0'].startswith('ID_PATH='))
+        with tempfile.TemporaryDirectory() as d:
+            sync_link_files(store, link_dir=Path(d), devices=devices)
+            body = (Path(d) / '10-vyos-eth0.link').read_text()
+        self.assertIn('Driver=hv_netvsc\n', body)
+
+    def test_link_file_pins_the_driver_for_a_mac_key(self):
+        # the accelerated-networking VF carries its NIC's MAC
+        body = render_link('eth0', 'ID_NET_NAME_MAC=enx000d3a47381d', 'hv_netvsc')
+        self.assertIn(
+            'Property=ID_NET_NAME_MAC=enx000d3a47381d\nDriver=hv_netvsc\n', body
+        )
+
+    def test_link_file_without_a_driver_is_unchanged(self):
+        self.assertNotIn('Driver=', render_link('eth0', 'ID_PATH=pci-0000:00:03.0'))
+
+    def link_dir(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp)
+        return tmp
+
+    def test_sync_pins_the_driver_for_hyperv_only(self):
+        devices = self.nics()
+        usb = {
+            'name': 'eth4',
+            'mac': 'aa:00:00:00:00:04',
+            'wireless': False,
+            'properties': {
+                'ID_NET_NAME_MAC': 'enxaa0000000004',
+                'ID_NET_DRIVER': 'r8152',
+            },
+        }
+        devices += keyed([usb])
+        _, store, _ = resolve(devices, empty_store())
+        tmp = self.link_dir()
+        sync_link_files(store, link_dir=tmp, devices=devices)
+        name_of = {key: name for name, key in store['interfaces'].items()}
+        wan = name_of['ID_NET_NAME_MAC=enx000d3a47381d']
+        other = name_of['ID_NET_NAME_MAC=enxaa0000000004']
+        self.assertIn('Driver=hv_netvsc', (tmp / f'10-vyos-{wan}.link').read_text())
+        self.assertNotIn('Driver=', (tmp / f'10-vyos-{other}.link').read_text())
+
+    def test_an_absent_nic_keeps_its_driver_pin(self):
+        # a boot without the NIC used to rewrite its file without the pin, and
+        # on its return its VF matched the file again
+        devices = self.nics()
+        _, store, _ = resolve(devices, empty_store())
+        tmp = self.link_dir()
+        sync_link_files(store, link_dir=tmp, devices=devices)
+        sync_link_files(store, link_dir=tmp, devices=devices[:3])
+        self.assertIn('Driver=hv_netvsc', (tmp / '10-vyos-eth3.link').read_text())
+
+
 class TestReplacedHardware(unittest.TestCase):
     """A slot keeps its name when its card is swapped - which hands that
     interface's addresses to different hardware. resolve() reports the change

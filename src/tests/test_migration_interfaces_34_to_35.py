@@ -102,6 +102,18 @@ class TestMigration34to35(unittest.TestCase):
         self.assertEqual(entries['eth0'], 'ID_PATH=pci-0000:00:04.0')
         self.assertEqual(entries['eth1'], 'ID_PATH=pci-0000:00:05.0')
 
+    def test_the_link_files_are_written_from_the_hardware_present(self):
+        # the files pin a Hyper-V NIC's driver, which only the device says
+        devices = [
+            device('eth0', '00:00:5e:00:53:01', 'pci-0000:00:04.0'),
+            device('eth1', '00:00:5e:00:53:02', 'pci-0000:00:05.0'),
+        ]
+        with self._devices(devices):
+            migration.migrate(self.config)
+        migration.sync_link_files.assert_called_once()
+        self.assertEqual(migration.sync_link_files.call_args.kwargs['devices'],
+                         devices)
+
     def test_names_are_preserved_even_out_of_slot_order(self):
         # a box named by an earlier release in MAC order: eth0 sits in the
         # HIGHER slot. The migration must record what is, not what slot

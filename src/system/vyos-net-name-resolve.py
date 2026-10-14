@@ -254,7 +254,7 @@ def main():
     if persisted:
         # render so udev applies the names on the next boot
         try:
-            sync_link_files(store)
+            sync_link_files(store, devices=devices)
         except OSError as e:
             logger.error(f'could not write .link files: {e}')
     else:
