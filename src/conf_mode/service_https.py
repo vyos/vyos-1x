@@ -19,7 +19,6 @@ import socket
 import sys
 import json
 
-from time import sleep
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -30,6 +29,7 @@ from vyos.configverify import verify_pki_ca_certificate
 from vyos.configverify import verify_pki_dh_parameters
 from vyos.configdiff import get_config_diff
 from vyos.defaults import api_config_state
+from vyos.defaults import api_ready_state
 from vyos.pki import encode_certificate
 from vyos.pki import find_chain
 from vyos.pki import load_certificate
@@ -42,6 +42,7 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.file import write_file
+from vyos.utils.misc import wait_for
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -292,9 +293,13 @@ def apply(https):
         return
 
     if 'api' in https:
+        # A reload is only signalled; the server restarts asynchronously and
+        # nginx answers 502 until it listens again. Wait for it.
+        if os.path.exists(api_ready_state):
+            os.unlink(api_ready_state)
         call(f'systemctl reload-or-restart {http_api_service_name}')
-        # Let uvicorn settle before (possibly) restarting nginx
-        sleep(1)
+        if not wait_for(os.path.exists, api_ready_state, interval=0.1, timeout=30):
+            Warning('HTTP API server did not become ready within 30 seconds')
     elif is_systemd_service_active(http_api_service_name):
         call(f'systemctl stop {http_api_service_name}')
 
