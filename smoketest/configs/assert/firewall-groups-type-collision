@@ -1,0 +1,14 @@
+set firewall group address-group bad_name address '198.51.100.1'
+set firewall group address-group bad_name_ address '192.0.2.1'
+set firewall group port-group bad_name port '80'
+set firewall ipv4 name TEST1 default-action 'drop'
+set firewall ipv4 name TEST1 rule 10 action 'return'
+set firewall ipv4 name TEST1 rule 10 destination group port-group 'bad_name'
+set firewall ipv4 name TEST1 rule 10 protocol 'tcp'
+set firewall ipv4 name TEST1 rule 10 source group address-group 'bad_name_'
+set interfaces ethernet eth0
+set interfaces loopback lo
+set system console device @SERIAL_DEVICE@ speed '@SERIAL_SPEED@'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$QxPS.uk6mfo$9QBSo8u1FkH16gMyAVhus6fU3LOzvLR9Z9.82m3tiHFAxTtIkhaZSWssSgzt4v4dGAL8rhVQxTg0oAG9/q11h/'
+set system login user vyos authentication plaintext-password ''
