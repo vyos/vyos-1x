@@ -195,7 +195,10 @@ unset _vyatta_extglob
         declare -x -r vyos_persistence_dir="/usr/lib/live/mount/persistence/${UNION_NAME}"
     fi
     if test -z "$vyos_rootfs_dir" ; then
-        ROOTFS=$(mount -t squashfs | grep loop0 | cut -d' ' -f3)
+        # the running image's squashfs is mounted twice, under /run/live and
+        # under the legacy /usr/lib/live/mount tree, and both match - take one
+        # or unquoted uses of this variable split into two words
+        ROOTFS=$(mount -t squashfs | grep loop0 | cut -d' ' -f3 | head -n1)
         declare -x -r vyos_rootfs_dir="${ROOTFS}"
     fi
     if test -z "$VRF" ; then
