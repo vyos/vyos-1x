@@ -619,6 +619,72 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
 
             self.assertNotIn('ikey', conf['linkinfo']['info_data'])
 
+    def test_tunnel_gre_key_leading_zero(self):
+        # iproute2 parses the key with strtoul(3) and base 0, so a leading zero
+        # makes it octal - "00" is the very same zero key as "0" and must be
+        # refused for a tunnel which carries no endpoint at all
+        interface = 'tun1281'
+
+        self.cli_set(self._base_path + [interface, 'encapsulation', 'gre'])
+        self.cli_set(self._base_path + [interface, 'source-address', '0.0.0.0'])
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '00'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # "010" is octal 8 and does identify the tunnel
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '010'])
+
+        self.cli_commit()
+
+        conf = get_interface_config(interface)
+        self.assertEqual('0.0.0.8', conf['linkinfo']['info_data']['ikey'])
+
+    def test_tunnel_gre_key_octal_collision(self):
+        # "010" reaches the Kernel as 8, thus it collides with a plain "8" on an
+        # otherwise identical tunnel although the two strings differ
+        for tunnel in ['tun10', 'tun20']:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+        self.cli_set(self._base_path + ['tun10', 'parameters', 'ip', 'key', '010'])
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '8'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # "010" and "10" are 8 and 10 - different keys, so both tunnels fit
+        self.cli_set(self._base_path + ['tun20', 'parameters', 'ip', 'key', '10'])
+
+        self.cli_commit()
+
+        self.assertEqual(
+            '0.0.0.8', get_interface_config('tun10')['linkinfo']['info_data']['ikey']
+        )
+        self.assertEqual(
+            '0.0.0.10', get_interface_config('tun20')['linkinfo']['info_data']['ikey']
+        )
+
+    def test_tunnel_gre_key_invalid_octal(self):
+        # The numeric validator takes "08", but a leading zero makes the key
+        # octal where "8" is no digit - iproute2 refuses the value outright, so
+        # the tunnel could never be created and this must fail on commit
+        interface = 'tun1282'
+
+        self.cli_set(self._base_path + [interface, 'encapsulation', 'gre'])
+        self.cli_set(self._base_path + [interface, 'source-address', self.local_v4])
+        self.cli_set(self._base_path + [interface, 'remote', remote_ip4])
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '08'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '8'])
+
+        self.cli_commit()
+
+        conf = get_interface_config(interface)
+        self.assertEqual('0.0.0.8', conf['linkinfo']['info_data']['ikey'])
+
     def test_tunnel_invalid_source_interface(self):
         encapsulation = 'gre'
         remote = '192.0.2.1'

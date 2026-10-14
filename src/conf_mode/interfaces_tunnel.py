@@ -44,7 +44,24 @@ class TunnelIdentity(NamedTuple):
     local: str | None
     remote: str | None
     source_interface: str | None
-    key: str | None
+    key: int | None
+
+
+def tunnel_key_value(key):
+    """
+    iproute2 hands a GRE key to strtoul(3) with base 0, so a leading zero makes
+    it octal - "010" reaches the Kernel as 8, and "00" as the same zero as "0".
+    The numeric validator accepts those spellings, thus a key must be compared
+    as the value the Kernel stores and not as the string the CLI carries.
+
+    Raises ValueError for a spelling strtoul(3) stops short of, e.g. "08",
+    which iproute2 refuses outright.
+    """
+    if key is None:
+        return None
+    if len(key) > 1 and key.startswith('0'):
+        return int(key, 8)
+    return int(key, 10)
 
 
 def tunnel_identity(conf):
@@ -68,8 +85,8 @@ def tunnel_identity(conf):
     if remote in ['0.0.0.0', '::']:
         remote = None
     source_interface = dict_search('source_interface', conf)
-    key = dict_search('parameters.ip.key', conf)
-    if local is None and remote is None and key == '0':
+    key = tunnel_key_value(dict_search('parameters.ip.key', conf))
+    if local is None and remote is None and key == 0:
         key = None
     return TunnelIdentity(local, remote, source_interface, key)
 
@@ -141,6 +158,19 @@ def verify(tunnel):
 
     verify_tunnel(tunnel)
 
+    # The key is handed to iproute2 verbatim, which parses it with strtoul(3)
+    # and base 0 - a leading zero thus makes it octal, where "8" and "9" carry
+    # no meaning. iproute2 refuses such a value and the tunnel is never created,
+    # so name it here instead of failing when the interface is brought up
+    tmp = dict_search('parameters.ip.key', tunnel)
+    try:
+        tunnel_key_value(tmp)
+    except ValueError:
+        raise ConfigError(
+            f'"parameters ip key {tmp}" is invalid for {tunnel["ifname"]} - a '
+            'leading zero makes the key octal, where "8" and "9" are no digits'
+        )
+
     if tunnel['encapsulation'] in ['erspan', 'ip6erspan']:
         if dict_search('parameters.ip.key', tunnel) == None:
             raise ConfigError('ERSPAN requires ip key parameter!')
@@ -190,15 +220,21 @@ def verify(tunnel):
                 not in gre_encapsulations:
                 continue
 
-            theirs = tunnel_identity(o_tunnel_conf)
+            try:
+                theirs = tunnel_identity(o_tunnel_conf)
+            except ValueError:
+                # iproute2 will not take their key, so the Kernel never holds
+                # that tunnel and it cannot collide with ours
+                continue
             if ours != theirs:
                 continue
 
             # Remember whether a zero key was configured, the error message
-            # differs from the one for a tunnel carrying no key at all.
-            zero_key = '0' in [
-                dict_search('parameters.ip.key', tunnel),
-                dict_search('parameters.ip.key', o_tunnel_conf),
+            # differs from the one for a tunnel carrying no key at all. Both
+            # keys parse, an unparseable one leaves the loop above
+            zero_key = 0 in [
+                tunnel_key_value(dict_search('parameters.ip.key', tunnel)),
+                tunnel_key_value(dict_search('parameters.ip.key', o_tunnel_conf)),
             ]
 
             if ours.key is not None:
