@@ -14,6 +14,7 @@
             <format>vxlanN</format>
             <description>VXLAN interface name</description>
           </valueHelp>
+          <kind>interface</kind>
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6.xml.i>

@@ -17,6 +17,7 @@
             <regex>((eth|lan)[0-9]+|(eno|ens|enp|enx).+)</regex>
           </constraint>
           <constraintErrorMessage>Invalid Ethernet interface name</constraintErrorMessage>
+          <kind>interface</kind>
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>

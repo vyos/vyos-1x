@@ -17,6 +17,7 @@
             <format>wlanN</format>
             <description>Wireless (WiFi/WLAN) interface name</description>
           </valueHelp>
+          <kind>interface</kind>
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>

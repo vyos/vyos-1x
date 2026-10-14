@@ -99,6 +99,9 @@ properties = element properties
     (element constraintSilenceOutput { empty })? &
     completionHelp* &
     
+    (element kind { text })* &
+    dependency? &
+
     # "docs" is used to store documentation for a node in a structured format
     # It is used to generate documentation for the CLI and Web docs
     (element docs {
@@ -196,4 +199,19 @@ completionHelp = element completionHelp
     (element list { text })* &
     (element path { text })* &
     (element script { text })*
+}
+
+dependency = element dependency
+{
+    kindAttr & alertAttr
+}
+
+kindAttr = attribute kind
+{
+    text
+}
+
+alertAttr = attribute alert
+{
+    "error" | "warning"
 }

@@ -15,6 +15,7 @@
             <format>ifbN</format>
             <description>Input interface name</description>
           </valueHelp>
+          <kind>interface</kind>
         </properties>
         <children>
           #include <include/generic-description.xml.i>

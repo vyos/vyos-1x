@@ -61,6 +61,7 @@
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
+              <dependency kind="interface" alert="warning"/>
             </properties>
             <children>
               <leafNode name="combined">

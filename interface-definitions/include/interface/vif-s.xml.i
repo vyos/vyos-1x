@@ -10,6 +10,7 @@
       <validator name="numeric" argument="--range 0-4094"/>
     </constraint>
     <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+    <kind>interface</kind>
   </properties>
   <children>
     #include <include/generic-description.xml.i>
@@ -32,6 +33,7 @@
           <validator name="numeric" argument="--range 0-4094"/>
         </constraint>
         <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+        <kind>interface</kind>
       </properties>
       <children>
         #include <include/generic-description.xml.i>

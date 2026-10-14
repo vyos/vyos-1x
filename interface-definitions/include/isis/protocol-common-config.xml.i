@@ -719,6 +719,7 @@
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
+    <dependency kind="interface" alert="error"/>
   </properties>
   <children>
     #include <include/bfd/bfd.xml.i>
