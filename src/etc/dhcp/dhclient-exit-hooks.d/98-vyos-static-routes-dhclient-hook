@@ -34,5 +34,7 @@ elif [ "$reason" != "BOUND" ] && [ "$reason" != "EXPIRE" ] && [ "$reason" != "RE
     return 0
 fi
 
-# Reconcile the rendered FRR configuration with the current lease
-sudo /usr/libexec/vyos/vyos-frr-render.py
+# Reconcile the rendered FRR configuration with the current lease. The render
+# waits for a running commit, which may itself wait for this dhclient to stop -
+# do not block on it.
+sudo systemd-run --no-block --collect --quiet /usr/libexec/vyos/vyos-frr-render.py --after-commit

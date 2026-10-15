@@ -23,12 +23,16 @@ to running the conf-mode scripts directly."""
 
 import sys
 
+from argparse import ArgumentParser
+from time import sleep
+
 from vyos.config import Config
 from vyos.frrender import FRRender
 from vyos.frrender import frr_applied_config_file
 from vyos.frrender import frr_config_file
 from vyos.frrender import frr_render_lock
 from vyos.frrender import get_frrender_dict
+from vyos.utils.commit import commit_in_progress2
 from vyos.utils.file import read_file
 from vyos import ConfigError
 
@@ -50,6 +54,17 @@ def render() -> None:
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser()
+    # The active configuration only changes once a commit is complete. Reading
+    # it earlier renders the pre-commit state, which the commit then never
+    # corrects as its own FRR render has already run. Not for callers which
+    # are part of a commit - they would wait for themselves.
+    parser.add_argument('--after-commit', action='store_true',
+                        help='Wait for a running commit to complete first')
+    args = parser.parse_args()
+
+    while args.after_commit and commit_in_progress2():
+        sleep(0.25)
     try:
         with frr_render_lock():
             render()

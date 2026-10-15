@@ -225,9 +225,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             tmp = self.getFRRopmode('show ip route 0.0.0.0/0', json=True)
             # Test if we have a default route 0.0.0.0/0 pointing to our PPPoE interface
             tmp = dict_search_recursive(tmp, 'interfaceName')
-
-            #self.assertTrue(any(iface == interface for (iface, _) in tmp))
-        self.skipTest('Bug in FRR 10.2 - PPPoE interfaces sometimes carry ifIndex 0 which is invalid')
+            self.assertTrue(any(iface == interface for (iface, _) in tmp))
 
     def test_pppoe_client_disabled_interface(self):
         # Check if PPPoE Client can be disabled
