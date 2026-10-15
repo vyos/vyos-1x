@@ -532,7 +532,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     },
                 },
             },
-            'bar' : {
+            'bar.baz' : {
                 'rule' : {
                     '5' : {
                         'action' : 'permit',
@@ -615,7 +615,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     },
                 },
             },
-            'bar' : {
+            'bar.baz' : {
                 'rule' : {
                     '5' : {
                         'action' : 'permit',
@@ -675,6 +675,16 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     tmp += ' le ' + rule_config['le']
 
                 self.assertIn(tmp, config)
+
+    def test_prefix_list_name(self):
+        # T9346: prefix-list names use the VyOS 1.3 pattern '^[-_a-zA-Z0-9.]+$'
+        invalid_names = ['foo+bar', 'foo,bar', 'foo/bar', 'foo:bar']
+
+        for prefix_list in ['prefix-list', 'prefix-list6']:
+            for name in invalid_names:
+                with self.assertRaises(ConfigSessionError):
+                    path = base_path + [prefix_list, name, 'description', 'invalid']
+                    self.cli_set(path)
 
     def test_prefix_list_duplicates(self):
         # FRR does not allow to specify the same profix list rule multiple times
@@ -966,7 +976,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         ipv6_nexthop_type= 'blackhole'
 
         test_data = {
-            'foo-map-bar' : {
+            'foo-map.bar' : {
                 'rule' : {
                     '5' : {
                         'action' : 'permit',

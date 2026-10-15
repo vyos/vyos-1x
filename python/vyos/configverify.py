@@ -439,10 +439,9 @@ def verify_common_route_maps(config):
     for route_map in ['route-map', 'route_map']:
         if route_map not in config:
             continue
-        tmp = config[route_map]
+        route_map_name = config[route_map]
         # Check if the specified route-map exists, if not error out
-        if dict_search(f'policy.route_map.{tmp}', config) == None:
-            raise ConfigError(f'Specified route-map "{tmp}" does not exist!')
+        verify_route_map(route_map_name, config)
 
     if 'redistribute' in config:
         for protocol, protocol_config in config['redistribute'].items():
@@ -454,8 +453,10 @@ def verify_route_map(route_map_name, config):
     Common helper function used by routing protocol implementations to perform
     recurring validation if a specified route-map exists!
     """
+
     # Check if the specified route-map exists, if not error out
-    if dict_search(f'policy.route_map.{route_map_name}', config) == None:
+    route_maps = dict_search('policy.route_map', config) or {}
+    if route_map_name not in route_maps:
         raise ConfigError(f'Specified route-map "{route_map_name}" does not exist!')
 
 def verify_prefix_list(prefix_list, config, version=''):
@@ -463,8 +464,10 @@ def verify_prefix_list(prefix_list, config, version=''):
     Common helper function used by routing protocol implementations to perform
     recurring validation if a specified prefix-list exists!
     """
+
     # Check if the specified prefix-list exists, if not error out
-    if dict_search(f'policy.prefix_list{version}.{prefix_list}', config) == None:
+    prefixes = dict_search(f'policy.prefix_list{version}', config) or {}
+    if prefix_list not in prefixes:
         raise ConfigError(f'Specified prefix-list{version} "{prefix_list}" does not exist!')
 
 def verify_access_list(access_list, config, version=''):

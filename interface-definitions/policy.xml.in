@@ -380,9 +380,9 @@
             <description>Name of IPv4 prefix-list</description>
           </valueHelp>
           <constraint>
-            #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+            #include <include/policy/prefix-list-name.xml.i>
           </constraint>
-          <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+          <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen, underscore and dot</constraintErrorMessage>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
@@ -448,9 +448,9 @@
             <description>Name of IPv6 prefix-list</description>
           </valueHelp>
           <constraint>
-            #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+            #include <include/policy/prefix-list-name.xml.i>
           </constraint>
-          <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+          <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen, underscore and dot</constraintErrorMessage>
         </properties>
         <children>
           #include <include/generic-description.xml.i>

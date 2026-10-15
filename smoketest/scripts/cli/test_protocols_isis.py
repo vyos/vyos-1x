@@ -368,7 +368,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' no isis mpls ldp-sync', tmp)
 
     def test_isis_09_lfa(self):
-        prefix_list = 'lfa-prefix-list-test-1'
+        prefix_list = 'lfa.prefix-list.test-1'
         prefix_list_address = '192.168.255.255/32'
         interface = 'lo'
 
