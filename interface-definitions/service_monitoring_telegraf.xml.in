@@ -403,6 +403,27 @@
                 </children>
               </node>
               #include <include/interface/vrf.xml.i>
+              <node name="prometheus">
+                <properties>
+                  <help>Prometheus input plugin</help>
+                </properties>
+                <children>
+                  <tagNode name="input">
+                    <properties>
+                      <help>Prometheus input instance</help>
+                    </properties>
+                    <children>
+                      #include <include/url-http-https.xml.i>
+                      <leafNode name="insecure-skip-verify">
+                        <properties>
+                          <help>Skip TLS certificate verification</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
             </children>
           </node>
         </children>

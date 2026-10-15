@@ -277,5 +277,36 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_discard()
 
+    def test_09_prometheus_inputs(self):
+        self.basic_influxdb_setup()
+
+        # Set good values
+        self.cli_set(base_path + ['prometheus', 'input', 'local', 'url',
+                                  'https://localhost:9100/actuator/prometheus'])
+        self.cli_set(base_path + ['prometheus', 'input', "local", 'insecure-skip-verify'])
+
+        # Set another endpoint
+        self.cli_set(base_path + ['prometheus', 'input', 'remote', 'url',
+                                  'https://10.10.10.10:9100/actuator/prometheus'])
+        self.cli_set(base_path + ['prometheus', 'input', "remote", 'insecure-skip-verify'])
+
+        # Commit new values
+        self.cli_commit()
+
+        # Check values changed
+        config = read_file(TELEGRAF_CONF)
+
+        self.assertIn('''[[inputs.prometheus]]
+  urls = ["https://localhost:9100/actuator/prometheus"]
+  insecure_skip_verify = true
+[[inputs.prometheus]]
+  urls = ["https://10.10.10.10:9100/actuator/prometheus"]
+  insecure_skip_verify = true''', config)
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(base_path + ['prometheus', 'input', 'local', 'url',
+                                      'not-valid-url'])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

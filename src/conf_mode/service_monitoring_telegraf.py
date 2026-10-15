@@ -248,6 +248,14 @@ def verify(monitoring):
                     f'Authentication "username" and "password" are mandatory!'
                 )
 
+    # Verify Prometheus inputs
+    if 'prometheus' in monitoring and 'input' in monitoring['prometheus']:
+        for input_id, input_config in monitoring['prometheus']['input'].items():
+            if 'url' not in input_config:
+                raise ConfigError(
+                    f'Monitoring prometheus input "{input_id}" "url" is mandatory!'
+                )
+
     # Verify local FRR metrics relay
     if 'frr_metrics' in monitoring:
         if 'not_configured' in monitoring['frr_metrics']:
