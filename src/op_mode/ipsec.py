@@ -658,14 +658,22 @@ def _terminate_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
             # a tunnel can consist of several CHILD_SAs, check each of them
             sas_found = False
             terminated = False
+            terminate_error = None
             for name in _get_tunnel_sw_names(peer, tunnel):
                 sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, name)
                 if not sa_list:
                     continue
                 sas_found = True
                 if _get_childsa_id_list(sa_list):
-                    vyos.ipsec.terminate_vici_by_name(peer, name)
-                    terminated = True
+                    # keep going, so a failure on one CHILD_SA does not
+                    # leave the other one up
+                    try:
+                        vyos.ipsec.terminate_vici_by_name(peer, name)
+                        terminated = True
+                    except vyos.ipsec.ViciCommandError as err:
+                        terminate_error = terminate_error or err
+            if terminate_error:
+                raise terminate_error
             if terminated:
                 print(f'Peer {peer} tunnel {tunnel} terminate result: success')
             elif sas_found:

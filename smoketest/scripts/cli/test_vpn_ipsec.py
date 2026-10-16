@@ -716,6 +716,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'{connection_name}-vti {{', swanctl_conf)
         self.assertIn(f'{connection_name}-vti6 {{', swanctl_conf)
 
+        # A tunnel takes precedence over the VTI, so the option is rejected
+        self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24'])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'prefix', '172.17.10.0/24'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(peer_base_path + ['tunnel'])
+        self.cli_commit()
+
         # A family with a local but no remote prefix is rejected
         self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'local', 'prefix', '0.0.0.0/0'])
         with self.assertRaises(ConfigSessionError):

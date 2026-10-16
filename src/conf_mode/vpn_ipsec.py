@@ -702,6 +702,10 @@ def verify(ipsec):
 
                 traffic_selector = peer_conf['vti'].get('traffic_selector', {})
                 if 'split_by_family' in traffic_selector:
+                    # A tunnel takes precedence over the VTI, so no VTI child SAs would be rendered
+                    if 'tunnel' in peer_conf:
+                        raise ConfigError(f'split-by-family can not be used on site-to-site peer {peer}, '
+                                          f'it has a tunnel configured!')
                     # Every address family needs a prefix on both sides, or its child SA can not be built
                     default_prefixes = ['0.0.0.0/0', '::/0']
                     local_prefixes = dict_search('local.prefix', traffic_selector) or default_prefixes
