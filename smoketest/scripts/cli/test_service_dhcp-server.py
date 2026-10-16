@@ -613,6 +613,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             '192.0.2.1',
             'http://prov.vyos.io/phones/cfg',
             'https://prov.vyos.io:8443/phones?model=$MA',
+            'ftp://prov.vyos.io/phones/cfg',
+            'ftps://prov.vyos.io:8443/phones?model=$MA',
             'tftp://192.0.2.1/boot',
         ]:
             self.cli_set(pool + ['option', 'tftp-server-name', tftp_server])
