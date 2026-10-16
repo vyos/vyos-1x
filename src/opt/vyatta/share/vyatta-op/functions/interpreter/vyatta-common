@@ -33,8 +33,9 @@ get_prefix_filtered_list ()
   eval "olist=( \"\${$2[@]}\" )"
   local idx=0
   for elem in "${olist[@]}"; do
-    local sub="${elem#$pfx}"
-    if [[ "$elem" == "$sub" ]] && [[ -n "$pfx" ]]; then
+    local cmp="${elem#\"}"
+    local sub="${cmp#"$pfx"}"
+    if [[ "$cmp" == "$sub" ]] && [[ -n "$pfx" ]]; then
       continue
     fi
     eval "$3[$idx]=\$elem"
