@@ -703,7 +703,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
         self.assertNotRegex(out, r'flags:.*\bpromisc\b')
 
-    def test_06_vpp_bridge(self):
+    def test_06_1_vpp_bridge(self):
         bridge_path = interfaces_path + ['bridge']
         fake_member = 'eth2'
         members = [interface]
@@ -839,6 +839,61 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # cannot remove loopback interface while it is used as BVI
         self.cli_delete(interfaces_path + ['loopback', f'vpplo{vni}'])
         with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_06_2_vpp_bridge_gre_teb_all_members(self):
+        gre_path = interfaces_path + ['gre']
+        bridge_path = interfaces_path + ['bridge']
+        bridge = 'vppbr1'
+        gre_l3 = 'vppgre1'
+        gre_teb = 'vppgre2'
+        source_address = '192.0.2.1'
+
+        # GRE source address must be configured on the system
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'address', f'{source_address}/24']
+        )
+
+        # Add member with allowed prefix but not yet configured in VPP
+        self.cli_set(bridge_path + [bridge, 'member', 'interface', gre_l3])
+        err_msg = wrapped_error_regex(
+            f'Interface "{gre_l3}" does not exist in VPP and cannot be a '
+            'bridge member'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # GRE with tunnel-type l3, already a bridge member
+        self.cli_set(gre_path + [gre_l3, 'source-address', source_address])
+        self.cli_set(gre_path + [gre_l3, 'remote', '192.0.2.253'])
+        self.cli_set(gre_path + [gre_l3, 'tunnel-type', 'l3'])
+
+        # GRE with tunnel-type teb
+        self.cli_set(gre_path + [gre_teb, 'source-address', source_address])
+        self.cli_set(gre_path + [gre_teb, 'remote', '192.0.2.254'])
+        self.cli_set(gre_path + [gre_teb, 'tunnel-type', 'teb'])
+
+        # Add teb GRE as the last bridge member
+        self.cli_set(bridge_path + [bridge, 'member', 'interface', gre_teb])
+
+        # l3 GRE must be rejected even though the last member is teb
+        err_msg = wrapped_error_regex(
+            f'GRE interface "{gre_l3}" in bridge must have tunnel-type "teb".'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # All GRE members are teb, commit must succeed
+        self.cli_set(gre_path + [gre_l3, 'tunnel-type', 'teb'])
+        self.cli_commit()
+
+        # Add member with allowed prefix but not configured in VPP
+        self.cli_set(bridge_path + [bridge, 'member', 'interface', 'vppgre99'])
+        err_msg = wrapped_error_regex(
+            'Interface "vppgre99" does not exist in VPP and cannot be a '
+            'bridge member'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
             self.cli_commit()
 
     def test_07_vpp_ipip(self):
