@@ -180,7 +180,7 @@
     </tagNode >
     <leafNode name="tftp-server-name">
       <properties>
-        <help>TFTP server name</help>
+        <help>TFTP server name or provisioning URL</help>
         <valueHelp>
           <format>ipv4</format>
           <description>TFTP server IPv4 address</description>
@@ -189,10 +189,16 @@
           <format>hostname</format>
           <description>TFTP server FQDN</description>
         </valueHelp>
+        <valueHelp>
+          <format>url</format>
+          <description>Provisioning server URL (http, https, ftp, ftps or tftp)</description>
+        </valueHelp>
         <constraint>
           <validator name="ipv4-address"/>
           <validator name="fqdn"/>
+          <regex>(https?|ftps?|tftp)://[[:graph:]]{1,240}</regex>
         </constraint>
+        <constraintErrorMessage>Invalid TFTP server name, expected IPv4 address, FQDN or URL</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="time-offset">
