@@ -15,9 +15,9 @@
           <description>Name of IPv4 prefix-list</description>
         </valueHelp>
         <constraint>
-          #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+          #include <include/policy/prefix-list-name.xml.i>
         </constraint>
-        <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+        <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen, underscore and dot</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="import">
@@ -31,9 +31,9 @@
           <description>Name of IPv4 prefix-list</description>
         </valueHelp>
         <constraint>
-          #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+          #include <include/policy/prefix-list-name.xml.i>
         </constraint>
-        <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+        <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen, underscore and dot</constraintErrorMessage>
       </properties>
     </leafNode>
   </children>

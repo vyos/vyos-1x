@@ -33,10 +33,10 @@ base_path = ['protocols', 'bgp']
 
 route_map_in = 'foo-map-in'
 route_map_out = 'foo-map-out'
-prefix_list_in = 'pfx-foo-in'
+prefix_list_in = 'pfx.foo-in'
 prefix_list_out = 'pfx-foo-out'
 prefix_list_in6 = 'pfx-foo-in6'
-prefix_list_out6 = 'pfx-foo-out6'
+prefix_list_out6 = 'pfx.foo-out6'
 bfd_profile = 'foo-bar-baz'
 
 import_afi = 'ipv4-unicast'
