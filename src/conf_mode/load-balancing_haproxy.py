@@ -23,11 +23,11 @@ from vyos.defaults import systemd_services
 from vyos.config import Config
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
+from vyos.configverify import verify_vrf
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
-from vyos.utils.network import is_addr_assigned
 from vyos.pki import find_chain
 from vyos.pki import load_certificate
 from vyos.pki import load_private_key
@@ -68,42 +68,28 @@ def verify(lb):
     if 'backend' not in lb or 'service' not in lb:
         raise ConfigError('Both "service" and "backend" must be configured!')
 
+    verify_vrf(lb)
+
     for front, front_config in lb['service'].items():
         if 'port' not in front_config:
             raise ConfigError(f'"{front} service port" must be configured!')
 
-        # Check if bind 'listen-address:port' are used by another service
-        listen_addresses = front_config.get('listen_address') or {}
-        listen_port = int(front_config['port'])
-        if listen_addresses:
-            for listen_address in listen_addresses:
-                # Remove the interface name if present in the listen address
-                if '%' in listen_address:
-                    listen_address, *_ = listen_address.split('%', maxsplit=1)
+        # Check if bind address:port are used by another service
+        tmp_port = int(front_config['port'])
+        listen_addresses = front_config.get('listen_address')
+        if not listen_addresses:
+            # Without listen-address HAProxy listens on all addresses
+            listen_addresses = [None]
 
-                if not is_addr_assigned(listen_address, allow_nonlocal=True):
-                    raise ConfigError(
-                        f'listen-address "{listen_address}" not assigned on any interface!'
-                    )
-
-                port_availability = check_port_availability(
-                    listen_address, listen_port, 'tcp'
-                )
-                port_bind_service = is_listen_port_bind_service(
-                    listen_port, 'haproxy', address=listen_address
-                )
-                if not port_availability and not port_bind_service:
-                    raise ConfigError(
-                        f'TCP port "{listen_port}" on address "{listen_address}" is used by another service'
-                    )
-        else:
-            # Verify listen port for all IP addresses
-            port_availability = check_port_availability(None, listen_port, 'tcp')
-            port_bind_service = is_listen_port_bind_service(listen_port, 'haproxy')
-            if not port_availability and not port_bind_service:
-                raise ConfigError(
-                    f'TCP port "{listen_port}" is used by another service'
-                )
+        for address in listen_addresses:
+            # Listening sockets are reported without the %<interface> scope
+            owner_address = address.split('%')[0] if address else None
+            if not check_port_availability(
+                address, tmp_port, 'tcp', vrf=lb.get('vrf'), busy_only=True
+            ) and not is_listen_port_bind_service(
+                tmp_port, 'haproxy', address=owner_address
+            ):
+                raise ConfigError(f'TCP port "{tmp_port}" is used by another service')
 
         if 'http_compression' in front_config:
             if front_config['mode'] != 'http':
