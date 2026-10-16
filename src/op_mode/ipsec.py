@@ -654,24 +654,33 @@ def _terminate_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
     # Convert tunnel to Strongwan format of CHILD_SA
     tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
     try:
-        sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, tunnel_sw)
-        if sa_list:
-            if tunnel:
-                childsa_id_list: list = _get_childsa_id_list(sa_list)
-                if childsa_id_list:
-                    for name in _get_tunnel_sw_names(peer, tunnel):
-                        if vyos.ipsec.get_vici_sas_by_name(peer, name):
-                            vyos.ipsec.terminate_vici_by_name(peer, name)
-                    print(f'Peer {peer} tunnel {tunnel} terminate result: success')
-                else:
-                    Warning(
-                        f'Peer {peer} tunnel {tunnel} SA is not initiated. Nothing to terminate'
-                    )
+        if tunnel:
+            # a tunnel can consist of several CHILD_SAs, check each of them
+            sas_found = False
+            terminated = False
+            for name in _get_tunnel_sw_names(peer, tunnel):
+                sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, name)
+                if not sa_list:
+                    continue
+                sas_found = True
+                if _get_childsa_id_list(sa_list):
+                    vyos.ipsec.terminate_vici_by_name(peer, name)
+                    terminated = True
+            if terminated:
+                print(f'Peer {peer} tunnel {tunnel} terminate result: success')
+            elif sas_found:
+                Warning(
+                    f'Peer {peer} tunnel {tunnel} SA is not initiated. Nothing to terminate'
+                )
             else:
+                Warning(f"Peer's {peer} SAs are not initiated. Nothing to terminate")
+        else:
+            sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, tunnel_sw)
+            if sa_list:
                 vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
                 print(f'Peer {peer} terminate result: success')
-        else:
-            Warning(f"Peer's {peer} SAs are not initiated. Nothing to terminate")
+            else:
+                Warning(f"Peer's {peer} SAs are not initiated. Nothing to terminate")
 
     except vyos.ipsec.ViciInitiateError as err:
         raise vyos.opmode.UnconfiguredSubsystem(err)
