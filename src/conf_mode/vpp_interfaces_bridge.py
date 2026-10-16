@@ -27,6 +27,7 @@ from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_member_conflicts
 from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
+from vyos.vpp.utils import cli_ifaces_list
 
 
 def get_config(config=None) -> dict:
@@ -51,7 +52,7 @@ def get_config(config=None) -> dict:
         return config
 
     # Get global vpp interfaces for verify
-    config['vpp_interfaces'] = conf.get_config_dict(
+    config['vpp_ethernet_ifaces'] = conf.get_config_dict(
         ['vpp', 'settings', 'interface'],
         key_mangling=('-', '_'),
         get_first_key=True,
@@ -67,6 +68,8 @@ def get_config(config=None) -> dict:
         with_defaults=True,
         with_recursive_defaults=True,
     )
+
+    config['vpp_ifaces'] = cli_ifaces_list(conf, include_vifs=True)
 
     config['bond_members'] = deps_bond_dict(conf)
     config['bridge_members'] = deps_bridge_dict(conf)
@@ -102,11 +105,17 @@ def verify(config):
         ):
             # Check if the interface exists in VPP settings or starts with allowed prefixes
             if not (
-                member in config.get('vpp_interfaces', {})
+                member in config.get('vpp_ethernet_ifaces', {})
                 or member.startswith(allowed_prefixes)
             ):
                 raise ConfigError(
                     f"Interface '{member}' not found in 'vpp settings interface' or does not start with allowed prefixes {allowed_prefixes}"
+                )
+
+            # Check if interface exists in VPP
+            if member not in config.get('vpp_ifaces', []):
+                raise ConfigError(
+                    f'Interface "{member}" does not exist in VPP and cannot be a bridge member'
                 )
 
             # Each interface can belong only to one bridge
@@ -127,12 +136,11 @@ def verify(config):
                     raise ConfigError("BVI can only be defined on loopback interface")
                 bvi_exists = True
 
-        # check GRE tunnels as part of the bridge, only tunnel-type "teb" is allowed
-        #   set interfaces vpp bridge vppbr1 member interface vppgre1
-        #   set interfaces vpp gre vppgre1 tunnel-type teb
-        if member.startswith('vppgre'):
-            if member in config.get('gre_interfaces'):
-                gre_config = config.get('gre_interfaces').get(member)
+            # check GRE tunnels as part of the bridge, only tunnel-type "teb" is allowed
+            #   set interfaces vpp bridge vppbr1 member interface vppgre1
+            #   set interfaces vpp gre vppgre1 tunnel-type teb
+            if member.startswith('vppgre'):
+                gre_config = config['gre_interfaces'][member]
                 if gre_config.get('tunnel_type') != 'teb':
                     raise ConfigError(
                         f'GRE interface "{member}" in bridge must have tunnel-type "teb". '
