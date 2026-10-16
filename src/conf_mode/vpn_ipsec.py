@@ -700,6 +700,19 @@ def verify(ipsec):
                     if 'disable' not in peer_conf:
                         ipsec['enabled_vti_interfaces'].add(vti_interface)
 
+                traffic_selector = peer_conf['vti'].get('traffic_selector', {})
+                if 'split_by_family' in traffic_selector:
+                    # Every address family needs a prefix on both sides, or its child SA can not be built
+                    default_prefixes = ['0.0.0.0/0', '::/0']
+                    local_prefixes = dict_search('local.prefix', traffic_selector) or default_prefixes
+                    remote_prefixes = dict_search('remote.prefix', traffic_selector) or default_prefixes
+                    for family_name, match in (('IPv4', lambda p: ':' not in p), ('IPv6', lambda p: ':' in p)):
+                        has_local = any(match(p) for p in local_prefixes)
+                        has_remote = any(match(p) for p in remote_prefixes)
+                        if has_local != has_remote:
+                            raise ConfigError(f'{family_name} traffic-selector on site-to-site peer {peer} needs a local '
+                                              f'and a remote prefix when using split-by-family!')
+
             if 'vti' not in peer_conf and 'tunnel' not in peer_conf:
                 raise ConfigError(f"No VTI or tunnel specified on site-to-site peer {peer}")
 

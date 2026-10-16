@@ -1405,6 +1405,12 @@
                               </leafNode>
                             </children>
                           </node>
+                          <leafNode name="split-by-family">
+                            <properties>
+                              <help>Negotiate IPv4 and IPv6 traffic selectors in separate child SAs</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
                         </children>
                       </node>
                     </children>

@@ -582,6 +582,25 @@ def _get_tunnel_sw_format(peer: str, tunnel: str) -> str:
     return tunnel_sw
 
 
+def _get_tunnel_sw_names(peer: str, tunnel: typing.Optional[str]) -> list:
+    """
+    Get all CHILD_SA names of a tunnel. A VTI peer has a second CHILD_SA for
+    IPv6 if its traffic-selector is split by address family.
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param tunnel: tunnel number (CHILD_SA)
+    :type tunnel: str
+    :return: list of CHILD_SA names, empty if tunnel is None
+    :rtype: list
+    """
+    tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
+    if not tunnel_sw:
+        return []
+    if tunnel == 'vti':
+        return [tunnel_sw, f'{peer}-vti6']
+    return [tunnel_sw]
+
+
 def _initiate_peer_with_childsas(
     peer: str, tunnel: typing.Optional[str] = None
 ) -> None:
@@ -607,8 +626,11 @@ def _initiate_peer_with_childsas(
             print(f'Peer {peer} initiate result: success')
             return
 
-        if tunnel_sw in childsa_name_list:
-            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, [tunnel_sw])
+        tunnel_sw_names = [
+            name for name in _get_tunnel_sw_names(peer, tunnel) if name in childsa_name_list
+        ]
+        if tunnel_sw_names:
+            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, tunnel_sw_names)
             print(f'Peer {peer} tunnel {tunnel} initiate result: success')
             return
 
@@ -637,7 +659,9 @@ def _terminate_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
             if tunnel:
                 childsa_id_list: list = _get_childsa_id_list(sa_list)
                 if childsa_id_list:
-                    vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
+                    for name in _get_tunnel_sw_names(peer, tunnel):
+                        if vyos.ipsec.get_vici_sas_by_name(peer, name):
+                            vyos.ipsec.terminate_vici_by_name(peer, name)
                     print(f'Peer {peer} tunnel {tunnel} terminate result: success')
                 else:
                     Warning(
