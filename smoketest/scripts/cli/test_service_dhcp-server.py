@@ -626,7 +626,14 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             )
 
         # not an IPv4 address, FQDN or URL, rejected by the value constraint
-        for invalid in ['http://', 'http:/prov.vyos.io', 'foo bar', 'file:///etc']:
+        for invalid in [
+            'http://',
+            'http:///etc',
+            'https://?x=1',
+            'http:/prov.vyos.io',
+            'foo bar',
+            'file:///etc',
+        ]:
             with self.assertRaises(ConfigSessionError):
                 self.cli_set(pool + ['option', 'tftp-server-name', invalid])
 

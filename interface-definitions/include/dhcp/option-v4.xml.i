@@ -196,7 +196,7 @@
         <constraint>
           <validator name="ipv4-address"/>
           <validator name="fqdn"/>
-          <regex>(https?|ftps?|tftp)://[[:graph:]]{1,240}</regex>
+          <regex>(https?|ftps?|tftp)://[^/?#[:space:]]{1,100}([/?#][[:graph:]]{0,140})?</regex>
         </constraint>
         <constraintErrorMessage>Invalid TFTP server name, expected IPv4 address, FQDN or URL</constraintErrorMessage>
       </properties>
