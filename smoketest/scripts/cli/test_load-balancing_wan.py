@@ -99,10 +99,24 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
             cmd_in_netns(ns, f'ip addr add {lab_target}/32 dev lo')
             # port 80 answers and closes, port 90 echoes for long-lived flows
             for port, reply in [('80', f'SYSTEM:echo isp{index} peer=$SOCAT_PEERADDR'), ('90', 'EXEC:cat')]:
-                subprocess.Popen(['sudo', 'ip', 'netns', 'exec', ns, 'socat',
-                                  f'TCP-LISTEN:{port},fork,reuseaddr', reply],
-                                 start_new_session=True,
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                server = subprocess.Popen(['sudo', 'ip', 'netns', 'exec', ns, 'socat',
+                                           f'TCP-LISTEN:{port},fork,reuseaddr', reply],
+                                          start_new_session=True,
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self.addCleanup(self.lab_stop, server)
+
+    @staticmethod
+    def lab_stop(proc):
+        # proc is sudo, which hands the signal on to the command it runs
+        call(f'sudo kill {proc.pid}')
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            call(f'sudo kill -9 {proc.pid}')
+            proc.wait()
+        for pipe in [proc.stdin, proc.stdout]:
+            if pipe:
+                pipe.close()
 
     def lab_health(self, ifname, index):
         path = base_path + ['wan', 'interface-health', ifname]
@@ -912,7 +926,7 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         client = subprocess.Popen(['sudo', 'ip', 'netns', 'exec', 'wlb-lan', 'socat', '-',
                                    f'TCP:{lab_target}:90'], stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, text=True)
-        self.addCleanup(client.kill)
+        self.addCleanup(self.lab_stop, client)
 
         def echo(text, timeout=5):
             client.stdin.write(f'{text}\n')
