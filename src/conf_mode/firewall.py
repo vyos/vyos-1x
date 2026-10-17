@@ -150,9 +150,6 @@ def get_config(config=None):
 
     fqdn_config_parse(firewall, 'firewall')
 
-    if not os.path.exists(nftables_conf):
-        firewall['first_install'] = True
-
     if 'zone' in firewall:
         for local_zone, local_zone_conf in firewall['zone'].items():
             if 'local_zone' not in local_zone_conf:

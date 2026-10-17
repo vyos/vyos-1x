@@ -30,9 +30,9 @@ table ip6 raw {
     }
 }
 
-{% if first_install is not vyos_defined %}
+# declaring the table first makes the delete succeed whether or not it exists
+table ip vyos_filter
 delete table ip vyos_filter
-{% endif %}
 table ip vyos_filter {
 {% if ipv4 is vyos_defined %}
 {%     if flowtable is vyos_defined %}
@@ -218,9 +218,8 @@ table ip vyos_filter {
 {% endif %}
 }
 
-{% if first_install is not vyos_defined %}
+table ip6 vyos_filter
 delete table ip6 vyos_filter
-{% endif %}
 table ip6 vyos_filter {
 {% if ipv6 is vyos_defined %}
 {%     if flowtable is vyos_defined %}
@@ -405,9 +404,8 @@ table ip6 vyos_filter {
 }
 
 ## Bridge Firewall
-{% if first_install is not vyos_defined %}
+table bridge vyos_filter
 delete table bridge vyos_filter
-{% endif %}
 table bridge vyos_filter {
 {% if bridge is vyos_defined %}
 {%     if bridge.forward is vyos_defined %}

@@ -21,6 +21,7 @@ from glob import glob
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.file import read_file
 
@@ -2183,6 +2184,25 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+
+    def test_table_recreated(self):
+        # the rule file in /run and the nftables table can drift apart, the
+        # next commit must rebuild the table instead of failing on it
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'source', 'address', '2001:db8::1'])
+        self.cli_commit()
+
+        cmdl(['nft', 'delete', 'table', 'ip6', 'vyos_filter'], sudo=True)
+
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '2', 'source', 'address', '2001:db8::2'])
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip6 saddr 2001:db8::1', 'accept', 'comment "ipv6-NAM-smoketest-1"'],
+            ['ip6 saddr 2001:db8::2', 'drop', 'comment "ipv6-NAM-smoketest-2"'],
+        ]
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
