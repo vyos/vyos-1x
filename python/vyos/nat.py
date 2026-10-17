@@ -92,6 +92,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                         else:
                             translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
                         ignore_type_addr = True
+                    elif port:
+                        # nft has no "prefix to <net>:<port>" syntax, a catch-all
+                        # map key keeps the 1:1 prefix mapping plus the port range
+                        translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ 0.0.0.0/0 : {addr} . {port} }}')
                     else:
                         translation_output.append(f'prefix to {addr}')
                 else:
