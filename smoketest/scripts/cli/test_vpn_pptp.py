@@ -16,6 +16,8 @@
 
 import unittest
 
+from configparser import ConfigParser
+
 from base_accel_ppp_test import BasicAccelPPPTest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -35,6 +37,23 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
 
     def basic_protocol_specific_config(self):
         pass
+
+    def test_pptp_mppe_policy(self):
+        # The PPTP control module reads 'mppe' from its own [pptp] section and
+        # ignores the common [ppp] one, so both must carry the configured value
+        self.basic_config()
+
+        for mppe in ['require', 'prefer', 'deny']:
+            with self.subTest(mppe=mppe):
+                self.set(['ppp-options', 'mppe', mppe])
+                self.cli_commit()
+
+                conf = ConfigParser(allow_no_value=True, delimiters='=')
+                conf.read(self._config_file)
+
+                self.assertEqual(conf['pptp']['mppe'], mppe)
+                self.assertEqual(conf['ppp']['mppe'], mppe)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

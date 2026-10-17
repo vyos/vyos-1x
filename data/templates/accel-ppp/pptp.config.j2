@@ -45,7 +45,7 @@ bind={{ outside_address }}
 {% endif %}
 verbose=1
 ppp-max-mtu={{ mtu }}
-mppe={{ authentication.mppe }}
+mppe={{ ppp_options.mppe }}
 echo-interval=10
 echo-failure=3
 {% if default_pool is vyos_defined %}
