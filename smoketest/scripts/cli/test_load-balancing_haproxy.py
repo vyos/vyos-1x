@@ -15,18 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import time
 import textwrap
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import Interface
 from vyos.template import get_default_port
 from vyos.utils.process import call
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.network import check_port_availability
+from vyos.utils.network import is_ipv6_link_local
 
 PROCESS_NAME = 'haproxy'
 HAPROXY_CONF = '/run/haproxy/haproxy.cfg'
@@ -727,11 +728,10 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         addr_listen = '::1'  # HAProxy listen-address
         addr_busy = '127.0.0.1'  # IP address kept busy by nc (different from the first)
 
-        # Run the netcat command to bind to the specified address and port
+        # Run the netcat command to bind to the specified address and port.
+        # It runs in the background - make sure it holds the port.
         call(f'sudo nc -lk -s {addr_busy} -p {shared_port} &')
-
-        # Give nc a moment to bind before we commit
-        time.sleep(0.5)
+        self.assert_port_availability(False, address=addr_busy, port=shared_port)
 
         try:
             backend_path = base_path + ['backend', backend]
@@ -764,21 +764,26 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'bind {addr_busy}:{shared_port}', config)
         self.assertIn(f'bind [{addr_listen}]:{shared_port}', config)
 
-    def assert_port_availability(self, expected, address=None):
-        """ Assert availability of the service port.
+    def assert_port_availability(
+        self, expected, address=None, port=haproxy_service_port
+    ):
+        """Assert availability of a port, the service port by default.
 
         A commit returns once systemd reports the unit active - the workers
         binding and releasing the listen sockets follow a moment later, so
-        poll instead of sampling once. """
+        poll instead of sampling once."""
 
         result, last = self.wait_for_result(
-            lambda: check_port_availability(address=address,
-                                            port=int(haproxy_service_port),
-                                            protocol='tcp'),
-            expected, pause=0.5, timeout=10)
+            lambda: check_port_availability(
+                address=address, port=int(port), protocol='tcp'
+            ),
+            expected,
+            pause=0.5,
+            timeout=10,
+        )
 
         self.assertTrue(result,
-            f'port {haproxy_service_port} on address "{address or "any"}" '
+            f'port {port} on address "{address or "any"}" '
             f'is available={last}, expected available={expected}')
 
     def test_reverse_proxy_listen_address_lifecycle(self):
@@ -829,6 +834,117 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
         # Check port availability without address (default to 'any'), must yield false
         self.assert_port_availability(False)
+
+    def test_reverse_proxy_listen_address_not_assigned(self):
+        # A listen-address not present on any interface (e.g. a VRRP address
+        # on the backup router) is no port conflict, even if another service
+        # holds the port on a different address
+        frontend = 'svc-1'
+        backend = 'bk-1'
+        shared_port = '993'
+        addr_listen = '192.0.2.15'  # not assigned to any interface
+        addr_busy = '127.0.0.1'
+
+        call(f'sudo nc -lk -s {addr_busy} -p {shared_port} &')
+        self.assert_port_availability(False, address=addr_busy, port=shared_port)
+
+        try:
+            backend_path = base_path + ['backend', backend]
+            self.cli_set(backend_path + ['mode', 'tcp'])
+            self.cli_set(backend_path + ['server', 'srv-m', 'address', '192.0.2.14'])
+            self.cli_set(backend_path + ['server', 'srv-m', 'port', shared_port])
+
+            service_path = base_path + ['service', frontend]
+            self.cli_set(service_path + ['mode', 'tcp'])
+            self.cli_set(service_path + ['port', shared_port])
+            self.cli_set(service_path + ['listen-address', addr_listen])
+            self.cli_set(service_path + ['backend', backend])
+
+            self.cli_commit()
+        finally:
+            call('sudo pkill nc')
+
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'bind {addr_listen}:{shared_port}', config)
+
+        # Without the address HAProxy cannot start, but tearDown() expects
+        # it running - listen on any address again
+        self.cli_delete(service_path + ['listen-address'])
+        self.cli_commit()
+
+    def test_reverse_proxy_listen_address_vrf(self):
+        # A listen-address on an interface in the HAProxy VRF must be accepted
+
+        # Names only this test uses, so the cleanup cannot remove anything else
+        vrf = 'haproxy-smoke'
+        dummy = 'dum4433'
+        addr_listen = '192.0.2.1'
+
+        # Remove the VRF also when this test fails, it would break the
+        # remaining tests. HAProxy goes too, a VRF in use cannot be removed.
+        def remove_vrf():
+            self.cli_delete(base_path)
+            self.cli_delete(['interfaces', 'dummy', dummy])
+            self.cli_delete(['vrf', 'name', vrf])
+            self.cli_commit()
+
+        self.addCleanup(remove_vrf)
+
+        self.cli_set(['vrf', 'name', vrf, 'table', '4433'])
+        self.cli_set(['interfaces', 'dummy', dummy, 'vrf', vrf])
+        self.cli_set(['interfaces', 'dummy', dummy, 'address', f'{addr_listen}/32'])
+
+        self.base_config()
+        self.cli_set(base_path + ['vrf', vrf])
+        self.cli_set(
+            base_path + ['service', haproxy_service_name, 'listen-address', addr_listen]
+        )
+        self.cli_commit()
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'bind {addr_listen}:{haproxy_service_port}', config)
+
+    def test_reverse_proxy_listen_address_link_local(self):
+        # An IPv6 link-local listen-address must keep its %<interface> scope
+        # for the port check - without it the check failed and reported the
+        # port as used by another service
+
+        dummy = 'dum4434'
+
+        # VyOS assigns every interface with a MAC address a link-local address
+        self.cli_set(['interfaces', 'dummy', dummy])
+        self.cli_commit()
+
+        link_local = [
+            addr.split('/')[0]
+            for addr in Interface(dummy).get_addr_v6()
+            if is_ipv6_link_local(addr)
+        ]
+        self.assertTrue(link_local, f'No IPv6 link-local address on {dummy}')
+        addr_listen = f'{link_local[0]}%{dummy}'
+        addr_busy = '127.0.0.1'
+        listen_path = base_path + ['service', haproxy_service_name, 'listen-address']
+
+        # Another service holds the port on a different address
+        call(f'sudo nc -lk -s {addr_busy} -p {haproxy_service_port} &')
+        self.assert_port_availability(False, address=addr_busy)
+
+        try:
+            self.base_config()
+            self.cli_set(listen_path + [addr_listen])
+            self.cli_commit()
+        finally:
+            call('sudo pkill nc')
+
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'bind [{addr_listen}]:{haproxy_service_port}', config)
+
+        # HAProxy may not start with a scoped address, but tearDown() expects
+        # it running - listen on any address again
+        self.cli_delete(listen_path)
+        self.cli_delete(['interfaces', 'dummy', dummy])
+        self.cli_commit()
 
 
 if __name__ == '__main__':
