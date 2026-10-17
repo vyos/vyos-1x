@@ -39,12 +39,6 @@ table ip vyos_nat {
 {%     endif %}
 
     }
-{%     for set_name in ip_fqdn %}
-    set FQDN_nat_{{ set_name }} {
-        type ipv4_addr
-        flags interval
-    }
-{%     endfor %}
 
     chain VYOS_PRE_DNAT_HOOK {
         return
