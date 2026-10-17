@@ -112,7 +112,8 @@ def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
-    if 'source_based_routing' not in rule_conf and not restore_mark:
+    # per flow by default - only the first packet of a connection is balanced
+    if 'per_packet_balancing' not in rule_conf and not restore_mark:
         output.append('ct state new')
 
     if limit and 'limit' in rule_conf and 'rate' in rule_conf['limit']:

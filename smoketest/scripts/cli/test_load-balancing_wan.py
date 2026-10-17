@@ -117,6 +117,24 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
                          f'TCP:{lab_target}:{port},connect-timeout=2{bind} </dev/null')
         return out.splitlines()[-1] if rc == 0 and out else None
 
+    @staticmethod
+    def lab_count_echo_requests(isp_count):
+        """ Return how many ICMP echo requests every ISP received since the
+        counters were added """
+        counts = []
+        for index in range(1, isp_count + 1):
+            rc, out = rc_cmd(f'sudo ip netns exec wlb-isp{index} nft list table ip lab')
+            counts.append(int(out.split('packets ')[1].split()[0]) if rc == 0 else 0)
+        return counts
+
+    @staticmethod
+    def lab_add_echo_counters(isp_count):
+        for index in range(1, isp_count + 1):
+            ns = f'wlb-isp{index}'
+            cmd_in_netns(ns, 'nft add table ip lab')
+            cmd_in_netns(ns, "nft add chain ip lab c '{ type filter hook input priority 0; }'")
+            cmd_in_netns(ns, 'nft add rule ip lab c icmp type echo-request counter')
+
     def lab_wait_status(self, expected, timeout=30):
         found, last = self.wait_for_result(wlb_status, expected, timeout=timeout)
         self.assertTrue(found, msg=f'health state {last}, expected {expected}')
@@ -746,6 +764,29 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         self.assertNotIn('"any"', out)
         answers = {self.lab_connect() for _ in range(20)}
         self.assertEqual(answers, {'isp1 peer=10.250.1.1', 'isp2 peer=10.250.2.1'})
+    def test_per_packet_balancing(self):
+        # the option was never read, every rule balanced per flow
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', 'icmp'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'per-packet-balancing'])
+        self.cli_commit()
+
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'meta l4proto icmp counter' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+        self.assertNotIn('ct state new', out)
+
+        # one ICMP flow - per packet, both ISPs see some of its requests
+        self.lab_add_echo_counters(len(isps))
+        cmd_in_netns('wlb-lan', f'ping -c 20 -i 0.05 -W 1 {lab_target}')
+        counts = self.lab_count_echo_requests(len(isps))
+        self.assertTrue(all(counts), msg=f'echo requests per ISP: {counts}')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
