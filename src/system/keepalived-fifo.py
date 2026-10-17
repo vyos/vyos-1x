@@ -27,7 +27,7 @@ from logging.handlers import SysLogHandler
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import cmdl
-from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
 from vyos.utils.commit import commit_in_progress
 
 # configure logging
@@ -40,6 +40,34 @@ logger.setLevel(logging.DEBUG)
 
 mdns_running_file = '/run/mdns_vrrp_active'
 mdns_update_command = '/usr/libexec/vyos/conf_mode/service_mdns_repeater.py'
+
+
+def lookup_transition_script(vrrp_config_dict, kind, name, state):
+    """Look up the configured transition-script command for a VRRP
+    notification.
+
+    kind is 'group' or 'sync_group', matching the (mangled) top-level keys
+    of vrrp_config_dict. name is used as a single dict key exactly as
+    received from the keepalived notify line - never split, never
+    reassembled into a delimited path.
+
+    T9256 defect 1 was originally "the notify regex rejects names
+    containing ':'". Widening the regex (see regex_notify in
+    pipe_process()) only fixes matching the name out of the notify line.
+    The two call sites here used to hand dict_search() an f-string path
+    like f'group.{name}.transition_script.{state}' - dict_search() splits
+    that path on '.', so any name containing a literal dot reproduces the
+    exact same silent no-op one call downstream of the regex, and the
+    same is true of any other character that collides with dict_search()'s
+    own delimiter. dict_search_args() takes name as one positional
+    argument and indexes by exact key with no parsing at all, so this is
+    correct for any name the CLI's tag-node tokenizer accepts - not just
+    the specific characters anyone happened to test.
+    """
+    return dict_search_args(
+        vrrp_config_dict, kind, name, 'transition_script', state.lower()
+    )
+
 
 # class for all operations
 class KeepalivedFifo:
@@ -106,7 +134,17 @@ class KeepalivedFifo:
     # process message from pipe
     def pipe_process(self):
         logger.debug('Message processing start')
-        regex_notify = re.compile(r'^(?P<type>\w+) "(?P<name>[\w-]+)" (?P<state>\w+) (?P<priority>\d+)$', re.MULTILINE)
+        # The name is whatever the CLI accepted as a VRRP group/sync-group
+        # name, framed by keepalived between literal double quotes - e.g.
+        # INSTANCE "cluster:11" MASTER 100. The CLI does not restrict that
+        # name to \w and -: colons are a common naming convention and are
+        # accepted without complaint (T9256). Matching on the delimiter
+        # itself, rather than trying to enumerate the accepted character
+        # set, is what actually tracks what the CLI allows.
+        regex_notify = re.compile(
+            r'^(?P<type>\w+) "(?P<name>[^"]+)" (?P<state>\w+) (?P<priority>\d+)$',
+            re.MULTILINE,
+        )
         while self.stopme.is_set() is False:
             # wait for a new message event from pipe_wait
             self.message_event.wait()
@@ -129,16 +167,20 @@ class KeepalivedFifo:
                             if os.path.exists(mdns_running_file):
                                 cmdl(mdns_update_command.split(), sudo=True)
 
-                            tmp = dict_search(f'group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
-                            if tmp != None:
+                            tmp = lookup_transition_script(
+                                self.vrrp_config_dict, 'group', n_name, n_state
+                            )
+                            if tmp is not None:
                                 self._run_command(tmp)
                         # check and run commands for VRRP sync groups
                         elif n_type == 'GROUP':
                             if os.path.exists(mdns_running_file):
                                 cmdl(mdns_update_command.split(), sudo=True)
 
-                            tmp = dict_search(f'sync_group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
-                            if tmp != None:
+                            tmp = lookup_transition_script(
+                                self.vrrp_config_dict, 'sync_group', n_name, n_state
+                            )
+                            if tmp is not None:
                                 self._run_command(tmp)
                     # mark task in queue as done
                     self.message_queue.task_done()
@@ -191,17 +233,30 @@ def sigterm_handle(signum, frame):
     fifo.message_event.set()
     thread_process_message.join()
 
-signal.signal(signal.SIGTERM, sigterm_handle)
+def main():
+    # __init__ parses argv and reads the live VRRP config, and the bottom
+    # half below spawns real threads and opens a real FIFO - none of which
+    # a unit test should trigger just by importing this module for its
+    # pure functions (e.g. lookup_transition_script). Gating all of it
+    # behind __name__ == '__main__' is what makes that possible, the same
+    # way vyos-net-name-resolve.py / vyos-netlinkd already do it.
+    global fifo, thread_wait_message, thread_process_message
 
-# init our class
-fifo = KeepalivedFifo()
-# try to create PIPE if it is not exist yet
-# It looks like keepalived do it before the script will be running, but if we
-# will decide to run this not from keepalived config, then we may get in
-# trouble. So it is betteer to leave this here.
-fifo.pipe_create()
-# create and run dedicated threads for reading and processing messages
-thread_wait_message = threading.Thread(target=fifo.pipe_wait)
-thread_process_message = threading.Thread(target=fifo.pipe_process)
-thread_wait_message.start()
-thread_process_message.start()
+    signal.signal(signal.SIGTERM, sigterm_handle)
+
+    # init our class
+    fifo = KeepalivedFifo()
+    # try to create PIPE if it is not exist yet
+    # It looks like keepalived do it before the script will be running, but if we
+    # will decide to run this not from keepalived config, then we may get in
+    # trouble. So it is betteer to leave this here.
+    fifo.pipe_create()
+    # create and run dedicated threads for reading and processing messages
+    thread_wait_message = threading.Thread(target=fifo.pipe_wait)
+    thread_process_message = threading.Thread(target=fifo.pipe_process)
+    thread_wait_message.start()
+    thread_process_message.start()
+
+
+if __name__ == '__main__':
+    main()
