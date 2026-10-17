@@ -636,6 +636,17 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
                                           lambda out: 'iifname "eth1" meta l4proto != tcp' in out, timeout=15)
         self.assertTrue(found, msg=out)
+    def test_rule_interface_requires_health(self):
+        # an interface without health configuration was silently left out
+        # of the rule, the traffic was not balanced at all
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'nexthop', '192.0.2.1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth2'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth1'])
+        with self.assertRaisesRegex(ConfigSessionError, 'Interface "eth1" on load-balancing wan rule 10 has no interface-health'):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth1', 'nexthop', '198.51.100.1'])
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

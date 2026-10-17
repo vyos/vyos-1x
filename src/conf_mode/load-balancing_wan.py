@@ -89,6 +89,11 @@ def verify(lb):
             if 'interface' not in rule_conf and 'exclude' not in rule_conf:
                 raise ConfigError(f'Interface or exclude not specified on load-balancing wan rule {rule_id}')
 
+            for ifname in rule_conf.get('interface', {}):
+                if ifname not in lb['interface_health']:
+                    raise ConfigError(f'Interface "{ifname}" on load-balancing wan rule {rule_id} '
+                                      'has no interface-health configuration')
+
             if rule_conf.get('protocol') == '!all':
                 raise ConfigError(f'Protocol "!all" matches no traffic on load-balancing wan rule {rule_id}')
 
