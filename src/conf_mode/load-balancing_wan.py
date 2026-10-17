@@ -169,7 +169,8 @@ def apply(lb):
         if os.path.exists(wlb_tables_file):
             os.unlink(wlb_tables_file)
     else:
-        cmdl(['systemctl', 'restart', service])
+        # a restart removes all rules and routes until the daemon is back
+        cmdl(['systemctl', 'reload-or-restart', service])
 
     call_dependents()
 

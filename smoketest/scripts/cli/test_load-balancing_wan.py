@@ -18,6 +18,7 @@ import json
 import os
 import select
 import subprocess
+import threading
 import tempfile
 import unittest
 import time
@@ -845,7 +846,7 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
             self.cli_set(test + ['target', target])
             self.cli_set(test + ['ttl-limit', ttl])
             self.cli_commit()
-            # the daemon starts with ACTIVE, give it two rounds of checks
+            # eth231 is ACTIVE until a check fails, give it two rounds of checks
             found, _ = self.wait_for_result(wlb_status, failed, timeout=12)
             self.assertFalse(found, msg=f'ttl test to {target} with ttl {ttl} failed')
 
@@ -937,6 +938,60 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         self.cli_delete(base_path)
         self.cli_commit()
         self.assertFalse(os.path.exists('/run/wlb_tables.json'))
+    def test_commit_reloads_without_gap(self):
+        # every commit restarted the health daemon: rules, routes and health
+        # state were gone until it was back
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_commit()
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+
+        def daemon_pid():
+            return cmdl(['systemctl', 'show', '--property=MainPID', '--value',
+                         'vyos-wan-load-balance.service'])
+        pid = daemon_pid()
+
+        # new connections keep working while an unrelated change is committed
+        results = []
+        done = threading.Event()
+        def connect():
+            while not done.is_set():
+                results.append(self.lab_connect() is not None)
+        worker = threading.Thread(target=connect)
+        worker.start()
+        time.sleep(1)
+        self.cli_set(base_path + ['wan', 'rule', '10', 'description', 'reload'])
+        self.cli_commit()
+        time.sleep(7)
+        done.set()
+        worker.join()
+        self.assertEqual(daemon_pid(), pid)
+        self.assertNotIn(False, results, msg=f'{results.count(False)} of {len(results)} connections failed')
+
+        # a known health state survives a commit
+        cmd_in_netns('wlb-isp1', 'nft add table ip block')
+        cmd_in_netns('wlb-isp1', "nft add chain ip block c '{ type filter hook input priority 0; }'")
+        cmd_in_netns('wlb-isp1', 'nft add rule ip block c icmp type echo-request drop')
+        failed = {'eth231': 'FAILED', 'eth232': 'ACTIVE'}
+        self.lab_wait_status(failed)
+        self.cli_set(base_path + ['wan', 'rule', '10', 'description', 'reload again'])
+        self.cli_commit()
+        time.sleep(2)
+        self.assertEqual(wlb_status(), failed)
+        self.assertEqual(daemon_pid(), pid)
+
+        # a removed interface takes its route and ip rule along
+        self.cli_delete(base_path + ['wan', 'interface-health', 'eth232'])
+        self.cli_delete(base_path + ['wan', 'rule', '10', 'interface', 'eth232'])
+        self.cli_commit()
+        self.lab_wait_status({'eth231': 'FAILED'})
+        self.assertNotIn('lookup 202', cmdl(['ip', 'rule', 'show']))
+        self.assertEqual(cmdl(['ip', 'route', 'show', 'table', '202']), '')
+        self.assertEqual(daemon_pid(), pid)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
