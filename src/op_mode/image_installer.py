@@ -32,6 +32,13 @@ from os import readlink
 from os import getpid
 from os import getppid
 from os import sync
+from os import chmod
+from os import lchown
+from os import lstat
+from os import walk
+from stat import S_IFMT
+from stat import S_IMODE
+from stat import S_ISLNK
 from json import loads
 from json import dumps
 from typing import Union
@@ -372,6 +379,73 @@ def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
     st = Path(src).stat()
     copy(src, dst, follow_symlinks=follow_symlinks)
     chown(dst, user=st.st_uid)
+
+
+def read_ids(path: str) -> dict[str, int]:
+    """Return {name: id} from a passwd or group file"""
+    ids = {}
+    for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
+        fields = line.split(':')
+        if len(fields) > 2 and fields[2].isdigit():
+            ids.setdefault(fields[0], int(fields[2]))
+    return ids
+
+
+def id_map(old_file: str, new_file: str) -> dict[int, int]:
+    """Map the ids of old_file to those of new_file, by name
+
+    System users and groups are not given fixed ids at build time, so a name
+    can get another number in another image. The files are read directly,
+    not through NSS, which can answer for ids that are not in them.
+    """
+    old_ids = read_ids(old_file)
+    new_ids = read_ids(new_file)
+    mapping = {}
+    for name, old_id in old_ids.items():
+        if name in new_ids:
+            mapping.setdefault(old_id, new_ids[name])
+    return mapping
+
+
+def copy_ownership(
+    src: str, dst: str, uid_map: dict[int, int] = None, gid_map: dict[int, int] = None
+) -> None:
+    """Give every entry of dst the owner, group and mode of the same path in src
+
+    copytree() preserves permissions but not ownership: directories and
+    symlinks are created by root, and copy_preserve_owner() only restores the
+    owner of regular files - their group is lost and chown() clears the
+    setuid/setgid bits. Services running as a non-root user can then no longer
+    write to their directories under /config after an image upgrade.
+    Only paths present in both trees and of the same type are touched.
+
+    Owners are translated by name with uid_map and gid_map, like tar and rsync
+    do: an id whose name exists in both images gets the number of the new
+    image. An id without a name in the old image (e.g. a container user), or
+    whose name is not in the new image (e.g. a login user, created at boot
+    from the configuration), keeps its number.
+    """
+    uid_map = uid_map or {}
+    gid_map = gid_map or {}
+    for root, dirs, files in walk(src):
+        for name in ['.'] + dirs + files if root == src else dirs + files:
+            src_path = Path(root, name)
+            dst_path = Path(dst, src_path.relative_to(src))
+            try:
+                src_st = lstat(src_path)
+                dst_st = lstat(dst_path)
+            except FileNotFoundError:
+                continue
+            if S_IFMT(src_st.st_mode) != S_IFMT(dst_st.st_mode):
+                continue
+            lchown(
+                dst_path,
+                uid_map.get(src_st.st_uid, src_st.st_uid),
+                gid_map.get(src_st.st_gid, src_st.st_gid),
+            )
+            # after chown, which clears setuid/setgid on files
+            if not S_ISLNK(src_st.st_mode):
+                chmod(dst_path, S_IMODE(src_st.st_mode))
 
 
 def copy_previous_installation_data(target_dir: str) -> None:
@@ -1299,6 +1373,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
         cfg_ver: str = image.get_image_tools_version(DIR_ROOTFS_SRC)
         version_name: str = image.get_image_version(DIR_ROOTFS_SRC)
+        uid_map = id_map('/etc/passwd', f'{DIR_ROOTFS_SRC}/etc/passwd')
+        gid_map = id_map('/etc/group', f'{DIR_ROOTFS_SRC}/etc/group')
 
         disk.partition_umount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs')
 
@@ -1356,8 +1432,14 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 Path(target_config_dir).mkdir(parents=True)
                 chown(target_config_dir, group='vyattacfg')
                 chmod_2775(target_config_dir)
-                copytree(f'{DIR_CONFIG}/', target_config_dir, symlinks=True,
-                        copy_function=copy_preserve_owner, dirs_exist_ok=True)
+                copytree(
+                    f'{DIR_CONFIG}/',
+                    target_config_dir,
+                    symlinks=True,
+                    copy_function=copy_preserve_owner,
+                    dirs_exist_ok=True,
+                )
+                copy_ownership(f'{DIR_CONFIG}/', target_config_dir, uid_map, gid_map)
 
                 # Record information from which image we upgraded to the new one.
                 # This can be used for a future automatic rollback into the old image.
