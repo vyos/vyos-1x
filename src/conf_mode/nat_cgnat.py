@@ -410,6 +410,13 @@ def verify(config):
     ]
     _verify_range_overlap(external_ranges)
 
+    internal_ranges = [
+        (f'internal pool {pool_name}', ip_range)
+        for pool_name in used_internal_pools
+        for ip_range in config['pool']['internal'][pool_name]['range']
+    ]
+    _verify_range_overlap(internal_ranges)
+
 
 def generate(config):
     if 'deleted' in config:

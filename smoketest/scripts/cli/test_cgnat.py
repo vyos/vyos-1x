@@ -234,6 +234,34 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
                               ['100.64.1.0 : 192.0.2.2 . 1024-3023']],
                              'ip cgnat', inverse=False, args='-s')
 
+    def test_cgnat_internal_overlap(self):
+        pool_path = base_path + ['pool']
+
+        self.cli_set(pool_path + ['external', 'ext-01', 'range', '192.0.2.1/32'])
+        self.cli_set(pool_path + ['external', 'ext-02', 'range', '192.0.2.2/32'])
+        self.cli_set(pool_path + ['internal', 'int-01', 'range', '100.64.0.0/29'])
+        self.cli_set(pool_path + ['internal', 'int-02', 'range', '100.64.0.4-100.64.0.5'])
+        for rule, pool in [('10', '01'), ('20', '02')]:
+            self.cli_set(base_path + ['rule', rule, 'source', 'pool', f'int-{pool}'])
+            self.cli_set(base_path + ['rule', rule, 'translation', 'pool', f'ext-{pool}'])
+
+        # same internal address in pools of different rules
+        with self.assertRaisesRegex(ConfigSessionError, r'overlaps\s+with\s+range'):
+            self.cli_commit()
+        self.cli_delete(pool_path + ['internal', 'int-02', 'range', '100.64.0.4-100.64.0.5'])
+        self.cli_set(pool_path + ['internal', 'int-02', 'range', '100.64.0.8-100.64.0.9'])
+
+        # internal address in two ranges of the same pool
+        self.cli_set(pool_path + ['internal', 'int-01', 'range', '100.64.0.0-100.64.0.7'])
+        with self.assertRaisesRegex(ConfigSessionError, r'overlaps\s+with\s+range'):
+            self.cli_commit()
+        self.cli_delete(pool_path + ['internal', 'int-01', 'range', '100.64.0.0-100.64.0.7'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.7 : 192.0.2.1 . 15024-17023'],
+                              ['100.64.0.9 : 192.0.2.2 . 3024-5023']],
+                             'ip cgnat', inverse=False, args='-s')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
