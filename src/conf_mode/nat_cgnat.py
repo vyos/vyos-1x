@@ -145,6 +145,51 @@ class IPOperations:
         # Return the summarized IP networks list
         return list(ipaddress.summarize_address_range(range_start, range_end))
 
+    def get_bounds(self) -> tuple[int, int]:
+        """Return the first and last address of a prefix or range as integers
+
+        Example:
+            % ip = IPOperations('192.0.2.0/30')
+            % ip.get_bounds()
+            (3221225984, 3221225987)
+        """
+        if self.ip_network:
+            return (
+                int(self.ip_network.network_address),
+                int(self.ip_network.broadcast_address),
+            )
+        start_ip, end_ip = self.ip_prefix.split('-')
+        return int(ipaddress.ip_address(start_ip)), int(ipaddress.ip_address(end_ip))
+
+
+def _find_range_overlap(ranges: list[tuple[str, str]]) -> tuple | None:
+    """Return the first two overlapping (owner, range) pairs or None"""
+    bounds = sorted(
+        (IPOperations(ip_range).get_bounds(), owner, ip_range)
+        for owner, ip_range in ranges
+    )
+    # compare against the range reaching furthest so far, not just the
+    # previous one - it may contain several of the following ranges
+    widest = None
+    widest_end = -1
+    for (start, end), owner, ip_range in bounds:
+        if start <= widest_end:
+            return widest, (owner, ip_range)
+        if end > widest_end:
+            widest = (owner, ip_range)
+            widest_end = end
+    return None
+
+
+def _verify_range_overlap(ranges: list[tuple[str, str]]) -> None:
+    overlap = _find_range_overlap(ranges)
+    if overlap:
+        (owner_a, range_a), (owner_b, range_b) = overlap
+        raise ConfigError(
+            f'Range "{range_a}" of "{owner_a}" overlaps with range '
+            f'"{range_b}" of "{owner_b}"!'
+        )
+
 
 def _delete_conntrack_entries(source_prefixes: list[ipaddress.IPv4Network]) -> None:
     """Delete all conntrack entries for the list of prefixes"""
@@ -356,6 +401,14 @@ def verify(config):
                 f'Rule "{rule}" does not have enough ports available for the '
                 f'specified parameters'
             )
+
+    # Ports are allocated per range, an address in two ranges is handed out twice
+    external_ranges = [
+        (f'external pool {pool_name}', ip_range)
+        for pool_name in used_external_pools
+        for ip_range in config['pool']['external'][pool_name]['range']
+    ]
+    _verify_range_overlap(external_ranges)
 
 
 def generate(config):
