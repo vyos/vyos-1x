@@ -105,12 +105,18 @@ if prifilt("{{ prifilt_selectors(console.facility) | trim }}") then {
 {%     for remote_name, remote_options in remote.items() %}
 {%         if remote_options.facility is vyos_defined %}
 {%             set tls = remote_options.tls %}
+{%             if remote_options.resolved_address is vyos_defined %}
+{%                 set remote_target = remote_options.resolved_address %}
+# Remote syslog to {{ remote_name }} ({{ remote_target }})
+{%             else %}
+{%                 set remote_target = remote_name %}
 # Remote syslog to {{ remote_name }}
+{%             endif %}
 if prifilt("{{ prifilt_selectors(remote_options.facility) | trim }}") then {
     action(
         type="omfwd"
         # Remote syslog server where we send our logs to
-        target="{{ remote_name }}"
+        target="{{ remote_target }}"
         # Port on the remote syslog server
         port="{{ remote_options.port }}"
         protocol="{{ 'tcp' if tls is vyos_defined else remote_options.protocol }}"
