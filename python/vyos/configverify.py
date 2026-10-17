@@ -188,21 +188,25 @@ def verify_mirror_redirect(config):
         # limitation from the past
         raise ConfigError('Cannot use QoS together with mirror!')
 
+    def verify_target(kind, target):
+        # T6393: interface types are committed in priority order, the target
+        # may only be defined on the CLI and not (yet) exist in the Kernel
+        for interfaces in getattr(config, 'interfaces_root', {}).values():
+            if target in interfaces:
+                return
+        if not interface_exists(target):
+            raise ConfigError(f'Requested {kind} interface "{target}" does not exist!')
+
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
-            if not interface_exists(mirror_interface):
-                raise ConfigError(f'Requested mirror interface "{mirror_interface}" '\
-                                   'does not exist!')
+            verify_target('mirror', mirror_interface)
 
             if mirror_interface == config['ifname']:
                 raise ConfigError(f'Cannot mirror "{direction}" traffic back '\
                                    'the originating interface!')
 
     if 'redirect' in config:
-        redirect_ifname = config['redirect']
-        if not interface_exists(redirect_ifname):
-            raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
-                               'does not exist!')
+        verify_target('redirect', config['redirect'])
 
 def verify_authentication(config):
     """
