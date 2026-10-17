@@ -14,9 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import unittest
-
-from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -25,6 +24,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmdl
+from vyos.utils.process import rc_cmd
 from vyos.utils.file import read_file
 from vyos.frrender import bgp_daemon
 
@@ -1640,7 +1640,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         int_neighbors = ['192.0.2.2', '192.0.2.3', '192.0.2.4', '192.0.2.5']
         int_interfaces = ['dum0', 'dum1', 'dum2', 'dum3']
         int_pg_names = ['SMOKETESTINT0', 'SMOKETESTINT1', 'SMOKETESTINT2']
-        remote_as_types = ['external', 'internal']
         for int_interface in int_interfaces:
             self.cli_set(['interfaces', 'dummy', int_interface])
         self.cli_commit()
@@ -1673,16 +1672,19 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['remote-as', remote_as_type])
 
         set_neighbor_funcs = [_set_neighbor_0, _set_neighbor_1, _set_neighbor_2, _set_neighbor_3]
-        for remote_as_type in remote_as_types:
-            for func_count, set_neighbor_func in enumerate(set_neighbor_funcs):
-                for neighbors in [int_neighbors, int_interfaces]:
-                    set_neighbor_func(neighbors[func_count], remote_as_type)
-                    if remote_as_type == 'external':
-                        with self.assertRaises(ConfigSessionError) as e:
-                            self.cli_commit()
-                        self.cli_discard()
-                    else:
-                        self.cli_commit()
+        # route-reflector-client is only valid for iBGP - every eBGP variant
+        # must be rejected on its own
+        for func_count, set_neighbor_func in enumerate(set_neighbor_funcs):
+            for neighbors in [int_neighbors, int_interfaces]:
+                set_neighbor_func(neighbors[func_count], 'external')
+                with self.assertRaises(ConfigSessionError) as e:
+                    self.cli_commit()
+                self.cli_discard()
+
+        for func_count, set_neighbor_func in enumerate(set_neighbor_funcs):
+            for neighbors in [int_neighbors, int_interfaces]:
+                set_neighbor_func(neighbors[func_count], 'internal')
+        self.cli_commit()
 
         frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit', start_subsection=' address-family ipv4 unicast', stop_subsection='^ exit-address-family')
         neighbor_has_rr_client = [
@@ -1843,21 +1845,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         router_id = '127.0.0.4'
         vrf = 'red'
 
-        for vrf in ['', 'red']:
-            vrf_base = ['vrf', 'name', vrf] if vrf else []
-            vrf_frr_bit = f' vrf {vrf}' if vrf else ''
-            bgp_path = vrf_base + base_path
+        vrf_frr_bits = ['', f' vrf {vrf}']
+        bgp_paths = [base_path, ['vrf', 'name', vrf] + base_path]
 
-            if vrf_base:
-                self.cli_set(vrf_base + ['table', '2000'])
-
+        self.cli_set(['vrf', 'name', vrf, 'table', '2000'])
+        for bgp_path in bgp_paths:
             self.cli_set(bgp_path + ['system-as', ASN])
             self.cli_set(bgp_path + ['parameters', 'router-id', router_id])
 
-            for notation in ['asdot', 'asdot+']:
+        for notation in ['asdot', 'asdot+']:
+            for bgp_path in bgp_paths:
                 self.cli_set(bgp_path + ['parameters', 'as-notation', notation])
-                self.cli_commit()
+            self.cli_commit()
 
+            for vrf_frr_bit in vrf_frr_bits:
                 # our config options are called 'asdot' and 'asdot+' as in
                 # RFC 5396
                 # but FRR calls them 'dot' and 'dot+' in the router bgp line
@@ -1871,22 +1872,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 )
                 self.assertIn(router_str, frrconfig)
 
-            # Verify removing as-notation works
+        # Verify removing as-notation works
+        for bgp_path in bgp_paths:
             self.cli_delete(bgp_path + ['parameters', 'as-notation'])
-            self.cli_commit()
+        self.cli_commit()
 
+        for vrf_frr_bit in vrf_frr_bits:
             router_str = f'router bgp {ASN}{vrf_frr_bit}'
-
             frrconfig = self.getFRRconfig(router_str, stop_section='^exit')
             self.assertIn(router_str, frrconfig)
             self.assertNotIn('as-notation', frrconfig.splitlines()[0])
-
-            # Cleanup
-            self.cli_delete(bgp_path)
-            if vrf_base:
-                self.cli_delete(vrf_base)
-
-            self.cli_commit()
 
     def test_bgp_32_bfd_strict(self):
         neighbor = '192.0.2.22'
@@ -2019,11 +2014,21 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # restart bgpd to apply "-M bmp" and update PID
-        cmdl(['kill', '-9', str(self.daemon_pid)], sudo=True)
-        # let the bgpd process recover
-        sleep(10)
+        old_pid = self.daemon_pid
+        cmdl(['kill', '-9', str(old_pid)], sudo=True)
+        # bgpd is only settled once watchfrr has finished restarting it - an
+        # early PID may still be replaced
+        def bgpd_settled(out):
+            return (process_named_running(bgp_daemon, 'bmp') not in (None, old_pid) and
+                    'global phase: Idle' in out and
+                    'Reading Configuration: no' in out and
+                    re.search(rf'^\s+{bgp_daemon}\s+Up$', out, re.M))
+        # timeout follows watchfrr "Restart Timeout"
+        settled, _ = self.wait_for_result(lambda: rc_cmd('vtysh -c "show watchfrr"')[1],
+                                          bgpd_settled, pause=0.5, timeout=90)
+        self.assertTrue(settled)
         # update daemon PID - this was a planned daemon restart
-        self.daemon_pid = process_named_running(bgp_daemon)
+        self.daemon_pid = process_named_running(bgp_daemon, 'bmp')
 
         # set bmp config but not set address
         self.cli_set(target_path + ['port', target_port])
