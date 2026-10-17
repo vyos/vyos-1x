@@ -38,8 +38,9 @@ def _get_raw_data(external_address: str = '', internal_address: str = '') -> lis
     for elem in elements:
         internal = elem[0]  # internal
         external = elem[1]['concat'][0]  # external
-        start_port = elem[1]['concat'][1]['range'][0]
-        end_port = elem[1]['concat'][1]['range'][1]
+        port = elem[1]['concat'][1]
+        # nftables stores a range of a single port as plain port
+        start_port, end_port = port['range'] if isinstance(port, dict) else (port, port)
         port_range = f'{start_port}-{end_port}'
 
         if (internal_address and internal != internal_address) or (
