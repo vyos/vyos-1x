@@ -23,8 +23,10 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmdl
 from vyos.utils.network import get_vrf_tableid
+from vyos.defaults import fragment_mark_bit
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
+from vyos.defaults import user_mark_mask
 
 # Conntrack
 def conntrack_required(conf):
@@ -462,11 +464,11 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
     if 'fragment' in rule_conf:
         # Checking for fragmentation after priority -400 is not possible,
-        # so we use a priority -450 hook to set a mark
+        # a priority -450 hook sets bit 31 of the mark on fragments
         if 'match_frag' in rule_conf['fragment']:
-            output.append('meta mark 0xffff1')
+            output.append(f'meta mark & {fragment_mark_bit} == {fragment_mark_bit}')
         if 'match_non_frag' in rule_conf['fragment']:
-            output.append('meta mark != 0xffff1')
+            output.append(f'meta mark & {fragment_mark_bit} != {fragment_mark_bit}')
 
     if 'limit' in rule_conf:
         if 'rate' in rule_conf['limit']:
@@ -536,7 +538,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if mark[0] == '!':
             operator = '!='
             mark = mark[1:]
-        output.append(f'meta mark {operator} {{{mark}}}')
+        output.append(f'meta mark & {user_mark_mask} {operator} {{{mark}}}')
 
     if 'vlan' in rule_conf:
         if 'id' in rule_conf['vlan']:
@@ -608,7 +610,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             output.append(f'ip{def_suffix} dscp set {dscp}')
         if 'mark' in rule_conf['set']:
             mark = rule_conf['set']['mark']
-            output.append(f'meta mark set {mark}')
+            output.append(f'meta mark set meta mark & {fragment_mark_bit} | {mark}')
         if 'vrf' in rule_conf['set']:
             set_table = True
             vrf_name = rule_conf['set']['vrf']
@@ -624,7 +626,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 table = rt_global_table
         if set_table:
             mark = 0x7FFFFFFF - int(table)
-            output.append(f'meta mark set {mark}')
+            output.append(f'meta mark set meta mark & {fragment_mark_bit} | {mark}')
         if 'tcp_mss' in rule_conf['set']:
             mss = rule_conf['set']['tcp_mss']
             output.append(f'tcp option maxseg size set {mss}')

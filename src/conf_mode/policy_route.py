@@ -34,6 +34,7 @@ from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import interface_exists
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
+from vyos.defaults import user_mark_mask
 from vyos.geoip import  geoip_refresh, geoip_update
 from vyos import ConfigError
 from vyos import airbag
@@ -265,8 +266,9 @@ def apply_table_marks(policy):
                                 continue
                             tables.append(vrf_table_id)
                             table_mark = mark_offset - vrf_table_id
+                            # fragments carry bit 31 of the mark while being routed
                             cmdl(cmd_list + ['rule', 'add', 'pref', str(vrf_table_id),
-                                              'fwmark', str(table_mark), 'table', str(vrf_table_id)])
+                                              'fwmark', f'{table_mark}/{user_mark_mask}', 'table', str(vrf_table_id)])
 
 def cleanup_table_marks():
     for cmd_list in [['ip'], ['ip', '-6']]:
@@ -280,6 +282,9 @@ def cleanup_table_marks():
             if fwmark[:2] == '0x':
                 fwmark = int(fwmark, 16)
             if (int(fwmark) == (mark_offset - table)):
+                # a rule with a mask is only found again with the same mask
+                if 'fwmask' in rule:
+                    fwmark = f'{fwmark}/{rule["fwmask"]}'
                 cmdl(cmd_list + ['rule', 'del', 'fwmark', str(fwmark), 'table', str(table)])
 
 def apply(policy):
