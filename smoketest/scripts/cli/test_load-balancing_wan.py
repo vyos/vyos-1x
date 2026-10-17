@@ -811,6 +811,43 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
 
         answers = [self.lab_connect() for _ in range(10)]
         self.assertGreaterEqual(answers.count('isp2 peer=10.250.2.1'), 5, msg=answers)
+    def test_health_test_ttl(self):
+        # the ttl test treated every ping failure as healthy and an answer
+        # as failure - an outage was never detected
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        # 203.0.113.0/24 is behind isp1, which forwards it into a black hole
+        call('sudo ip route add 203.0.113.0/24 via 10.250.1.2')
+        self.addCleanup(call, 'sudo ip route del 203.0.113.0/24 via 10.250.1.2')
+        cmd_in_netns('wlb-isp1', 'sysctl -w net.ipv4.ip_forward=1')
+        cmd_in_netns('wlb-isp1', 'ip link add d0 type dummy')
+        cmd_in_netns('wlb-isp1', 'ip link set d0 up')
+        cmd_in_netns('wlb-isp1', 'ip addr add 192.0.2.1/30 dev d0')
+        cmd_in_netns('wlb-isp1', 'ip route add 203.0.113.0/24 via 192.0.2.2')
+
+        self.lab_health('eth232', 2)
+        test = base_path + ['wan', 'interface-health', 'eth231', 'test', '10']
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth231', 'nexthop', '10.250.1.2'])
+        self.cli_set(test + ['type', 'ttl'])
+        self.cli_set(test + ['resp-time', '1'])
+        for ifname in isps:
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+
+        failed = {'eth231': 'FAILED', 'eth232': 'ACTIVE'}
+        # the target answers itself, or the hop where the TTL runs out does
+        for target, ttl in [('10.250.1.2', '1'), ('203.0.113.10', '1')]:
+            self.cli_set(test + ['target', target])
+            self.cli_set(test + ['ttl-limit', ttl])
+            self.cli_commit()
+            # the daemon starts with ACTIVE, give it two rounds of checks
+            found, _ = self.wait_for_result(wlb_status, failed, timeout=12)
+            self.assertFalse(found, msg=f'ttl test to {target} with ttl {ttl} failed')
+
+        # nothing answers - the path is broken
+        self.cli_set(test + ['ttl-limit', '3'])
+        self.cli_commit()
+        self.lab_wait_status(failed)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

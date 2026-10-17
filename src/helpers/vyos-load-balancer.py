@@ -68,7 +68,8 @@ def health_check(ifname, conf, state, test_defaults):
         elif check_type == 'ttl':
             target = test_conf['target']
             ttl_limit = test_conf['ttl_limit']
-            if not health_ping_host_ttl(target, ifname, ttl_limit=ttl_limit):
+            resp_time = test_conf['resp_time']
+            if not health_ping_host_ttl(target, ifname, ttl_limit=ttl_limit, wait_time=resp_time):
                 return False
         elif check_type == 'user-defined':
             script = test_conf['test_script']

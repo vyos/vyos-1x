@@ -17,6 +17,7 @@
 import os
 
 from vyos.defaults import directories
+from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 
 dhclient_lease = 'dhclient_{0}.lease'
@@ -172,10 +173,12 @@ def health_ping_host(host, ifname, count=1, wait_time=0):
     rc = run(cmd_str)
     return rc == 0
 
-def health_ping_host_ttl(host, ifname, count=1, ttl_limit=0):
-    cmd_str = f'ping -c {count} -t {ttl_limit} -I {ifname} {host}'
-    rc = run(cmd_str)
-    return rc != 0
+def health_ping_host_ttl(host, ifname, count=1, ttl_limit=0, wait_time=0):
+    # The path is up to ttl_limit hops if the hop where the TTL runs out
+    # reports it, or if the target itself is closer and answers
+    cmd_str = f'ping -c {count} -W {wait_time} -t {ttl_limit} -I {ifname} {host}'
+    rc, out = rc_cmd(cmd_str)
+    return rc == 0 or 'Time to live exceeded' in out
 
 def parse_dhcp_nexthop(ifname):
     lease_file = os.path.join(directories['isc_dhclient_dir'], dhclient_lease.format(ifname))
