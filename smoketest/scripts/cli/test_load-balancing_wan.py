@@ -20,6 +20,7 @@ import unittest
 import time
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
 from vyos.utils.file import chmod_755
 from vyos.utils.file import write_file
 from vyos.utils.misc import wait_for
@@ -602,6 +603,20 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         ]
 
         self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
+    def test_health_test_requires_target(self):
+        # without a target the health daemon failed after the commit succeeded
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'nexthop', '192.0.2.1'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'resp-time', '3'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0'])
+
+        for test_type in ['ping', 'ttl']:
+            self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'type', test_type])
+            with self.assertRaisesRegex(ConfigSessionError, f'Missing target for {test_type} health test 10'):
+                self.cli_commit()
+
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'target', '192.0.2.1'])
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

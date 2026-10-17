@@ -78,6 +78,9 @@ def verify(lb):
 
                 if test_conf['type'] == 'user-defined' and 'test_script' not in test_conf:
                     raise ConfigError(f'Missing user-defined script for health test on interface {ifname}')
+
+                if test_conf['type'] in ['ping', 'ttl'] and 'target' not in test_conf:
+                    raise ConfigError(f'Missing target for {test_conf["type"]} health test {test_id} on interface {ifname}')
     else:
         raise ConfigError('Interface health tests must be configured')
 
