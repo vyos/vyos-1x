@@ -241,6 +241,8 @@ def get_config():
     for rule in lb.get('rule', []):
         if lb.from_defaults(['rule', rule, 'limit']):
             del lb['rule'][rule]['limit']
+        # "inbound-interface any" needs to exclude the WAN interfaces
+        lb['rule'][rule]['wan_interfaces'] = list(lb.get('interface_health', {}))
 
     lb['test_defaults'] = get_defaults(base + ['interface-health', 'A', 'test', 'B'], get_first_key=True)
 

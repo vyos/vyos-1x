@@ -728,6 +728,24 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         self.lab_wait_status({'wlb-isp1': 'ACTIVE', 'wlb-isp2': 'ACTIVE'})
         answers = {self.lab_connect() for _ in range(20)}
         self.assertEqual(answers, {'isp1 peer=10.250.1.1', 'isp2 peer=10.250.2.1'})
+    def test_inbound_interface_any(self):
+        # "any" was rendered as interface name and matched no packet
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'any'])
+        self.cli_commit()
+
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+        # replies from an ISP must not be balanced back to an ISP
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'iifname != { "eth231", "eth232" }' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+        self.assertNotIn('"any"', out)
+        answers = {self.lab_connect() for _ in range(20)}
+        self.assertEqual(answers, {'isp1 peer=10.250.1.1', 'isp2 peer=10.250.2.1'})
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -24,7 +24,13 @@ dhclient_lease = 'dhclient_{0}.lease'
 def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight=None, health_state=None, action=None, restore_mark=False):
     output = []
 
-    if 'inbound_interface' in rule_conf:
+    if rule_conf.get('inbound_interface') == 'any':
+        # any interface but the WAN interfaces - matching replies arriving
+        # from an ISP would route them back to that ISP
+        wan_interfaces = ', '.join(f'"{ifname}"' for ifname in rule_conf.get('wan_interfaces', []))
+        if wan_interfaces and not local:
+            output.append(f'iifname != {{ {wan_interfaces} }}')
+    elif 'inbound_interface' in rule_conf:
         ifname = rule_conf['inbound_interface']
         if local and not exclude:
             output.append(f'oifname != "{ifname}"')
