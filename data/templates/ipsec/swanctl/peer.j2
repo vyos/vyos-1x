@@ -78,7 +78,45 @@
         children {
 {% if peer_conf.vti.bind is vyos_defined and peer_conf.tunnel is not vyos_defined %}
 {%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is vyos_defined else esp_group[ peer_conf.default_esp_group ] %}
-            {{ name }}-vti {
+{#     set default traffic-selectors #}
+{%     set local_prefixes = ['0.0.0.0/0', '::/0'] %}
+{%     set remote_prefixes = ['0.0.0.0/0', '::/0'] %}
+{%     if peer_conf.vti.traffic_selector is vyos_defined %}
+{%         if peer_conf.vti.traffic_selector.local is vyos_defined and peer_conf.vti.traffic_selector.local.prefix is vyos_defined %}
+{%             set local_prefixes = peer_conf.vti.traffic_selector.local.prefix %}
+{%         endif %}
+{%         if peer_conf.vti.traffic_selector.remote is vyos_defined and peer_conf.vti.traffic_selector.remote.prefix is vyos_defined %}
+{%             set remote_prefixes = peer_conf.vti.traffic_selector.remote.prefix %}
+{%         endif %}
+{%     endif %}
+{#     Some peers narrow a CHILD_SA to one address family, so optionally use one child per family #}
+{%     set vti_children = [{'name': name ~ '-vti', 'local': local_prefixes, 'remote': remote_prefixes}] %}
+{%     if peer_conf.vti.traffic_selector is vyos_defined and peer_conf.vti.traffic_selector.split_by_family is vyos_defined %}
+{%         set ns = namespace(local4=[], local6=[], remote4=[], remote6=[]) %}
+{%         for prefix in local_prefixes %}
+{%             if ':' in prefix %}
+{%                 set ns.local6 = ns.local6 + [prefix] %}
+{%             else %}
+{%                 set ns.local4 = ns.local4 + [prefix] %}
+{%             endif %}
+{%         endfor %}
+{%         for prefix in remote_prefixes %}
+{%             if ':' in prefix %}
+{%                 set ns.remote6 = ns.remote6 + [prefix] %}
+{%             else %}
+{%                 set ns.remote4 = ns.remote4 + [prefix] %}
+{%             endif %}
+{%         endfor %}
+{%         set vti_children = [] %}
+{%         if ns.local4 and ns.remote4 %}
+{%             set vti_children = vti_children + [{'name': name ~ '-vti', 'local': ns.local4, 'remote': ns.remote4}] %}
+{%         endif %}
+{%         if ns.local6 and ns.remote6 %}
+{%             set vti_children = vti_children + [{'name': name ~ '-vti6', 'local': ns.local6, 'remote': ns.remote6}] %}
+{%         endif %}
+{%     endif %}
+{%     for vti_child in vti_children %}
+            {{ vti_child.name }} {
                 esp_proposals = {{ vti_esp | get_esp_cipher(ike) | join(',') }}
 {%     if vti_esp.life_bytes is vyos_defined %}
                 life_bytes = {{ vti_esp.life_bytes }}
@@ -92,19 +130,8 @@
                 rekey_packets = 0
                 rekey_time = 0s
 {%     endif %}
-{#     set default traffic-selectors #}
-{%     set local_ts = '0.0.0.0/0,::/0' %}
-{%     set remote_ts = '0.0.0.0/0,::/0' %}
-{%     if peer_conf.vti.traffic_selector is vyos_defined %}
-{%         if peer_conf.vti.traffic_selector.local is vyos_defined and peer_conf.vti.traffic_selector.local.prefix is vyos_defined %}
-{%             set local_ts = peer_conf.vti.traffic_selector.local.prefix | join(',') %}
-{%         endif %}
-{%         if peer_conf.vti.traffic_selector.remote is vyos_defined and peer_conf.vti.traffic_selector.remote.prefix is vyos_defined %}
-{%             set remote_ts = peer_conf.vti.traffic_selector.remote.prefix | join(',') %}
-{%         endif %}
-{%     endif %}
-                local_ts = {{ local_ts }}
-                remote_ts = {{ remote_ts }}
+                local_ts = {{ vti_child.local | join(',') }}
+                remote_ts = {{ vti_child.remote | join(',') }}
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
 {#              The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
 {#              Thus we simply shift the key by one to also support a vti0 interface #}
@@ -130,6 +157,7 @@
                 replay_window = {{ peer_conf.replay_window }}
 {%     endif %}
             }
+{%     endfor %}
 {% elif peer_conf.tunnel is vyos_defined %}
 {%     for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
 {%         set tunnel_esp_name = tunnel_conf.esp_group if tunnel_conf.esp_group is vyos_defined else peer_conf.default_esp_group %}
