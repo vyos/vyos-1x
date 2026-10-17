@@ -48,6 +48,11 @@ def cmd_in_netns(netns, cmd):
 def delete_netns(name):
     return call(f'sudo ip netns del {name}')
 
+def wlb_chain(chain):
+    # rules are installed by the health daemon once the commit has finished
+    rc, out = rc_cmd(f'sudo nft list chain ip vyos_wanloadbalance {chain}')
+    return out if rc == 0 else ''
+
 class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -617,6 +622,20 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
 
         self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'target', '192.0.2.1'])
         self.cli_commit()
+    def test_protocol_not_all(self):
+        # "!all" was rendered as "meta l4proto != all", which nft rejects
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'nexthop', '192.0.2.1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', '!all'])
+        with self.assertRaisesRegex(ConfigSessionError, 'Protocol "!all" matches no traffic'):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', '!tcp'])
+        self.cli_commit()
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'iifname "eth1" meta l4proto != tcp' in out, timeout=15)
+        self.assertTrue(found, msg=out)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
