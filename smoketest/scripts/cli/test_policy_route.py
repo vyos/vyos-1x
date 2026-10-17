@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.utils.process import cmdl
 from vyos.utils.process import run
 
 mark = '100'
@@ -398,6 +399,27 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_mangle', args='-t')
+
+    def test_pbr_table_recreated(self):
+        # the rule file in /run and the nftables table can drift apart, the
+        # next commit must rebuild the table instead of failing on it
+        mark_hex = "{0:#010x}".format(int(mark))
+        self.cli_set(['policy', 'route6', 'smoketest6', 'interface', interface])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'source', 'address', '2001:db8::1'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'set', 'mark', mark])
+        self.cli_commit()
+
+        cmdl(['nft', 'delete', 'table', 'ip6', 'vyos_mangle'], sudo=True)
+
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'source', 'address', '2001:db8::2'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'set', 'mark', mark])
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip6 saddr 2001:db8::1', f'meta mark set {mark_hex}'],
+            ['ip6 saddr 2001:db8::2', f'meta mark set {mark_hex}'],
+        ]
+        self.verify_nftables(nftables_search, 'ip6 vyos_mangle')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
