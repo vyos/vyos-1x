@@ -722,15 +722,18 @@ def parse_time(time):
         if 'T' not in start and 'starttime' in time:
             start += f' {time["starttime"]}'
         out.append(f'time >= "{start}"')
-    if 'starttime' in time and 'startdate' not in time:
-        out.append(f'hour >= "{time["starttime"]}"')
     if 'stopdate' in time:
         stop = time['stopdate']
         if 'T' not in stop and 'stoptime' in time:
             stop += f' {time["stoptime"]}'
         out.append(f'time < "{stop}"')
-    if 'stoptime' in time and 'stopdate' not in time:
-        out.append(f'hour < "{time["stoptime"]}"')
+    # nft converts hours to UTC when loading the ruleset. Separate >= and <
+    # comparisons never match once the window crosses midnight in UTC, a range
+    # is turned into its complement by nft instead.
+    hour_start = time['starttime'] if 'starttime' in time and 'startdate' not in time else None
+    hour_stop = time['stoptime'] if 'stoptime' in time and 'stopdate' not in time else None
+    if hour_start or hour_stop:
+        out.append(f'hour "{hour_start or "00:00"}"-"{hour_stop or "23:59:59"}"')
     if 'weekdays' in time:
         days = [day.strip() for day in time['weekdays'].split(",") if day]
         out_days = [f'"{expand_weekday(day).title()}"' for day in days if day[0] != '!']

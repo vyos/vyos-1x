@@ -707,6 +707,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '18', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '18', 'time', 'starttime', '08:00'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '18', 'time', 'stoptime', '17:00'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '26', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '26', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '26', 'destination', 'port', '25'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '26', 'time', 'starttime', '22:00'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '26', 'time', 'stoptime', '06:00'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '19', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '19', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '19', 'tcp', 'flags', 'syn'])
@@ -824,7 +829,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp sport 1024-2048', 'accept', 'ipv4-NAM-smoketest-15'],
             ['limit rate 10/second burst 20 packets', 'accept', 'ipv4-NAM-smoketest-16'],
             ['meta time >= "2026-01-01 08:00:00"', 'meta time < "2026-12-31 18:00:00"', 'accept', 'ipv4-NAM-smoketest-17'],
-            ['meta hour >= "08:00"', 'meta hour < "17:00"', 'accept', 'ipv4-NAM-smoketest-18'],
             ['tcp flags & syn == syn', 'tcp option maxseg size set 1400', 'accept', 'ipv4-NAM-smoketest-19'],
             ['iifname @I_smoketest_if1', 'accept', 'ipv4-NAM-smoketest-21'],
             ['ip daddr @A_smoketest_addr1', 'accept', 'ipv4-NAM-smoketest-22'],
@@ -838,6 +842,15 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
         # disabled rule must not be rendered
         self.verify_nftables([['198.51.100.77'], ['ipv4-NAM-smoketest-20']], 'ip vyos_filter', inverse=True)
+
+        # hour windows must be ranges - nft lists a range which wraps around
+        # midnight in UTC as its complement, depending on the system timezone
+        rules = cmdl(['nft', 'list', 'chain', 'ip', 'vyos_filter', f'NAME_{name}'], sudo=True).splitlines()
+        for start, stop, comment in [('08:00', '17:00', 'ipv4-NAM-smoketest-18'),
+                                     ('22:00', '06:00', 'ipv4-NAM-smoketest-26')]:
+            forms = [f'meta hour "{start}"-"{stop}"', f'meta hour != "{stop}"-"{start}"']
+            self.assertTrue(any(form in line and f'"{comment}"' in line for line in rules for form in forms),
+                            msg=f'{comment}: none of {forms}')
 
     def test_ipv4_time_weekdays(self):
         name = 'v4-time-weekdays-test'
