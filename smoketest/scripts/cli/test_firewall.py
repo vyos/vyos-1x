@@ -17,7 +17,6 @@
 import unittest
 
 from glob import glob
-from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -76,14 +75,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
         # Resolver no longer blocks commit, need to wait for daemon to populate set
-        count = 0
-        while count < max_wait:
-            code = run(f'sudo nft get element {table} {set_name} {{ {element} }}')
-            if code == 0:
-                return True
-            count += 1
-            sleep(1)
-        return False
+        found, _ = self.wait_for_result(
+            lambda: run(f'sudo nft get element {table} {set_name} {{ {element} }}'),
+            0, pause=0.2, timeout=max_wait)
+        return found
 
     def test_geoip(self):
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'drop'])
