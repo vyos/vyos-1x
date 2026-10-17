@@ -18,6 +18,8 @@ import sys
 
 from copy import deepcopy
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos import ConfigError
 from vyos.utils.process import call
 
@@ -37,6 +39,12 @@ def get_config(config=None):
     if conf.exists('system time-zone'):
         tz['name'] = conf.return_value('system time-zone')
 
+    # nft converts hour matches with the offset of the time-zone in use
+    if conf.exists('firewall'):
+        set_dependents('firewall', conf)
+    if conf.exists('policy route') or conf.exists('policy route6'):
+        set_dependents('policy_route', conf)
+
     return tz
 
 def verify(tz):
@@ -48,6 +56,8 @@ def generate(tz):
 def apply(tz):
     call('/usr/bin/timedatectl set-timezone {}'.format(tz['name']))
     call('systemctl restart rsyslog')
+
+    call_dependents()
 
 if __name__ == '__main__':
     try:

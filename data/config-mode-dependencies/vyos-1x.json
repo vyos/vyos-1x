@@ -141,6 +141,10 @@
         "firewall": ["firewall"],
         "sysctl": ["system_sysctl"]
     },
+    "system_timezone": {
+        "firewall": ["firewall"],
+        "policy_route": ["policy_route"]
+    },
     "system_logs": {
         "syslog": ["system_syslog"]
     },

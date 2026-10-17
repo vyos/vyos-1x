@@ -3,9 +3,9 @@
 {% import 'conntrack/nftables-helpers.j2' as helper_tmpl %}
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
-{% if first_install is not vyos_defined %}
+# declaring the table first makes the delete succeed whether or not it exists
+table ip vyos_conntrack
 delete table ip vyos_conntrack
-{% endif %}
 table ip vyos_conntrack {
     chain VYOS_CT_IGNORE {
 {% if ignore.ipv4.rule is vyos_defined %}
@@ -101,9 +101,8 @@ table ip vyos_conntrack {
 {% endif %}
 }
 
-{% if first_install is not vyos_defined %}
+table ip6 vyos_conntrack
 delete table ip6 vyos_conntrack
-{% endif %}
 table ip6 vyos_conntrack {
     chain VYOS_CT_IGNORE {
 {% if ignore.ipv6.rule is vyos_defined %}

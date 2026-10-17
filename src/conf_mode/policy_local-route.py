@@ -22,6 +22,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
+from vyos.defaults import user_mark_mask
 from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
@@ -282,7 +283,7 @@ def apply(pbr):
                     f_src_port = '' if src_port == '' else f' sport {src_port} '
                     f_dst = '' if dst == '' else f' to {dst} '
                     f_dst_port = '' if dst_port == '' else f' dport {dst_port} '
-                    f_fwmk = '' if fwmk == '' else f' fwmark {fwmk} '
+                    f_fwmk = '' if fwmk == '' else f' fwmark {fwmk}/{user_mark_mask} '
                     f_iif = '' if iif == '' else f' iif {iif} '
                     f_proto = '' if proto == '' else f' ipproto {proto} '
                     f_table = '' if table_or_vrf == '' else f' lookup {table_or_vrf} '
@@ -320,7 +321,8 @@ def apply(pbr):
                         f_dst = f' to {dst} ' if dst else ''
                         f_src_port = f' sport {source_port} ' if source_port else ''
                         f_dst_port = f' dport {destination_port} ' if destination_port else ''
-                        f_fwmk = f' fwmark {fwmark} ' if fwmark else ''
+                        # fragments carry bit 31 of the mark while being routed
+                        f_fwmk = f' fwmark {fwmark}/{user_mark_mask} ' if fwmark else ''
                         f_iif = f' iif {inbound_interface} ' if inbound_interface else ''
                         f_proto = f' ipproto {protocol} ' if protocol else ''
 
