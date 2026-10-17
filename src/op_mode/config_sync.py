@@ -16,6 +16,8 @@
 
 import sys
 import typing
+import warnings
+import urllib3
 from pathlib import Path
 
 from vyos import opmode
@@ -73,13 +75,23 @@ def _load_config_sync_settings() -> dict:
     key = secondary.get('key')
     port = int(secondary.get('port', 443))
     timeout = int(secondary.get('timeout')) if secondary.get('timeout') else None
+    # config-sync talks to a remote secondary over HTTPS. TLS verification is
+    # off because secondary nodes typically present a self-signed certificate.
+    # It is hard-coded rather than read from the runtime config: that config
+    # has no key mangling and its leaf values are strings, so mapping a CLI
+    # option to a bool or CA bundle path belongs with the CLI work.
+    # TODO(T9396): expose ca-certificate / peer-fingerprint under
+    # service config-sync secondary
+    verify_tls = False
 
     if not address or not key:
         raise opmode.UnconfiguredObject(
             'Config-sync is not fully configured: missing secondary address/key'
         )
 
-    return dict(host=address, key=key, port=port, timeout=timeout)
+    return dict(
+        host=address, key=key, port=port, timeout=timeout, verify_tls=verify_tls
+    )
 
 
 class ConfigSyncDiffManager:
@@ -283,6 +295,12 @@ def show_sync_diff(
 
 
 if __name__ == '__main__':
+    # This one-shot op-mode process deliberately connects to the secondary
+    # without TLS verification (verify_tls=False) until T9396. The filter is
+    # scoped to this process only; the library never touches warning filters.
+    warnings.filterwarnings(
+        'ignore', category=urllib3.exceptions.InsecureRequestWarning
+    )
     try:
         res = opmode.run(sys.modules[__name__])
         if res:
