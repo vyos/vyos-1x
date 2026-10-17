@@ -17,14 +17,23 @@
 import os
 
 from vyos.defaults import directories
+from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 
 dhclient_lease = 'dhclient_{0}.lease'
+# routing table - and mark - of every WAN interface, see vyos-load-balancer.py
+wlb_tables_file = '/run/wlb_tables.json'
 
 def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight=None, health_state=None, action=None, restore_mark=False):
     output = []
 
-    if 'inbound_interface' in rule_conf:
+    if rule_conf.get('inbound_interface') == 'any':
+        # any interface but the WAN interfaces - matching replies arriving
+        # from an ISP would route them back to that ISP
+        wan_interfaces = ', '.join(f'"{ifname}"' for ifname in rule_conf.get('wan_interfaces', []))
+        if wan_interfaces and not local:
+            output.append(f'iifname != {{ {wan_interfaces} }}')
+    elif 'inbound_interface' in rule_conf:
         ifname = rule_conf['inbound_interface']
         if local and not exclude:
             output.append(f'oifname != "{ifname}"')
@@ -106,11 +115,14 @@ def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
-    if 'source_based_routing' not in rule_conf and not restore_mark:
+    # per flow by default - only the first packet of a connection is balanced
+    if 'per_packet_balancing' not in rule_conf and not restore_mark:
         output.append('ct state new')
 
     if limit and 'limit' in rule_conf and 'rate' in rule_conf['limit']:
-        output.append(f'limit rate {rule_conf["limit"]["rate"]}/{rule_conf["limit"]["period"]}')
+        # "above" matches the traffic exceeding the rate, "below" the rest
+        over = 'over ' if rule_conf['limit'].get('threshold') == 'above' else ''
+        output.append(f'limit rate {over}{rule_conf["limit"]["rate"]}/{rule_conf["limit"]["period"]}')
         if 'burst' in rule_conf['limit']:
             output.append(f'burst {rule_conf["limit"]["burst"]} packets')
 
@@ -163,10 +175,12 @@ def health_ping_host(host, ifname, count=1, wait_time=0):
     rc = run(cmd_str)
     return rc == 0
 
-def health_ping_host_ttl(host, ifname, count=1, ttl_limit=0):
-    cmd_str = f'ping -c {count} -t {ttl_limit} -I {ifname} {host}'
-    rc = run(cmd_str)
-    return rc != 0
+def health_ping_host_ttl(host, ifname, count=1, ttl_limit=0, wait_time=0):
+    # The path is up to ttl_limit hops if the hop where the TTL runs out
+    # reports it, or if the target itself is closer and answers
+    cmd_str = f'ping -c {count} -W {wait_time} -t {ttl_limit} -I {ifname} {host}'
+    rc, out = rc_cmd(cmd_str)
+    return rc == 0 or 'Time to live exceeded' in out
 
 def parse_dhcp_nexthop(ifname):
     lease_file = os.path.join(directories['isc_dhclient_dir'], dhclient_lease.format(ifname))

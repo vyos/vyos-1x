@@ -14,12 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import os
+import select
+import subprocess
+import threading
 import tempfile
 import unittest
 import time
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
 from vyos.utils.file import chmod_755
 from vyos.utils.file import write_file
 from vyos.utils.misc import wait_for
@@ -47,7 +52,109 @@ def cmd_in_netns(netns, cmd):
 def delete_netns(name):
     return call(f'sudo ip netns del {name}')
 
+# Traffic lab: a LAN namespace and one namespace per ISP, all connected to
+# the router by veth pairs. Every ISP owns the same "internet" address and
+# answers with its name and the source address it sees.
+lab_target = '198.51.100.10'
+
+def wlb_status():
+    try:
+        with open('/run/wlb_status.json') as f:
+            return {ifname: 'ACTIVE' if state['state'] else 'FAILED'
+                    for ifname, state in json.load(f).items()}
+    except (OSError, ValueError):
+        return {}
+
+def wlb_chain(chain):
+    # rules are installed by the health daemon once the commit has finished
+    rc, out = rc_cmd(f'sudo nft list chain ip vyos_wanloadbalance {chain}')
+    return out if rc == 0 else ''
+
 class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
+    def lab_setup(self, lan, isps):
+        """ Create the LAN namespace behind interface lan and one ISP
+        namespace per interface in isps. ISP n is 10.250.n.2, the router
+        uses 10.250.n.1 and 10.250.0.1 towards the LAN hosts 10.250.0.2/3. """
+        def add_ns(ns, ifname, local, peer):
+            create_netns(ns)
+            create_veth_pair(ifname, f'{ns}-p')
+            move_interface_to_netns(f'{ns}-p', ns)
+            cmd_in_netns(ns, f'ip link set {ns}-p name eth0')
+            cmd_in_netns(ns, 'ip link set lo up')
+            cmd_in_netns(ns, 'ip link set eth0 up')
+            for address in peer:
+                cmd_in_netns(ns, f'ip addr add {address}/24 dev eth0')
+            call(f'sudo ip addr add {local}/24 dev {ifname}')
+            call(f'sudo ip link set {ifname} up')
+            # cleanups run in reverse: echo services, veth pair, namespace
+            self.addCleanup(delete_netns, ns)
+            self.addCleanup(call, f'sudo ip link del {ifname}')
+            self.addCleanup(call, f'sudo ip netns pids {ns} | xargs -r sudo kill')
+
+        add_ns('wlb-lan', lan, '10.250.0.1', ['10.250.0.2', '10.250.0.3'])
+        cmd_in_netns('wlb-lan', 'ip route add default via 10.250.0.1')
+        for index, ifname in enumerate(isps, start=1):
+            ns = f'wlb-isp{index}'
+            add_ns(ns, ifname, f'10.250.{index}.1', [f'10.250.{index}.2'])
+            cmd_in_netns(ns, f'ip addr add {lab_target}/32 dev lo')
+            # port 80 answers and closes, port 90 echoes for long-lived flows
+            for port, reply in [('80', f'SYSTEM:echo isp{index} peer=$SOCAT_PEERADDR'), ('90', 'EXEC:cat')]:
+                server = subprocess.Popen(['sudo', 'ip', 'netns', 'exec', ns, 'socat',
+                                           f'TCP-LISTEN:{port},fork,reuseaddr', reply],
+                                          start_new_session=True,
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self.addCleanup(self.lab_stop, server)
+
+    @staticmethod
+    def lab_stop(proc):
+        # proc is sudo, which hands the signal on to the command it runs
+        call(f'sudo kill {proc.pid}')
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            call(f'sudo kill -9 {proc.pid}')
+            proc.wait()
+        for pipe in [proc.stdin, proc.stdout]:
+            if pipe:
+                pipe.close()
+
+    def lab_health(self, ifname, index):
+        path = base_path + ['wan', 'interface-health', ifname]
+        self.cli_set(path + ['nexthop', f'10.250.{index}.2'])
+        self.cli_set(path + ['test', '10', 'type', 'ping'])
+        self.cli_set(path + ['test', '10', 'target', f'10.250.{index}.2'])
+
+    @staticmethod
+    def lab_connect(port=80, source=None):
+        """ Open a new connection from the LAN to the internet address and
+        return the answer, e.g. "isp1 peer=10.250.1.1", or None """
+        bind = f',bind={source}' if source else ''
+        rc, out = rc_cmd(f'sudo ip netns exec wlb-lan socat -T2 - '
+                         f'TCP:{lab_target}:{port},connect-timeout=2{bind} </dev/null')
+        return out.splitlines()[-1] if rc == 0 and out else None
+
+    @staticmethod
+    def lab_count_echo_requests(isp_count):
+        """ Return how many ICMP echo requests every ISP received since the
+        counters were added """
+        counts = []
+        for index in range(1, isp_count + 1):
+            rc, out = rc_cmd(f'sudo ip netns exec wlb-isp{index} nft list table ip lab')
+            counts.append(int(out.split('packets ')[1].split()[0]) if rc == 0 else 0)
+        return counts
+
+    @staticmethod
+    def lab_add_echo_counters(isp_count):
+        for index in range(1, isp_count + 1):
+            ns = f'wlb-isp{index}'
+            cmd_in_netns(ns, 'nft add table ip lab')
+            cmd_in_netns(ns, "nft add chain ip lab c '{ type filter hook input priority 0; }'")
+            cmd_in_netns(ns, 'nft add rule ip lab c icmp type echo-request counter')
+
+    def lab_wait_status(self, expected, timeout=30):
+        found, last = self.wait_for_result(wlb_status, expected, timeout=timeout)
+        self.assertTrue(found, msg=f'health state {last}, expected {expected}')
+
     @classmethod
     def setUpClass(cls):
         super(TestLoadBalancingWan, cls).setUpClass()
@@ -299,9 +406,13 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
 ifname=$WLB_INTERFACE_NAME
 state=$WLB_INTERFACE_STATE
 
-echo "$ifname - $state" > {hook_output_path}
+echo "$ifname - $state" >> {hook_output_path}
 """
 
+        # the hook reports every interface on start, keep all events and
+        # drop the ones of earlier runs
+        call(f'sudo rm -f {hook_output_path}')
+        self.addCleanup(call, f'sudo rm -f {hook_output_path} {hook_path}')
         write_file(hook_path, hook_script)
         chmod_755(hook_path)
 
@@ -602,6 +713,299 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         ]
 
         self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
+    def test_health_test_requires_target(self):
+        # without a target the health daemon failed after the commit succeeded
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'nexthop', '192.0.2.1'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'resp-time', '3'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0'])
+
+        for test_type in ['ping', 'ttl']:
+            self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'type', test_type])
+            with self.assertRaisesRegex(ConfigSessionError, f'Missing target for {test_type} health test 10'):
+                self.cli_commit()
+
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'test', '10', 'target', '192.0.2.1'])
+        self.cli_commit()
+    def test_protocol_not_all(self):
+        # "!all" was rendered as "meta l4proto != all", which nft rejects
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'nexthop', '192.0.2.1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', '!all'])
+        with self.assertRaisesRegex(ConfigSessionError, 'Protocol "!all" matches no traffic'):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', '!tcp'])
+        self.cli_commit()
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'iifname "eth1" meta l4proto != tcp' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+    def test_rule_interface_requires_health(self):
+        # an interface without health configuration was silently left out
+        # of the rule, the traffic was not balanced at all
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0', 'nexthop', '192.0.2.1'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth2'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth1'])
+        with self.assertRaisesRegex(ConfigSessionError, 'Interface "eth1" on load-balancing wan rule 10 has no interface-health'):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth1', 'nexthop', '198.51.100.1'])
+        self.cli_commit()
+    def test_interface_name_with_dash(self):
+        # the health daemon mangled "-" in interface names to "_" and then
+        # looked for interfaces which do not exist
+        isps = ['wlb-isp1', 'wlb-isp2']
+        self.lab_setup('wlb-lan0', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'wlb-lan0'])
+        self.cli_commit()
+
+        self.lab_wait_status({'wlb-isp1': 'ACTIVE', 'wlb-isp2': 'ACTIVE'})
+        answers = {self.lab_connect() for _ in range(20)}
+        self.assertEqual(answers, {'isp1 peer=10.250.1.1', 'isp2 peer=10.250.2.1'})
+    def test_inbound_interface_any(self):
+        # "any" was rendered as interface name and matched no packet
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'any'])
+        self.cli_commit()
+
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+        # replies from an ISP must not be balanced back to an ISP
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'iifname != { "eth231", "eth232" }' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+        self.assertNotIn('"any"', out)
+        answers = {self.lab_connect() for _ in range(20)}
+        self.assertEqual(answers, {'isp1 peer=10.250.1.1', 'isp2 peer=10.250.2.1'})
+    def test_per_packet_balancing(self):
+        # the option was never read, every rule balanced per flow
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', 'icmp'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'per-packet-balancing'])
+        self.cli_commit()
+
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'meta l4proto icmp counter' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+        self.assertNotIn('ct state new', out)
+
+        # one ICMP flow - per packet, both ISPs see some of its requests
+        self.lab_add_echo_counters(len(isps))
+        cmd_in_netns('wlb-lan', f'ping -c 20 -i 0.05 -W 1 {lab_target}')
+        counts = self.lab_count_echo_requests(len(isps))
+        self.assertTrue(all(counts), msg=f'echo requests per ISP: {counts}')
+    def test_limit_threshold_above(self):
+        # the threshold was ignored, "above" behaved like "below"
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+        # connections beyond one per second go to isp2, all others to isp1
+        rule = base_path + ['wan', 'rule', '10']
+        self.cli_set(rule + ['inbound-interface', 'eth230'])
+        self.cli_set(rule + ['interface', 'eth232'])
+        self.cli_set(rule + ['limit', 'rate', '1'])
+        self.cli_set(rule + ['limit', 'burst', '1'])
+        self.cli_set(rule + ['limit', 'threshold', 'above'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'inbound-interface', 'eth230'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth231'])
+        self.cli_commit()
+
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'limit rate over 1/second burst 1 packets' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+
+        answers = [self.lab_connect() for _ in range(10)]
+        self.assertGreaterEqual(answers.count('isp2 peer=10.250.2.1'), 5, msg=answers)
+    def test_health_test_ttl(self):
+        # the ttl test treated every ping failure as healthy and an answer
+        # as failure - an outage was never detected
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        # 203.0.113.0/24 is behind isp1, which forwards it into a black hole
+        call('sudo ip route add 203.0.113.0/24 via 10.250.1.2')
+        self.addCleanup(call, 'sudo ip route del 203.0.113.0/24 via 10.250.1.2')
+        cmd_in_netns('wlb-isp1', 'sysctl -w net.ipv4.ip_forward=1')
+        cmd_in_netns('wlb-isp1', 'ip link add d0 type dummy')
+        cmd_in_netns('wlb-isp1', 'ip link set d0 up')
+        cmd_in_netns('wlb-isp1', 'ip addr add 192.0.2.1/30 dev d0')
+        cmd_in_netns('wlb-isp1', 'ip route add 203.0.113.0/24 via 192.0.2.2')
+
+        self.lab_health('eth232', 2)
+        test = base_path + ['wan', 'interface-health', 'eth231', 'test', '10']
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth231', 'nexthop', '10.250.1.2'])
+        self.cli_set(test + ['type', 'ttl'])
+        self.cli_set(test + ['resp-time', '1'])
+        for ifname in isps:
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+
+        failed = {'eth231': 'FAILED', 'eth232': 'ACTIVE'}
+        # the target answers itself, or the hop where the TTL runs out does
+        for target, ttl in [('10.250.1.2', '1'), ('203.0.113.10', '1')]:
+            self.cli_set(test + ['target', target])
+            self.cli_set(test + ['ttl-limit', ttl])
+            self.cli_commit()
+            # eth231 is ACTIVE until a check fails, give it two rounds of checks
+            found, _ = self.wait_for_result(wlb_status, failed, timeout=12)
+            self.assertFalse(found, msg=f'ttl test to {target} with ttl {ttl} failed')
+
+        # nothing answers - the path is broken
+        self.cli_set(test + ['ttl-limit', '3'])
+        self.cli_commit()
+        self.lab_wait_status(failed)
+    def test_hook_initial_state_all_interfaces(self):
+        # the initial state was only reported to the hook for the first
+        # interface
+        tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmpdir.cleanup)
+        hook = os.path.join(tmpdir.name, 'hook.sh')
+        log = os.path.join(tmpdir.name, 'hook.log')
+        # the hook runs without PATH
+        write_file(hook, f'#!/bin/sh\n/bin/echo "$WLB_INTERFACE_NAME $WLB_INTERFACE_STATE" >> {log}\n')
+        chmod_755(hook)
+        chmod_755(tmpdir.name)
+
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_set(base_path + ['wan', 'hook', hook])
+        self.cli_commit()
+
+        def reported():
+            if not os.path.exists(log):
+                return set()
+            with open(log) as f:
+                return set(f.read().splitlines())
+
+        found, last = self.wait_for_result(reported, {'eth231 ACTIVE', 'eth232 ACTIVE'}, timeout=20)
+        self.assertTrue(found, msg=f'hook reported {last}')
+    def test_mark_stable_when_adding_interface(self):
+        # marks and routing tables followed the sorted interface list, adding
+        # an interface renumbered the others and broke their connections
+        isps = ['eth231', 'eth232', 'eth229']
+        self.lab_setup('eth230', isps)
+        self.lab_health('eth231', 1)
+        self.lab_health('eth232', 2)
+        for ifname in ['eth231', 'eth232']:
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_commit()
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+
+        def isp_marks():
+            marks = {}
+            chain = None
+            for line in rc_cmd('sudo nft list table ip vyos_wanloadbalance')[1].splitlines():
+                if 'chain wlb_mangle_isp_' in line:
+                    chain = line.split('wlb_mangle_isp_')[1].split()[0]
+                elif chain and 'meta mark set' in line:
+                    marks[chain] = line.split('meta mark set ')[1].split()[0]
+            return marks
+
+        marks = isp_marks()
+
+        # a long-lived connection through one of the ISPs
+        client = subprocess.Popen(['sudo', 'ip', 'netns', 'exec', 'wlb-lan', 'socat', '-',
+                                   f'TCP:{lab_target}:90'], stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE, text=True)
+        self.addCleanup(self.lab_stop, client)
+
+        def echo(text, timeout=5):
+            client.stdin.write(f'{text}\n')
+            client.stdin.flush()
+            if select.select([client.stdout], [], [], timeout)[0]:
+                return client.stdout.readline().strip()
+            return None
+
+        self.assertEqual(echo('first'), 'first')
+
+        # eth229 sorts before the interfaces already in use
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth229', 'nexthop', '10.250.3.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth229', 'test', '10', 'target', '10.250.3.2'])
+        self.cli_commit()
+        self.lab_wait_status({'eth229': 'ACTIVE', 'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+
+        new_marks = isp_marks()
+        for ifname in ['eth231', 'eth232']:
+            self.assertEqual(new_marks.get(ifname), marks[ifname], msg=f'mark of {ifname} changed')
+        self.assertEqual(echo('second'), 'second')
+
+        # a removed WAN load-balancing starts over with the first table
+        self.cli_delete(base_path)
+        self.cli_commit()
+        self.assertFalse(os.path.exists('/run/wlb_tables.json'))
+    def test_commit_reloads_without_gap(self):
+        # every commit restarted the health daemon: rules, routes and health
+        # state were gone until it was back
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_commit()
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+
+        def daemon_pid():
+            return cmdl(['systemctl', 'show', '--property=MainPID', '--value',
+                         'vyos-wan-load-balance.service'])
+        pid = daemon_pid()
+
+        # new connections keep working while an unrelated change is committed
+        results = []
+        done = threading.Event()
+        def connect():
+            while not done.is_set():
+                results.append(self.lab_connect() is not None)
+        worker = threading.Thread(target=connect)
+        worker.start()
+        time.sleep(1)
+        self.cli_set(base_path + ['wan', 'rule', '10', 'description', 'reload'])
+        self.cli_commit()
+        time.sleep(7)
+        done.set()
+        worker.join()
+        self.assertEqual(daemon_pid(), pid)
+        self.assertNotIn(False, results, msg=f'{results.count(False)} of {len(results)} connections failed')
+
+        # a known health state survives a commit
+        cmd_in_netns('wlb-isp1', 'nft add table ip block')
+        cmd_in_netns('wlb-isp1', "nft add chain ip block c '{ type filter hook input priority 0; }'")
+        cmd_in_netns('wlb-isp1', 'nft add rule ip block c icmp type echo-request drop')
+        failed = {'eth231': 'FAILED', 'eth232': 'ACTIVE'}
+        self.lab_wait_status(failed)
+        self.cli_set(base_path + ['wan', 'rule', '10', 'description', 'reload again'])
+        self.cli_commit()
+        time.sleep(2)
+        self.assertEqual(wlb_status(), failed)
+        self.assertEqual(daemon_pid(), pid)
+
+        # a removed interface takes its route and ip rule along
+        self.cli_delete(base_path + ['wan', 'interface-health', 'eth232'])
+        self.cli_delete(base_path + ['wan', 'rule', '10', 'interface', 'eth232'])
+        self.cli_commit()
+        self.lab_wait_status({'eth231': 'FAILED'})
+        self.assertNotIn('lookup 202', cmdl(['ip', 'rule', 'show']))
+        self.assertEqual(cmdl(['ip', 'route', 'show', 'table', '202']), '')
+        self.assertEqual(daemon_pid(), pid)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
