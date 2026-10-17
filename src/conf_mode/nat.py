@@ -133,13 +133,6 @@ def verify_rule(config, err_msg, groups_dict):
         for item in ['source-port', 'destination-port']:
             if item in config['load_balance']['hash'] and config['protocol'] not in ['tcp', 'udp']:
                 raise ConfigError('Protocol must be tcp or udp when specifying hash ports')
-        count = 0
-        if 'backend' in config['load_balance']:
-            for member in config['load_balance']['backend']:
-                weight = config['load_balance']['backend'][member]['weight']
-                count = count +  int(weight)
-            if count != 100:
-                Warning(f'Sum of weight for nat load balance rule is not 100. You may get unexpected behaviour')
 
 def verify(nat):
     if not nat or 'deleted' in nat:

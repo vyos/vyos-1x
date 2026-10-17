@@ -141,9 +141,12 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 current_prob = current_prob + item_prob
 
             elements = ' , '.join(nat_map)
+            # weights are relative - a modulus other than their sum leaves hash
+            # values without a backend
+            modulus = current_prob
 
             if 'hash' in rule_conf['load_balance'] and 'random' in rule_conf['load_balance']['hash']:
-                translation_str += ' numgen random mod 100 map ' + '{ ' + f'{elements}' + ' }'
+                translation_str += f' numgen random mod {modulus} map ' + '{ ' + f'{elements}' + ' }'
             else:
                 for input_param in rule_conf['load_balance']['hash']:
                     if input_param == 'source-address':
@@ -158,7 +161,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                         param = f'{prot} dport'
                     hash_input_items.append(param)
                 hash_input = ' . '.join(hash_input_items)
-                translation_str += f' jhash ' + f'{hash_input}' + ' mod 100 map ' + '{ ' + f'{elements}' + ' }'
+                translation_str += f' jhash ' + f'{hash_input}' + f' mod {modulus} map ' + '{ ' + f'{elements}' + ' }'
 
     for target in ['source', 'destination']:
         if target not in rule_conf:
