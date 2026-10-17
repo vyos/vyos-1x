@@ -321,6 +321,16 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(src_path + ['rule', '2', 'load-balance', 'backend', '203.0.113.1', 'weight', '1'])
         self.cli_set(src_path + ['rule', '2', 'load-balance', 'backend', '203.0.113.2', 'weight', '1'])
 
+        # translation port and options must not end up in front of the map
+        self.cli_set(dst_path + ['rule', '3', 'inbound-interface', 'name', ifname])
+        self.cli_set(dst_path + ['rule', '3', 'protocol', 'tcp'])
+        self.cli_set(dst_path + ['rule', '3', 'destination', 'port', '8443'])
+        self.cli_set(dst_path + ['rule', '3', 'translation', 'port', '443'])
+        self.cli_set(dst_path + ['rule', '3', 'translation', 'options', 'address-mapping', 'persistent'])
+        self.cli_set(dst_path + ['rule', '3', 'load-balance', 'hash', 'random'])
+        self.cli_set(dst_path + ['rule', '3', 'load-balance', 'backend', '192.0.2.61', 'weight', '1'])
+        self.cli_set(dst_path + ['rule', '3', 'load-balance', 'backend', '192.0.2.62', 'weight', '3'])
+
         self.cli_commit()
 
         nftables_search = [
@@ -328,6 +338,7 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
             [f'oifname "{ifname}"', f'snat to numgen random mod 100 map', f'0-34 : {member_3}, 35-99 : {member_4}'],
             ['udp dport 53', 'dnat to jhash ip saddr mod 90 map { 0-49 : 192.0.2.51, 50-89 : 192.0.2.52 }', 'comment "DST-NAT-2"'],
             ['meta l4proto tcp', 'snat to jhash tcp dport mod 2 map { 0 : 203.0.113.1, 1 : 203.0.113.2 }', 'comment "SRC-NAT-2"'],
+            ['tcp dport 8443', 'dnat ip to numgen random mod 4 map { 0 : 192.0.2.61 . 443, 1-3 : 192.0.2.62 . 443 } persistent', 'comment "DST-NAT-3"'],
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
