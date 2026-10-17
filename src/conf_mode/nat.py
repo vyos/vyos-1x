@@ -47,7 +47,8 @@ valid_groups = [
     'address_group',
     'domain_group',
     'network_group',
-    'port_group'
+    'port_group',
+    'mac_group',
 ]
 
 def get_config(config=None):
