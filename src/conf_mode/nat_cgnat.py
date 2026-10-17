@@ -262,6 +262,14 @@ def verify(config):
                     f'Range for "{pool} pool {pool_name}" must be defined!'
                 )
 
+    for pool_name, pool_config in config['pool']['external'].items():
+        start_port, end_port = map(int, pool_config['external_port_range'].split('-'))
+        if start_port > end_port:
+            raise ConfigError(
+                f'External port range of "external pool {pool_name}" must not '
+                f'start above its end!'
+            )
+
     external_pools_query = "keys(pool.external)"
     external_pools: list = jmespath.search(external_pools_query, config)
     internal_pools_query = "keys(pool.internal)"
