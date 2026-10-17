@@ -390,9 +390,13 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
 ifname=$WLB_INTERFACE_NAME
 state=$WLB_INTERFACE_STATE
 
-echo "$ifname - $state" > {hook_output_path}
+echo "$ifname - $state" >> {hook_output_path}
 """
 
+        # the hook reports every interface on start, keep all events and
+        # drop the ones of earlier runs
+        call(f'sudo rm -f {hook_output_path}')
+        self.addCleanup(call, f'sudo rm -f {hook_output_path} {hook_path}')
         write_file(hook_path, hook_script)
         chmod_755(hook_path)
 
@@ -848,6 +852,35 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         self.cli_set(test + ['ttl-limit', '3'])
         self.cli_commit()
         self.lab_wait_status(failed)
+    def test_hook_initial_state_all_interfaces(self):
+        # the initial state was only reported to the hook for the first
+        # interface
+        tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmpdir.cleanup)
+        hook = os.path.join(tmpdir.name, 'hook.sh')
+        log = os.path.join(tmpdir.name, 'hook.log')
+        # the hook runs without PATH
+        write_file(hook, f'#!/bin/sh\n/bin/echo "$WLB_INTERFACE_NAME $WLB_INTERFACE_STATE" >> {log}\n')
+        chmod_755(hook)
+        chmod_755(tmpdir.name)
+
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_set(base_path + ['wan', 'hook', hook])
+        self.cli_commit()
+
+        def reported():
+            if not os.path.exists(log):
+                return set()
+            with open(log) as f:
+                return set(f.read().splitlines())
+
+        found, last = self.wait_for_result(reported, {'eth231 ACTIVE', 'eth232 ACTIVE'}, timeout=20)
+        self.assertTrue(found, msg=f'hook reported {last}')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

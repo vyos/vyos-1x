@@ -375,7 +375,6 @@ if __name__ == '__main__':
                     #Force state changed to trigger the first write
                     if init == True:
                         state['state_changed'] = True
-                        init = False
 
                     if state['state_changed']:
                         state['if_addr'] = get_ipv4_address(ifname)
@@ -385,6 +384,9 @@ if __name__ == '__main__':
                         ip_change = True
 
                     restore_default_route(lb, ifname)
+
+            # every interface reports its initial state
+            init = False
 
             if any(state['state_changed'] for ifname, state in lb['health_state'].items()):
                 if not nftables_update(lb):
