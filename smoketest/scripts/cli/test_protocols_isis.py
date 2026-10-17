@@ -545,6 +545,64 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.assertIn('   max-h-encaps 60', tmp)
         self.assertIn('   max-segs-left 70', tmp)
 
+    def test_isis_15_distribute_link_state(self):
+        interface = 'lo'
+        te_address = '192.0.2.1'
+
+        # Set a basic IS-IS config
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['distribute', 'link-state'])
+        self.cli_commit()
+
+        tmp = self.getFRRconfig(f'router isis {domain}', stop_section='^exit')
+        self.assertIn(f' net {net}', tmp)
+        self.assertIn(' distribute link-state', tmp)
+
+        # verify() - distribute link-state and traffic-engineering are mutually
+        # exclusive, see "must" statement of the distribute-link-state leaf in
+        # FRR yang/frr-isisd.yang
+        self.cli_set(base_path + ['traffic-engineering', 'enable'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['traffic-engineering', 'enable'])
+
+        # verify() - same applies to the traffic-engineering export node
+        self.cli_set(base_path + ['traffic-engineering', 'export'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['traffic-engineering', 'export'])
+
+        # verify() - FRR renders "mpls-te router-address" into the mpls-te
+        # presence container, thus any traffic-engineering node conflicts - even
+        # if traffic-engineering enable is not set
+        self.cli_set(base_path + ['traffic-engineering', 'address', te_address])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['traffic-engineering', 'address', te_address])
+
+        # Commit the remaining changes - IS-IS must only distribute the
+        # link-state database, MPLS-TE must not be enabled
+        self.cli_commit()
+
+        tmp = self.getFRRconfig(f'router isis {domain}', stop_section='^exit')
+        self.assertIn(' distribute link-state', tmp)
+        self.assertNotIn(' mpls-te', tmp)
+
+        # Verify the opposite direction - traffic-engineering can be used once
+        # distribute link-state is removed again
+        self.cli_delete(base_path + ['distribute'])
+        self.cli_set(base_path + ['traffic-engineering', 'enable'])
+        self.cli_set(base_path + ['traffic-engineering', 'address', te_address])
+        self.cli_set(base_path + ['traffic-engineering', 'export'])
+        self.cli_commit()
+
+        tmp = self.getFRRconfig(f'router isis {domain}', stop_section='^exit')
+        self.assertNotIn(' distribute link-state', tmp)
+        self.assertIn(' mpls-te on', tmp)
+        self.assertIn(f' mpls-te router-address {te_address}', tmp)
+        self.assertIn(' mpls-te export', tmp)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

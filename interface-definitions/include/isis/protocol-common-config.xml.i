@@ -49,6 +49,19 @@
     </node>
   </children>
 </node>
+<node name="distribute">
+  <properties>
+    <help>Distribute routing information to external services</help>
+  </properties>
+  <children>
+    <leafNode name="link-state">
+      <properties>
+        <help>Distribute the link-state database to external services</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 <node name="domain-password">
   <properties>
     <help>Set the authentication password for a routing domain</help>
