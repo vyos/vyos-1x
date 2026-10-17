@@ -750,6 +750,51 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.verify_service_running()
 
+    def test_dhcp_tftp_server_name_url(self):
+        shared_net_name = 'SMOKE-TFTP-URL'
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # option 66 is a plain string, provisioning URLs are used in practice
+        for tftp_server in [
+            'tftp.vyos.io',
+            '192.0.2.1',
+            'http://prov.vyos.io/phones/cfg',
+            'https://prov.vyos.io:8443/phones?model=$MA',
+            'ftp://prov.vyos.io/phones/cfg',
+            'ftps://prov.vyos.io:8443/phones?model=$MA',
+            'tftp://192.0.2.1/boot',
+        ]:
+            self.cli_set(pool + ['option', 'tftp-server-name', tftp_server])
+            self.cli_commit()
+
+            obj = loads(read_file(KEA4_CONF))
+            self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'tftp-server-name', 'data': tftp_server},
+            )
+
+        # not an IPv4 address, FQDN or URL, rejected by the value constraint
+        for invalid in [
+            'http://',
+            'http:///etc',
+            'https://?x=1',
+            'http:/prov.vyos.io',
+            'foo bar',
+            'file:///etc',
+        ]:
+            with self.assertRaises(ConfigSessionError):
+                self.cli_set(pool + ['option', 'tftp-server-name', invalid])
+
+        self.verify_service_running()
+
     def test_dhcp_single_pool_options_scoped(self):
         shared_net_name = 'SMOKE-2'
 
