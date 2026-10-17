@@ -149,10 +149,10 @@ def verify(nat):
                     raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for nat source rule "{rule}"')
                 elif 'name' in config['outbound_interface']:
                     interface_name = config['outbound_interface']['name']
-                    if interface_name not in 'any':
+                    if interface_name != 'any':
                         if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
-                        if not interface_exists(interface_name):
+                        if '*' not in interface_name and not interface_exists(interface_name):
                             Warning(f'Interface "{interface_name}" for source NAT rule "{rule}" does not exist!')
                 else:
                     group_name = config['outbound_interface']['group']
@@ -180,10 +180,10 @@ def verify(nat):
                     raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for destination nat rule "{rule}"')
                 elif 'name' in config['inbound_interface']:
                     interface_name = config['inbound_interface']['name']
-                    if interface_name not in 'any':
+                    if interface_name != 'any':
                         if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
-                        if not interface_exists(interface_name):
+                        if '*' not in interface_name and not interface_exists(interface_name):
                             Warning(f'Interface "{interface_name}" for destination NAT rule "{rule}" does not exist!')
                 else:
                     group_name = config['inbound_interface']['group']
