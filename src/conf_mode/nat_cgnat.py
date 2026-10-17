@@ -285,6 +285,8 @@ def verify(config):
 
         if 'translation' not in rule_config:
             raise ConfigError(f'Rule "{rule}" translation pool must be defined!')
+        if 'pool' not in rule_config['translation']:
+            raise ConfigError(f'Rule "{rule}" translation pool must be defined!')
 
         # Check if pool exists
         internal_pool = rule_config['source']['pool']

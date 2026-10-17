@@ -184,6 +184,28 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
                               ['100.64.0.7 : 192.0.2.0 . 15024-17023']],
                              'ip cgnat', inverse=False, args='-s')
 
+    def test_cgnat_rule_pools(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        rule_path = base_path + ['rule', '10']
+
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', '192.0.2.1/32'])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/31'])
+
+        # source and translation nodes without a pool
+        self.cli_set(rule_path + ['source'])
+        self.cli_set(rule_path + ['translation'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(rule_path + ['source', 'pool', internal_name])
+        with self.assertRaisesRegex(ConfigSessionError, r'translation\s+pool\s+must\s+be\s+defined'):
+            self.cli_commit()
+        self.cli_set(rule_path + ['translation', 'pool', external_name])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 192.0.2.1 . 1024-3023']],
+                             'ip cgnat', inverse=False, args='-s')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
