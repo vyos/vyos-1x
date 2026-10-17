@@ -16,6 +16,7 @@
 
 import json
 import os
+import select
 import subprocess
 import tempfile
 import unittest
@@ -881,6 +882,61 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
 
         found, last = self.wait_for_result(reported, {'eth231 ACTIVE', 'eth232 ACTIVE'}, timeout=20)
         self.assertTrue(found, msg=f'hook reported {last}')
+    def test_mark_stable_when_adding_interface(self):
+        # marks and routing tables followed the sorted interface list, adding
+        # an interface renumbered the others and broke their connections
+        isps = ['eth231', 'eth232', 'eth229']
+        self.lab_setup('eth230', isps)
+        self.lab_health('eth231', 1)
+        self.lab_health('eth232', 2)
+        for ifname in ['eth231', 'eth232']:
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'eth230'])
+        self.cli_commit()
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+
+        def isp_marks():
+            marks = {}
+            chain = None
+            for line in rc_cmd('sudo nft list table ip vyos_wanloadbalance')[1].splitlines():
+                if 'chain wlb_mangle_isp_' in line:
+                    chain = line.split('wlb_mangle_isp_')[1].split()[0]
+                elif chain and 'meta mark set' in line:
+                    marks[chain] = line.split('meta mark set ')[1].split()[0]
+            return marks
+
+        marks = isp_marks()
+
+        # a long-lived connection through one of the ISPs
+        client = subprocess.Popen(['sudo', 'ip', 'netns', 'exec', 'wlb-lan', 'socat', '-',
+                                   f'TCP:{lab_target}:90'], stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE, text=True)
+        self.addCleanup(client.kill)
+
+        def echo(text, timeout=5):
+            client.stdin.write(f'{text}\n')
+            client.stdin.flush()
+            if select.select([client.stdout], [], [], timeout)[0]:
+                return client.stdout.readline().strip()
+            return None
+
+        self.assertEqual(echo('first'), 'first')
+
+        # eth229 sorts before the interfaces already in use
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth229', 'nexthop', '10.250.3.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth229', 'test', '10', 'target', '10.250.3.2'])
+        self.cli_commit()
+        self.lab_wait_status({'eth229': 'ACTIVE', 'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+
+        new_marks = isp_marks()
+        for ifname in ['eth231', 'eth232']:
+            self.assertEqual(new_marks.get(ifname), marks[ifname], msg=f'mark of {ifname} changed')
+        self.assertEqual(echo('second'), 'second')
+
+        # a removed WAN load-balancing starts over with the first table
+        self.cli_delete(base_path)
+        self.cli_commit()
+        self.assertFalse(os.path.exists('/run/wlb_tables.json'))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

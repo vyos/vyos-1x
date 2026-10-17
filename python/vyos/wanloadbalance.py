@@ -21,6 +21,8 @@ from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 
 dhclient_lease = 'dhclient_{0}.lease'
+# routing table - and mark - of every WAN interface, see vyos-load-balancer.py
+wlb_tables_file = '/run/wlb_tables.json'
 
 def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight=None, health_state=None, action=None, restore_mark=False):
     output = []

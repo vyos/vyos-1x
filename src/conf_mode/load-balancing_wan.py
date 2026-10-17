@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmdl
+from vyos.wanloadbalance import wlb_tables_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -162,6 +165,9 @@ def generate(lb):
 def apply(lb):
     if not lb:
         cmdl(['systemctl', 'stop', service])
+        # without WAN load-balancing the marks of existing connections are moot
+        if os.path.exists(wlb_tables_file):
+            os.unlink(wlb_tables_file)
     else:
         cmdl(['systemctl', 'restart', service])
 

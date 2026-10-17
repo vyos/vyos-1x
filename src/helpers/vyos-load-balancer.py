@@ -33,6 +33,7 @@ from vyos.wanloadbalance import health_ping_host
 from vyos.wanloadbalance import health_ping_host_ttl
 from vyos.wanloadbalance import parse_dhcp_nexthop
 from vyos.wanloadbalance import parse_ppp_nexthop
+from vyos.wanloadbalance import wlb_tables_file
 
 nftables_wlb_conf = '/run/nftables_wlb.conf'
 wlb_status_file = '/run/wlb_status.json'
@@ -207,12 +208,35 @@ def nftables_update(lb):
 
     return True
 
+def assign_tables(interfaces, mark_offset):
+    """ Return the routing table - and mark - of every interface. Connections
+    keep their mark in conntrack, an interface keeps its table as long as it
+    stays configured. New interfaces get the lowest free table. """
+    try:
+        with open(wlb_tables_file) as f:
+            previous = json.load(f)
+    except (OSError, ValueError):
+        previous = {}
+
+    tables = {ifname: previous[ifname] for ifname in interfaces if ifname in previous}
+    table_num = mark_offset
+    for ifname in interfaces:
+        if ifname in tables:
+            continue
+        table_num += 1
+        while table_num in tables.values():
+            table_num += 1
+        tables[ifname] = table_num
+
+    with open(wlb_tables_file, 'w') as f:
+        json.dump(tables, f)
+    return tables
+
 def cleanup(lb):
-    if 'interface_health' in lb:
-        index = 1
-        for ifname, health_conf in lb['interface_health'].items():
-            table_num = lb['mark_offset'] + index
-            suppress_prio = lb['mark_offset'] + index
+    if 'health_state' in lb:
+        for ifname, state in lb['health_state'].items():
+            table_num = state['table_number']
+            suppress_prio = table_num
             table_prio = suppress_prio + 100
             run(f'ip route del table {table_num} default')
             run(
@@ -224,7 +248,6 @@ def cleanup(lb):
                 f'priority {table_prio}'
             )
             run(f'ip rule del fwmark {hex(table_num)} table {table_num}')
-            index += 1
 
     run(f'nft delete table ip vyos_wanloadbalance')
 
@@ -261,9 +284,9 @@ if __name__ == '__main__':
 
     # Create state dicts, interface address and nexthop, install routes and ip rules
     if 'interface_health' in lb:
-        index = 1
+        tables = assign_tables(lb['interface_health'], lb['mark_offset'])
         for ifname, health_conf in lb['interface_health'].items():
-            table_num = lb['mark_offset'] + index
+            table_num = tables[ifname]
             addr = get_ipv4_address(ifname)
             lb['health_state'][ifname] = {
                 'if_addr': addr,
@@ -284,7 +307,7 @@ if __name__ == '__main__':
             else:
                 run(f'ip route replace table {table_num} default dev {ifname} via {health_conf["nexthop"]}')
 
-            suppress_prio = lb['mark_offset'] + index
+            suppress_prio = table_num
             table_prio = suppress_prio + 100
             if 'only_default_route' in lb:
                 run(
@@ -297,8 +320,6 @@ if __name__ == '__main__':
                 )
             else:
                 run(f'ip rule add fwmark {hex(table_num)} table {table_num}')
-
-            index += 1
 
         nftables_update(lb)
 
