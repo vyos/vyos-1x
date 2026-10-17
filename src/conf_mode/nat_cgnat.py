@@ -416,6 +416,8 @@ def verify(config):
         for ip_range in config['pool']['internal'][pool_name]['range']
     ]
     _verify_range_overlap(internal_ranges)
+    # Both lists are free of overlaps, so only external and internal can clash
+    _verify_range_overlap(external_ranges + internal_ranges)
 
 
 def generate(config):
