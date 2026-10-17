@@ -14,12 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import unittest
 
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from glob import glob
+from time import monotonic
+from time import sleep
+from time import time
+from zoneinfo import ZoneInfo
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configquery import ConfigTreeQuery
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
@@ -2476,6 +2485,75 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip6 saddr 2001:db8::2', 'drop', 'comment "ipv6-NAM-smoketest-2"'],
         ]
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+    def test_hour_window_follows_utc_offset_change(self):
+        # nft converts hour matches to UTC when the ruleset is loaded. Once the
+        # UTC offset changes the rules must be loaded again, without touching
+        # anything else in the table.
+        if not self.running_in_smoketest_harness():
+            # jumping the clock days ahead fires every timer due until then
+            self.skipTest('moves the system clock, only run in the smoketest harness')
+        tz_name = 'Europe/Berlin'
+        name = 'smoketest-dst'
+        group = 'smoketest_dst'
+        element = '192.0.2.99'
+        rule = ['firewall', 'ipv4', 'name', name, 'rule', '10']
+
+        self.cli_set(['system', 'time-zone', tz_name])
+        self.cli_set(['firewall', 'group', 'dynamic-group', 'address-group', group])
+        self.cli_set(rule + ['action', 'drop'])
+        self.cli_set(rule + ['protocol', 'tcp'])
+        self.cli_set(rule + ['destination', 'port', '25'])
+        self.cli_set(rule + ['time', 'starttime', '08:00'])
+        self.cli_set(rule + ['time', 'stoptime', '17:00'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '20', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '20', 'source', 'group', 'dynamic-address-group', group])
+        self.cli_commit()
+
+        def hour_window():
+            rules = cmdl(['nft', 'list', 'chain', 'ip', 'vyos_filter', f'NAME_{name}'], sudo=True)
+            for line in rules.splitlines():
+                if f'"ipv4-NAM-{name}-10"' in line:
+                    return re.search(r'meta hour (\S+)', line).group(1)
+            return None
+
+        self.assertEqual(hour_window(), '"08:00"-"17:00"')
+        timers = cmdl(['systemctl', 'list-timers', '--all', '--no-legend', 'vyos-nft-time-refresh-*'])
+        self.assertIn('vyos-nft-time-refresh-', timers)
+
+        # learned at runtime - must survive the refresh
+        cmdl(['nft', 'add', 'element', 'ip', 'vyos_filter', f'DA_{group}', f'{{ {element} timeout 1h }}'], sudo=True)
+
+        # Europe/Berlin changes its offset on a full UTC hour
+        tz = ZoneInfo(tz_name)
+        now = datetime.now(timezone.utc)
+        old_offset = now.astimezone(tz).utcoffset()
+        change = now.replace(minute=0, second=0, microsecond=0)
+        while change.astimezone(tz).utcoffset() == old_offset:
+            change += timedelta(hours=1)
+        shift = change.astimezone(tz).utcoffset() - old_offset
+        stale = '"{}"-"{}"'.format(*[(datetime(2000, 1, 1, h) + shift).strftime('%H:%M') for h in (8, 17)])
+
+        # time synchronisation would undo the clock change - tearDownClass
+        # loads the saved configuration, which brings NTP back
+        if ConfigTreeQuery().exists(['service', 'ntp']):
+            self.cli_delete(['service', 'ntp'])
+            self.cli_commit()
+
+        wall, mono = time(), monotonic()
+        try:
+            cmdl(['date', '-s', f'@{int(change.timestamp()) - 10}'], sudo=True)
+            self.assertEqual(hour_window(), '"08:00"-"17:00"')
+
+            # past the change, the refresh fires 5 seconds after it
+            sleep(max(0, change.timestamp() + 1 - time()))
+            self.assertEqual(hour_window(), stale)
+
+            refreshed, last = self.wait_for_result(hour_window, '"08:00"-"17:00"', pause=0.5, timeout=20)
+            self.assertTrue(refreshed, msg=f'hour window not refreshed: {last}')
+            self.assertEqual(0, run(f'sudo nft get element ip vyos_filter DA_{group} {{ {element} }}'))
+        finally:
+            cmdl(['date', '-s', f'@{int(wall + monotonic() - mono)}'], sudo=True)
+            self.cli_delete(['system', 'time-zone'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

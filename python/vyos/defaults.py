@@ -96,6 +96,9 @@ rt_global_table = rt_symbolic_names['main']
 fragment_mark_bit = '0x80000000'
 user_mark_mask = '0x7fffffff'
 
+# Loads nft rules with an hour match again whenever the UTC offset changes
+nft_time_refresh = f'{base_dir}/vyos-nft-time-refresh.py'
+
 vyconfd_conf = '/etc/vyos/vyconfd.conf'
 
 DEFAULT_COMMIT_CONFIRM_MINUTES = 10

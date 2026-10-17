@@ -32,6 +32,7 @@ from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import interface_exists
+from vyos.defaults import nft_time_refresh
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
 from vyos.defaults import user_mark_mask
@@ -296,6 +297,9 @@ def apply(policy):
         cleanup_table_marks()
 
     apply_table_marks(policy)
+
+    # hour matches were converted to UTC with the current offset
+    call(f'{nft_time_refresh} --arm')
 
     update_domain_resolver(policy)
 
