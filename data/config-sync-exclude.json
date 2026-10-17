@@ -2,11 +2,6 @@
  [
   "interfaces",
   "ethernet",
-  "hw-id"
- ],
- [
-  "interfaces",
-  "ethernet",
   "address"
  ],
  [
