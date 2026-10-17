@@ -231,6 +231,7 @@ def get_config():
     conf = Config()
     base = ['load-balancing', 'wan']
     lb = conf.get_config_dict(base, key_mangling=('-', '_'),
+                            no_tag_node_value_mangle=True,
                             get_first_key=True, with_recursive_defaults=True)
 
     lb['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,

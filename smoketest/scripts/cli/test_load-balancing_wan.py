@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import os
+import subprocess
 import tempfile
 import unittest
 import time
@@ -48,12 +50,77 @@ def cmd_in_netns(netns, cmd):
 def delete_netns(name):
     return call(f'sudo ip netns del {name}')
 
+# Traffic lab: a LAN namespace and one namespace per ISP, all connected to
+# the router by veth pairs. Every ISP owns the same "internet" address and
+# answers with its name and the source address it sees.
+lab_target = '198.51.100.10'
+
+def wlb_status():
+    try:
+        with open('/run/wlb_status.json') as f:
+            return {ifname: 'ACTIVE' if state['state'] else 'FAILED'
+                    for ifname, state in json.load(f).items()}
+    except (OSError, ValueError):
+        return {}
+
 def wlb_chain(chain):
     # rules are installed by the health daemon once the commit has finished
     rc, out = rc_cmd(f'sudo nft list chain ip vyos_wanloadbalance {chain}')
     return out if rc == 0 else ''
 
 class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
+    def lab_setup(self, lan, isps):
+        """ Create the LAN namespace behind interface lan and one ISP
+        namespace per interface in isps. ISP n is 10.250.n.2, the router
+        uses 10.250.n.1 and 10.250.0.1 towards the LAN hosts 10.250.0.2/3. """
+        def add_ns(ns, ifname, local, peer):
+            create_netns(ns)
+            create_veth_pair(ifname, f'{ns}-p')
+            move_interface_to_netns(f'{ns}-p', ns)
+            cmd_in_netns(ns, f'ip link set {ns}-p name eth0')
+            cmd_in_netns(ns, 'ip link set lo up')
+            cmd_in_netns(ns, 'ip link set eth0 up')
+            for address in peer:
+                cmd_in_netns(ns, f'ip addr add {address}/24 dev eth0')
+            call(f'sudo ip addr add {local}/24 dev {ifname}')
+            call(f'sudo ip link set {ifname} up')
+            # cleanups run in reverse: echo services, veth pair, namespace
+            self.addCleanup(delete_netns, ns)
+            self.addCleanup(call, f'sudo ip link del {ifname}')
+            self.addCleanup(call, f'sudo ip netns pids {ns} | xargs -r sudo kill')
+
+        add_ns('wlb-lan', lan, '10.250.0.1', ['10.250.0.2', '10.250.0.3'])
+        cmd_in_netns('wlb-lan', 'ip route add default via 10.250.0.1')
+        for index, ifname in enumerate(isps, start=1):
+            ns = f'wlb-isp{index}'
+            add_ns(ns, ifname, f'10.250.{index}.1', [f'10.250.{index}.2'])
+            cmd_in_netns(ns, f'ip addr add {lab_target}/32 dev lo')
+            # port 80 answers and closes, port 90 echoes for long-lived flows
+            for port, reply in [('80', f'SYSTEM:echo isp{index} peer=$SOCAT_PEERADDR'), ('90', 'EXEC:cat')]:
+                subprocess.Popen(['sudo', 'ip', 'netns', 'exec', ns, 'socat',
+                                  f'TCP-LISTEN:{port},fork,reuseaddr', reply],
+                                 start_new_session=True,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def lab_health(self, ifname, index):
+        path = base_path + ['wan', 'interface-health', ifname]
+        self.cli_set(path + ['nexthop', f'10.250.{index}.2'])
+        self.cli_set(path + ['test', '10', 'type', 'ping'])
+        self.cli_set(path + ['test', '10', 'target', f'10.250.{index}.2'])
+
+    @staticmethod
+    def lab_connect(port=80, source=None):
+        """ Open a new connection from the LAN to the internet address and
+        return the answer, e.g. "isp1 peer=10.250.1.1", or None """
+        bind = f',bind={source}' if source else ''
+        rc, out = rc_cmd(f'sudo ip netns exec wlb-lan socat -T2 - '
+                         f'TCP:{lab_target}:{port},connect-timeout=2{bind} </dev/null')
+        return out.splitlines()[-1] if rc == 0 and out else None
+
+    def lab_wait_status(self, expected, timeout=30):
+        found, last = self.wait_for_result(wlb_status, expected, timeout=timeout)
+        self.assertTrue(found, msg=f'health state {last}, expected {expected}')
+
     @classmethod
     def setUpClass(cls):
         super(TestLoadBalancingWan, cls).setUpClass()
@@ -647,6 +714,20 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
 
         self.cli_set(base_path + ['wan', 'interface-health', 'eth1', 'nexthop', '198.51.100.1'])
         self.cli_commit()
+    def test_interface_name_with_dash(self):
+        # the health daemon mangled "-" in interface names to "_" and then
+        # looked for interfaces which do not exist
+        isps = ['wlb-isp1', 'wlb-isp2']
+        self.lab_setup('wlb-lan0', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+            self.cli_set(base_path + ['wan', 'rule', '10', 'interface', ifname])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', 'wlb-lan0'])
+        self.cli_commit()
+
+        self.lab_wait_status({'wlb-isp1': 'ACTIVE', 'wlb-isp2': 'ACTIVE'})
+        answers = {self.lab_connect() for _ in range(20)}
+        self.assertEqual(answers, {'isp1 peer=10.250.1.1', 'isp2 peer=10.250.2.1'})
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
