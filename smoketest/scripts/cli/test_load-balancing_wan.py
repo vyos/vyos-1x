@@ -787,6 +787,30 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
         cmd_in_netns('wlb-lan', f'ping -c 20 -i 0.05 -W 1 {lab_target}')
         counts = self.lab_count_echo_requests(len(isps))
         self.assertTrue(all(counts), msg=f'echo requests per ISP: {counts}')
+    def test_limit_threshold_above(self):
+        # the threshold was ignored, "above" behaved like "below"
+        isps = ['eth231', 'eth232']
+        self.lab_setup('eth230', isps)
+        for index, ifname in enumerate(isps, start=1):
+            self.lab_health(ifname, index)
+        # connections beyond one per second go to isp2, all others to isp1
+        rule = base_path + ['wan', 'rule', '10']
+        self.cli_set(rule + ['inbound-interface', 'eth230'])
+        self.cli_set(rule + ['interface', 'eth232'])
+        self.cli_set(rule + ['limit', 'rate', '1'])
+        self.cli_set(rule + ['limit', 'burst', '1'])
+        self.cli_set(rule + ['limit', 'threshold', 'above'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'inbound-interface', 'eth230'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth231'])
+        self.cli_commit()
+
+        self.lab_wait_status({'eth231': 'ACTIVE', 'eth232': 'ACTIVE'})
+        found, out = self.wait_for_result(lambda: wlb_chain('wlb_mangle_prerouting'),
+                                          lambda out: 'limit rate over 1/second burst 1 packets' in out, timeout=15)
+        self.assertTrue(found, msg=out)
+
+        answers = [self.lab_connect() for _ in range(10)]
+        self.assertGreaterEqual(answers.count('isp2 peer=10.250.2.1'), 5, msg=answers)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

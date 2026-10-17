@@ -117,7 +117,9 @@ def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight
         output.append('ct state new')
 
     if limit and 'limit' in rule_conf and 'rate' in rule_conf['limit']:
-        output.append(f'limit rate {rule_conf["limit"]["rate"]}/{rule_conf["limit"]["period"]}')
+        # "above" matches the traffic exceeding the rate, "below" the rest
+        over = 'over ' if rule_conf['limit'].get('threshold') == 'above' else ''
+        output.append(f'limit rate {over}{rule_conf["limit"]["rate"]}/{rule_conf["limit"]["period"]}')
         if 'burst' in rule_conf['limit']:
             output.append(f'burst {rule_conf["limit"]["burst"]} packets')
 
