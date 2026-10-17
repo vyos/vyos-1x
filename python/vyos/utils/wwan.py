@@ -175,14 +175,16 @@ def connect_options(config: dict) -> str:
     context - both are key-mangled the same way, so both are accepted here.
     """
     ip_type = 'ipv4'
+    # SLAAC is configured below "ipv6 address", thus there is no "address" node
+    # on the interface when it is the only way of getting an address
+    address = config.get('address', [])
     slaac = dict_search('ipv6.address.autoconf', config) != None
-    if 'address' in config:
-        if 'dhcp' in config['address'] and ('dhcpv6' in config['address'] or slaac):
-            ip_type = 'ipv4v6'
-        elif 'dhcpv6' in config['address'] or slaac:
-            ip_type = 'ipv6'
-        elif 'dhcp' in config['address']:
-            ip_type = 'ipv4'
+    if 'dhcp' in address and ('dhcpv6' in address or slaac):
+        ip_type = 'ipv4v6'
+    elif 'dhcpv6' in address or slaac:
+        ip_type = 'ipv6'
+    elif 'dhcp' in address:
+        ip_type = 'ipv4'
 
     options = f'ip-type={ip_type},apn=' + config['apn']
     if 'authentication' in config:
