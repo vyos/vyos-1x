@@ -19,6 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.utils.process import cmdl
 
 base_path = ['nat66']
 src_path = base_path + ['source']
@@ -318,6 +319,27 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_set(src_path)
         self.cli_set(dst_path)
         self.cli_commit()
+
+    def test_nat66_table_recreated(self):
+        # the rule file in /run and the nftables table can drift apart, the
+        # next commit must rebuild the table instead of failing on it
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'name', 'eth1'])
+        self.cli_set(src_path + ['rule', '1', 'source', 'prefix', 'fc00::/64'])
+        self.cli_set(src_path + ['rule', '1', 'translation', 'address', 'masquerade'])
+        self.cli_commit()
+
+        cmdl(['nft', 'delete', 'table', 'ip6', 'vyos_nat'], sudo=True)
+
+        self.cli_set(src_path + ['rule', '2', 'outbound-interface', 'name', 'eth1'])
+        self.cli_set(src_path + ['rule', '2', 'source', 'prefix', 'fc02::/64'])
+        self.cli_set(src_path + ['rule', '2', 'exclude'])
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip6 saddr fc00::/64', 'masquerade', 'comment "SRC-NAT66-1"'],
+            ['ip6 saddr fc02::/64', 'return', 'comment "SRC-NAT66-2"'],
+        ]
+        self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
