@@ -631,7 +631,8 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {% if parameters.cluster_id is vyos_defined %}
  bgp cluster-id {{ parameters.cluster_id }}
 {% endif %}
-{% if parameters.conditional_advertisement.timer is vyos_defined %}
+{# xml_default_conditional_advertisement_timer is the XML default of parameters conditional-advertisement timer, added to the dict by frrender #}
+{% if parameters.conditional_advertisement.timer is vyos_defined and parameters.conditional_advertisement.timer | int != xml_default_conditional_advertisement_timer | int %}
  bgp conditional-advertisement timer {{ parameters.conditional_advertisement.timer }}
 {% endif %}
 {% if parameters.confederation.identifier is vyos_defined %}

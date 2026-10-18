@@ -2381,5 +2381,70 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'no neighbor {member} activate', frrconfig)
         self.assertNotIn(f'no neighbor {iface_member} activate', frrconfig)
 
+    def test_bgp_110_conditional_advertisement_timer_default_value(self):
+        # T9450: FRR does not print "bgp conditional-advertisement timer 60"
+        # in its running config because 60 is the default
+        # (DEFAULT_CONDITIONAL_ROUTES_POLL_TIME, bgpd/bgp_conditional_adv.h).
+        # If we render the line anyway, frr-reload finds it missing on every
+        # reload and sends it again on every commit.
+        #
+        # This reads the generated FRR config file instead of getFRRconfig():
+        # FRR never prints the line for 60, so vtysh cannot tell if we render it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        timer = ' bgp conditional-advertisement timer'
+
+        # the XML default (60) is always in the config dict, but it is the
+        # default, so nothing is rendered when the timer is not configured
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(timer, frrconfig)
+
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', '60'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(timer, frrconfig)
+
+        # a value other than the default is still rendered and applied
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', '90'])
+        self.cli_commit()
+
+        self.assertIn(f'{timer} 90', read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'{timer} 90', frrconfig)
+
+        # back to the default value, FRR must have the default again
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', '60'])
+        self.cli_commit()
+
+        self.assertNotIn(timer, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(timer, frrconfig)
+
+        # the VRF instance has the same default: 60 is not rendered in the
+        # VRF block, 90 is rendered in the VRF block only
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        vrf_timer = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'parameters', 'conditional-advertisement', 'timer']
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(vrf_timer + ['60'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn(timer, frrconfig)
+
+        self.cli_set(vrf_timer + ['90'])
+        self.cli_commit()
+
+        # the global block comes first in the file, the VRF block after it
+        global_block, _, vrf_block = read_file(frr_conf).partition(vrf_header)
+        self.assertIn(f'router bgp {ASN}', global_block)
+        self.assertNotIn(timer, global_block)
+        self.assertIn(f'{timer} 90', vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(f'{timer} 90', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
