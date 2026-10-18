@@ -171,6 +171,7 @@ jobs:
 
       - name: Generate ISO version string
         id: version
+        shell: bash
         env:
           BUILD_VERSION_FORMAT: ${{ needs.set_config.outputs.build_version_format }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
