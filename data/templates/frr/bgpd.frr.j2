@@ -7,7 +7,7 @@
 {% endif %}
 {### MACRO definition for recurring peer patter, this can be either fed by a ###}
 {### peer-group or an individual BGP neighbor ###}
-{% macro bgp_neighbor(neighbor, config, peer_group=false) %}
+{% macro bgp_neighbor(neighbor, config, peer_group=false, groups=none) %}
 {# BGP order of peer-group and remote-as placement must be honored #}
 {% if peer_group == true %}
  neighbor {{ neighbor }} peer-group
@@ -263,7 +263,32 @@
 {%         if afi_config.disable_send_community.standard is vyos_defined %}
   no neighbor {{ neighbor }} send-community standard
 {%         endif %}
+{%         set member_pg = none %}
+{%         if peer_group == false %}
+{%             if config.peer_group is vyos_defined %}
+{%                 set member_pg = config.peer_group %}
+{%             elif config.interface.peer_group is vyos_defined %}
+{%                 set member_pg = config.interface.peer_group %}
+{%             elif config.interface.v6only.peer_group is vyos_defined %}
+{%                 set member_pg = config.interface.v6only.peer_group %}
+{%             endif %}
+{%         endif %}
+{# T9450: FRR (bgp_config_write_peer_af(), bgpd/bgp_vty.c) prints a peer-group #}
+{# member's own "activate" only when the member's activation state for this #}
+{# AFI/SAFI differs from its peer-group's: peer_group_active(peer) true and #}
+{# g_peer->afc[afi][safi] == peer->afc[afi][safi] (both on, the case here - a #}
+{# member with an address-family stanza is always "activate"d) prints nothing, #}
+{# because the member inherits activation from the group. Skip the member's own #}
+{# line exactly then - when its peer-group also has this AFI/SAFI configured, #}
+{# which makes the group render its own "activate" in the peer-group's block. #}
+{%         if member_pg is vyos_defined and groups[member_pg].address_family[afi] is vyos_defined %}
+{%             set skip_activate = true %}
+{%         else %}
+{%             set skip_activate = false %}
+{%         endif %}
+{%         if not skip_activate %}
   neighbor {{ neighbor }} activate
+{%         endif %}
  exit-address-family
  !
 {# j2lint: disable=jinja-statements-delimeter #}
@@ -561,7 +586,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
  !
 {% if neighbor is vyos_defined %}
 {%     for peer, config in neighbor.items() %}
-{{ bgp_neighbor(peer, config) }}
+{{ bgp_neighbor(peer, config, false, peer_group) }}
 {# j2lint: disable=jinja-statements-delimeter #}
 {%-    endfor %}
 {% endif %}
