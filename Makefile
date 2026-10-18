@@ -87,7 +87,7 @@ ocaml: libvyosconfig
 	$(MAKE) -C src/ocaml
 
 .PHONY: all
-all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json ocaml
+all: clean copyright check_scripts_not_executable libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json ocaml
 
 .PHONY: copyright
 copyright:
@@ -114,6 +114,11 @@ test: generate-configd-include-json
 check_migration_scripts_executable:
 	@echo "Checking if migration scripts have executable bit set..."
 	find src/migration-scripts -type f -not -executable -print -exec false {} + || sh -c 'echo "Found files that are not executable! Add permissions." && exit 1'
+
+.PHONY: check_scripts_not_executable
+check_scripts_not_executable:
+	@echo "Checking that conf_mode scripts have no executable bit set..."
+	@find src/conf_mode -type f -perm /111 -print -exec false {} + || sh -c 'echo "Found executable files! Remove executable bit." && exit 1'
 
 .PHONY: pylint
 pylint: interface_definitions
