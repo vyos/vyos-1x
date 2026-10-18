@@ -20,6 +20,7 @@ alternatives for competing use cases, and a base for profiling the
 performance of each.
 """
 
+import re
 import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -149,6 +150,10 @@ def load_tree(config_obj: ConfigObj):
 
 def load_legacy(config_obj: ConfigObj):
     """Legacy load from file or configtree.
+
+    Returns the text printed by 'cli-shell-api loadFile', which reports a
+    path it cannot apply as 'Set [...] failed' / 'Delete [...] failed' and
+    still exits 0; see check_legacy_output.
     """
     if isinstance(config_obj, ConfigTree):
         config_file = NamedTemporaryFile(delete=False).name
@@ -159,12 +164,21 @@ def load_legacy(config_obj: ConfigObj):
     config = LoadConfig()
 
     try:
-        config.load_config(config_file)
+        return config.load_config(config_file)
     except VyOSError as e:
         raise LoadConfigError(e) from e
     finally:
         if isinstance(config_obj, ConfigTree):
             Path(config_file).unlink()
+
+
+def check_legacy_output(out: str) -> None:
+    """Raise LoadConfigError with the text of 'cli-shell-api loadFile' if it
+    reports a path it could not set or delete. loadFile exits 0 in that case,
+    having applied the rest, which the explicit variety raised on.
+    """
+    if out and re.search(r'^(Set|Delete) \[.*\] failed$', out, re.M):
+        raise LoadConfigError(out.strip())
 
 def load(config_obj: ConfigObj, strict: bool = True,
          switch: Variety = 'legacy'):
@@ -178,4 +192,4 @@ def load(config_obj: ConfigObj, strict: bool = True,
     config_obj = migrate(config_obj)
 
     func = getattr(thismod, f'load_{switch}')
-    func(config_obj)
+    return func(config_obj)

@@ -41,6 +41,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.configtree import diff_compare
 from vyos.load_config import load
+from vyos.load_config import check_legacy_output
 from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
@@ -138,6 +139,21 @@ def is_node_revised(path: list = [], rev1: int = 1, rev2: int = 0) -> bool:
 
 class ConfigMgmtError(Exception):
     pass
+
+
+def check_session_unchanged():
+    """Refuse to load a revision outside a config session or over
+    uncommitted changes. The legacy loader (cli-shell-api loadFile) applies
+    the difference between the active config and the file to the working
+    config without checking either, so the result is only the revision if
+    the working config equals the active config. sessionChanged exits 0 if
+    there are uncommitted changes."""
+    rc, _ = rc_cmd('/bin/cli-shell-api inSession')
+    if rc != 0:
+        raise ConfigMgmtError('not in a config session')
+    rc, _ = rc_cmd('/bin/cli-shell-api sessionChanged')
+    if rc == 0:
+        raise ConfigMgmtError('commit or discard changes before loading config')
 
 
 class ConfigMgmt:
@@ -330,7 +346,8 @@ Proceed ?"""
             if session.vyconf_backend():
                 session.load_config_obj(revert_ct)
             else:
-                session.load_explicit(revert_ct)
+                check_session_unchanged()
+                session.load_legacy(revert_ct)
 
             session.commit()
         except ConfigSessionError as e:
@@ -388,7 +405,8 @@ Proceed ?"""
 
         rollback_ct = self.get_config_tree_revision(rev)
         try:
-            load(rollback_ct, switch='explicit')
+            check_session_unchanged()
+            check_legacy_output(load(rollback_ct, switch='legacy'))
             print('Rollback diff has been applied.')
             print('Use "compare" to review the changes or "commit" to apply them.')
         except LoadConfigError as e:
