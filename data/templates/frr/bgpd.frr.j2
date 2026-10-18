@@ -480,9 +480,18 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
   rt vpn import {{ afi_config.route_target.vpn.import }}
 {%             endif %}
 {%         endif %}
+{# T9450: FRR never folds a VRF's l2vpn evpn route-targets back into "both" #}
+{# (bgp_config_write_evpn_info(), bgpd/bgp_evpn_vty.c: the import list and the #}
+{# export list are each printed from their own flag/list, independently of #}
+{# how they were set - unlike the per-VNI "route-target both" context, which #}
+{# tools/frr-reload.py folds a matching import+export pair back into "both" #}
+{# by a dedicated special case that does not exist for this, VRF-wide, #}
+{# context). Rendering "route-target both" here makes frr-reload see it #}
+{# missing from the running config and delete+re-add both RTs every reload. #}
 {%         if afi_config.route_target.both is vyos_defined %}
 {%             for route_target in afi_config.route_target.both %}
-  route-target both {{ route_target }}
+  route-target import {{ route_target }}
+  route-target export {{ route_target }}
 {%             endfor %}
 {%         endif %}
 {%         if afi_config.route_target.export is vyos_defined %}

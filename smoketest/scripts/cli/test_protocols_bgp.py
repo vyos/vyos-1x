@@ -2446,5 +2446,42 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
         self.assertIn(f'{timer} 90', frrconfig)
 
+    def test_bgp_111_vrf_evpn_route_target_both(self):
+        # T9450: FRR never folds a VRF's l2vpn evpn route-targets back into
+        # "both" (bgp_config_write_evpn_info(), bgpd/bgp_evpn_vty.c): the
+        # import list and the export list are each printed independently of
+        # how they were configured - unlike the per-VNI "route-target both"
+        # context, which tools/frr-reload.py folds back into "both" with a
+        # dedicated special case that does not exist for this, VRF-wide,
+        # context. Rendering "route-target both" here makes frr-reload see
+        # it missing from the running config and delete+re-add both
+        # route-targets every reload.
+        both_rt = f'{ASN}:400'
+        extra_import_rt = f'{ASN}:401'
+
+        self.create_bgp_instances_for_import_test()
+        af_path = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'address-family', 'l2vpn-evpn']
+        self.cli_set(af_path + ['route-target', 'both', both_rt])
+        # a separate "import" of a different RT must still be rendered and
+        # applied alongside the "both" pair
+        self.cli_set(af_path + ['route-target', 'import', extra_import_rt])
+        self.cli_commit()
+
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        rendered = read_file(frr_conf)
+        # FRR never prints "route-target both" for this context - the
+        # rendered file must not either, or frr-reload will see a spurious
+        # diff on every reload
+        self.assertNotIn('route-target both', rendered)
+
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn('route-target both', frrconfig)
+        self.assertIn(f' route-target import {both_rt}', frrconfig)
+        self.assertIn(f' route-target export {both_rt}', frrconfig)
+        self.assertIn(f' route-target import {extra_import_rt}', frrconfig)
+        self.assertNotIn(f' route-target export {extra_import_rt}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
