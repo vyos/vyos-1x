@@ -1,0 +1,54 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T9441: "parameters opaque-lsa" and "capability opaque" are two CLI nodes for
+#        the same FRR setting. Keep "capability opaque" only. FRR supports
+#        opaque LSAs only in the default VRF and refuses the setting in a VRF,
+#        so in VRF instances it never took effect: drop it there.
+
+from vyos.configtree import ConfigTree
+
+
+def opaque_lsa_migration(config: ConfigTree, ospf_base: list, vrf: bool) -> None:
+    parameters = ospf_base + ['parameters']
+    if config.exists(parameters + ['opaque-lsa']):
+        config.delete(parameters + ['opaque-lsa'])
+
+        # do not leave an empty "parameters" node behind
+        if config.list_nodes(parameters) == []:
+            config.delete(parameters)
+
+        if not vrf:
+            config.set(ospf_base + ['capability', 'opaque'])
+
+    # FRR refuses "capability opaque" outside the default VRF; drop a value
+    # that would otherwise fail every commit (it never took effect anyway)
+    capability = ospf_base + ['capability']
+    if vrf and config.exists(capability + ['opaque']):
+        config.delete(capability + ['opaque'])
+        if config.list_nodes(capability) == []:
+            config.delete(capability)
+
+
+def migrate(config: ConfigTree) -> None:
+    # OSPF in the default VRF
+    opaque_lsa_migration(config, ['protocols', 'ospf'], vrf=False)
+
+    # OSPF in every VRF
+    if config.exists(['vrf', 'name']):
+        for name in config.list_nodes(['vrf', 'name']):
+            opaque_lsa_migration(
+                config, ['vrf', 'name', name, 'protocols', 'ospf'], vrf=True
+            )

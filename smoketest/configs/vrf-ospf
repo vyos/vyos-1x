@@ -27,6 +27,7 @@ protocols {
         }
         parameters {
             abr-type cisco
+            opaque-lsa
             router-id 1.2.3.4
         }
         passive-interface default
@@ -128,6 +129,7 @@ vrf {
                 }
                 parameters {
                     abr-type cisco
+                    opaque-lsa
                     router-id 9.10.11.12
                 }
                 passive-interface default

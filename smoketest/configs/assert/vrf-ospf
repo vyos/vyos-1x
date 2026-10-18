@@ -5,6 +5,7 @@ set interfaces ethernet eth1 vrf 'red'
 set interfaces ethernet eth2 offload gro
 set interfaces ethernet eth2 vrf 'blue'
 set protocols ospf area 0 network '192.0.2.0/24'
+set protocols ospf capability opaque
 set protocols ospf interface eth0 authentication md5 key-id 10 md5-key 'ospfkey'
 set protocols ospf interface eth0 passive disable
 set protocols ospf log-adjacency-changes

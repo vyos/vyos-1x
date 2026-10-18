@@ -52,6 +52,13 @@ def verify(config_dict):
                                  config_dict) or config_dict['ospf']
     ospf['policy'] = config_dict['policy']
 
+    # FRR supports opaque LSAs only in the default VRF
+    if vrf and 'opaque' in ospf.get('capability', {}):
+        raise ConfigError(
+            'OSPF "capability opaque" is only supported in the '
+            f'default VRF, not in VRF "{vrf}"!'
+        )
+
     verify_common_route_maps(ospf)
 
     # As we can have a default-information route-map, we need to validate it!

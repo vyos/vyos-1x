@@ -640,12 +640,6 @@
       </properties>
       <defaultValue>cisco</defaultValue>
     </leafNode>
-    <leafNode name="opaque-lsa">
-      <properties>
-        <help>Enable the Opaque-LSA capability (rfc2370)</help>
-        <valueless/>
-      </properties>
-    </leafNode>
     <leafNode name="rfc1583-compatibility">
       <properties>
         <help>Enable RFC1583 criteria for handling AS external routes</help>
