@@ -1836,6 +1836,52 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
         self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
 
+        # T9394: route-map is still referenced by "route-map vrf import"
+        self.cli_delete(['policy', 'route-map', route_map_in])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+    def test_bgp_30_import_vrf_routemap_vrf_only(self):
+        # T9394: BGP only inside VRFs, no BGP instance in the default VRF
+        vrf = 'red'
+        vrf_import = 'blue'
+        vrf_base = ['vrf', 'name', vrf]
+        vrf_bgp_path = vrf_base + base_path
+
+        self.cli_delete(base_path)
+        self.cli_set(['vrf', 'name', vrf_import, 'table', '2000'])
+        self.cli_set(vrf_base + ['table', '1000'])
+        self.cli_set(vrf_bgp_path + ['system-as', ASN])
+        self.cli_set(vrf_bgp_path + ['address-family', 'ipv4-unicast', 'import',
+                                     'vrf', vrf_import])
+        self.cli_set(vrf_bgp_path + ['address-family', 'ipv4-unicast', 'route-map',
+                                     'vrf', 'import', route_map_in])
+        self.cli_set(vrf_bgp_path + ['neighbor', '192.0.2.1', 'remote-as', 'external'])
+        self.cli_set(vrf_bgp_path + ['neighbor', '192.0.2.1', 'address-family',
+                                     'ipv4-unicast', 'route-map', 'export', route_map_out])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}', stop_section='^exit')
+        self.assertIn(f'  import vrf route-map {route_map_in}', frrconfig)
+        self.assertIn(f'  neighbor 192.0.2.1 route-map {route_map_out} out', frrconfig)
+
+        for route_map in [route_map_in, route_map_out]:
+            self.cli_delete(['policy', 'route-map', route_map])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+
+        # Deleting the VRF and the route-map in one commit is fine
+        self.cli_delete(vrf_base)
+        self.cli_delete(['policy', 'route-map', route_map_in])
+        self.cli_delete(['policy', 'route-map', route_map_out])
+        self.cli_commit()
+
+        # Restore route-maps from setUpClass for subsequent tests
+        self.cli_set(['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
+        self.cli_commit()
 
     def test_bgp_31_as_notation(self):
         # Test BGP AS-notation output format for both global and VRF BGP instances.
