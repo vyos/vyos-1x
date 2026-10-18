@@ -126,6 +126,9 @@ advertise-passive-only
 {% if spf_interval is vyos_defined %}
  spf-interval {{ spf_interval }}
 {% endif %}
+{% if distribute.link_state is vyos_defined %}
+ distribute link-state
+{% endif %}
 {% if traffic_engineering.enable is vyos_defined %}
  mpls-te on
 {% endif %}
