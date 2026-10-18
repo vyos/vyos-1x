@@ -63,6 +63,14 @@ def get_config(config=None):
 
     ipoe['vpp_ifaces'] = cli_ifaces_list(conf)
 
+    # The XML default fills in "lease-time", so remember which of the lease
+    # timings the user has actually configured
+    ipoe['lease_timings_set'] = [
+        option
+        for option in ['lease-time', 'renew-time', 'rebind-time']
+        if conf.exists(base + [option])
+    ]
+
     return ipoe
 
 
@@ -106,6 +114,22 @@ def verify(ipoe):
                     f'"external-dhcp dhcp-relay" requires "giaddr" to be set for interface {interface}'
                 )
 
+    # With "external-dhcp dhcp-relay" accel-ppp takes the lease timings from the
+    # reply of the external DHCP server and only falls back to the configured
+    # values for the options the reply does not carry.
+    relay_interfaces = [
+        interface
+        for interface, iface_config in ipoe['interface'].items()
+        if dict_search('external_dhcp.dhcp_relay', iface_config)
+    ]
+    if relay_interfaces and ipoe.get('lease_timings_set'):
+        timings = ', '.join(f'"{option}"' for option in ipoe['lease_timings_set'])
+        Warning(
+            f'{timings} only apply as a fallback on interface(s) '
+            f'{", ".join(relay_interfaces)} using "external-dhcp dhcp-relay": '
+            f'the lease timings sent by the external DHCP server take precedence'
+        )
+
     verify_accel_ppp_authentication(ipoe, local_users=False)
     verify_accel_ppp_ip_pool(ipoe)
     verify_accel_ppp_name_servers(ipoe)
@@ -129,6 +153,7 @@ def verify(ipoe):
         effective_renew_time = int(renew_time)
     else:
         effective_renew_time = lease_time // 2
+    derived_renew_time = effective_renew_time
 
     if rebind_time and int(rebind_time) <= lease_time:
         effective_rebind_time = int(rebind_time)
@@ -140,17 +165,40 @@ def verify(ipoe):
     if effective_rebind_time and effective_renew_time > effective_rebind_time:
         effective_renew_time = effective_rebind_time * 4 // 7
 
+    # Without "max-lease-time" accel-ppp uses the lease time plus a tenth of it,
+    # which does not fit its signed 32 bit integer for a very long lease time
+    if not max_lease_time and lease_time + lease_time // 10 > 2**31 - 1:
+        raise ConfigError(
+            f'"lease-time" {lease_time} is too long without "max-lease-time": '
+            f'accel-ppp would derive a value above {2**31 - 1}'
+        )
+
     if max_lease_time and int(max_lease_time) < lease_time:
         Warning(
             f'"max-lease-time" ({max_lease_time}) is lower than "lease-time" '
             f'({lease_time}) and will have no effect'
         )
 
+    # accel-ppp does not send the renewal time option (58) for the value 0
+    not_sent = (
+        ', the renewal time option is then not sent' if not effective_renew_time else ''
+    )
+
     if renew_time and int(renew_time) != effective_renew_time:
         Warning(
             f'"renew-time" ({renew_time}) will be overridden by accel-ppp with '
             f'{effective_renew_time}, derived from "lease-time" {lease_time} '
-            f'and "rebind-time" {effective_rebind_time}'
+            f'and "rebind-time" {effective_rebind_time}{not_sent}'
+        )
+
+    # Without "renew-time" the value derived from "lease-time" is pulled back
+    # in the same way, which a lower "rebind-time" triggers on its own.
+    if not renew_time and effective_renew_time != derived_renew_time:
+        Warning(
+            f'The renewal time derived from "lease-time" {lease_time} '
+            f'({derived_renew_time}) is above "rebind-time" '
+            f'({effective_rebind_time}), accel-ppp lowers it to '
+            f'{effective_renew_time}{not_sent}'
         )
 
     if rebind_time and int(rebind_time) != effective_rebind_time:
