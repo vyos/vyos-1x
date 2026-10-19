@@ -74,11 +74,20 @@ def routing_policy_find(key, dictionary):
     # a given key as generator object. This is made for routing policies,
     # thus also import/export is checked
     for k, v in dictionary.items():
+        # Copies of other VRFs, possibly from the effective config - every VRF
+        # is checked on its own
+        if k == 'dependent_vrfs':
+            continue
         if k == key:
             if isinstance(v, dict):
                 for a, b in v.items():
                     if a in ['import', 'export']:
                         yield b
+                    # BGP "route-map vrf|vpn import|export"
+                    elif a in ['vrf', 'vpn'] and isinstance(b, dict):
+                        for direction in ['import', 'export']:
+                            if direction in b:
+                                yield b[direction]
             else:
                 yield v
         elif isinstance(v, dict):
@@ -116,6 +125,16 @@ def verify(config_dict):
         if 'protocol' not in policy:
             policy.update({'protocol': {}})
         policy['protocol'].update({protocol : config_dict[protocol]})
+
+    if 'vrf' in config_dict and 'name' in config_dict['vrf']:
+        for vrf_name, vrf_config in config_dict['vrf']['name'].items():
+            if 'protocols' not in vrf_config:
+                continue
+            if 'protocol' not in policy:
+                policy.update({'protocol': {}})
+            if 'vrf' not in policy['protocol']:
+                policy['protocol'].update({'vrf': {}})
+            policy['protocol']['vrf'].update({vrf_name : vrf_config['protocols']})
 
     for policy_type in policy_types:
         # Bail out early and continue with next policy type
