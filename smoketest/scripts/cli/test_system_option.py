@@ -27,6 +27,7 @@ from vyos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from vyos.utils.cpu import get_cpus
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
+from vyos.utils.kernel import get_kernel_boot_arg
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_read
 from vyos.system import image
@@ -220,10 +221,17 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
             'initramfs hook must contain MODULES=most to work on OverlayFS root',
         )
 
-        self.assertTrue(
-            is_systemd_service_active(service),
-            f'{service} must be active after enabling kdump',
-        )
+        # kdump-tools only starts when booted with crashkernel=
+        if get_kernel_boot_arg('crashkernel') is not None:
+            self.assertTrue(
+                is_systemd_service_active(service),
+                f'{service} must be active when booted with crashkernel=',
+            )
+        else:
+            self.assertFalse(
+                is_systemd_service_active(service),
+                f'{service} must be skipped when booted without crashkernel=',
+            )
 
         # Disabling kdump must remove the initramfs conf.d drop-in
         self.cli_delete(kdump_path)
