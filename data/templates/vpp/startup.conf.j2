@@ -124,9 +124,8 @@ linux-cp {
 {% endif %}
 }
 
-{% set netlink_rx_buffers = 268435456 %}
 linux-nl {
-    nl-rx-buffer-size {{ netlink_rx_buffers }}
+    nl-rx-buffer-size {{ netlink_rx_buffer_size }}
 }
 
 {% if resource_allocation.memory.stats is vyos_defined %}
@@ -187,7 +186,7 @@ dpdk {
 linux-xfrm-nl {
      enable-route-mode-ipsec
      interface ipsec
-     nl-rx-buffer-size {{ netlink_rx_buffers }}
+     nl-rx-buffer-size {{ netlink_rx_buffer_size }}
 }
 {% endif %}
 

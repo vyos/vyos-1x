@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.template import render
 from vyos.utils.process import cmdl
@@ -39,9 +40,32 @@ def get_config(config=None):
     sysctl = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                   no_tag_node_value_mangle=True)
 
+    # VPP sizes its netlink receive buffer up to net.core.rmem_max every time it
+    # (re)opens its netlink socket - do not let a lower value cap it (T9484)
+    rmem_max = sysctl.get('parameter', {}).get('net.core.rmem_max', {})
+    value = rmem_max.get('value', '')
+    if conf.exists(['vpp']) and value.isdigit():
+        try:
+            from vyos.vpp.config_resource_checks.resource_defaults import (
+                default_resource_map,
+            )
+        except ImportError:
+            # VPP is not installed
+            default_resource_map = {}
+
+        required = default_resource_map.get('netlink_rx_buffer_size', 0)
+        if int(value) < required:
+            sysctl['vpp_rmem_max_configured'] = value
+            rmem_max['value'] = str(required)
+
     return sysctl
 
 def verify(sysctl):
+    if sysctl and 'vpp_rmem_max_configured' in sysctl:
+        Warning(
+            f'net.core.rmem_max {sysctl["vpp_rmem_max_configured"]} is below '
+            f'what VPP requires, using {sysctl["parameter"]["net.core.rmem_max"]["value"]}!'
+        )
     return None
 
 def generate(sysctl):
