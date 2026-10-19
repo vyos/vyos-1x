@@ -90,6 +90,15 @@ rt_symbolic_names = {
 rt_global_vrf = rt_symbolic_names['main']
 rt_global_table = rt_symbolic_names['main']
 
+# Firewall marks fragments with bit 31 of the packet mark until the filter
+# hooks are done. Firewall and routing policy marks stop at 2147483647, so the
+# bit is free - anything matching a mark while the bit can be set must mask it.
+fragment_mark_bit = '0x80000000'
+user_mark_mask = '0x7fffffff'
+
+# Loads nft rules with an hour match again whenever the UTC offset changes
+nft_time_refresh = f'{base_dir}/vyos-nft-time-refresh.py'
+
 vyconfd_conf = '/etc/vyos/vyconfd.conf'
 
 DEFAULT_COMMIT_CONFIRM_MINUTES = 10

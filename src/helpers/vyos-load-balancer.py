@@ -192,11 +192,6 @@ def restore_default_route(lb: dict, ifname: str) -> None:
 
 def nftables_update(lb):
     # Atomically reload nftables table from template
-    if not os.path.exists(nftables_wlb_conf):
-        lb['first_install'] = True
-    elif 'first_install' in lb:
-        del lb['first_install']
-
     render(nftables_wlb_conf, 'load-balancing/nftables-wlb.j2', lb)
 
     rc, out = rc_cmd(f'nft -f {nftables_wlb_conf}')

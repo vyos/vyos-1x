@@ -26,6 +26,7 @@ from vyos.configdict import is_node_changed
 from vyos.configdiff import Diff, get_config_diff
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
+from vyos.defaults import nft_time_refresh
 from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
 from vyos.geoip import geoip_refresh, geoip_update
@@ -149,9 +150,6 @@ def get_config(config=None):
         get_first_key=True, no_tag_node_value_mangle=True)
 
     fqdn_config_parse(firewall, 'firewall')
-
-    if not os.path.exists(nftables_conf):
-        firewall['first_install'] = True
 
     if 'zone' in firewall:
         for local_zone, local_zone_conf in firewall['zone'].items():
@@ -785,6 +783,9 @@ def apply(firewall):
 
     # Apply firewall global-options sysctl settings
     cmdl(['sysctl', '-f', sysctl_file])
+
+    # hour matches were converted to UTC with the current offset
+    call(f'{nft_time_refresh} --arm')
 
     call_dependents()
 

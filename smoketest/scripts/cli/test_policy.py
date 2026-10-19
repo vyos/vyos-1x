@@ -1645,7 +1645,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        101:    from all fwmark 0x18 lookup 154
+        101:    from all fwmark 0x18/0x7fffffff lookup 154
         """
         tmp = cmdl(['ip', 'rule', 'show', 'prio', '101'])
 
@@ -1720,8 +1720,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        23:	from 203.0.113.1 to 203.0.113.5 fwmark 0x1e240 ipproto udp sport 5555 dport 8888 lookup 123
-        23:	from 203.0.113.2 to 203.0.113.5 fwmark 0x1e240 ipproto udp sport 5555 dport 8888 lookup 123
+        23:	from 203.0.113.1 to 203.0.113.5 fwmark 0x1e240/0x7fffffff ipproto udp sport 5555 dport 8888 lookup 123
+        23:	from 203.0.113.2 to 203.0.113.5 fwmark 0x1e240/0x7fffffff ipproto udp sport 5555 dport 8888 lookup 123
         """
         tmp = cmdl(['ip', 'rule', 'show', 'prio', rule])
 
@@ -1759,8 +1759,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        100:	from 203.0.113.11 fwmark 0x17 lookup 150
-        100:	from 203.0.113.12 fwmark 0x17 lookup 150
+        100:	from 203.0.113.11 fwmark 0x17/0x7fffffff lookup 150
+        100:	from 203.0.113.12 fwmark 0x17/0x7fffffff lookup 150
         """
         tmp = cmdl(['ip', 'rule', 'show', 'prio', '100'])
 
@@ -1811,10 +1811,10 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        103:	from 203.0.113.11 to 203.0.113.13 fwmark 0x17 lookup 150
-        103:	from 203.0.113.11 to 203.0.113.15 fwmark 0x17 lookup 150
-        103:	from 203.0.113.12 to 203.0.113.13 fwmark 0x17 lookup 150
-        103:	from 203.0.113.12 to 203.0.113.15 fwmark 0x17 lookup 150
+        103:	from 203.0.113.11 to 203.0.113.13 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 203.0.113.11 to 203.0.113.15 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 203.0.113.12 to 203.0.113.13 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 203.0.113.12 to 203.0.113.15 fwmark 0x17/0x7fffffff lookup 150
         """
         tmp = cmdl(['ip', 'rule', 'show', 'prio', '103'])
 
@@ -1855,7 +1855,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        100:    from all fwmark 0x18 lookup 154
+        100:    from all fwmark 0x18/0x7fffffff lookup 154
         """
         tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '100'])
 
@@ -1897,8 +1897,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        102:	from 2001:db8:1338::/126 fwmark 0x17 lookup 150
-        102:	from 2001:db8:1339::/126 fwmark 0x17 lookup 150
+        102:	from 2001:db8:1338::/126 fwmark 0x17/0x7fffffff lookup 150
+        102:	from 2001:db8:1339::/126 fwmark 0x17/0x7fffffff lookup 150
         """
         tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '102'])
 
@@ -1948,10 +1948,10 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
-        103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
-        103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
-        103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17/0x7fffffff lookup 150
         """
         tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '103'])
 
@@ -1986,16 +1986,16 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         original = """
-        103:	from 203.0.113.0/24 to 203.0.116.5 fwmark 0x17 lookup 150
-        103:	from 203.0.114.5 to 203.0.112.0/24 fwmark 0x17 lookup 150
-        103:	from 203.0.114.5 to 203.0.116.5 fwmark 0x17 lookup 150
-        103:	from 203.0.113.0/24 to 203.0.112.0/24 fwmark 0x17 lookup 150
+        103:	from 203.0.113.0/24 to 203.0.116.5 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 203.0.114.5 to 203.0.112.0/24 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 203.0.114.5 to 203.0.116.5 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 203.0.113.0/24 to 203.0.112.0/24 fwmark 0x17/0x7fffffff lookup 150
         """
         original_v6 = """
-        103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
-        103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
-        103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
-        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17/0x7fffffff lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17/0x7fffffff lookup 150
         """
         tmp = cmdl(['ip', 'rule', 'show', 'prio', '103'])
         tmp_v6 = cmdl(['ip', '-6', 'rule', 'show', 'prio', '103'])

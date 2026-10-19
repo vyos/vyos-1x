@@ -30,9 +30,9 @@ table ip6 raw {
     }
 }
 
-{% if first_install is not vyos_defined %}
+# declaring the table first makes the delete succeed whether or not it exists
+table ip vyos_filter
 delete table ip vyos_filter
-{% endif %}
 table ip vyos_filter {
 {% if ipv4 is vyos_defined %}
 {%     if flowtable is vyos_defined %}
@@ -119,9 +119,22 @@ table ip vyos_filter {
 {%         endfor %}
 {%     endif %}
 
+    # Fragments are reassembled at priority -400, mark them before. Bit 31 is
+    # never used by any other mark, set/match it only and clear it again once
+    # the filter hooks are done so routing, QoS and IPVS see the original mark.
     chain VYOS_FRAG_MARK {
         type filter hook prerouting priority -450; policy accept;
-        ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
+        ip frag-off & 0x3fff != 0 meta mark set meta mark | 0x80000000 return
+    }
+
+    chain VYOS_FRAG_UNMARK_FWD {
+        type filter hook forward priority filter + 10; policy accept;
+        meta mark & 0x80000000 == 0x80000000 meta mark set meta mark & 0x7fffffff
+    }
+
+    chain VYOS_FRAG_UNMARK_INP {
+        type filter hook input priority filter + 10; policy accept;
+        meta mark & 0x80000000 == 0x80000000 meta mark set meta mark & 0x7fffffff
     }
 
 {%     if ipv4.name is vyos_defined %}
@@ -218,9 +231,8 @@ table ip vyos_filter {
 {% endif %}
 }
 
-{% if first_install is not vyos_defined %}
+table ip6 vyos_filter
 delete table ip6 vyos_filter
-{% endif %}
 table ip6 vyos_filter {
 {% if ipv6 is vyos_defined %}
 {%     if flowtable is vyos_defined %}
@@ -306,9 +318,20 @@ table ip6 vyos_filter {
     }
 {%         endfor %}
 {%     endif %}
+    # see VYOS_FRAG_MARK
     chain VYOS_FRAG6_MARK {
         type filter hook prerouting priority -450; policy accept;
-        exthdr frag exists meta mark set 0xffff1 return
+        exthdr frag exists meta mark set meta mark | 0x80000000 return
+    }
+
+    chain VYOS_FRAG6_UNMARK_FWD {
+        type filter hook forward priority filter + 10; policy accept;
+        meta mark & 0x80000000 == 0x80000000 meta mark set meta mark & 0x7fffffff
+    }
+
+    chain VYOS_FRAG6_UNMARK_INP {
+        type filter hook input priority filter + 10; policy accept;
+        meta mark & 0x80000000 == 0x80000000 meta mark set meta mark & 0x7fffffff
     }
 
 {%     if ipv6.name is vyos_defined %}
@@ -405,9 +428,8 @@ table ip6 vyos_filter {
 }
 
 ## Bridge Firewall
-{% if first_install is not vyos_defined %}
+table bridge vyos_filter
 delete table bridge vyos_filter
-{% endif %}
 table bridge vyos_filter {
 {% if bridge is vyos_defined %}
 {%     if bridge.forward is vyos_defined %}
