@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmdl
+from vyos.wanloadbalance import wlb_tables_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -78,6 +81,9 @@ def verify(lb):
 
                 if test_conf['type'] == 'user-defined' and 'test_script' not in test_conf:
                     raise ConfigError(f'Missing user-defined script for health test on interface {ifname}')
+
+                if test_conf['type'] in ['ping', 'ttl'] and 'target' not in test_conf:
+                    raise ConfigError(f'Missing target for {test_conf["type"]} health test {test_id} on interface {ifname}')
     else:
         raise ConfigError('Interface health tests must be configured')
 
@@ -85,6 +91,14 @@ def verify(lb):
         for rule_id, rule_conf in lb['rule'].items():
             if 'interface' not in rule_conf and 'exclude' not in rule_conf:
                 raise ConfigError(f'Interface or exclude not specified on load-balancing wan rule {rule_id}')
+
+            for ifname in rule_conf.get('interface', {}):
+                if ifname not in lb['interface_health']:
+                    raise ConfigError(f'Interface "{ifname}" on load-balancing wan rule {rule_id} '
+                                      'has no interface-health configuration')
+
+            if rule_conf.get('protocol') == '!all':
+                raise ConfigError(f'Protocol "!all" matches no traffic on load-balancing wan rule {rule_id}')
 
             if 'failover' in rule_conf and 'exclude' in rule_conf:
                 raise ConfigError(f'Failover cannot be configured with exclude on load-balancing wan rule {rule_id}')
@@ -151,8 +165,12 @@ def generate(lb):
 def apply(lb):
     if not lb:
         cmdl(['systemctl', 'stop', service])
+        # without WAN load-balancing the marks of existing connections are moot
+        if os.path.exists(wlb_tables_file):
+            os.unlink(wlb_tables_file)
     else:
-        cmdl(['systemctl', 'restart', service])
+        # a restart removes all rules and routes until the daemon is back
+        cmdl(['systemctl', 'reload-or-restart', service])
 
     call_dependents()
 

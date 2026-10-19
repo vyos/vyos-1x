@@ -33,6 +33,7 @@ from vyos.wanloadbalance import health_ping_host
 from vyos.wanloadbalance import health_ping_host_ttl
 from vyos.wanloadbalance import parse_dhcp_nexthop
 from vyos.wanloadbalance import parse_ppp_nexthop
+from vyos.wanloadbalance import wlb_tables_file
 
 nftables_wlb_conf = '/run/nftables_wlb.conf'
 wlb_status_file = '/run/wlb_status.json'
@@ -68,7 +69,8 @@ def health_check(ifname, conf, state, test_defaults):
         elif check_type == 'ttl':
             target = test_conf['target']
             ttl_limit = test_conf['ttl_limit']
-            if not health_ping_host_ttl(target, ifname, ttl_limit=ttl_limit):
+            resp_time = test_conf['resp_time']
+            if not health_ping_host_ttl(target, ifname, ttl_limit=ttl_limit, wait_time=resp_time):
                 return False
         elif check_type == 'user-defined':
             script = test_conf['test_script']
@@ -206,31 +208,114 @@ def nftables_update(lb):
 
     return True
 
+def assign_tables(interfaces, mark_offset):
+    """ Return the routing table - and mark - of every interface. Connections
+    keep their mark in conntrack, an interface keeps its table as long as it
+    stays configured. New interfaces get the lowest free table. """
+    try:
+        with open(wlb_tables_file) as f:
+            previous = json.load(f)
+    except (OSError, ValueError):
+        previous = {}
+
+    tables = {ifname: previous[ifname] for ifname in interfaces if ifname in previous}
+    table_num = mark_offset
+    for ifname in interfaces:
+        if ifname in tables:
+            continue
+        table_num += 1
+        while table_num in tables.values():
+            table_num += 1
+        tables[ifname] = table_num
+
+    with open(wlb_tables_file, 'w') as f:
+        json.dump(tables, f)
+    return tables
+
+def ip_rules(table_num, only_default_route):
+    """ ip rule arguments sending traffic with the mark of table_num there """
+    if only_default_route:
+        return [f'fwmark {hex(table_num)} table main suppress_prefixlength 0 priority {table_num}',
+                f'fwmark {hex(table_num)} table {table_num} priority {table_num + 100}']
+    return [f'fwmark {hex(table_num)} table {table_num}']
+
+def remove_interface(state):
+    table_num = state['table_number']
+    run(f'ip route del table {table_num} default')
+    for only_default_route in [True, False]:
+        for rule in ip_rules(table_num, only_default_route):
+            run(f'ip rule del {rule}')
+
+def take_over_config(lb, new):
+    """ Install the routes and ip rules of the configuration new and make it
+    the active one. Interfaces staying configured keep their health state. """
+    old_state = lb.get('health_state', {})
+    old_only_default_route = 'only_default_route' in lb
+    only_default_route = 'only_default_route' in new
+    interfaces = new.get('interface_health', {})
+
+    new['health_state'] = {}
+    new['mark_offset'] = 0xc8
+
+    for ifname in set(old_state) - set(interfaces):
+        remove_interface(old_state[ifname])
+
+    tables = assign_tables(interfaces, new['mark_offset'])
+    for ifname, health_conf in interfaces.items():
+        table_num = tables[ifname]
+        state = old_state.get(ifname)
+        if state is None:
+            addr = get_ipv4_address(ifname)
+            state = {
+                'if_addr': addr,
+                'failure_count': 0,
+                'success_count': 0,
+                'last_success': 0,
+                'last_failure': 0,
+                'state': addr is not None,
+                'state_changed': False,
+                'table_number': table_num,
+                'mark': hex(table_num),
+                # the hook learns the initial state of every interface
+                'report': True
+            }
+        new['health_state'][ifname] = state
+
+        if health_conf['nexthop'] == 'dhcp':
+            state.setdefault('dhcp_nexthop', None)
+            dynamic_nexthop_update(new, ifname)
+        else:
+            state.pop('dhcp_nexthop', None)
+            run(f'ip route replace table {table_num} default dev {ifname} via {health_conf["nexthop"]}')
+
+        if ifname in old_state and only_default_route == old_only_default_route:
+            continue
+        if ifname in old_state:
+            for rule in ip_rules(table_num, old_only_default_route):
+                run(f'ip rule del {rule}')
+        for rule in ip_rules(table_num, only_default_route):
+            run(f'ip rule add {rule}')
+
+    # the same dict is used by the signal handlers
+    lb.clear()
+    lb.update(new)
+
 def cleanup(lb):
-    if 'interface_health' in lb:
-        index = 1
-        for ifname, health_conf in lb['interface_health'].items():
-            table_num = lb['mark_offset'] + index
-            suppress_prio = lb['mark_offset'] + index
-            table_prio = suppress_prio + 100
-            run(f'ip route del table {table_num} default')
-            run(
-                f'ip rule del fwmark {hex(table_num)} table main '
-                f'suppress_prefixlength 0 priority {suppress_prio}'
-            )
-            run(
-                f'ip rule del fwmark {hex(table_num)} table {table_num} '
-                f'priority {table_prio}'
-            )
-            run(f'ip rule del fwmark {hex(table_num)} table {table_num}')
-            index += 1
+    for state in lb.get('health_state', {}).values():
+        remove_interface(state)
 
     run(f'nft delete table ip vyos_wanloadbalance')
+
+def wait_for_commit():
+    while commit_in_progress():
+        print("Notice: Waiting for commit to complete...")
+        time.sleep(1)
 
 def get_config():
     conf = Config()
     base = ['load-balancing', 'wan']
     lb = conf.get_config_dict(base, key_mangling=('-', '_'),
+                            no_tag_node_value_mangle=True,
                             get_first_key=True, with_recursive_defaults=True)
 
     lb['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
@@ -240,72 +325,33 @@ def get_config():
     for rule in lb.get('rule', []):
         if lb.from_defaults(['rule', rule, 'limit']):
             del lb['rule'][rule]['limit']
+        # "inbound-interface any" needs to exclude the WAN interfaces
+        lb['rule'][rule]['wan_interfaces'] = list(lb.get('interface_health', {}))
 
     lb['test_defaults'] = get_defaults(base + ['interface-health', 'A', 'test', 'B'], get_first_key=True)
 
     return lb
 
 if __name__ == '__main__':
-    while commit_in_progress():
-        print("Notice: Waiting for commit to complete...")
-        time.sleep(1)
+    # SIGHUP reloads the configuration, it must not end the daemon before the
+    # main loop waits for it
+    signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGHUP})
 
-    lb = get_config()
+    wait_for_commit()
 
-    lb['health_state'] = {}
-    lb['mark_offset'] = 0xc8
+    lb = {}
+    take_over_config(lb, get_config())
 
-    # Create state dicts, interface address and nexthop, install routes and ip rules
-    if 'interface_health' in lb:
-        index = 1
-        for ifname, health_conf in lb['interface_health'].items():
-            table_num = lb['mark_offset'] + index
-            addr = get_ipv4_address(ifname)
-            lb['health_state'][ifname] = {
-                'if_addr': addr,
-                'failure_count': 0,
-                'success_count': 0,
-                'last_success': 0,
-                'last_failure': 0,
-                'state': addr is not None,
-                'state_changed': False,
-                'table_number': table_num,
-                'mark': hex(table_num)
-            }
+    nftables_update(lb)
 
-            if health_conf['nexthop'] == 'dhcp':
-                lb['health_state'][ifname]['dhcp_nexthop'] = None
+    run('ip route flush cache')
 
-                dynamic_nexthop_update(lb, ifname)
-            else:
-                run(f'ip route replace table {table_num} default dev {ifname} via {health_conf["nexthop"]}')
+    if 'flush_connections' in lb:
+        for _state in lb['health_state'].values():
+            run(f'conntrack --delete --mark {_state["table_number"]}')
 
-            suppress_prio = lb['mark_offset'] + index
-            table_prio = suppress_prio + 100
-            if 'only_default_route' in lb:
-                run(
-                    f'ip rule add fwmark {hex(table_num)} table main '
-                    f'suppress_prefixlength 0 priority {suppress_prio}'
-                )
-                run(
-                    f'ip rule add fwmark {hex(table_num)} table {table_num} '
-                    f'priority {table_prio}'
-                )
-            else:
-                run(f'ip rule add fwmark {hex(table_num)} table {table_num}')
-
-            index += 1
-
-        nftables_update(lb)
-
-        run('ip route flush cache')
-
-        if 'flush_connections' in lb:
-            for _state in lb['health_state'].values():
-                run(f'conntrack --delete --mark {_state["table_number"]}')
-
-        with open(wlb_status_file, 'w') as f:
-            f.write(json.dumps(lb['health_state']))
+    with open(wlb_status_file, 'w') as f:
+        f.write(json.dumps(lb['health_state']))
 
     # Signal handler SIGUSR2 -> dhcpcd update
     def handle_sigusr2(signum, frame):
@@ -339,7 +385,6 @@ if __name__ == '__main__':
 
     # Main loop
 
-    init = True;
     try:
         while True:
             ip_change = False
@@ -369,9 +414,8 @@ if __name__ == '__main__':
                             state['state_changed'] = True
 
                     #Force state changed to trigger the first write
-                    if init == True:
+                    if state.pop('report', False):
                         state['state_changed'] = True
-                        init = False
 
                     if state['state_changed']:
                         state['if_addr'] = get_ipv4_address(ifname)
@@ -397,7 +441,17 @@ if __name__ == '__main__':
             elif ip_change:
                 nftables_update(lb)
 
-            time.sleep(sleep_interval)
+            # The next round starts after sleep_interval or on a reload. The
+            # rules are replaced in one transaction, traffic is never left
+            # without them.
+            if signal.sigtimedwait({signal.SIGHUP}, sleep_interval):
+                wait_for_commit()
+                take_over_config(lb, get_config())
+                if not nftables_update(lb):
+                    break
+                run('ip route flush cache')
+                with open(wlb_status_file, 'w') as f:
+                    f.write(json.dumps(lb['health_state']))
     except Exception as e:
         print('WLB ERROR:', e)
 
