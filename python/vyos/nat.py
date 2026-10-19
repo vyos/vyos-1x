@@ -92,6 +92,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                         else:
                             translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
                         ignore_type_addr = True
+                    elif port:
+                        # nft has no "prefix to <net>:<port>" syntax, a catch-all
+                        # map key keeps the 1:1 prefix mapping plus the port range
+                        translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ 0.0.0.0/0 : {addr} . {port} }}')
                     else:
                         translation_output.append(f'prefix to {addr}')
                 else:
@@ -120,26 +124,33 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         else:
             translation_str = " ".join(translation_output)
 
-        if options:
-            translation_str += f' {",".join(options)}'
+        options_str = f' {",".join(options)}' if options else ''
 
         if not ipv6 and 'backend' in rule_conf['load_balance']:
             hash_input_items = []
             current_prob = 0
             nat_map = []
 
+            # the port has to be part of every map value, nft rejects a port
+            # or options between "to" and the hash expression
+            translation_str = f'{nat_type[:1]}nat {ip_prefix} to' if port else f'{nat_type[:1]}nat to'
+            backend_suffix = f' . {port}' if port else ''
+
             for trans_addr, addr in rule_conf['load_balance']['backend'].items():
                 item_prob = int(addr['weight'])
                 upper_limit = current_prob + item_prob - 1
                 hash_val = str(current_prob) + '-' + str(upper_limit)
-                element = hash_val + " : " + trans_addr
+                element = hash_val + " : " + trans_addr + backend_suffix
                 nat_map.append(element)
                 current_prob = current_prob + item_prob
 
             elements = ' , '.join(nat_map)
+            # weights are relative - a modulus other than their sum leaves hash
+            # values without a backend
+            modulus = current_prob
 
             if 'hash' in rule_conf['load_balance'] and 'random' in rule_conf['load_balance']['hash']:
-                translation_str += ' numgen random mod 100 map ' + '{ ' + f'{elements}' + ' }'
+                translation_str += f' numgen random mod {modulus} map ' + '{ ' + f'{elements}' + ' }'
             else:
                 for input_param in rule_conf['load_balance']['hash']:
                     if input_param == 'source-address':
@@ -154,7 +165,9 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                         param = f'{prot} dport'
                     hash_input_items.append(param)
                 hash_input = ' . '.join(hash_input_items)
-                translation_str += f' jhash ' + f'{hash_input}' + ' mod 100 map ' + '{ ' + f'{elements}' + ' }'
+                translation_str += f' jhash ' + f'{hash_input}' + f' mod {modulus} map ' + '{ ' + f'{elements}' + ' }'
+
+        translation_str += options_str
 
     for target in ['source', 'destination']:
         if target not in rule_conf:

@@ -127,9 +127,6 @@ def verify(nat):
     return None
 
 def generate(nat):
-    if not os.path.exists(nftables_nat66_config):
-        nat['first_install'] = True
-
     render(nftables_nat66_config, 'firewall/nftables-nat66.j2', nat)
 
     # dry-run newly generated configuration

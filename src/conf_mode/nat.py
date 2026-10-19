@@ -47,7 +47,8 @@ valid_groups = [
     'address_group',
     'domain_group',
     'network_group',
-    'port_group'
+    'port_group',
+    'mac_group',
 ]
 
 def get_config(config=None):
@@ -133,13 +134,6 @@ def verify_rule(config, err_msg, groups_dict):
         for item in ['source-port', 'destination-port']:
             if item in config['load_balance']['hash'] and config['protocol'] not in ['tcp', 'udp']:
                 raise ConfigError('Protocol must be tcp or udp when specifying hash ports')
-        count = 0
-        if 'backend' in config['load_balance']:
-            for member in config['load_balance']['backend']:
-                weight = config['load_balance']['backend'][member]['weight']
-                count = count +  int(weight)
-            if count != 100:
-                Warning(f'Sum of weight for nat load balance rule is not 100. You may get unexpected behaviour')
 
 def verify(nat):
     if not nat or 'deleted' in nat:
@@ -155,10 +149,10 @@ def verify(nat):
                     raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for nat source rule "{rule}"')
                 elif 'name' in config['outbound_interface']:
                     interface_name = config['outbound_interface']['name']
-                    if interface_name not in 'any':
+                    if interface_name != 'any':
                         if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
-                        if not interface_exists(interface_name):
+                        if '*' not in interface_name and not interface_exists(interface_name):
                             Warning(f'Interface "{interface_name}" for source NAT rule "{rule}" does not exist!')
                 else:
                     group_name = config['outbound_interface']['group']
@@ -186,10 +180,10 @@ def verify(nat):
                     raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for destination nat rule "{rule}"')
                 elif 'name' in config['inbound_interface']:
                     interface_name = config['inbound_interface']['name']
-                    if interface_name not in 'any':
+                    if interface_name != 'any':
                         if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
-                        if not interface_exists(interface_name):
+                        if '*' not in interface_name and not interface_exists(interface_name):
                             Warning(f'Interface "{interface_name}" for destination NAT rule "{rule}" does not exist!')
                 else:
                     group_name = config['inbound_interface']['group']
@@ -221,9 +215,6 @@ def verify(nat):
     return None
 
 def generate(nat):
-    if not os.path.exists(nftables_nat_config):
-        nat['first_install'] = True
-
     render(nftables_nat_config, 'firewall/nftables-nat.j2', nat)
     render(nftables_static_nat_conf, 'firewall/nftables-static-nat.j2', nat)
 

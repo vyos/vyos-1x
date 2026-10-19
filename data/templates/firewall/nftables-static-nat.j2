@@ -1,8 +1,8 @@
 #!/usr/sbin/nft -f
 
-{% if first_install is not vyos_defined %}
+# declaring the table first makes the delete succeed whether or not it exists
+table ip vyos_static_nat
 delete table ip vyos_static_nat
-{% endif %}
 {% if deleted is not vyos_defined %}
 table ip vyos_static_nat {
     #

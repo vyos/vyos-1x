@@ -2,9 +2,9 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
-{% if first_install is not vyos_defined %}
+# declaring the table first makes the delete succeed whether or not it exists
+table ip6 vyos_nat
 delete table ip6 vyos_nat
-{% endif %}
 {% if deleted is not vyos_defined %}
 table ip6 vyos_nat {
     #
