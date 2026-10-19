@@ -7,7 +7,7 @@
 {% endif %}
 {### MACRO definition for recurring peer patter, this can be either fed by a ###}
 {### peer-group or an individual BGP neighbor ###}
-{% macro bgp_neighbor(neighbor, config, peer_group=false) %}
+{% macro bgp_neighbor(neighbor, config, peer_group=false, groups=none) %}
 {# BGP order of peer-group and remote-as placement must be honored #}
 {% if peer_group == true %}
  neighbor {{ neighbor }} peer-group
@@ -263,7 +263,32 @@
 {%         if afi_config.disable_send_community.standard is vyos_defined %}
   no neighbor {{ neighbor }} send-community standard
 {%         endif %}
+{%         set member_pg = none %}
+{%         if peer_group == false %}
+{%             if config.peer_group is vyos_defined %}
+{%                 set member_pg = config.peer_group %}
+{%             elif config.interface.peer_group is vyos_defined %}
+{%                 set member_pg = config.interface.peer_group %}
+{%             elif config.interface.v6only.peer_group is vyos_defined %}
+{%                 set member_pg = config.interface.v6only.peer_group %}
+{%             endif %}
+{%         endif %}
+{# T9450: FRR (bgp_config_write_peer_af(), bgpd/bgp_vty.c) prints a peer-group #}
+{# member's own "activate" only when the member's activation state for this #}
+{# AFI/SAFI differs from its peer-group's: peer_group_active(peer) true and #}
+{# g_peer->afc[afi][safi] == peer->afc[afi][safi] (both on, the case here - a #}
+{# member with an address-family stanza is always "activate"d) prints nothing, #}
+{# because the member inherits activation from the group. Skip the member's own #}
+{# line exactly then - when its peer-group also has this AFI/SAFI configured, #}
+{# which makes the group render its own "activate" in the peer-group's block. #}
+{%         if member_pg is vyos_defined and groups[member_pg].address_family[afi] is vyos_defined %}
+{%             set skip_activate = true %}
+{%         else %}
+{%             set skip_activate = false %}
+{%         endif %}
+{%         if not skip_activate %}
   neighbor {{ neighbor }} activate
+{%         endif %}
  exit-address-family
  !
 {# j2lint: disable=jinja-statements-delimeter #}
@@ -455,9 +480,18 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
   rt vpn import {{ afi_config.route_target.vpn.import }}
 {%             endif %}
 {%         endif %}
+{# T9450: FRR never folds a VRF's l2vpn evpn route-targets back into "both" #}
+{# (bgp_config_write_evpn_info(), bgpd/bgp_evpn_vty.c: the import list and the #}
+{# export list are each printed from their own flag/list, independently of #}
+{# how they were set - unlike the per-VNI "route-target both" context, which #}
+{# tools/frr-reload.py folds a matching import+export pair back into "both" #}
+{# by a dedicated special case that does not exist for this, VRF-wide, #}
+{# context). Rendering "route-target both" here makes frr-reload see it #}
+{# missing from the running config and delete+re-add both RTs every reload. #}
 {%         if afi_config.route_target.both is vyos_defined %}
 {%             for route_target in afi_config.route_target.both %}
-  route-target both {{ route_target }}
+  route-target import {{ route_target }}
+  route-target export {{ route_target }}
 {%             endfor %}
 {%         endif %}
 {%         if afi_config.route_target.export is vyos_defined %}
@@ -561,7 +595,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
  !
 {% if neighbor is vyos_defined %}
 {%     for peer, config in neighbor.items() %}
-{{ bgp_neighbor(peer, config) }}
+{{ bgp_neighbor(peer, config, false, peer_group) }}
 {# j2lint: disable=jinja-statements-delimeter #}
 {%-    endfor %}
 {% endif %}
@@ -606,7 +640,8 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-nota
 {% if parameters.cluster_id is vyos_defined %}
  bgp cluster-id {{ parameters.cluster_id }}
 {% endif %}
-{% if parameters.conditional_advertisement.timer is vyos_defined %}
+{# xml_default_conditional_advertisement_timer is the XML default of parameters conditional-advertisement timer, added to the dict by frrender #}
+{% if parameters.conditional_advertisement.timer is vyos_defined and parameters.conditional_advertisement.timer | int != xml_default_conditional_advertisement_timer | int %}
  bgp conditional-advertisement timer {{ parameters.conditional_advertisement.timer }}
 {% endif %}
 {% if parameters.confederation.identifier is vyos_defined %}

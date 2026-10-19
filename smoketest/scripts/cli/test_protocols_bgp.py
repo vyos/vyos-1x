@@ -2265,5 +2265,228 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(vrf_header, frrconfig)
         self.assertNotIn(no_reject, frrconfig)
 
+    def test_bgp_109_peer_group_member_activate_inherited(self):
+        # T9450: FRR (bgp_config_write_peer_af(), bgpd/bgp_vty.c) prints a
+        # peer-group member's own "neighbor X activate" only when the
+        # member's activation state for an AFI/SAFI differs from the
+        # group's. A member bound to a group that already has the same
+        # address-family is activated for it at bind time
+        # (peer_group_bind(), bgpd/bgpd.c), so re-sending the member's own
+        # "activate" every commit is both redundant and, at scale, one of
+        # the lines frr-reload re-applies on every reload.
+        peer_group = 'foo'
+        member = '192.0.2.1'
+        iface_member = 'eth0'
+
+        self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', ASN])
+        self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast'])
+
+        self.cli_set(base_path + ['neighbor', member, 'peer-group', peer_group])
+        # same AFI as the group - the member-specific route-map proves the
+        # address-family block itself is still rendered
+        self.cli_set(base_path + ['neighbor', member, 'address-family', 'ipv4-unicast', 'route-map', 'import', route_map_in])
+        # an AFI the group does NOT have - the member must keep its own activate
+        self.cli_set(base_path + ['neighbor', member, 'address-family', 'ipv6-unicast'])
+
+        # an interface-based ("unnumbered") peer-group member behaves the same way
+        self.cli_set(base_path + ['neighbor', iface_member, 'interface', 'peer-group', peer_group])
+        # address-family is a direct child of "neighbor", not of "interface",
+        # even for an interface-based (unnumbered) member
+        self.cli_set(base_path + ['neighbor', iface_member, 'address-family', 'ipv4-unicast'])
+
+        self.cli_commit()
+
+        # This reads the generated FRR config file instead of getFRRconfig():
+        # FRR's own bgp_config_write_peer_af() always suppresses a member's
+        # "activate" from its OWN running-config print when the member's
+        # state matches its peer-group's, regardless of whether the rendered
+        # file keeps re-sending the redundant line every commit - so vtysh
+        # cannot tell if we render it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        rendered = read_file(frr_conf)
+        # scope the ipv4-unicast checks to that address-family's own block -
+        # 192.0.2.1 legitimately gets its own "activate" under ipv6-unicast
+        # (checked below), and a whole-text assertNotIn would wrongly catch that
+        ipv4_block, _, ipv6_and_rest = rendered.partition(' address-family ipv6 unicast')
+        # the group itself always activates
+        self.assertIn(f' neighbor {peer_group} activate', ipv4_block)
+        # the member's ipv4-unicast activation is inherited from the group:
+        # the rendered file must not re-send it, but the member's own per-AF
+        # option is still there
+        self.assertNotIn(f' neighbor {member} activate', ipv4_block)
+        self.assertIn(f' neighbor {member} route-map {route_map_in} in', ipv4_block)
+        # ipv6-unicast: the group has nothing there, the member keeps its own activate
+        self.assertIn(f' neighbor {member} activate', ipv6_and_rest)
+        # the interface-based member inherits the same way (it has no ipv6-unicast
+        # config, so the whole-text check is unambiguous)
+        self.assertNotIn(f' neighbor {iface_member} activate', rendered)
+
+        # FRR's own running config must also be exactly this - neither an
+        # explicit "activate" nor a "no activate" for the inherited member,
+        # since the member's own per-AF option proves the block is active
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(f'no neighbor {member} activate', frrconfig)
+        self.assertNotIn(f'no neighbor {iface_member} activate', frrconfig)
+
+        # functional proof beyond the rendered text: FRR's own per-peer state
+        # (afc[afi][safi], independent of session reachability) must show the
+        # member active in both families regardless of which one it inherited
+        neigh = self.getFRRopmode(f'show bgp neighbors {member}', json=True)
+        self.assertIn('ipv4Unicast', neigh[member]['addressFamilyInfo'])
+        self.assertIn('ipv6Unicast', neigh[member]['addressFamilyInfo'])
+        iface_neigh = self.getFRRopmode(f'show bgp neighbors {iface_member}', json=True)
+        self.assertIn('ipv4Unicast', iface_neigh[iface_member]['addressFamilyInfo'])
+
+        # the group loses ipv4-unicast later: FRR deactivates the member
+        # (peer_deactivate(), bgpd.c) and the member must render its own
+        # activate again to catch up
+        self.cli_delete(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(f' neighbor {peer_group} activate', frrconfig)
+        # scope to the ipv4-unicast sub-section: 192.0.2.1 is also active in
+        # ipv6-unicast, where the group has nothing, so FRR always prints its
+        # "activate" there regardless of the ipv4 state being checked here
+        frr_v4 = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit',
+                                   start_subsection=' address-family ipv4 unicast',
+                                   stop_subsection='^ exit-address-family')
+        self.assertIn(f' neighbor {member} activate', frr_v4)
+        self.assertIn(f' neighbor {member} route-map {route_map_in} in', frrconfig)
+        self.assertIn(f' neighbor {iface_member} activate', frrconfig)
+
+        neigh = self.getFRRopmode(f'show bgp neighbors {member}', json=True)
+        self.assertIn('ipv4Unicast', neigh[member]['addressFamilyInfo'])
+
+        # the group gains the address family back: the members' own activate
+        # is dropped again (frr-reload deletes each member's "activate" before
+        # it adds the group's - a one-time session reset per affected member
+        # at this commit, not a lasting functional loss), and FRR must still
+        # have each member active (inherited)
+        self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast'])
+        self.cli_commit()
+
+        rendered = read_file(frr_conf)
+        ipv4_block = rendered.partition(' address-family ipv6 unicast')[0]
+        self.assertNotIn(f' neighbor {member} activate', ipv4_block)
+        # whole-text check, not scoped to ipv4_block: eth0 has no ipv6-unicast
+        # stanza of its own, so the partition above would put its entire block
+        # (including this line, if rendered) past the first ipv6-unicast
+        # boundary introduced by 192.0.2.1 - scoping this assertion to
+        # ipv4_block would never see it either way
+        self.assertNotIn(f' neighbor {iface_member} activate', rendered)
+
+        neigh = self.getFRRopmode(f'show bgp neighbors {member}', json=True)
+        self.assertIn('ipv4Unicast', neigh[member]['addressFamilyInfo'])
+        iface_neigh = self.getFRRopmode(f'show bgp neighbors {iface_member}', json=True)
+        self.assertIn('ipv4Unicast', iface_neigh[iface_member]['addressFamilyInfo'])
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f' neighbor {member} route-map {route_map_in} in', frrconfig)
+        self.assertNotIn(f'no neighbor {member} activate', frrconfig)
+        self.assertNotIn(f'no neighbor {iface_member} activate', frrconfig)
+
+    def test_bgp_110_conditional_advertisement_timer_default_value(self):
+        # T9450: FRR does not print "bgp conditional-advertisement timer 60"
+        # in its running config because 60 is the default
+        # (DEFAULT_CONDITIONAL_ROUTES_POLL_TIME, bgpd/bgp_conditional_adv.h).
+        # If we render the line anyway, frr-reload finds it missing on every
+        # reload and sends it again on every commit.
+        #
+        # This reads the generated FRR config file instead of getFRRconfig():
+        # FRR never prints the line for 60, so vtysh cannot tell if we render it.
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        timer = ' bgp conditional-advertisement timer'
+
+        # the XML default (60) is always in the config dict, but it is the
+        # default, so nothing is rendered when the timer is not configured
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(timer, frrconfig)
+
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', '60'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(timer, frrconfig)
+
+        # a value other than the default is still rendered and applied
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', '90'])
+        self.cli_commit()
+
+        self.assertIn(f'{timer} 90', read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'{timer} 90', frrconfig)
+
+        # back to the default value, FRR must have the default again
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', '60'])
+        self.cli_commit()
+
+        self.assertNotIn(timer, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(timer, frrconfig)
+
+        # the VRF instance has the same default: 60 is not rendered in the
+        # VRF block, 90 is rendered in the VRF block only
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        vrf_timer = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'parameters', 'conditional-advertisement', 'timer']
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(vrf_timer + ['60'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn(timer, frrconfig)
+
+        self.cli_set(vrf_timer + ['90'])
+        self.cli_commit()
+
+        # the global block comes first in the file, the VRF block after it
+        global_block, _, vrf_block = read_file(frr_conf).partition(vrf_header)
+        self.assertIn(f'router bgp {ASN}', global_block)
+        self.assertNotIn(timer, global_block)
+        self.assertIn(f'{timer} 90', vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(f'{timer} 90', frrconfig)
+
+    def test_bgp_111_vrf_evpn_route_target_both(self):
+        # T9450: FRR never folds a VRF's l2vpn evpn route-targets back into
+        # "both" (bgp_config_write_evpn_info(), bgpd/bgp_evpn_vty.c): the
+        # import list and the export list are each printed independently of
+        # how they were configured - unlike the per-VNI "route-target both"
+        # context, which tools/frr-reload.py folds back into "both" with a
+        # dedicated special case that does not exist for this, VRF-wide,
+        # context. Rendering "route-target both" here makes frr-reload see
+        # it missing from the running config and delete+re-add both
+        # route-targets every reload.
+        both_rt = f'{ASN}:400'
+        extra_import_rt = f'{ASN}:401'
+
+        self.create_bgp_instances_for_import_test()
+        af_path = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'address-family', 'l2vpn-evpn']
+        self.cli_set(af_path + ['route-target', 'both', both_rt])
+        # a separate "import" of a different RT must still be rendered and
+        # applied alongside the "both" pair
+        self.cli_set(af_path + ['route-target', 'import', extra_import_rt])
+        self.cli_commit()
+
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        frr_conf = '/run/frr/config/vyos.frr.conf'
+        rendered = read_file(frr_conf)
+        # FRR never prints "route-target both" for this context - the
+        # rendered file must not either, or frr-reload will see a spurious
+        # diff on every reload
+        self.assertNotIn('route-target both', rendered)
+
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn('route-target both', frrconfig)
+        self.assertIn(f' route-target import {both_rt}', frrconfig)
+        self.assertIn(f' route-target export {both_rt}', frrconfig)
+        self.assertIn(f' route-target import {extra_import_rt}', frrconfig)
+        self.assertNotIn(f' route-target export {extra_import_rt}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

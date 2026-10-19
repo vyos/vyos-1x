@@ -334,6 +334,13 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
         tmp = conf.get_config_defaults(bgp_cli_path + ['parameters', 'default'],
                                        key_mangling=('-', '_'), get_first_key=True)
         bgp['xml_default_local_pref'] = tmp.get('local_pref')
+        # Same pattern for "parameters conditional-advertisement timer".
+        tmp = conf.get_config_defaults(
+            bgp_cli_path + ['parameters', 'conditional-advertisement'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+        )
+        bgp['xml_default_conditional_advertisement_timer'] = tmp.get('timer')
         dict.update({'bgp' : bgp})
     elif conf.exists_effective(bgp_cli_path):
         dict.update({'bgp' : {'deleted' : '', 'dependent_vrfs' : {}}})
@@ -561,6 +568,12 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                                                    vrf_config['protocols']['bgp'])
                 vrf_config['protocols']['bgp']['xml_default_local_pref'] = dict_search(
                     'parameters.default.local_pref', default_values)
+
+                vrf_config['protocols']['bgp'][
+                    'xml_default_conditional_advertisement_timer'
+                ] = dict_search(
+                    'parameters.conditional_advertisement.timer', default_values
+                )
 
                 # Add this BGP VRF instance as dependency into the default VRF
                 if 'bgp' in dict:
