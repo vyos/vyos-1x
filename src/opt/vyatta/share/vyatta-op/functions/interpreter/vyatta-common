@@ -30,6 +30,7 @@ get_prefix_filtered_list ()
   declare -a olist
   local pfx=$1
   pfx=${pfx#\"}
+  pfx=${pfx%\"}
   eval "olist=( \"\${$2[@]}\" )"
   local idx=0
   for elem in "${olist[@]}"; do
