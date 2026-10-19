@@ -7,4 +7,7 @@ After=vyos-router.service
 Type=oneshot
 ExecStart=/usr/bin/python3 /usr/libexec/vyos/vyos-dhclient-lease-watch
 SyslogIdentifier=vyos-dhclient-lease-watch
+# Drop the info-level Starting/Finished lines PID 1 logs every 5 minutes;
+# the helper only logs at warning and above.
+LogLevelMax=notice
 Nice=10
