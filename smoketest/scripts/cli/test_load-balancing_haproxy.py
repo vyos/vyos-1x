@@ -366,6 +366,56 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn('http-request add-header X-Forwarded-Proto https if { ssl_fc }', config)
         self.assertIn(f'server {haproxy_backend_name} 192.0.2.11:9090 send-proxy ssl verify none', config)
 
+    def test_reverse_proxy_backend_ssl_checks_only(self):
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # TCP passthrough, the intended use case
+        self.cli_set(base_path + ['service', haproxy_service_name, 'mode', 'tcp'])
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'mode', 'tcp'])
+
+        # checks-only alone is inert: requires no-verify or ca-certificate
+        self.cli_set(
+            base_path + ['backend', haproxy_backend_name, 'ssl', 'checks-only']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # checks-only requires at least one server with check enabled
+        self.cli_set(base_path + ['backend', haproxy_backend_name, 'ssl', 'no-verify'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path
+            + ['backend', haproxy_backend_name, 'server', haproxy_backend_name, 'check']
+        )
+        self.cli_commit()
+
+        # Health check uses TLS, forwarded traffic is untouched (no bare ssl keyword)
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(
+            f'server {haproxy_backend_name} 192.0.2.11:9090 check send-proxy check-ssl verify none',
+            config,
+        )
+
+        # Same with certificate verification against a CA
+        self.cli_delete(
+            base_path + ['backend', haproxy_backend_name, 'ssl', 'no-verify']
+        )
+        self.cli_set(
+            base_path
+            + ['backend', haproxy_backend_name, 'ssl', 'ca-certificate', 'smoketest']
+        )
+        self.cli_commit()
+
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(
+            f'server {haproxy_backend_name} 192.0.2.11:9090 check send-proxy check-ssl ca-file /run/haproxy/smoketest.pem',
+            config,
+        )
+
     def test_reverse_proxy_backend_http_check(self):
         # Setup base
         self.base_config()
