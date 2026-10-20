@@ -34,18 +34,20 @@
 {% if table is vyos_defined %}
 {%     set ip_route = ip_route ~ ' table ' ~ table %}
 {% endif %}
+{% if config.disable is not vyos_defined %}
 {{ ip_route }}
+{% endif %}
 {%- endmacro -%}
 {# Build static IPv4/IPv6 route #}
 {% macro static_routes(ip_ipv6, prefix, prefix_config, table=None) %}
 {% set route = ip_ipv6 ~ 'route ' ~ prefix %}
 {% if prefix_config.interface is vyos_defined %}
-{%     for interface, interface_config in prefix_config.interface.items() if interface_config.disable is not defined %}
+{%     for interface, interface_config in prefix_config.interface.items() %}
 {{ route_options(route, interface, interface_config, table) }}
 {%     endfor %}
 {% endif %}
 {% if prefix_config.next_hop is vyos_defined and prefix_config.next_hop is not none %}
-{%     for next_hop, next_hop_config in prefix_config.next_hop.items() if next_hop_config.disable is not defined %}
+{%     for next_hop, next_hop_config in prefix_config.next_hop.items() %}
 {{ route_options(route, next_hop, next_hop_config, table) }}
 {%     endfor %}
 {% endif %}
@@ -59,7 +61,8 @@
 {% endif %}
 {% if prefix_config.blackhole is vyos_defined %}
 {{ route_options(route, 'blackhole', prefix_config.blackhole, table) }}
-{% elif prefix_config.reject is vyos_defined %}
+{% endif %}
+{% if prefix_config.reject is vyos_defined %}
 {{ route_options(route, 'reject', prefix_config.reject, table) }}
 {% endif %}
 {# j2lint: disable=jinja-statements-delimeter #}

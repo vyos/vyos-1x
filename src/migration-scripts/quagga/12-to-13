@@ -1,0 +1,92 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T9482:
+#   FRR staticd refuses a blackhole or reject route next to a next-hop or
+#   interface route of the same prefix with the same distance. The route
+#   configured first is kept, VyOS renders the blackhole and reject route last,
+#   so it is the one that is dropped. Make this visible in the CLI by setting
+#   "disable" on that blackhole or reject route.
+#   A prefix with both a blackhole and a reject route rendered only the
+#   blackhole route, the reject route gets "disable" the same way.
+
+from vyos.configtree import ConfigTree
+
+
+def distance(config: ConfigTree, path: list) -> int:
+    if config.exists(path + ['distance']):
+        return int(config.return_value(path + ['distance']))
+    return 1
+
+
+def migrate_static(config: ConfigTree, base: list) -> None:
+    if not config.exists(base):
+        return
+
+    sources = [base]
+    if config.exists(base + ['table']):
+        sources += [base + ['table', table] for table in config.list_nodes(base + ['table'])]
+
+    for source in sources:
+        for route in ['route', 'route6']:
+            route_base = source + [route]
+            if not config.exists(route_base):
+                continue
+            for prefix in config.list_nodes(route_base):
+                prefix_base = route_base + [prefix]
+                # Both at once used to render only the blackhole route, the
+                # reject route was ignored. Routes in a table were not checked,
+                # so such a configuration can exist.
+                blackhole_base = prefix_base + ['blackhole']
+                reject_base = prefix_base + ['reject']
+                if (
+                    config.exists(blackhole_base)
+                    and config.exists(reject_base)
+                    and not config.exists(blackhole_base + ['disable'])
+                    and not config.exists(reject_base + ['disable'])
+                ):
+                    config.set(reject_base + ['disable'])
+
+                for discard in ['blackhole', 'reject']:
+                    discard_base = prefix_base + [discard]
+                    if not config.exists(discard_base):
+                        continue
+                    if config.exists(discard_base + ['disable']):
+                        continue
+                    discard_distance = distance(config, discard_base)
+
+                    conflict = False
+                    # dhcp-interface routes use the default distance
+                    if discard_distance == 1 and config.exists(prefix_base + ['dhcp-interface']):
+                        conflict = True
+                    for node in ['interface', 'next-hop']:
+                        node_base = prefix_base + [node]
+                        if not config.exists(node_base):
+                            continue
+                        for name in config.list_nodes(node_base):
+                            if config.exists(node_base + [name, 'disable']):
+                                continue
+                            if distance(config, node_base + [name]) == discard_distance:
+                                conflict = True
+                    if conflict:
+                        config.set(discard_base + ['disable'])
+
+
+def migrate(config: ConfigTree) -> None:
+    migrate_static(config, ['protocols', 'static'])
+
+    if config.exists(['vrf', 'name']):
+        for vrf in config.list_nodes(['vrf', 'name']):
+            migrate_static(config, ['vrf', 'name', vrf, 'protocols', 'static'])

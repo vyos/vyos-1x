@@ -26,6 +26,7 @@ from vyos.configverify import verify_vrf
 from vyos.frrender import get_dhcp_route_interfaces
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
+from vyos.xml_ref import default_value
 from vyos.utils.file import write_file
 from vyos.template import render
 from vyos import ConfigError
@@ -75,9 +76,69 @@ def verify(config_dict):
                     for interface, interface_config in prefix_options[type].items():
                         verify_vrf(interface_config)
 
-            if {'blackhole', 'reject'} <= set(prefix_options):
-                raise ConfigError(f'Cannot use both blackhole and reject for '\
-                                  f'prefix "{prefix}"!')
+    # FRR staticd refuses a blackhole or reject route and a next-hop or
+    # interface route for the same prefix with the same distance, which only
+    # shows up when frr-reload fails after the commit. Routes in a table are
+    # checked as well, blackhole and reject at once is refused there too.
+    def route_distance(route, prefix, node, config, name=None):
+        # the default distance comes from the CLI definition, a tag node needs
+        # a value in the path. Compare the numbers, the validator accepts
+        # leading zeros.
+        path = ['protocols', 'static', route, prefix, node]
+        if name:
+            path.append(name)
+        distance = config.get('distance', default_value(path + ['distance']))
+        return int(distance)
+
+    for source in [static] + list(static.get('table', {}).values()):
+        for route in ['route', 'route6']:
+            for prefix, prefix_options in source.get(route, {}).items():
+                # a disabled route is not rendered, so it does not conflict
+                if all(
+                    discard in prefix_options
+                    and 'disable' not in prefix_options[discard]
+                    for discard in ['blackhole', 'reject']
+                ):
+                    raise ConfigError(
+                        f'Cannot use both blackhole and reject for '
+                        f'prefix "{prefix}"!'
+                    )
+
+                for discard in ['blackhole', 'reject']:
+                    if discard not in prefix_options:
+                        continue
+                    if 'disable' in prefix_options[discard]:
+                        continue
+                    discard_distance = route_distance(
+                        route, prefix, discard, prefix_options[discard]
+                    )
+                    for type in ['interface', 'next_hop']:
+                        node = type.replace('_', '-')
+                        for name, config in prefix_options.get(type, {}).items():
+                            if 'disable' in config:
+                                continue
+                            if (
+                                route_distance(route, prefix, node, config, name)
+                                == discard_distance
+                            ):
+                                raise ConfigError(
+                                    f'Cannot use {discard} and {node} "{name}" '
+                                    f'with the same distance {discard_distance} '
+                                    f'for prefix "{prefix}"!'
+                                )
+
+                    # A dhcp-interface route has no distance option, it is
+                    # rendered like a next-hop route without a distance as soon
+                    # as the interface has a gateway
+                    if discard_distance == route_distance(
+                        route, prefix, 'next-hop', {}, 'dhcp'
+                    ):
+                        for name in prefix_options.get('dhcp_interface', []):
+                            raise ConfigError(
+                                f'Cannot use {discard} and dhcp-interface "{name}" '
+                                f'with the same distance {discard_distance} for '
+                                f'prefix "{prefix}"!'
+                            )
 
     if 'multicast' in static and 'route' in static['multicast']:
         for prefix, prefix_options in static['multicast']['route'].items():
