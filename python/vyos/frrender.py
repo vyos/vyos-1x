@@ -788,10 +788,14 @@ def get_dhcp_route_interfaces(config_dict) -> set:
     return interfaces
 
 class FRRender:
+    # Configuration of the last successful apply(), see generate()
     cached_config_dict = {}
     cached_dhcp_gateways = {}
     def __init__(self):
         self._frr_conf = frr_config_file
+        # Configuration rendered by generate(), which apply() has not
+        # confirmed yet
+        self._pending = None
 
     def generate(self, config_dict) -> None:
         """
@@ -812,15 +816,15 @@ class FRRender:
             for interface in get_dhcp_route_interfaces(config_dict)
         }
 
+        # A render which did not reach apply() must not count as applied
+        self._pending = None
+
         if (
             self.cached_config_dict == config_dict
             and self.cached_dhcp_gateways == dhcp_gateways
         ):
             debug('FRR:        NO CHANGES DETECTED')
             return False
-
-        self.cached_config_dict = config_dict
-        self.cached_dhcp_gateways = dhcp_gateways
 
         def inline_helper(config_dict) -> str:
             output = '!\n'
@@ -950,6 +954,11 @@ class FRRender:
         debug(output)
         write_file(self._frr_conf, output)
         debug('FRR:        RENDERING CONFIG COMPLETE')
+
+        # Only apply() makes this the cached configuration. If FRR does not
+        # take it, the next commit must render and apply it again instead of
+        # reporting no changes (T9442).
+        self._pending = (config_dict, dhcp_gateways)
         return True
 
     def apply(self, count_max=5):
@@ -988,3 +997,9 @@ class FRRender:
         # --daemon. Repeating it asks every daemon for its configuration once
         # more, and a bgpd busy with a policy walk then holds the commit until
         # the walk ends.
+
+        # FRR runs the rendered configuration now, remember it for the change
+        # detection of generate()
+        if self._pending is not None:
+            self.cached_config_dict, self.cached_dhcp_gateways = self._pending
+            self._pending = None
