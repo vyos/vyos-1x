@@ -338,6 +338,156 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         conf.read(self._config_file)
         self.assertEqual(conf['ipoe']['idle-timeout'], idle_timeout)
 
+    def test_ipoe_server_lease_time(self):
+        lease_time = '600'
+        max_lease_time = '700'
+        renew_time = '300'
+        rebind_time = '525'
+
+        self.basic_config()
+        self.cli_commit()
+
+        # Default: "lease-time" is baked into the CLI as accel-ppp's own
+        # built-in default (ipoe.c: LEASE_TIME), the other three are derived
+        # from it and stay unset until the operator overrides them
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        self.assertEqual(conf['ipoe']['lease-time'], '600')
+        for option in ['max-lease-time', 'renew-time', 'rebind-time']:
+            self.assertNotIn(option, conf['ipoe'])
+
+        self.set(['lease-time', lease_time])
+        self.set(['max-lease-time', max_lease_time])
+        self.set(['renew-time', renew_time])
+        self.set(['rebind-time', rebind_time])
+        self.cli_commit()
+
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        self.assertEqual(conf['ipoe']['lease-time'], lease_time)
+        self.assertEqual(conf['ipoe']['max-lease-time'], max_lease_time)
+        self.assertEqual(conf['ipoe']['renew-time'], renew_time)
+        self.assertEqual(conf['ipoe']['rebind-time'], rebind_time)
+
+    def test_ipoe_server_lease_time_override_warnings(self):
+        self.basic_config()
+
+        # accel-ppp fills in its own defaults for the timing options left
+        # unset, so "renew-time" on its own is already inconsistent: the
+        # default "rebind-time" (7/8 of the default 600s lease) is lower, and
+        # accel-ppp pulls the renewal back to 4/7 of it. Warnings are wrapped
+        # to 72 characters, so collapse the whitespace before matching.
+        self.set(['renew-time', '550'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"renew-time" (550) will be overridden by accel-ppp with 300, '
+            'derived from "lease-time" 600 and "rebind-time" 525',
+            out,
+        )
+        self.delete(['renew-time'])
+
+        # A "rebind-time" alone, below the renewal time accel-ppp derives from
+        # the lease time, lowers that renewal time as well
+        self.set(['rebind-time', '100'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            'The renewal time derived from "lease-time" 600 (300) is above '
+            '"rebind-time" (100), accel-ppp lowers it to 57',
+            out,
+        )
+        self.delete(['rebind-time'])
+
+        # A "rebind-time" above the lease time is replaced by 7/8 of it
+        self.set(['lease-time', '600'])
+        self.set(['rebind-time', '700'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"rebind-time" (700) will be overridden by accel-ppp with 525, '
+            'derived from "lease-time" 600',
+            out,
+        )
+        self.delete(['rebind-time'])
+
+        # A "max-lease-time" below the lease time never takes effect
+        self.set(['max-lease-time', '500'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"max-lease-time" (500) is lower than "lease-time" (600) and '
+            'will have no effect',
+            out,
+        )
+        self.delete(['max-lease-time'])
+
+        # Timings accel-ppp accepts as-is are not reported
+        self.set(['renew-time', '300'])
+        self.set(['rebind-time', '525'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertNotIn('will be overridden', out)
+
+    def test_ipoe_server_lease_time_renewal_not_sent(self):
+        # Own test: every commit restarts accel-ppp and too many restarts in a
+        # row hit the systemd start limit.
+        self.basic_config()
+
+        # A derived renewal time of 0 is not sent at all (DHCP option 58)
+        self.set(['rebind-time', '1'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            '"rebind-time" (1), accel-ppp lowers it to 0, the renewal time '
+            'option is then not sent',
+            out,
+        )
+
+    def test_ipoe_server_lease_time_too_long(self):
+        # Own test: every commit restarts accel-ppp and too many restarts in a
+        # row hit the systemd start limit.
+        self.basic_config()
+
+        # accel-ppp derives "max-lease-time" as lease time plus a tenth, that
+        # does not fit into 32 bits for a very long lease time
+        self.set(['lease-time', '2000000000'])
+        with self.assertRaisesRegex(ConfigSessionError, 'without "max-lease-time"'):
+            self.cli_commit()
+
+        # the longest lease time that still fits
+        self.set(['lease-time', '1952257861'])
+        self.cli_commit()
+
+        # an explicit "max-lease-time" is used as it is
+        self.set(['lease-time', '2000000000'])
+        self.set(['max-lease-time', '2147483647'])
+        self.cli_commit()
+
+    def test_ipoe_server_lease_time_relay_warning(self):
+        self.basic_config()
+        relay = ['interface', interface, 'external-dhcp']
+        self.set(relay + ['dhcp-relay', '192.0.2.3'])
+        self.set(relay + ['giaddr', '192.0.2.2'])
+
+        # Only the "lease-time" default is in effect, nothing to warn about
+        out = ' '.join(self.cli_commit().split())
+        self.assertNotIn('take precedence', out)
+
+        # The external DHCP server sends its own timings, so the configured
+        # values are only a fallback
+        self.set(['lease-time', '1200'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn(
+            f'"lease-time" only apply as a fallback on interface(s) {interface} '
+            'using "external-dhcp dhcp-relay": the lease timings sent by the '
+            'external DHCP server take precedence',
+            out,
+        )
+
+        self.set(['renew-time', '300'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertIn('"lease-time", "renew-time" only apply as a fallback', out)
+
+        # No warning without the relay
+        self.delete(['interface', interface, 'external-dhcp'])
+        out = ' '.join(self.cli_commit().split())
+        self.assertNotIn('take precedence', out)
+
     @unittest.skip("PPP is not a part of IPoE")
     def test_accel_ppp_options(self):
         pass
