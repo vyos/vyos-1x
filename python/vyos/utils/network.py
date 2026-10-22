@@ -18,6 +18,7 @@ import hashlib
 from json import loads
 from socket import AF_INET
 from socket import AF_INET6
+from socket import AF_UNSPEC
 from vyos.utils.process import cmdl
 
 def _are_same_ip(one, two):
@@ -903,3 +904,93 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
             ifaces.append(interface)
 
     return ifaces
+
+
+def fqdn_resolve(
+    fqdn: str, ipv6: bool | None = False, vrf: str = None
+) -> frozenset | None:
+    """Resolve an FQDN to a set of addresses, optionally inside a VRF.
+
+    When `vrf` is None, resolution is performed with the standard
+    library resolver (getaddrinfo), in the process's default
+    routing/namespace context - this matches the original,
+    non-VRF-aware behavior exactly.
+
+    When `vrf` is given, resolution is instead performed inside that
+    VRF's routing/namespace context via `ip vrf exec`, so lookups
+    against a resolver only reachable through that VRF succeed.
+
+    Args:
+        fqdn: The hostname to resolve.
+        ipv6: If True, resolve AAAA (IPv6) records instead of A
+              (IPv4) records. With None will use dual-stack resolving.
+        vrf: Name of the VRF to resolve within, or None to resolve in
+             the default/global routing context.
+
+    Returns:
+        A set of resolved address strings, or None if resolution
+        failed or returned no usable addresses.
+    """
+
+    import socket
+
+    addresses = None
+
+    # When `vrf` is given, it runs inside that VRF via `ip vrf exec`,
+    # so lookups against a resolver only reachable through that VRF.
+    if vrf:
+
+        if ipv6 is None:
+            db = 'ahosts'
+        else:
+            # ahostsv4 / ahostsv6 restrict getent to one family directly,
+            # avoiding the need to filter mixed-family output ourselves
+            db = 'ahostsv6' if ipv6 else 'ahostsv4'
+
+        # getent's "ahostsv6" database passes AI_V4MAPPED under the hood, so it
+        # will happily return a synthesized ::ffff:a.b.c.d address even when no
+        # real AAAA record exists - e.g.:
+        #
+        #   $ ip vrf exec red getent ahostsv6 fqdn.vyos
+        #   ::ffff:192.168.50.2 STREAM fqdn.vyos
+        #
+        # The non-VRF getaddrinfo(fqdn, None, AF_INET6) path does NOT synthesize
+        # mapped addresses, so without filtering these out, the VRF-aware path
+        # would report IPv6 support that doesn't actually exist. Strip anything
+        # matching the IPv4-mapped prefix before returning IPv6 results.
+        IPV4_MAPPED_PREFIX = '::ffff:'
+
+        try:
+            out = cmdl(['ip', 'vrf', 'exec', vrf, 'getent', db, fqdn], sudo=True)
+        except OSError:
+            pass
+        else:
+            if out:
+                addresses = []
+                for line in out.splitlines():
+                    if line.strip():
+                        addr = line.split()[0]
+
+                        # Drop synthesized IPv4-mapped addresses.
+                        # Without this, a domain with only an A record (no AAAA)
+                        # would incorrectly appear to have IPv6 support
+                        # when resolved via a VRF:
+                        if ipv6 and addr.lower().startswith(IPV4_MAPPED_PREFIX):
+                            continue
+
+                        addresses.append(addr)
+    else:
+        if ipv6 is None:
+            # Use dual-stack resolving
+            family = AF_UNSPEC
+        else:
+            family = AF_INET6 if ipv6 else AF_INET
+
+        try:
+            res = socket.getaddrinfo(fqdn, None, family=family)
+        except OSError:
+            pass
+        else:
+            addresses = [item[4][0] for item in res]
+
+    return frozenset(addresses) if addresses else None
