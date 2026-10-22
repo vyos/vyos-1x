@@ -47,6 +47,9 @@ from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import list_loaded_modules
 from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.system import sysctl_read
+from vyos.utils.system import sysctl_read_default
+from vyos.utils.system import sysctl_write
 
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
@@ -65,6 +68,7 @@ from vyos.vpp.config_verify import (
     verify_vpp_mac_change_supported,
 )
 from vyos.vpp.config_resource_checks import memory
+from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
@@ -178,6 +182,36 @@ def _unload_module(module_name: str):
     except Exception as e:
         vpp_log.error(f"Failed to unload module '{module_name}': {e}")
         raise
+
+
+def _raise_netlink_rmem_max(required: int):
+    """
+    The kernel caps the netlink receive buffer VPP requests (nl-rx-buffer-size)
+    at net.core.rmem_max. Raise the limit before VPP opens its netlink sockets;
+    a higher value is kept. VPP re-opens its socket on every netlink resync,
+    so system_sysctl.py does not lower the limit while VPP is configured.
+    """
+    current = sysctl_read(['net', 'core', 'rmem_max'])
+    if not current.isdigit() or int(current) < required:
+        if not sysctl_write(['net', 'core', 'rmem_max'], required):
+            Warning(
+                f'Could not set net.core.rmem_max to {required}: VPP can miss '
+                'interface and route updates from the kernel, and the dataplane '
+                'may not match the configuration!'
+            )
+
+
+def _restore_netlink_rmem_max(rmem_max: str | None):
+    """
+    VPP is removed: set net.core.rmem_max back to the value from system sysctl,
+    or to the default from sysctl.d. system_sysctl.py does not run when only
+    VPP is removed.
+    """
+    if not rmem_max:
+        rmem_max = sysctl_read_default(['net', 'core', 'rmem_max'])
+
+    if rmem_max and rmem_max.isdigit():
+        sysctl_write(['net', 'core', 'rmem_max'], rmem_max)
 
 
 def _configure_vpp_cpu_settings(config: dict):
@@ -344,6 +378,9 @@ def get_config(config=None):
             'persist_config': eth_ifaces_persist,
             'interfaces_vpp': interfaces_config,
             'pppoe_ifaces': pppoe_ifaces,
+            'rmem_max_configured': conf.return_value(
+                ['system', 'sysctl', 'parameter', 'net.core.rmem_max', 'value']
+            ),
             'remove': {},
         }
 
@@ -401,6 +438,11 @@ def get_config(config=None):
     ifaces_with_vifs = cli_ethernet_with_vifs_ifaces(conf, include_nested_vifs=True)
 
     if 'settings' in config:
+        # nl-rx-buffer-size in startup.conf, and the net.core.rmem_max it needs
+        config['settings']['netlink_rx_buffer_size'] = default_resource_map[
+            'netlink_rx_buffer_size'
+        ]
+
         if 'interface' in config['settings']:
             interface_rx_mode = config['settings'].get('interface_rx_mode')
 
@@ -782,6 +824,8 @@ def apply(config):
         # Unlod modules (modprobe -r)
         for module in modules:
             _unload_module(module)
+
+        _restore_netlink_rmem_max(config.get('rmem_max_configured'))
     else:
         # Some interfaces required extra preparation before VPP can be started
         if 'settings' in config and 'interface' in config.get('settings'):
@@ -826,6 +870,8 @@ def apply(config):
                             config['persist_config'][iface]['dev_id'],
                             override_drivers[k_module],
                         )
+
+        _raise_netlink_rmem_max(config['settings']['netlink_rx_buffer_size'])
 
         call('systemctl daemon-reload')
         call(f'systemctl restart {service_name}.service')

@@ -33,6 +33,32 @@ def sysctl_read(name: list[str]) -> str:
     tmp = run(['sysctl', '-nb', key], capture_output=True)
     return tmp.stdout.decode().strip()
 
+
+def sysctl_read_default(name: list[str]) -> str | None:
+    """Read the value the sysctl.d files set for a sysctl() option
+
+    systemd-analyze lists the files in the order systemd-sysctl applies them,
+    so the last assignment wins.
+
+    Args:
+        name (list[str]): sysctl key name components
+
+    Returns:
+        str | None: sysctl key value, None if no file sets it
+    """
+    key = _sysctl_key(name)
+    tmp = run(['systemd-analyze', 'cat-config', 'sysctl.d'], capture_output=True)
+    value = None
+    for line in tmp.stdout.decode().splitlines():
+        line = line.strip()
+        if not line or line.startswith(('#', ';')):
+            continue
+        tmp_key, sep, tmp_value = line.partition('=')
+        # a leading '-' only tells systemd-sysctl to ignore errors
+        if sep and tmp_key.strip().lstrip('-') == key:
+            value = tmp_value.strip()
+    return value
+
 def sysctl_write(name: list[str], value: str | int) -> bool:
     """Change value via sysctl()
 
