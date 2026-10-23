@@ -21,6 +21,7 @@ from textwrap import fill
 
 from vyos.config import Config
 from vyos.ifconfig import Section
+from vyos.utils.dict import dict_search_args
 
 client_config = """
 
@@ -88,7 +89,22 @@ auth {{ hash }}
 -----END PRIVATE KEY-----
 
 </key>
+{% if tls is defined and tls.crypt_key is defined %}
 
+<tls-crypt>
+-----BEGIN OpenVPN Static key V1-----
+{{ tls_key }}
+-----END OpenVPN Static key V1-----
+</tls-crypt>
+{% elif tls is defined and tls.auth_key is defined %}
+
+key-direction 1
+<tls-auth>
+-----BEGIN OpenVPN Static key V1-----
+{{ tls_key }}
+-----END OpenVPN Static key V1-----
+</tls-auth>
+{% endif %}
 """
 
 config = Config()
@@ -157,6 +173,16 @@ if __name__ == '__main__':
     config['cert'] = cert
     config['key'] = key
     config['port'] = '1194' if 'local_port' not in config else config['local_port']
+
+    tls = config.get('tls', {})
+    tls_key = tls.get('crypt_key') or tls.get('auth_key')
+    if tls_key:
+        tls_key_data = dict_search_args(
+            config, 'pki', 'openvpn', 'shared_secret', tls_key, 'key'
+        )
+        if not tls_key_data:
+            exit(f'OpenVPN shared secret key "{tls_key}" does not exist!')
+        config['tls_key'] = fill(tls_key_data, width=32)
 
     client = Template(client_config, trim_blocks=True).render(config)
     print(client)
