@@ -1735,7 +1735,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             {
                 'name': 'domain-lan-updates',
                 'algorithm': 'HMAC-SHA256',
-                'secret': 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
+                'secret-file': '/run/kea/kea-dhcp-ddns-tsig/domain-lan-updates',
             },
         )
         self.verify_config_object(
@@ -1744,9 +1744,22 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             {
                 'name': 'reverse-0-168-192',
                 'algorithm': 'HMAC-SHA256',
-                'secret': 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
+                'secret-file': '/run/kea/kea-dhcp-ddns-tsig/reverse-0-168-192',
             },
         )
+
+        # Kea refuses a TSIG secret in clear text, it is read from a file that
+        # only the Kea user can read
+        for key, secret in [
+            ('domain-lan-updates', 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='),
+            ('reverse-0-168-192', 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='),
+        ]:
+            key_file = f'/run/kea/kea-dhcp-ddns-tsig/{key}'
+            # the smoketest user is not the Kea user and cannot read the file
+            self.assertEqual(cmdl(['sudo', 'cat', key_file]), secret)
+            self.assertEqual(
+                cmdl(['sudo', 'stat', '-c', '%a %U', key_file]), '600 _kea'
+            )
 
         self.verify_config_value(
             d2_obj,

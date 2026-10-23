@@ -16,6 +16,7 @@
 
 import os
 import re
+import shutil
 
 from sys import exit
 from sys import argv
@@ -49,6 +50,7 @@ airbag.enable()
 ctrl_socket = ''
 config_file = ''
 config_file_d2 = ''
+tsig_key_dir = ''
 lease_file = ''
 lease_file_glob = ''
 
@@ -64,11 +66,13 @@ def _override_for_vrf(vrf_name):
     This function is intended to override global vars when vrf is enabled
     """
     global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global tsig_key_dir
     global ca_cert_file, cert_file, cert_key_file
 
     ctrl_socket = f'/run/kea/dhcp4-{vrf_name}-ctrl-socket'
     config_file = f'/run/kea/kea-{vrf_name}-dhcp4.conf'
     config_file_d2 = f'/run/kea/kea-{vrf_name}-dhcp-ddns.conf'
+    tsig_key_dir = f'/run/kea/kea-{vrf_name}-dhcp-ddns-tsig'
     lease_file = f'/config/dhcp/dhcp4-{vrf_name}-leases.csv'
     lease_file_glob = f'/config/dhcp/dhcp4-{vrf_name}-leases*'
 
@@ -82,11 +86,13 @@ def _reset_vars():
     This function is intended to reset global vars when vrf is not enabled
     """
     global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global tsig_key_dir
     global ca_cert_file, cert_file, cert_key_file
 
     ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
     config_file = '/run/kea/kea-dhcp4.conf'
     config_file_d2 = '/run/kea/kea-dhcp-ddns.conf'
+    tsig_key_dir = '/run/kea/kea-dhcp-ddns-tsig'
     lease_file = '/config/dhcp/dhcp4-leases.csv'
     lease_file_glob = '/config/dhcp/dhcp4-leases*'
 
@@ -686,6 +692,20 @@ def generate(dhcp):
         group=user_group,
     )
     if 'dynamic_dns_update' in dhcp:
+        # Kea refuses a TSIG secret in clear text, it is read from a file
+        shutil.rmtree(tsig_key_dir, ignore_errors=True)
+        makedir(tsig_key_dir, user=user_group, group=user_group)
+        os.chmod(tsig_key_dir, 0o750)
+        for name, key_config in dhcp['dynamic_dns_update'].get('tsig_key', {}).items():
+            write_file(
+                f'{tsig_key_dir}/{name}',
+                key_config['secret'],
+                user=user_group,
+                group=user_group,
+                mode=0o600,
+            )
+        dhcp['tsig_key_dir'] = tsig_key_dir
+
         render(
             config_file_d2,
             'dhcp-server/kea-dhcp-ddns.conf.j2',
@@ -693,6 +713,8 @@ def generate(dhcp):
             user=user_group,
             group=user_group
         )
+    else:
+        shutil.rmtree(tsig_key_dir, ignore_errors=True)
 
     return None
 
@@ -711,6 +733,8 @@ def apply(dhcp):
 
         if os.path.exists(config_file):
             os.unlink(config_file)
+
+        shutil.rmtree(tsig_key_dir, ignore_errors=True)
 
         return None
 

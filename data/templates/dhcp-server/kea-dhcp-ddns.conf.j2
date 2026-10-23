@@ -11,7 +11,7 @@
             "socket-name": "/var/run/kea/kea-ddns-ctrl-socket"
 {% endif %}
         },
-        "tsig-keys": {{ dynamic_dns_update | kea_dynamic_dns_update_tsig_key_json }},
+        "tsig-keys": {{ dynamic_dns_update | kea_dynamic_dns_update_tsig_key_json(tsig_key_dir) }},
         "forward-ddns" : {
             "ddns-domains": {{ dynamic_dns_update | kea_dynamic_dns_update_domains('forward_domain') }}
         },

@@ -1021,7 +1021,7 @@ def kea_dynamic_dns_update_main_json(config):
     return dumps(data, indent=8)[1:-1] + ','
 
 @register_filter('kea_dynamic_dns_update_tsig_key_json')
-def kea_dynamic_dns_update_tsig_key_json(config):
+def kea_dynamic_dns_update_tsig_key_json(config, key_dir):
     from vyos.kea import kea_parse_tsig_algo
     from json import dumps
     out = []
@@ -1035,7 +1035,7 @@ def kea_dynamic_dns_update_tsig_key_json(config):
         tsig_key = {
             'name': tsig_key_name,
             'algorithm': kea_parse_tsig_algo(tsig_key_config['algorithm']),
-            'secret': tsig_key_config['secret']
+            'secret-file': f'{key_dir}/{tsig_key_name}',
         }
         out.append(tsig_key)
 
