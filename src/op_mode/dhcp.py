@@ -632,7 +632,11 @@ def release_client_lease(raw: bool, family: ArgFamily, interface: str):
     if family == 'inet6':
         call(f'systemctl stop dhcp6c@{interface}.service')
     else:
-        call(f'systemctl stop dhclient@{interface}.service')
+        from vyos.ifconfig import Interface
+        from vyos.utils.process import stop_systemd_unit
+
+        Interface(interface).release_dhcp_lease()
+        stop_systemd_unit(f'dhclient@{interface}.service')
 
 
 if __name__ == '__main__':

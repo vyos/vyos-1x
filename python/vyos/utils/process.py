@@ -309,29 +309,40 @@ def is_systemd_service_active(service: str, vrf=None, netns=None) -> bool:
                vrf=vrf, netns=netns)
     return bool((tmp == 'active'))
 
+def is_systemd_unit_live(service: str, vrf=None, netns=None) -> bool:
+    """True if the unit is in a process-bearing ActiveState.
+
+    is_systemd_service_active() is ActiveState=active only. Type=exec units
+    with Restart=always can sit in activating while the process is already
+    live; teardown must still stop/kill them.
+    """
+    tmp = cmdl(['systemctl', 'show', '--value', '-p', 'ActiveState', service],
+               vrf=vrf, netns=netns)
+    return tmp in ('active', 'activating', 'deactivating', 'reloading')
+
 def stop_systemd_unit(service: str, retries: int=3, delay_s: float=0.250,
                       raise_on_failure: bool=True, vrf=None, netns=None) -> None:
     """
     Stop systemd unit used during interface teardown (e.g. DHCP clients).
 
-    Retries transient "systemctl stop| failures and verifies ActiveState is no
-    longer "active". Escalate to systemctl kill if stop attempts fail while
-    unit remains active.
+    Retries transient "systemctl stop" failures and verifies ActiveState is
+    no longer process-bearing (active/activating/deactivating/reloading).
+    Escalate to systemctl kill if stop attempts fail while the unit is live.
     """
 
-    if not is_systemd_service_active(service, vrf=vrf, netns=netns):
+    if not is_systemd_unit_live(service, vrf=vrf, netns=netns):
         return None
 
     for _ in range(retries):
         rc_cmd(f'systemctl stop {service}', vrf=vrf, netns=netns)
-        if not is_systemd_service_active(service, vrf=vrf, netns=netns):
+        if not is_systemd_unit_live(service, vrf=vrf, netns=netns):
             # Service properly stopped - return early, this should be the default
             return None
         time.sleep(delay_s)
 
     rc_cmd(f'systemctl kill {service}', vrf=vrf, netns=netns)
     time.sleep(delay_s)
-    if not is_systemd_service_active(service, vrf=vrf, netns=netns):
+    if not is_systemd_unit_live(service, vrf=vrf, netns=netns):
         return None
 
     # This should not happen
