@@ -277,5 +277,46 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_discard()
 
+    def test_09_prometheus_inputs(self):
+        self.basic_influxdb_setup()
+
+        # Set good values
+        local_input = 'local'
+        local_url = 'https://localhost:9100/actuator/prometheus'
+        self.cli_set(base_path + ['prometheus', 'input', local_input, 'url',
+                                  local_url])
+        self.cli_set(base_path + ['prometheus', 'input', local_input, 'insecure-skip-verify'])
+
+
+        # Set another endpoint without skipping insecure
+        remote_input = 'remote'
+        remote_url = 'https://10.10.10.10:9100/actuator/prometheus'
+        self.cli_set(base_path + ['prometheus', 'input', remote_input, 'url',
+                                  remote_url])
+
+        # Commit new values
+        self.cli_commit()
+
+        # Check values changed
+        config = read_file(TELEGRAF_CONF)
+
+        # Test local url
+        self.assertIn(f'''[[inputs.prometheus]]
+  urls = ["{local_url}"]
+  insecure_skip_verify = true''', config)
+
+        # Test remote url
+        remote_marker = f'''[[inputs.prometheus]]
+  urls = ["{remote_url}"]'''
+        self.assertIn(remote_marker, config)
+
+        remote_block = config.split(remote_marker, 1)[1].split('[[inputs.', 1)[0]
+        self.assertNotIn('insecure_skip_verify', remote_block)
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(base_path + ['prometheus', 'input', 'local', 'url',
+                                      'not-valid-url'])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
