@@ -17,9 +17,7 @@
 
 from vyos import ConfigError
 from vyos.config import Config
-from vyos.vpp.utils import cli_ifaces_list
 from vyos.vpp.sflow import SFlow
-from vyos.vpp.config_verify import verify_vpp_interface_not_a_member
 
 
 def get_config(config=None) -> dict:
@@ -68,15 +66,15 @@ def get_config(config=None) -> dict:
         config['remove'] = True
         return config
 
-    # Add list of VPP interfaces to the config
-    config.update({'vpp_ifaces': cli_ifaces_list(conf)})
-
-    # VPP interface membership data for member-conflict checks
-    config['interfaces_vpp'] = conf.get_config_dict(
-        ['interfaces', 'vpp'],
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
+    # sFlow only samples on physical ports, so the valid targets are exactly the
+    # physical NICs bound to VPP via "vpp settings interface".
+    config['vpp_physical_ifaces'] = list(
+        conf.get_config_dict(
+            ['vpp', 'settings', 'interface'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+        ).keys()
     )
 
     return config
@@ -90,13 +88,16 @@ def verify(config):
     if 'interface' not in config:
         raise ConfigError('Interfaces must be configured for sFlow')
 
-    # Verify that all interfaces specified exist in VPP
+    # sFlow can only sample on physical ports (VPP rejects or silently ignores
+    # bonds, tunnels, loopback and VLAN sub-interfaces), so only accept the
+    # physical NICs bound to VPP via "vpp settings interface".
     for interface in config['interface']:
-        if interface not in config['vpp_ifaces']:
+        if interface not in config['vpp_physical_ifaces']:
             raise ConfigError(
-                f'{interface} must be a VPP interface for sFlow monitoring'
+                'sFlow can only be enabled on physical interfaces bound to '
+                f'VPP. "{interface}" is not configured under '
+                '"vpp settings interface".'
             )
-        verify_vpp_interface_not_a_member(interface, config)
 
     # Verify that system sflow has enable-vpp defined
     if 'system_sflow' not in config or 'vpp' not in config.get('system_sflow', {}):
