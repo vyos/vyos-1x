@@ -26,6 +26,7 @@ from netifaces import ifaddresses # pylint: disable = no-name-in-module
 from socket import AF_INET
 from socket import AF_INET6
 
+from vyos.base import Warning
 from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
@@ -39,6 +40,7 @@ from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_address
 from vyos.utils.network import get_interface_namespace
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.network import interface_exists
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import stop_systemd_unit
@@ -1727,33 +1729,74 @@ class Interface(Control):
         # Please refer to the document for details
         #   - https://man7.org/linux/man-pages/man8/tc.8.html
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
-        # Depending if we are the source or the target interface of the port
-        # mirror we need to setup some variables.
 
         # Don't allow for netns yet
         if 'netns' in self.config:
             return None
 
-        source_if = self.ifname
+        # Our own mirror/redirect configuration
+        self._apply_mirror_redirect(self.ifname, self.config)
 
-        mirror_config = None
-        if 'mirror' in self.config:
-            mirror_config = self.config['mirror']
-        if 'is_mirror_intf' in self.config:
-            source_if = next(iter(self.config['is_mirror_intf']))
-            mirror_config = self.config['is_mirror_intf'][source_if].get('mirror', None)
+        # Install the filters of interfaces mirroring or redirecting into us,
+        # they could not do it themselves if we did not exist yet (T3089, T6393)
+        for source_if, source_config in self.config.get('is_mirror_intf', {}).items():
+            if not interface_exists(source_if):
+                continue
+            if self._mirror_redirect_installed(source_if, source_config):
+                continue
+            self._apply_mirror_redirect(source_if, source_config)
 
-        redirect_config = None
+    def _mirred_filters(self, dev, parent):
+        """tc(8) filters with a mirred action on dev/parent: (filter, target)"""
+        out, _ = self._popen(f'tc -j filter show dev {dev} parent {parent}')
+        for tc_filter in json.loads(out or '[]'):
+            for action in dict_search('options.actions', tc_filter) or []:
+                if action.get('kind') == 'mirred':
+                    yield tc_filter, action.get('to_dev')
 
+    def _mirror_redirect_installed(self, source_if, config):
+        """Check if source_if has all of its tc(8) mirred filters into us"""
+        parents = []
+        for direction, target in config.get('mirror', {}).items():
+            if target == self.ifname:
+                parents.append('ffff:' if direction == 'ingress' else '1:')
+        if config.get('redirect') == self.ifname:
+            parents.append('ffff:')
+        for parent in parents:
+            targets = [target for _, target in self._mirred_filters(source_if, parent)]
+            if self.ifname not in targets:
+                return False
+        return True
+
+    def _apply_mirror_redirect(self, source_if, config):
+        """
+        Install the tc(8) mirror or redirect filters of source_if according to
+        its configuration dictionary, we are either source_if or its target.
+        """
         # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
         # qdisc on specified device") - we simply cleanup all stuff here
-        if not 'qos' in self.config:
+        if 'qos' not in config:
             self._popen(f'tc qdisc del dev {source_if} root 2>/dev/null')
             self._popen(f'tc qdisc del dev {source_if} ingress 2>/dev/null')
+        else:
+            # keep the QoS qdiscs, only remove our own (mirred) filters
+            for tc_filter, _ in self._mirred_filters(source_if, 'ffff:'):
+                self._popen(
+                    f'tc filter del dev {source_if} parent ffff: '
+                    f'handle {tc_filter["options"]["fh"]} pref {tc_filter["pref"]} '
+                    f'protocol {tc_filter["protocol"]} {tc_filter["kind"]}'
+                )
 
         # Apply interface mirror policy
-        if mirror_config:
-            for direction, target_if in mirror_config.items():
+        if 'mirror' in config:
+            for direction, target_if in config['mirror'].items():
+                if not interface_exists(target_if):
+                    Warning(
+                        f'Mirror target "{target_if}" of "{source_if}" does not '
+                        'exist yet, tc filter will be installed once it is created'
+                    )
+                    continue
+
                 if direction == 'ingress':
                     handle = 'ffff: ingress'
                     parent = 'ffff:'
@@ -1771,11 +1814,18 @@ class Interface(Control):
                 if err: print('tc filter for mirror port failed')
 
         # Apply interface traffic redirection policy
-        elif 'redirect' in self.config:
+        elif 'redirect' in config:
+            target_if = config['redirect']
+            if not interface_exists(target_if):
+                Warning(
+                    f'Redirect target "{target_if}" of "{source_if}" does not '
+                    'exist yet, tc filter will be installed once it is created'
+                )
+                return None
+
             _, err = self._popen(f'tc qdisc add dev {source_if} handle ffff: ingress')
             if err: print(f'tc qdisc add for redirect failed!')
 
-            target_if = self.config['redirect']
             _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
                                  f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
                                  f'egress redirect dev {target_if}')
