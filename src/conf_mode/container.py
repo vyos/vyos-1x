@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify

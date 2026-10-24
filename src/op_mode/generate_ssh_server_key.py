@@ -40,4 +40,4 @@ if not host_key_files:
     raise OSError('No such file or directory: /etc/ssh/ssh_host_*')
 cmdl(['rm', '-v'] + host_key_files)
 cmdl(['dpkg-reconfigure', 'openssh-server'])
-cmdl([f'{conf_mode_dir}/service_ssh.py'])
+cmdl(['python3', f'{conf_mode_dir}/service_ssh.py'])
