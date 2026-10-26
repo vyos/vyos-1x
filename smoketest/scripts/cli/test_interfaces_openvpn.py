@@ -434,6 +434,38 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             sleep(1)
         self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
 
+    def test_openvpn_site2site_generated_shared_secret(self):
+        # A key from "generate pki openvpn shared-secret install" must be stored
+        # without its BEGIN/END wrapper, as that is added again on commit
+        interface = 'vtun5000'
+        path = base_path + [interface]
+        key_name = 'ovpn_generated'
+        key_path = ['pki', 'openvpn', 'shared-secret', key_name]
+
+        # op-mode inherits the session environment and installs into it
+        out = self.op_mode(
+            ['generate', 'pki', 'openvpn', 'shared-secret', 'install', key_name]
+        )
+        self.assertNotIn('not in configure mode', out)
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['shared-secret-key', key_name])
+        self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+        self.cli_commit()
+
+        key_file = read_file(f'/run/openvpn/{interface}_shared.key')
+        self.assertEqual(key_file.count('BEGIN OpenVPN Static key'), 1)
+
+        for _ in range(10):
+            if is_systemd_service_running(f'openvpn@{interface}.service'):
+                break
+            sleep(1)
+        self.assertTrue(is_systemd_service_running(f'openvpn@{interface}.service'))
+
+        self.cli_delete(key_path)
+
     # OVPN_CMD_PEER_GET carries GENL_ADMIN_PERM, hence the detour through
     # sudo. The probe swallows its own errors so a missing interface or a
     # refused dump reads as "no peer" with the reason attached, instead of

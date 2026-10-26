@@ -939,9 +939,10 @@ def generate_keypair(name, install=False, file=False):
 
 def generate_openvpn_key(name, install=False, file=False):
     raw_result = cmdl(['openvpn', '--genkey', 'secret', '/dev/stdout'])
-    # equivalent to the old `grep -o "^[^#]*"`, applied per line: keep
-    # everything before the first '#' on each line (comment lines become empty)
-    result = '\n'.join(line.split('#', 1)[0] for line in raw_result.splitlines())
+    # equivalent to the old `grep -o "^[^#]*"`: keep everything before the first
+    # '#' on each line and drop lines left empty (grep -o prints nothing for them)
+    stripped = (line.split('#', 1)[0] for line in raw_result.splitlines())
+    result = '\n'.join(line for line in stripped if line)
 
     if not result:
         print('Failed to generate OpenVPN key')
