@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -286,6 +287,24 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables([['100.64.0.0 : 100.64.0.8 . 1024-3023'],
                               ['100.64.0.7 : 100.64.0.8 . 15024-17023']],
                              'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_op_mode_allocation(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', '192.0.2.1/32'])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/31'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+
+        for ports, port_ranges in [('2', ['1024-1025', '1026-1027']),
+                                   ('1', ['1024-1024', '1025-1025'])]:
+            self.cli_set(base_path + ['pool', 'external', external_name, 'per-user-limit', 'port', ports])
+            self.cli_commit()
+
+            out = self.op_mode(['show', 'nat', 'cgnat', 'allocation'])
+            for internal, port_range in zip(['100.64.0.0', '100.64.0.1'], port_ranges):
+                self.assertRegex(out, rf'{re.escape(internal)}\s+192\.0\.2\.1\s+{port_range}\b')
 
 
 if __name__ == '__main__':
