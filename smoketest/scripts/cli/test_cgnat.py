@@ -266,6 +266,27 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
                               ['100.64.0.9 : 192.0.2.2 . 3024-5023']],
                              'ip cgnat', inverse=False, args='-s')
 
+    def test_cgnat_external_internal_overlap(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        external_path = base_path + ['pool', 'external', external_name]
+
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/29'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+
+        # external address taken from the internal pool
+        self.cli_set(external_path + ['range', '100.64.0.6-100.64.0.9'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(external_path + ['range', '100.64.0.6-100.64.0.9'])
+        self.cli_set(external_path + ['range', '100.64.0.8-100.64.0.9'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 100.64.0.8 . 1024-3023'],
+                              ['100.64.0.7 : 100.64.0.8 . 15024-17023']],
+                             'ip cgnat', inverse=False, args='-s')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
