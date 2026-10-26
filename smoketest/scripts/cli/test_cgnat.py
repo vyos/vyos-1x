@@ -134,6 +134,34 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip cgnat', inverse=False, args='-s')
 
+    def test_cgnat_external_port_range(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        external_path = base_path + ['pool', 'external', external_name]
+
+        # only a numeric range is a valid port range
+        for port_range in ['2000', 'http', '0-1000', '1024-65536']:
+            with self.assertRaises(ConfigSessionError):
+                self.cli_set(external_path + ['external-port-range', port_range])
+
+        self.cli_set(external_path + ['range', '192.0.2.1/32'])
+        self.cli_set(external_path + ['per-user-limit', 'port', '1000'])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/31'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+
+        # start of the range above its end
+        self.cli_set(external_path + ['external-port-range', '3000-1000'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(external_path + ['external-port-range', '1000-2999'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 192.0.2.1 . 1000-1999'],
+                              ['100.64.0.1 : 192.0.2.1 . 2000-2999']],
+                             'ip cgnat', inverse=False, args='-s')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
