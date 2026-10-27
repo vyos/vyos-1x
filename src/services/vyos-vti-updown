@@ -1,0 +1,641 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Drive the admin state of VTI (xfrm) interfaces from strongSwan via VICI plugin.
+#
+# 'charon' is the only source of truth for tunnel state. No tunnel state is kept
+# here: VICI events only tell us *when* to look, every decision is recomputed
+# from a fresh 'list-sas'/'list-conns' plus the kernel link state. The CLI
+# config only contributes intent: which enabled site-to-site peers and
+# remote-access connections are bound to which enabled VTI.
+#
+# A VTI is wanted 'up' iff
+#  - site-to-site: a peer bound to it holds a live CHILD_SA on its if_id, or
+#  - remote-access: a connection bound to it is loaded in charon (stays up
+#    without connected clients).
+# SAs of unbound or disabled connections never hold a VTI up.
+#
+# This process is the only one that brings a VTI 'up'. Conf mode only ever
+# takes VTIs 'down' (disable) and sends SIGHUP to request a reconcile.
+#
+# Started/stopped by 'conf_mode/vpn_ipsec.py' along with charon.
+
+import dataclasses
+import json
+import signal
+import socket
+import syslog
+import time
+
+import vici
+
+from vyos.configdict import get_interface_dict
+from vyos.configquery import ConfigTreeQuery
+from vyos.ifconfig import VTIIf
+from vyos.template import dot_colon_to_dash
+from vyos.utils.commit import commit_in_progress2
+from vyos.utils.dict import dict_search
+from vyos.utils.process import cmdl
+
+VICI_SOCKET = '/var/run/charon.vici'
+EVENTS = ['ike-updown', 'child-updown']
+
+# CHILD_SA states in which the SA is installed in the kernel
+VTI_LIVE_CHILD_STATES = {'INSTALLED', 'UPDATING', 'REKEYING', 'REKEYED'}
+
+TICK = 1.0  # vici.EventListener.listen() timeout, also the debounce window for events
+RESYNC = 60.0  # Periodic safety reconcile, cheap and self-healing
+QUERY_TIMEOUT = 30.0  # Never act on an incomplete answer from charon
+RETRY = 3.0  # Reconnect interval while charon is not running
+
+
+def log(message: str, priority=syslog.LOG_INFO):
+    syslog.syslog(priority, message)
+
+
+def flt2sec(value: float) -> str:
+    """Converts float value to seconds in string"""
+    return f'{value:.3f}s'.replace('.000s', '.0s')
+
+
+def _vici_str(value):
+    return value.decode() if isinstance(value, bytes) else value
+
+
+def _describe_vici_event(event, message) -> str:
+    """One line describing a VICI ike-updown/child-updown event"""
+
+    direction = 'up' if message and 'up' in message else 'down'
+    parts = []
+    for name, ike_sa in (message or {}).items():
+        if not isinstance(ike_sa, dict):
+            continue
+
+        items = []
+        for child_name, child in ike_sa.get('child-sas', {}).items():
+            uniqueid = _vici_str(child.get('uniqueid'))
+            if_id_in = _vici_str(child.get('if-id-in', '-'))
+            state = _vici_str(child.get('state'))
+
+            items.append(f'{child_name} uid {uniqueid} if_id {if_id_in} state {state}')
+        children = ', '.join(items)
+
+        uniqueid = _vici_str(ike_sa.get('uniqueid'))
+        ike = f'{name} (IKE_SA uid {uniqueid})'
+        parts.append(f'{ike} [{children}]' if children else ike)
+
+    event_name = _vici_str(event)
+    event_body = '; '.join(parts) or '-'
+    return f'Event `{event_name}` {direction}: {event_body}'
+
+
+def vici_socket(timeout=None):
+    """Return a socket connected to charon, or None if charon is not running"""
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    try:
+        sock.connect(VICI_SOCKET)
+        return sock
+    except (FileNotFoundError, ConnectionRefusedError):
+        sock.close()
+        return None
+
+
+@dataclasses.dataclass
+class VTIBinding:
+    """
+    Enabled IPsec connections bound to one enabled VTI interface. Connection
+    names must match the ones rendered by `ipsec/swanctl.conf.j2`.
+    """
+
+    ifname: str
+    site_to_site: set = dataclasses.field(default_factory=set)
+    remote_access: set = dataclasses.field(default_factory=set)
+
+    def __bool__(self):
+        return bool(self.site_to_site or self.remote_access)
+
+    @classmethod
+    def from_config(cls, vti: dict, ipsec: dict) -> dict:
+        """
+        Return {vti: VTIBinding} for every enabled VTI. Inputs are config
+        dicts of 'interfaces vti' and 'vpn ipsec' (key_mangling '-' -> '_').
+        """
+
+        bindings = {}
+        for ifname, cfg in vti.items():
+            if 'disable' not in cfg:
+                bindings[ifname] = cls(ifname=ifname)
+
+        for peer, cfg in dict_search('site_to_site.peer', ipsec, {}).items():
+            bind = dict_search('vti.bind', cfg)
+            if bind in bindings and 'disable' not in cfg:
+                # ipsec/swanctl/peer.j2: peer.replace("@", "") | dot_colon_to_dash
+                conn = dot_colon_to_dash(peer.replace('@', ''))
+                bindings[bind].site_to_site.add(conn)
+
+        for name, cfg in dict_search('remote_access.connection', ipsec, {}).items():
+            bind = cfg.get('bind')
+            if bind in bindings and 'disable' not in cfg:
+                # ipsec/swanctl/remote_access.j2: ra-{{ name }}
+                bindings[bind].remote_access.add(f'ra-{name}')
+
+        return bindings
+
+    @classmethod
+    def load(cls) -> dict:
+        """Return {vti: VTIBinding} from the running config"""
+
+        conf = ConfigTreeQuery()
+        args = {
+            'key_mangling': ('-', '_'),
+            'get_first_key': True,
+            'no_tag_node_value_mangle': True,
+        }
+        bindings = cls.from_config(
+            conf.get_config_dict(['interfaces', 'vti'], **args),
+            conf.get_config_dict(['vpn', 'ipsec'], **args),
+        )
+
+        log(f'Config loaded: {len(bindings)} enabled VTI interface(s)')
+        for ifname, bound in sorted(bindings.items()):
+            site_to_site = sorted(bound.site_to_site) or '-'
+            remote_access = sorted(bound.remote_access) or '-'
+            log(
+                f'Binding {ifname}: site-to-site {site_to_site}, remote-access {remote_access}'
+            )
+
+        return bindings
+
+
+class Tombstones:
+    """
+    Unique ids of CHILD_SAs charon announced as gone by a VICI 'child-updown'
+    event. Charon raises one per CHILD_SA on every teardown path, including
+    an IKE_SA dying on DPD/retransmit timeout.
+    Unlike PLUTO_UNIQUEID (an IKE_SA id), a CHILD_SA unique id is not touched
+    by an IKE_SA rekey, which merely adopts the same CHILD_SA objects.
+
+    Only valid for the charon instance that announced them: unique ids come
+    from a per-process counter and restart from 1 with charon.
+    """
+
+    def __init__(self):
+        self._ids = set()
+
+    def __contains__(self, uid: int) -> bool:
+        return uid in self._ids
+
+    def add_from_event(self, message: dict):
+        """Record the CHILD_SAs a 'child-updown' down event announces"""
+
+        if not message or 'up' in message:
+            return
+
+        for ike_sa in message.values():
+            if not isinstance(ike_sa, dict):
+                continue
+            for child in ike_sa.get('child-sas', {}).values():
+                if 'uniqueid' in child:
+                    uniqueid = int(_vici_str(child['uniqueid']))
+                    self._ids.add(uniqueid)
+
+    def prune(self, listed: frozenset):
+        """
+        A tombstone is only needed until charon stops listing that CHILD_SA,
+        within one charon instance unique ids are never reused.
+        """
+
+        pruned = self._ids - listed
+        self._ids -= pruned
+
+        if pruned:
+            log(f'Tombstones released (CHILD_SA gone from charon): {sorted(pruned)}')
+
+        if self._ids:
+            log(f'Tombstones kept (CHILD_SA still listed): {sorted(self._ids)}')
+
+    def clear(self):
+        self._ids.clear()
+
+
+@dataclasses.dataclass(frozen=True)
+class CharonState:
+    """One snapshot of charon, as seen through VICI"""
+
+    running: bool
+    live: dict = dataclasses.field(
+        default_factory=dict
+    )  # {if_id: {conn with live CHILD_SA}}
+    listed: frozenset = frozenset()  # Unique ids of all listed CHILD_SAs
+    conns: frozenset = frozenset()  # Loaded connections
+
+    @classmethod
+    def query(cls, tombstones: Tombstones) -> 'CharonState':
+        """
+        Query charon. Return a not running state if charon is not running:
+        then no SA can exist. Raises on any other error, so the caller never
+        acts on partial data.
+        """
+
+        sock = vici_socket(QUERY_TIMEOUT)
+        if sock is None:
+            log('Charon state: not running, no SA can exist')
+            return cls(running=False)
+
+        try:
+            session = vici.Session(sock)
+
+            # Blocking list-sas (no 'noblock'): it waits for checked-out IKE_SAs
+            # and skips ones being destroyed. Skipping would hide live SAs.
+            started = time.monotonic()
+            live, listed = cls._live_sas(session.list_sas(), tombstones)
+
+            conns = set()
+            for conn in session.list_conns():
+                for name in conn:
+                    conns.add(name)
+            conns = frozenset(conns)
+        finally:
+            sock.close()
+        completed = time.monotonic()
+
+        state = cls(True, live, listed, conns)
+        log(f'Charon state ({flt2sec(completed - started)}): {state}')
+        return state
+
+    @staticmethod
+    def _live_sas(sas, tombstones: Tombstones) -> tuple:
+        """
+        Return ({if_id: {connections with a live CHILD_SA}}, {listed CHILD_SA ids})
+        from a VICI 'list-sas' answer (the IKE_SA section name is the connection).
+
+        Every live CHILD_SA counts on its own - there is no key that can collide,
+        so concurrent CHILD_SAs of one connection (peer re-established before the
+        old IKE_SA timed out, T9154) keep the interface up until the last is gone.
+
+        CHILD_SAs charon has already announced as down are ignored even if still
+        listed.
+        """
+
+        live, listed = {}, set()
+
+        for ike in sas:
+            for conn, ike_sa in ike.items():
+                for child in ike_sa.get('child-sas', {}).values():
+                    # Charon starts unique ids at 1, so 0 never matches a tombstone
+                    uid = int(_vici_str(child.get('uniqueid', 0)))
+                    state = _vici_str(child.get('state'))
+
+                    listed.add(uid)
+                    if 'if-id-in' not in child:
+                        continue  # policy-based CHILD_SA, not related to any VTI
+
+                    if_id = int(_vici_str(child['if-id-in']), 16)
+                    if uid in tombstones:
+                        log(
+                            f'CHILD_SA {conn} uid {uid} if_id {if_id} state {state}: '
+                            f'ignored, already announced down'
+                        )
+                    elif state not in VTI_LIVE_CHILD_STATES:
+                        log(
+                            f'CHILD_SA {conn} uid {uid} if_id {if_id} state {state}: '
+                            f'ignored, not installed'
+                        )
+                    else:
+                        live.setdefault(if_id, set()).add(conn)
+
+        return live, frozenset(listed)
+
+    def wanted_state(self, if_id: int, binding: VTIBinding | None) -> tuple:
+        """Return (wanted up, reason) for a VTI with if_id and its binding"""
+
+        if not self.running:
+            return False, 'charon is not running'
+
+        if not binding:
+            return False, 'not bound to an enabled connection'
+
+        if binding.site_to_site & self.live.get(if_id, set()):
+            return True, 'site-to-site CHILD_SA'
+
+        if binding.remote_access & self.conns:
+            return True, 'remote-access connection loaded'
+
+        return False, 'no live CHILD_SA'
+
+    def __str__(self):
+        live = ', '.join(
+            f'if_id {if_id}: {sorted(names)}'
+            for if_id, names in sorted(self.live.items())
+        )
+        return (
+            f'{len(self.listed)} CHILD_SA(s) listed, {len(self.conns)} connection(s) '
+            f'loaded, live on {live or []}'
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class VTILink:
+    """One VTI (xfrm) interface as present in the kernel"""
+
+    ifname: str
+    if_id: int
+    is_up: bool
+
+    @classmethod
+    def all(cls) -> list:
+        """Return all VTI (xfrm) interfaces, sorted by name"""
+
+        links = []
+        command = ['ip', '--detail', '--json', 'link', 'show', 'type', 'xfrm']
+        for link in json.loads(cmdl(command) or '[]'):
+            ifname = link['ifname']
+            if_id = dict_search('linkinfo.info_data.if_id', link)
+            if not ifname.startswith('vti') or if_id is None:
+                continue
+
+            if isinstance(if_id, str):
+                if_id = int(if_id, 16)
+
+            links.append(cls(ifname, if_id, 'UP' in link.get('flags', [])))
+
+        return sorted(links, key=lambda link: link.ifname)
+
+    def set_admin_state(self, state: str):
+        vtiif = VTIIf(self.ifname, create=False)
+
+        if state == 'up':
+            conf = ConfigTreeQuery()
+            _, ifconfig = get_interface_dict(
+                conf.config, ['interfaces', 'vti'], self.ifname
+            )
+            vtiif.update(ifconfig)
+            vtiif.set_admin_state(state, force_up=True)
+        else:
+            vtiif.set_admin_state(state)
+
+
+def reconcile(bindings: dict, tombstones: Tombstones, allow_up: bool) -> bool:
+    """
+    Bring kernel state in line with Charon. Prunes tombstones in place.
+    Return True if an 'up' was deferred (allow_up False), so the caller
+    retries soon instead of waiting for the next periodic resync.
+    """
+
+    charon = CharonState.query(tombstones)
+    tombstones.prune(charon.listed)
+
+    links = VTILink.all()
+    if not links:
+        log('No VTI interfaces present in the kernel')
+
+    deferred = False
+    for link in links:
+        binding = bindings.get(link.ifname)
+        want_up, reason = charon.wanted_state(link.if_id, binding)
+        current = 'up' if link.is_up else 'down'
+        wanted = 'up' if want_up else 'down'
+
+        prefix = (
+            f'Interface {link.ifname} (if_id {link.if_id}): '
+            f'admin {current}, wanted {wanted} ({reason})'
+        )
+
+        if want_up == link.is_up:
+            log(f'{prefix}: no change')
+            continue
+
+        if want_up and not allow_up:
+            # Config may be mid-change: retried as soon as the commit is done
+            log(f'{prefix}: up deferred until config is settled')
+            deferred = True
+            continue
+
+        link.set_admin_state(wanted)
+        log(f'{prefix}: set admin {wanted}', syslog.LOG_NOTICE)
+
+    return deferred
+
+
+class Schedule:
+    """
+    Deadline of the next reconcile and what set it, for logging. Events only
+    ever pull the deadline closer, so bursts are coalesced and an event storm
+    cannot postpone it. Follow-ups after a reconcile always replace it.
+    """
+
+    FOLLOW_UPS = ('resync', 'retry', 'deferred-up', 'charon-busy')
+
+    def __init__(self):
+        self.due = 0.0
+        self.trigger = 'startup'
+
+    def at(self, delay: float, why: str):
+        """Move the next reconcile to now + delay, if that is sooner"""
+
+        when = time.monotonic() + delay
+        if when < self.due or why in self.FOLLOW_UPS:
+            self.due, self.trigger = when, why
+
+    def expired(self) -> bool:
+        return time.monotonic() >= self.due
+
+    def remaining(self) -> float:
+        return self.due - time.monotonic()
+
+
+class VTIUpdownDaemon:
+    def __init__(self, listener: vici.EventListener):
+        self.reload_requested = True
+        self.stop_requested = False
+
+        # VTI bindings from config, see VTIBinding. None until first loaded:
+        # never reconcile without them, or a restart during a commit would see
+        # every VTI as unbound and take live tunnels down.
+        self.bindings = None
+        self.tombstones = Tombstones()
+        self.schedule = Schedule()
+
+        # Last seen charon availability, logged on change only
+        self.charon_up = None
+
+        self.listener = listener
+        self.listener.on_timeout()(self.on_tick)
+        self.listener.on_events(EVENTS)(self.on_event)
+
+    def on_sighup(self, signum, frame):
+        log('SIGHUP received: config reload and reconcile requested')
+        self.reload_requested = True
+
+    def on_sigterm(self, signum, frame):
+        # Only a flag: the main loop wakes up at least every TICK/RETRY seconds.
+        # Raising here could be masked by the vici.EventListener.listen() generator cleanup.
+        log('SIGTERM received: stopping')
+        self.stop_requested = True
+
+    def is_due(self) -> bool:
+        if self.schedule.expired():
+            return True
+
+        if self.reload_requested and not commit_in_progress2():
+            self.schedule.trigger = 'config reload'
+            return True
+
+        return False
+
+    def sync(self):
+        """One reconcile pass, deferring anything that may race a commit"""
+
+        log(f'Reconcile triggered by: {self.schedule.trigger}')
+        started = time.monotonic()
+        try:
+            committing = commit_in_progress2()
+            if committing:
+                log('Commit in progress: config reload and admin up are deferred')
+            if self.reload_requested and not committing:
+                self.bindings = VTIBinding.load()
+                self.reload_requested = False
+
+            if self.bindings is None:
+                log('Config not loaded yet: reconcile skipped, retry next tick')
+                self.schedule.at(TICK, 'retry')
+                return
+
+            allow_up = not (committing or self.reload_requested)
+            deferred = reconcile(self.bindings, self.tombstones, allow_up)
+        except TimeoutError as e:
+            # Charon is still waiting for a checked-out IKE_SA on behalf of
+            # the abandoned query. Retrying sooner would only park more
+            # charon worker threads and could starve its thread pool.
+            why = 'charon-busy'
+            logmsg = f'Reconcile deferred, {why}: {repr(e)}, retry in {flt2sec(QUERY_TIMEOUT)}'
+            log(logmsg, syslog.LOG_WARNING)
+
+            self.schedule.at(QUERY_TIMEOUT, why)
+        except Exception as e:
+            # Never act on partial data
+            logmsg = f'Reconcile deferred (retry in {flt2sec(RETRY)}): {repr(e)}'
+            log(logmsg, syslog.LOG_WARNING)
+
+            self.schedule.at(RETRY, 'retry')
+        else:
+            # An 'up' held back by a commit must not wait for the next resync
+            if deferred:
+                self.schedule.at(TICK, 'deferred-up')
+            else:
+                self.schedule.at(RESYNC, 'resync')
+            completed = time.monotonic()
+
+            log(
+                f'Reconcile done in {flt2sec(completed - started)}, '
+                f'next by {self.schedule.trigger} in {flt2sec(self.schedule.remaining())}'
+            )
+
+    def on_tick(self):
+        if self.stop_requested:
+            raise vici.StopListening()
+
+        if self.is_due():
+            self.sync()
+
+    def on_event(self, name: str, message: dict):
+        log(_describe_vici_event(name, message))
+        self.tombstones.add_from_event(message)
+
+        self.schedule.at(TICK, f'event-{name}')
+
+        # 'vici.EventListener.on_timeout' only fires after TICK without any event,
+        # so check here too: an event storm must not postpone the reconcile
+        self.on_tick()
+
+    def run(self):
+        while not self.stop_requested:
+            sock = vici_socket()
+            if sock is None:
+                if self.charon_up is not False:
+                    self.charon_up = False
+                    log('Charon not running: no SA can exist, VTI interfaces go down')
+                    self.schedule.at(0, 'charon-stopped')
+
+                if self.is_due():
+                    self.sync()
+                time.sleep(RETRY)
+                continue
+
+            self.charon_up = True
+            log('Connected to charon instance')
+            self.schedule.at(0, 'connected')  # Events may have been missed meanwhile
+
+            self.listener.set_session(vici.Session(sock))
+            try:
+                # True on StopListening, False once charon closed the session
+                stopped = self.listener.listen(TICK)
+                if stopped:
+                    break
+                else:
+                    log('Lost connection to charon', syslog.LOG_WARNING)
+            except Exception as e:
+                log(f'Event handling failed: {e}', syslog.LOG_WARNING)
+            finally:
+                sock.close()
+                # The session ended, so charon may restart: drop its tombstones,
+                # a new charon reuses CHILD_SA unique ids from 1
+                self.tombstones.clear()
+
+            if not self.stop_requested:
+                time.sleep(RETRY)
+
+    def final_pass(self):
+        """
+        If charon is gone (IPsec deleted) no SA can exist, so every VTI goes
+        down. With charon still running (plain restart of this service) live
+        tunnels are left alone. Needs no config, which may never have loaded.
+        """
+
+        sock = vici_socket()
+        if sock is not None:
+            sock.close()
+            log('Final pass: charon still running, VTI interfaces left untouched')
+            return
+
+        log('Final pass: charon not running, taking VTI interfaces down')
+        try:
+            reconcile({}, Tombstones(), allow_up=False)
+        except Exception as e:
+            log(f'Final reconcile failed: {e}', syslog.LOG_WARNING)
+
+
+def main():
+    syslog.openlog('vyos-vti-updown', syslog.LOG_PID, syslog.LOG_DAEMON)
+    log(
+        f'Started: socket {VICI_SOCKET}, events {EVENTS}, tick {TICK}s, '
+        f'resync {RESYNC}s, query timeout {QUERY_TIMEOUT}s, retry {RETRY}s'
+    )
+
+    listener = vici.EventListener()
+    daemon = VTIUpdownDaemon(listener)
+
+    signal.signal(signal.SIGHUP, daemon.on_sighup)
+    signal.signal(signal.SIGTERM, daemon.on_sigterm)
+
+    daemon.run()
+    daemon.final_pass()
+
+
+if __name__ == '__main__':
+    main()

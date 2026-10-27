@@ -25,6 +25,7 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import VTIIf
+from vyos.ipsec import vti_updown_resync
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -68,6 +69,9 @@ def apply(vti):
 
     tmp = VTIIf(**vti)
     tmp.update(vti)
+
+    # Admin 'up' is derived from charon state by 'vyos-vti-updown' service
+    vti_updown_resync()
 
     # run the dependents
     call_dependents()

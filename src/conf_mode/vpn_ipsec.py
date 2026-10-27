@@ -30,7 +30,6 @@ from vyos.config import Config
 from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
-from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import dynamic_interface_pattern
@@ -51,8 +50,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call
-from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
-from vyos.utils.vti_updown_db import remove_vti_updown_db
 from vyos import ConfigError
 from vyos.base import Warning
 from vyos import airbag
@@ -173,8 +170,6 @@ def get_config(config=None):
     ipsec = config_dict_merge(default_values, ipsec)
 
     ipsec['dhcp_interfaces'] = set()
-    ipsec['enabled_vti_interfaces'] = set()
-    ipsec['persistent_vti_interfaces'] = set()
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
@@ -190,28 +185,6 @@ def get_config(config=None):
         ipsec['l2tp_outside_address'] = conf.return_value(['vpn', 'l2tp', 'remote-access', 'outside-address'])
         ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024'
         ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'
-
-    # Collect the interface dicts for any referenced VTI interfaces in
-    # case we need to bring the interface up
-    ipsec['vti_interface_dicts'] = {}
-
-    if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
-        for peer, peer_conf in ipsec['site_to_site']['peer'].items():
-            if 'vti' in peer_conf:
-                if 'bind' in peer_conf['vti']:
-                    vti_interface = peer_conf['vti']['bind']
-                    if vti_interface not in ipsec['vti_interface_dicts']:
-                        _, vti = get_interface_dict(conf, ['interfaces', 'vti'], vti_interface)
-                        ipsec['vti_interface_dicts'][vti_interface] = vti
-
-    if 'remote_access' in ipsec:
-        if 'connection' in ipsec['remote_access']:
-            for name, ra_conf in ipsec['remote_access']['connection'].items():
-                if 'bind' in ra_conf:
-                    vti_interface = ra_conf['bind']
-                    if vti_interface not in ipsec['vti_interface_dicts']:
-                        _, vti = get_interface_dict(conf, ['interfaces', 'vti'], vti_interface)
-                        ipsec['vti_interface_dicts'][vti_interface] = vti
 
     # T8262 renamed 'vpp settings ipsec' to 'vpp settings ipsec-acceleration'
     ipsec['vpp_ipsec_exists'] = conf.exists(['vpp', 'settings', 'ipsec-acceleration'])
@@ -476,11 +449,6 @@ def verify(ipsec):
                     if not interface_exists(vti_interface):
                         raise ConfigError(f'VTI interface {vti_interface} for remote-access connection {name} does not exist!')
 
-                    if 'disable' not in ra_conf:
-                        ipsec['enabled_vti_interfaces'].add(vti_interface)
-                        # remote access VPN interfaces are always up regardless of whether clients are connected
-                        ipsec['persistent_vti_interfaces'].add(vti_interface)
-
                 if 'pool' in ra_conf:
                     if {'dhcp', 'radius'} <= set(ra_conf['pool']):
                         raise ConfigError(f'Cannot use both DHCP and RADIUS for address allocation '\
@@ -697,8 +665,6 @@ def verify(ipsec):
                     vti_interface = peer_conf['vti']['bind']
                     if not interface_exists(vti_interface):
                         raise ConfigError(f'VTI interface {vti_interface} for site-to-site peer {peer} does not exist!')
-                    if 'disable' not in peer_conf:
-                        ipsec['enabled_vti_interfaces'].add(vti_interface)
 
             if 'vti' not in peer_conf and 'tunnel' not in peer_conf:
                 raise ConfigError(f"No VTI or tunnel specified on site-to-site peer {peer}")
@@ -939,18 +905,18 @@ def generate(ipsec):
 
 def apply(ipsec):
     systemd_service = 'strongswan.service'
+
+    # Derives VTI admin state from charon. Its lifetime follows charon's.
+    vti_updown_service = 'vyos-vti-updown.service'
+
     if not ipsec or 'deleted' in ipsec:
         call(f'systemctl stop {systemd_service}')
-        remove_vti_updown_db()
+        # Stopped after charon: its final pass sees no SA and takes all VTIs down
+        call(f'systemctl stop {vti_updown_service}')
     else:
         call(f'systemctl reload-or-restart {systemd_service}')
-        if ipsec['enabled_vti_interfaces']:
-            with open_vti_updown_db_for_create_or_update() as db:
-                db.removeAllOtherInterfaces(ipsec['enabled_vti_interfaces'])
-                db.setPersistentInterfaces(ipsec['persistent_vti_interfaces'])
-                db.commit(lambda interface: ipsec['vti_interface_dicts'][interface])
-        else:
-            remove_vti_updown_db()
+        # Start it, or if running, have it re-read config and reconcile (by SIGHUP)
+        call(f'systemctl reload-or-restart {vti_updown_service}')
     if ipsec:
         if ipsec.get('nhrp_exists', False):
             try:
