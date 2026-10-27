@@ -245,3 +245,17 @@ def vici_initiate(
         return True
     except Exception:
         raise ViciCommandError(f'Failed to initiate SA for IKE {ike_sa_name}')
+
+
+def vti_updown_resync():
+    """
+    Ask 'vyos-vti-updown' to re-read VTI intent from the config and reconcile
+    VTI admin state against charon. Non-blocking: the daemon defers until
+    the running commit has finished, so it never sees half-applied config.
+
+    No-op unless the service is running, which is the case only while IPsec
+    is configured (started and stopped by 'conf_mode/vpn_ipsec.py').
+    """
+    from vyos.utils.process import call
+
+    call('systemctl try-reload-or-restart vyos-vti-updown.service')
