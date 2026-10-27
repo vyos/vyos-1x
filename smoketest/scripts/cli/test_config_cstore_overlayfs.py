@@ -35,16 +35,23 @@
 # restores the active configuration rather than emptying it, and no mounts or
 # scratch directories survive teardown.
 #
+# The mounts are made by a privileged helper, while the directories it works
+# in are writable by the whole configuration group. The remaining tests plant
+# what a group member could, and assert the helper refuses to follow it.
+#
 # Nothing else in the suite opens more than one session.
 
 import os
 import re
+import shutil
 import unittest
 
 from subprocess import Popen
+from subprocess import call
 from subprocess import PIPE
 from subprocess import STDOUT
 from subprocess import DEVNULL
+from tempfile import mkdtemp
 from threading import Thread
 from time import sleep
 
@@ -52,6 +59,7 @@ from vyos.configsession import inject_vyos_env
 
 CLI_SHELL_API = '/bin/cli-shell-api'
 SBIN = '/opt/vyatta/sbin'
+OVL_HELPER = f'{SBIN}/vyos-cfg-overlay-helper'
 
 base_path = ['system', 'static-host-mapping', 'host-name']
 
@@ -63,6 +71,11 @@ host_prefix = 'smoketest-ovl'
 config_dir = '/opt/vyatta/config'
 session_dir = f'{config_dir}/tmp'
 ovl_work_dir = f'{config_dir}/ovl_work'
+
+# A well-formed session ID no process can have, for planted sessions.
+bogus_sid = '9999999999'
+planted_mnt = f'{session_dir}/new_config_{bogus_sid}'
+planted_upper = f'{session_dir}/changes_only_{bogus_sid}'
 
 
 class SessionError(Exception):
@@ -174,9 +187,10 @@ class CliSession:
                 pass
 
 
-def overlay_mounts() -> list:
-    """Session working directories currently mounted as overlayfs."""
-    found = []
+def overlay_mounts() -> dict:
+    """Session working directories currently mounted as overlayfs, mapped to
+    their per-mount options."""
+    found = {}
     with open('/proc/self/mountinfo') as f:
         for line in f:
             fields = line.split()
@@ -188,8 +202,30 @@ def overlay_mounts() -> list:
             if fields[sep + 1] == 'overlay' and mount_point.startswith(
                 f'{session_dir}/new_config_'
             ):
-                found.append(mount_point)
+                found[mount_point] = fields[5]
     return found
+
+
+def mount_fstype(path):
+    """Filesystem type of the topmost mount at path, or None."""
+    fstype = None
+    with open('/proc/self/mountinfo') as f:
+        for line in f:
+            fields = line.split()
+            if fields[4] == path:
+                fstype = fields[fields.index('-') + 1]
+    return fstype
+
+
+def remove_planted():
+    if planted_mnt in overlay_mounts():
+        call([OVL_HELPER, 'umount', bogus_sid], stdout=DEVNULL, stderr=DEVNULL)
+    for path in (planted_mnt, planted_upper):
+        if os.path.islink(path):
+            os.unlink(path)
+        elif os.path.isdir(path):
+            os.rmdir(path)
+    shutil.rmtree(f'{ovl_work_dir}/{bogus_sid}', ignore_errors=True)
 
 
 class TestConfigSessionConcurrent(unittest.TestCase):
@@ -238,6 +274,10 @@ class TestConfigSessionConcurrent(unittest.TestCase):
                 msg=f'no overlayfs workdir for session {sid}',
             )
             self.assertTrue(os.path.isdir(f'{session_dir}/changes_only_{sid}'))
+            # nothing in a configuration tree is a device or set-user-ID
+            options = mounts[f'{session_dir}/new_config_{sid}'].split(',')
+            self.assertIn('nosuid', options)
+            self.assertIn('nodev', options)
 
     def test_commit_is_visible_to_other_sessions(self):
         # Every session stages a change of its own, before anybody commits.
@@ -342,6 +382,104 @@ class TestConfigSessionConcurrent(unittest.TestCase):
         for i in range(n_sessions):
             self.assertIn(f'{host_prefix}-{i} ', active)
             self.assertIn(f'10.92.2.{i + 1}', active)
+
+    def test_restack_ignores_planted_session(self):
+        # Committing makes the helper re-mount every session it finds. A
+        # planted session whose mount point is a symlink to some other mount
+        # must not get that mount detached and an overlay of the planter's
+        # choosing stacked on top of it.
+        decoy = mkdtemp()
+        # the suite runs unprivileged, so the decoy mount needs sudo, and a
+        # mode that still lets this test write the marker it checks below
+        self.assertEqual(
+            call(['sudo', 'mount', '-t', 'tmpfs', '-o', 'mode=1777', 'none', decoy]), 0
+        )
+        try:
+            with open(f'{decoy}/marker', 'w') as f:
+                f.write('untouched')
+            os.symlink(decoy, planted_mnt)
+            os.mkdir(planted_upper)
+
+            a, b = self.sessions[0], self.sessions[1]
+            a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.3.1')
+            a.commit()
+
+            self.assertEqual(
+                mount_fstype(decoy), 'tmpfs', msg='re-stack followed a planted symlink'
+            )
+            with open(f'{decoy}/marker') as f:
+                self.assertEqual(f.read(), 'untouched')
+            # the planted entry must not keep genuine sessions from moving on
+            self.assertIn(f'{host_prefix}-0 ', b.show())
+        finally:
+            remove_planted()
+            call(['sudo', 'umount', decoy])
+            os.rmdir(decoy)
+
+    def test_helper_refuses_planted_upper(self):
+        # The overlay writes into its upper layer with the privilege of
+        # whoever mounted it, so an upper layer that is a symlink would land
+        # those writes wherever it points. The kernel keeps the upper layer on
+        # the work directory's filesystem, so the decoy lives in the
+        # configuration root, as e.g. the active configuration does.
+        decoy = mkdtemp(dir=config_dir)
+        try:
+            os.mkdir(planted_mnt)
+            os.symlink(decoy, planted_upper)
+            rc = call([OVL_HELPER, 'mount', bogus_sid], stdout=DEVNULL, stderr=DEVNULL)
+            self.assertNotEqual(rc, 0)
+            self.assertNotIn(planted_mnt, overlay_mounts())
+            self.assertEqual(os.listdir(decoy), [])
+
+            # the same session with a real upper layer mounts, so the refusal
+            # above was the symlink and nothing else
+            os.unlink(planted_upper)
+            os.mkdir(planted_upper)
+            rc = call([OVL_HELPER, 'mount', bogus_sid], stdout=DEVNULL, stderr=DEVNULL)
+            self.assertEqual(rc, 0)
+            self.assertIn(planted_mnt, overlay_mounts())
+        finally:
+            remove_planted()
+            shutil.rmtree(decoy)
+
+    def test_work_root_is_recreated_and_checked(self):
+        # The configuration root is a fresh tmpfs on every boot, so the helper
+        # creates the overlay work root itself. Anything it finds there that is
+        # not its own directory must be refused, or the removals it does in
+        # there could be aimed elsewhere.
+        for session in self.sessions:
+            session.teardown()
+        self.sessions = []
+        if os.path.isdir(ovl_work_dir) and os.listdir(ovl_work_dir):
+            self.skipTest('other configuration sessions are open')
+
+        decoy = mkdtemp()
+        os.mkdir(f'{decoy}/{bogus_sid}')
+        try:
+            if os.path.isdir(ovl_work_dir):
+                os.rmdir(ovl_work_dir)
+            os.mkdir(planted_mnt)
+            os.mkdir(planted_upper)
+
+            os.symlink(decoy, ovl_work_dir)
+            rc = call([OVL_HELPER, 'mount', bogus_sid], stdout=DEVNULL, stderr=DEVNULL)
+            self.assertNotEqual(rc, 0)
+            self.assertNotIn(planted_mnt, overlay_mounts())
+            self.assertEqual(os.listdir(decoy), [bogus_sid])
+            self.assertEqual(os.listdir(f'{decoy}/{bogus_sid}'), [])
+
+            # as after a reboot: no work root at all
+            os.unlink(ovl_work_dir)
+            rc = call([OVL_HELPER, 'mount', bogus_sid], stdout=DEVNULL, stderr=DEVNULL)
+            self.assertEqual(rc, 0)
+            self.assertIn(planted_mnt, overlay_mounts())
+            self.assertTrue(os.path.isdir(ovl_work_dir))
+            self.assertFalse(os.path.islink(ovl_work_dir))
+        finally:
+            if os.path.islink(ovl_work_dir):
+                os.unlink(ovl_work_dir)
+            remove_planted()
+            shutil.rmtree(decoy)
 
     def test_no_mount_or_workdir_leak(self):
         before = set(overlay_mounts())
