@@ -180,7 +180,7 @@
     </tagNode >
     <leafNode name="tftp-server-name">
       <properties>
-        <help>TFTP server name</help>
+        <help>TFTP server name or provisioning URL</help>
         <valueHelp>
           <format>ipv4</format>
           <description>TFTP server IPv4 address</description>
@@ -189,10 +189,17 @@
           <format>hostname</format>
           <description>TFTP server FQDN</description>
         </valueHelp>
+        <valueHelp>
+          <format>url</format>
+          <description>Provisioning server URL (http, https, ftp, ftps or tftp)</description>
+        </valueHelp>
         <constraint>
           <validator name="ipv4-address"/>
           <validator name="fqdn"/>
+          <!-- URL up to 255 characters, ASCII only: option 66 is a string of up to 255 octets -->
+          <validator name="ascii-url" argument="--scheme http --scheme https --scheme ftp --scheme ftps --scheme tftp --max-length 255"/>
         </constraint>
+        <constraintErrorMessage>Invalid TFTP server name, expected IPv4 address, FQDN or URL</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="time-offset">
