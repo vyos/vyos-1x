@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Validate a URL that has to fit into a limited, ASCII only field, for example
+# DHCP option 66: the scheme, a host and an optional numeric port. The path,
+# the query and the fragment are not looked at, any printable ASCII is fine.
+
+import argparse
+import ipaddress
+import re
+import sys
+
+URL_FORMAT = re.compile(
+    r'(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://'
+    r'(?:[^/?#@\s]*@)?'
+    r'(?P<host>\[[0-9A-Fa-f:.]+\]|[^/?#:@\s\[\]]+)'
+    r'(?::(?P<port>[^/?#]*))?'
+    r'(?P<rest>[/?#].*)?'
+)
+# A host name label may contain hyphens next to each other (punycode: xn--)
+LABEL_FORMAT = re.compile(r'[A-Za-z0-9](?:[A-Za-z0-9_-]*[A-Za-z0-9])?')
+
+
+def host_is_valid(host: str) -> bool:
+    if host.startswith('['):
+        try:
+            ipaddress.IPv6Address(host[1:-1])
+        except ValueError:
+            return False
+        return True
+    # an absolute name ends with one dot, it is not an empty label
+    host = host.removesuffix('.')
+    if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', host):
+        try:
+            ipaddress.IPv4Address(host)
+        except ValueError:
+            return False
+        return True
+    # a DNS label is at most 63 octets (RFC 1035), a longer one cannot be resolved
+    return all(
+        len(label) <= 63 and LABEL_FORMAT.fullmatch(label)
+        for label in host.split('.')
+    )
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--scheme', action='append', default=[],
+                        help='Allow only specified schemes')
+    parser.add_argument('--max-length', type=int, default=None,
+                        help='Maximum length of the URL in characters')
+    parser.add_argument('url', help='URL to validate')
+    args = parser.parse_args()
+    url = args.url
+
+    if args.max_length is not None and len(url) > args.max_length:
+        sys.exit(f'URL is longer than {args.max_length} characters')
+
+    # printable ASCII without the space
+    if not all(0x21 <= ord(char) <= 0x7E for char in url):
+        sys.exit('URL may only contain printable ASCII characters')
+
+    # not allowed in a URL (RFC 3986), and Kea treats it as an escape character
+    if '\\' in url:
+        sys.exit('URL may not contain a backslash')
+
+    match = URL_FORMAT.fullmatch(url)
+    if not match:
+        sys.exit(f'"{url}" is not a valid URL')
+
+    scheme = match.group('scheme').lower()
+    if args.scheme and scheme not in args.scheme:
+        sys.exit(f'URL scheme "{scheme}:" is not allowed')
+
+    if not host_is_valid(match.group('host')):
+        sys.exit(f'"{match.group("host")}" is not a valid host')
+
+    port = match.group('port')
+    if port is not None and not (port.isascii() and port.isdigit() and 0 < int(port) < 65536):
+        sys.exit(f'"{port}" is not a valid port')
