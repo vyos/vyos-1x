@@ -19,6 +19,7 @@ import sys
 import argparse
 
 from vyos.configtree import ConfigTree
+from vyos.configtree import ConfigTreeError
 from vyos.configtree import validate_tree_filter
 from vyos.component_version import add_system_version
 
@@ -37,7 +38,10 @@ with open(config_file) as f:
 
 config_tree = ConfigTree(config_str)
 
-valid_tree, out = validate_tree_filter(config_tree)
+try:
+    valid_tree, out = validate_tree_filter(config_tree)
+except ConfigTreeError as e:
+    sys.exit(e)
 
 if filtered_config:
     add_system_version(valid_tree.to_string(), filtered_config)
