@@ -59,6 +59,12 @@ def get_config(config=None):
     if conf.exists(conntrack_path):
         ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
+    # T9521: interfaces that are handled by VPP, a virtual MAC address of
+    # keepalived is not known to VPP
+    vpp_ifaces = conf.list_nodes(['vpp', 'settings', 'interface'])
+    if vpp_ifaces:
+        ha['vpp_interfaces'] = vpp_ifaces
+
     if node_changed(conf, base + ['vrrp', 'snmp']):
         ha.update({'restart_required': {}})
 
@@ -94,6 +100,18 @@ def verify(ha):
 
             interface = group_config['interface']
             vrid = group_config['vrid']
+
+            # keepalived puts the virtual IP address on a macvlan interface for
+            # the virtual MAC address, VPP has no route for the address then
+            if (
+                'rfc3768_compatibility' in group_config
+                and 'disable' not in group_config
+                and interface.split('.')[0] in ha.get('vpp_interfaces', [])
+            ):
+                raise ConfigError(
+                    f'"rfc3768-compatibility" in VRRP group "{group}" is not '
+                    f'supported on the VPP interface "{interface}"!'
+                )
 
             # XXX: filter on map object is destructive, so we force it to list.
             # Additionally, filter objects always evaluate to True, empty or not,
