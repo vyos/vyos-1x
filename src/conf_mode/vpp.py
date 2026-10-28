@@ -31,6 +31,7 @@ from vyos.base import Warning
 from vyos.config import Config, config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
+from vyos.configdiff import get_commit_scripts
 from vyos.configdict import node_changed, is_member, is_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_virtual_interface_exists
@@ -310,6 +311,20 @@ def _is_device_allowed(config: dict, iface: str):
     return False
 
 
+def set_mpls_dependent(conf, vpp_nics: list[str]) -> None:
+    """Replay protocols mpls after the NICs are set up again
+
+    The Ethernet script of a VPP interface that is part of the same commit
+    runs later and has no VLANs before that, it replays MPLS itself.
+    """
+    if not conf.exists(['protocols', 'mpls', 'interface']):
+        return
+    pending = get_commit_scripts(conf)
+    if any(f'interfaces_ethernet_{nic}' in pending for nic in vpp_nics):
+        return
+    set_dependents('mpls', conf)
+
+
 def get_config(config=None):
     # use persistent config to store interfaces data between executions
     # this is required because some interfaces after they are connected
@@ -379,6 +394,8 @@ def get_config(config=None):
     if not conf.exists(base):
         if changed_pppoe_ifaces:
             set_dependents('pppoe_server', conf)
+        # the NICs go back to the kernel, MPLS has to be set up there again
+        set_mpls_dependent(conf, [iface['iface_name'] for iface in removed_ifaces])
         return {
             'removed_ifaces': removed_ifaces,
             'persist_config': eth_ifaces_persist,
@@ -617,6 +634,15 @@ def get_config(config=None):
     if changed_pppoe_ifaces:
         set_dependents('pppoe_server', conf)
     config['changed_pppoe_ifaces'] = changed_pppoe_ifaces
+
+    # MPLS dependency, a VPP restart drops the MPLS state of the interfaces
+    set_mpls_dependent(
+        conf,
+        [
+            *config.get('settings', {}).get('interface', {}),
+            *[iface['iface_name'] for iface in removed_ifaces],
+        ],
+    )
 
     return config
 
