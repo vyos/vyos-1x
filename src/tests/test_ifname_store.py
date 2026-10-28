@@ -1061,6 +1061,26 @@ class TestLinkFiles(unittest.TestCase):
         self.assertIn('Name=eth1', body)
         self.assertIn('Type=ether', body)
 
+    def test_the_address_policy_is_spelled_out(self):
+        # only the first matching file is applied, so this one shadows the
+        # policy the distribution ships. Without it a modem keeps the random
+        # address its driver gives it, fresh on every boot.
+        for name in ('eth1', 'wwan0'):
+            body = render_link(name, 'ID_NET_NAME_PATH=wwp0s20f0u2u4c3')
+            self.assertIn('MACAddressPolicy=persistent', body)
+
+    def test_a_file_without_the_policy_is_rewritten(self):
+        # the upgrade path: a box already carrying files from before only
+        # picks this up if an existing one is replaced
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'wwan0': 'ID_NET_NAME_PATH=wwp0s20f0u2u4c3'},
+                 'hardware': {}}
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / '10-vyos-wwan0.link'
+            path.write_text('[Match]\nType=wwan\n\n[Link]\nName=wwan0\n')
+            sync_link_files(store, Path(d))
+            self.assertIn('MACAddressPolicy=persistent', path.read_text())
+
     def test_no_link_file_is_written_for_a_radio(self):
         # a .link keyed on a phy's address matches every interface created on
         # that phy, so writing one renamed the interface the operator had just

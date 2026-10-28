@@ -628,6 +628,11 @@ def render_link(name: str, key: str, driver: str = '') -> str:
     A MAC is not unique to one interface: an accelerated-networking VF
     carries its NIC's MAC, and matched the NIC's file - udev then tried to
     give the VF the NIC's name. The driver tells them apart.
+
+    Only the first matching file is applied, so this one shadows the address
+    policy the distribution ships. Spell it out again, or a device with no
+    permanent address - a modem - is left on the random one its driver gave
+    it, which is a different address on every boot.
     """
     match_driver = f'Driver={driver}\n' if driver else ''
     return (
@@ -640,6 +645,7 @@ def render_link(name: str, key: str, driver: str = '') -> str:
         '\n'
         '[Link]\n'
         f'Name={name}\n'
+        'MACAddressPolicy=persistent\n'
     )
 
 
