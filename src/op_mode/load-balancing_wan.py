@@ -94,7 +94,7 @@ def show_connection(raw: bool):
     if raw:
         return filtered_lines
 
-    for line in lines:
+    for line in filtered_lines:
         print(line)
 
 @_verify
