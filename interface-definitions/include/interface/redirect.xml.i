@@ -12,6 +12,7 @@
     <constraint>
       #include <include/constraint/interface-name.xml.i>
     </constraint>
+    <dependency kind="interface" alert="error"/>
   </properties>
 </leafNode>
 <!-- include end -->
