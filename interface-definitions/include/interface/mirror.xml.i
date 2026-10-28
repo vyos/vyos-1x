@@ -14,6 +14,7 @@
           <format>txt</format>
           <description>Destination interface name</description>
         </valueHelp>
+        <dependency kind="interface" alert="error"/>
       </properties>
     </leafNode>
     <leafNode name="egress">
@@ -26,6 +27,7 @@
           <format>txt</format>
           <description>Destination interface name</description>
         </valueHelp>
+        <dependency kind="interface" alert="error"/>
       </properties>
     </leafNode>
   </children>

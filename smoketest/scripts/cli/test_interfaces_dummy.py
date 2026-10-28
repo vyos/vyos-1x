@@ -17,7 +17,11 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_interfaces_test import is_mirrored_to
 from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.configsession import ConfigSessionError
+
 
 class DummyInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -27,6 +31,38 @@ class DummyInterfaceTest(BasicInterfaceTest.TestCase):
         cls._mirror_interfaces = ['eth0']
         # call base-classes classmethod
         super(DummyInterfaceTest, cls).setUpClass()
+
+    def test_mirror_redirect_target_delete(self):
+        # T9491: a mirror or redirect target must not be deleted while still
+        # in use, otherwise the source interface fails to load on next boot
+        target = 'dum9491'
+
+        # Target first, in its own commit, so the sources never see it missing
+        self.cli_set(self._base_path + [target])
+        self.cli_commit()
+
+        self.cli_set(self._base_path + ['dum435', 'mirror', 'ingress', target])
+        self.cli_set(self._base_path + ['dum0931', 'mirror', 'egress', target])
+        self.cli_set(self._base_path + ['dum089', 'redirect', target])
+        self.cli_commit()
+
+        # Check ingress (qdisc ffff:) and egress (qdisc 1:) mirror filters
+        self.assertTrue(is_mirrored_to('dum435', target, 'ffff'))
+        self.assertTrue(is_mirrored_to('dum0931', target, '1'))
+
+        # Deleting the target while it is still in use must be refused
+        self.cli_delete(self._base_path + [target])
+        with self.assertRaises(ConfigSessionError) as cm:
+            self.cli_commit()
+        self.assertIn('is required by', str(cm.exception))
+
+        # The target delete from above is still pending - removing all of its
+        # sources in the same commit makes it valid
+        self.cli_delete(self._base_path + ['dum435'])
+        self.cli_delete(self._base_path + ['dum0931'])
+        self.cli_delete(self._base_path + ['dum089'])
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
