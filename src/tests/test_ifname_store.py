@@ -623,8 +623,9 @@ class TestWwanNaming(unittest.TestCase):
     MODEM_MAC = 'b6:53:dd:66:c2:98'
 
     def _modem(self, name='eth6'):
+        # no address: discovery keeps none for a modem
         properties = {'ID_NET_NAME_PATH': self.WWP, 'ID_BUS': 'usb'}
-        return {'name': name, 'mac': self.MODEM_MAC, 'wireless': False,
+        return {'name': name, 'mac': '', 'wireless': False,
                 'wwan': True, 'properties': properties,
                 'key': f'ID_NET_NAME_PATH={self.WWP}'}
 
@@ -683,15 +684,40 @@ class TestWwanNaming(unittest.TestCase):
         # cannot carry it. Leave the name reserved and name the NIC as a NIC.
         store = {'version': STORE_VERSION,
                  'interfaces': {'wwan0': f'ID_NET_NAME_PATH={self.WWP}'},
-                 'hardware': {'wwan0': self.MODEM_MAC}}
+                 'hardware': {}}
         nic = self._nic('eth0', self.WWP, 'aa:bb:cc:dd:ee:07')
         _, new_store, report = resolve([nic], store)
 
         self.assertEqual(report['replaced'], {})
-        self.assertEqual(new_store['hardware']['wwan0'], self.MODEM_MAC)
         self.assertIn('eth0', new_store['interfaces'])
         self.assertEqual(new_store['interfaces']['wwan0'],
                           f'ID_NET_NAME_PATH={self.WWP}')
+
+    def test_a_modem_is_not_reported_as_replaced(self):
+        # its address changes at every probe, so comparing it reported the
+        # modem as a different card in the same socket on every boot
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'wwan0': f'ID_NET_NAME_PATH={self.WWP}'},
+                 'hardware': {'wwan0': self.MODEM_MAC}}
+        plan, new_store, report = resolve([self._modem('wwan0')], store)
+
+        self.assertEqual(plan, {})
+        self.assertEqual(report['replaced'], {})
+        self.assertIn('wwan0', report['matched'])
+        # and an address an earlier version recorded is dropped, so a store
+        # already carrying one settles on the next pass
+        self.assertNotIn('wwan0', new_store['hardware'])
+
+    def test_a_card_whose_address_changed_is_still_replaced(self):
+        # the modem must not have weakened this: a card in a recorded slot
+        # with a different address is the case worth warning about
+        store = {'version': STORE_VERSION,
+                 'interfaces': {'eth0': 'ID_NET_NAME_PATH=enp3s0'},
+                 'hardware': {'eth0': '00:f0:cb:fe:ba:99'}}
+        nic = self._nic('eth0', 'enp3s0', 'aa:bb:cc:dd:ee:07')
+        _, _, report = resolve([nic], store)
+
+        self.assertIn('eth0', report['replaced'])
 
     def test_an_ordinary_port_on_the_usb_bus_is_not_a_modem(self):
         # the key alone cannot tell them apart - a device falling back to
@@ -1192,7 +1218,7 @@ class TestDiscoverDevices(unittest.TestCase):
             self.addCleanup(patch.stop)
 
         def make(name, mac=None, has_device=True, enslaved=False, is_vf=False,
-                 master_is_device=False):
+                 master_is_device=False, wwan=False):
             path = os.path.join(self.tmp, name)
             os.mkdir(path)
             if has_device:
@@ -1210,7 +1236,11 @@ class TestDiscoverDevices(unittest.TestCase):
             if mac:
                 with open(os.path.join(path, 'address'), 'w') as f:
                     f.write(mac + '\n')
+            if wwan:
+                with open(os.path.join(path, 'uevent'), 'w') as f:
+                    f.write('DEVTYPE=wwan\n')
 
+        self.make = make
         make('eth0', mac='aa:aa:aa:aa:aa:00')
         make('eth1', mac='aa:aa:aa:aa:aa:01')
         make('br0', mac='aa:aa:aa:aa:aa:99', has_device=False)
@@ -1226,6 +1256,20 @@ class TestDiscoverDevices(unittest.TestCase):
 
     def test_only_physical_independent_interfaces(self):
         self.assertEqual(self._names(), {'eth0', 'eth1', 'eth8'})
+
+    def test_a_modem_is_discovered_without_an_address(self):
+        # a modem is given a random address at each probe, so recording it
+        # would make the same modem look like different hardware every boot
+        self.make('wwan0', mac='b6:53:dd:66:c2:98', wwan=True)
+        devices = {d['name']: d for d in discover_devices(self.tmp)}
+        self.assertIn('wwan0', devices)
+        self.assertEqual(devices['wwan0']['mac'], '')
+        self.assertTrue(devices['wwan0']['wwan'])
+
+    def test_a_card_with_no_address_is_still_skipped(self):
+        # only a modem is kept without one
+        self.make('eth5')
+        self.assertNotIn('eth5', self._names())
 
     def test_virtual_interfaces_excluded(self):
         self.assertNotIn('br0', self._names())

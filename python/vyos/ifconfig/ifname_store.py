@@ -249,15 +249,18 @@ def discover_devices(sys_class_net: str = '/sys/class/net') -> list:
         if is_wireless(entry.name, sys_class_net):
             continue
 
-        mac = permanent_mac(entry.name, sys_class_net)
-        if not mac:
+        # a modem is given a random address at each probe, so it says nothing
+        # about which modem this is - there is nothing here worth recording
+        wwan = is_wwan(entry.name, sys_class_net)
+        mac = '' if wwan else permanent_mac(entry.name, sys_class_net)
+        if not mac and not wwan:
             continue
 
         devices.append({
             'name': entry.name,
             'mac': mac,
             'wireless': is_wireless(entry.name, sys_class_net),
-            'wwan': is_wwan(entry.name, sys_class_net),
+            'wwan': wwan,
             'label_index': (port_label_index(entry.name, sys_class_net)
                             if is_vmware_nic(entry.name, sys_class_net)
                             else _LABEL_UNKNOWN),
@@ -485,7 +488,8 @@ def resolve(devices: list, store: dict, adopt: bool = True) -> tuple:
     for name, key in entries.items():
         for device in remaining:
             if (device_matches(device['properties'], key)
-                    and seen.get(name, device['mac']) == device['mac']
+                    and (not device['mac']
+                         or seen.get(name, device['mac']) == device['mac'])
                     and _name_fits(name, device)):
                 claim(device, name, 'matched')
                 break
@@ -577,6 +581,8 @@ def resolve(devices: list, store: dict, adopt: bool = True) -> tuple:
     for name, device in assigned.items():
         if device['mac']:
             new_hardware[name] = device['mac']
+        else:
+            new_hardware.pop(name, None)
 
     plan = {device['name']: name for name, device in assigned.items()
             if device['name'] != name}
