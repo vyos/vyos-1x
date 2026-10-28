@@ -126,6 +126,31 @@ def get_isolated_cpus():
     return range_str_to_list(isolated)
 
 
+def vppctl_ok(command: str) -> str:
+    """Output of a vppctl command, a failed command fails the test"""
+    rc, out = rc_cmd(f'sudo vppctl {command}')
+    assert rc == 0, f'vppctl {command} failed ({rc}): {out}'
+    return out
+
+
+def mpls_enabled_list() -> str:
+    return vppctl_ok('show mpls interface')
+
+
+def mpls_feature_enabled(vpp_ifname: str) -> bool:
+    """MPLS is on when the mpls-input arc of the interface is not mpls-not-enabled"""
+    out = vppctl_ok(f'show interface feat {vpp_ifname}')
+    match = re.search(r'mpls-input:\s*\n\s*(\S+)', out)
+    return bool(match) and match.group(1) != 'mpls-not-enabled'
+
+
+def lcp_tap_name(vpp_ifname: str) -> str:
+    """Name of the tap of the LCP pair of a VPP interface"""
+    out = vppctl_ok('show lcp')
+    match = re.search(rf'itf-pair: \[\d+\] {re.escape(vpp_ifname)} (\S+) ', out)
+    return match.group(1) if match else ''
+
+
 class TestVPP(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -154,6 +179,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(process_named_running(PROCESS_NAME))
         finally:
             # Ensure these cleanup operations always run
+            self.cli_delete(['protocols', 'mpls'])
+            self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
+            self.cli_delete(['interfaces', 'ethernet', interface, 'vif-s'])
             self.cli_delete(base_path)
             self.cli_delete(interfaces_path)
             self.cli_delete(prometheus_base_path + ['vpp-exporter'])
@@ -2407,6 +2435,186 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         file_content = read_file(vpp_exporter_service_file)
         self.assertIn(f'ip vrf exec {vpp_exporter_vrf}', file_content)
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+
+    def test_30_mpls_interface(self):
+        # MPLS is enabled on the VPP interface and on the tap of its LCP pair,
+        # labeled packets are dropped otherwise
+        mpls_interface_path = ['protocols', 'mpls', 'interface']
+        self.cli_set(mpls_interface_path + [interface])
+        self.cli_commit()
+
+        out = mpls_enabled_list()
+        self.assertEqual(out.count('MPLS enabled'), 2)
+        self.assertTrue(mpls_feature_enabled(interface))
+
+        # a restart of VPP drops the state, it has to come back
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '20'])
+        self.cli_commit()
+        self.assertEqual(mpls_enabled_list().count('MPLS enabled'), 2)
+        self.assertTrue(mpls_feature_enabled(interface))
+
+        self.cli_delete(mpls_interface_path + [interface])
+        self.cli_commit()
+        self.assertEqual(mpls_enabled_list().count('MPLS enabled'), 0)
+        self.assertFalse(mpls_feature_enabled(interface))
+
+    def test_30_1_mpls_other_vpp_interface_is_refused(self):
+        # the entry of a VPP interface does not survive a boot, see verify()
+        loopback = 'vpplo11'
+        self.cli_set(
+            interfaces_path + ['loopback', loopback, 'address', '192.0.2.11/32']
+        )
+        self.cli_commit()
+        self.cli_set(['protocols', 'mpls', 'interface', loopback])
+        with self.assertRaisesRegex(
+            ConfigSessionError, 'not supported on the VPP interface'
+        ):
+            self.cli_commit()
+        self.cli_delete(['protocols', 'mpls'])
+
+    def test_30_2_mpls_nic_vlan_removed_alone(self):
+        # a VLAN of a physical VPP interface is deleted alone as well
+        vlan = f'{interface}.10'
+        vpp_vlan = vpp_iface_name_transform(vlan)
+        vlan_path = ['interfaces', 'ethernet', interface, 'vif', '10']
+        self.cli_set(vlan_path + ['address', '192.0.2.129/25'])
+        self.cli_commit()
+        self.cli_set(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+
+        self.cli_delete(vlan_path)
+        self.cli_delete(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+
+        self.cli_set(vlan_path + ['address', '192.0.2.129/25'])
+        self.cli_commit()
+        self.cli_set(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+        self.assertTrue(mpls_feature_enabled(lcp_tap_name(vpp_vlan)))
+
+    def test_30_3_mpls_nic_vlan_recreated_by_update(self):
+        # a change of the QoS mapping makes the update delete the VLAN and
+        # create it again, MPLS has to be on for the new VLAN
+        vlan = f'{interface}.10'
+        vpp_vlan = vpp_iface_name_transform(vlan)
+        vlan_path = ['interfaces', 'ethernet', interface, 'vif', '10']
+        self.cli_set(vlan_path + ['address', '192.0.2.129/25'])
+        self.cli_set(vlan_path + ['ingress-qos', '1:1'])
+        self.cli_commit()
+        self.cli_set(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+
+        for qos in ['1:2', '1:3']:
+            self.cli_set(vlan_path + ['ingress-qos', qos])
+            self.cli_commit()
+            self.assertTrue(mpls_feature_enabled(vpp_vlan))
+            self.assertTrue(mpls_feature_enabled(lcp_tap_name(vpp_vlan)))
+
+        # a mapping that the kernel lists differently is not a change, the VLAN
+        # stays and MPLS stays on ('01' is 1 and '010' is 8, the last pair of a
+        # source wins and a pair that maps to 0 is not listed)
+        self.cli_set(vlan_path + ['ingress-qos', '01:6 1:7 2:7 3:0 4:010'])
+        self.cli_commit()
+        self.cli_set(['interfaces', 'ethernet', interface, 'description', 'qos'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+
+        # the kernel mapping was changed behind the configuration, the update
+        # creates the VLAN again and MPLS has to come back
+        rc, out = rc_cmd(f'sudo ip link set dev {vlan} type vlan ingress-qos-map 5:5')
+        self.assertEqual(rc, 0, out)
+        self.cli_set(['interfaces', 'ethernet', interface, 'description', 'drift'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+
+        # a mapping that is removed or added needs a new VLAN as well
+        self.cli_delete(vlan_path + ['ingress-qos'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+        self.cli_set(vlan_path + ['egress-qos', '2:5'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+        self.cli_delete(['interfaces', 'ethernet', interface, 'description'])
+
+    def test_30_3_1_mpls_nic_vif_s_protocol_set(self):
+        # the protocol of a vif-s goes from the default to a value, the update
+        # deletes the VLAN and creates it again, MPLS has to be on for the new one
+        vlan = f'{interface}.10'
+        vpp_vlan = vpp_iface_name_transform(vlan)
+        vlan_path = ['interfaces', 'ethernet', interface, 'vif-s', '10']
+        self.cli_set(vlan_path + ['address', '192.0.2.129/25'])
+        self.cli_commit()
+        self.cli_set(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+
+        self.cli_set(vlan_path + ['protocol', '802.1q'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+        self.assertTrue(mpls_feature_enabled(lcp_tap_name(vpp_vlan)))
+
+    def test_30_4_mpls_vpp_removed(self):
+        # the NIC goes back to the kernel, MPLS is set up there again
+        self.cli_set(['protocols', 'mpls', 'interface', interface])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(interface))
+
+        self.cli_delete(base_path)
+        self.cli_delete(interfaces_path)
+        self.cli_commit()
+        self.assertEqual(sysctl_read(['net', 'mpls', 'conf', interface, 'input']), '1')
+
+        # and into VPP again
+        self.cli_set(base_path + ['settings', 'interface', interface])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '10'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(interface))
+
+    def test_30_5_mpls_vpp_and_ethernet_in_one_commit(self):
+        # the Ethernet script of the NIC runs after VPP in the same commit, MPLS
+        # is applied after it rebuilt the VLAN
+        vlan = f'{interface}.10'
+        vpp_vlan = vpp_iface_name_transform(vlan)
+        self.cli_set(
+            [
+                'interfaces',
+                'ethernet',
+                interface,
+                'vif',
+                '10',
+                'address',
+                '192.0.2.129/25',
+            ]
+        )
+        self.cli_commit()
+        self.cli_set(['protocols', 'mpls', 'interface', interface])
+        self.cli_set(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '20'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'description', 'combined'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(interface))
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
+
+        # VPP is removed while the Ethernet script runs in the same commit
+        self.cli_delete(base_path)
+        self.cli_delete(interfaces_path)
+        self.cli_set(['interfaces', 'ethernet', interface, 'description', 'removed'])
+        self.cli_commit()
+        self.assertEqual(sysctl_read(['net', 'mpls', 'conf', interface, 'input']), '1')
+        self.assertEqual(sysctl_read(['net', 'mpls', 'conf', vlan, 'input']), '1')
+
+        # and into VPP again, the teardown expects it to run
+        self.cli_delete(['interfaces', 'ethernet', interface, 'description'])
+        self.cli_set(base_path + ['settings', 'interface', interface])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '10'])
+        self.cli_commit()
+        self.assertTrue(mpls_feature_enabled(vpp_vlan))
 
 
 if __name__ == '__main__':

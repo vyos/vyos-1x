@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from sys import exit
 
@@ -22,8 +23,10 @@ from vyos.configverify import has_frr_protocol_in_dict
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_write
 from vyos.configverify import verify_interface_exists
+from vyos.vpp.control_vpp import VPPControl
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -45,6 +48,13 @@ def verify(config_dict):
     if 'interface' in mpls:
         for interface in mpls['interface']:
             verify_interface_exists(mpls, interface)
+            # the entry of a VPP interface is lost when the saved configuration
+            # is loaded at boot: the name does not match the interface constraint
+            if re.match(r'vpp(?!tap|tun)', interface):
+                raise ConfigError(
+                    f'MPLS is not supported on the VPP interface "{interface}", '
+                    f'only on physical interfaces and their VLANs!'
+                )
 
     # Checks to see if LDP is properly configured
     if 'ldp' in mpls:
@@ -114,6 +124,25 @@ def apply(config_dict):
             system_interfaces.append(os.path.basename(interface))
         for system_interface in system_interfaces:
             sysctl_write(['net', 'mpls', 'conf', system_interface, 'input'], 0)
+
+    # VPP drops labeled packets on an interface with MPLS disabled,
+    # linux-cp mirrors the state to the LCP tap and the kernel
+    if is_systemd_service_active('vpp.service'):
+        vpp = VPPControl()
+        enabled = set(vpp.mpls_enabled_interfaces())
+        wanted = {}
+        for name in mpls.get('interface', {}):
+            index = vpp.get_sw_if_index(name)
+            if index is not None:
+                wanted[index] = name
+        to_enable = wanted.keys() - enabled
+        if to_enable:
+            vpp.mpls_table_add()
+        for index in to_enable:
+            vpp.set_interface_mpls(wanted[index], True)
+        for pair in vpp.lcp_pairs_list():
+            if pair['vpp_index_hw'] in enabled and pair['vpp_index_hw'] not in wanted:
+                vpp.set_interface_mpls(pair['vpp_name_hw'], False)
 
     return None
 
