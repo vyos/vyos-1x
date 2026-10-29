@@ -27,6 +27,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import PPPoEIf
 from vyos.ifconfig.interface import link_local_prefix
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.file import read_file
 from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_address
 from vyos.utils.network import mac2eui64
@@ -577,6 +578,51 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             # Validate and verify assigned IP addresses
             self._verify_interface_address(interface)
+
+    def test_pppoe_connect_on_demand_default_route(self):
+        # In connect-on-demand mode pppd itself installs the default route,
+        # driven by "no-default-route"
+        interface = self._interfaces[0]
+        user, passwd = self.u_p_dict[interface]
+
+        self.cli_set(base_path + [interface, 'authentication', 'username', user])
+        self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+        self.cli_set(
+            base_path + [interface, 'source-interface', self._source_interface]
+        )
+        self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+        self.cli_set(base_path + [interface, 'connect-on-demand'])
+        self.cli_commit()
+
+        default_route = rf'ip route 0.0.0.0/0 {interface} tag 210'
+        default_route6 = rf'ipv6 route ::/0 {interface} tag 210'
+
+        # Whole-line match, "defaultroute" is a substring of "nodefaultroute"
+        peer = read_file(config_file.format(interface)).splitlines()
+        self.assertIn('demand', peer)
+        self.assertIn('defaultroute', peer)
+        self.assertIn('defaultroute6', peer)
+        self.assertNotIn('nodefaultroute', peer)
+        self.assertNotIn('nodefaultroute6', peer)
+
+        # FRR default route
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
+
+        self.cli_set(base_path + [interface, 'no-default-route'])
+        self.cli_commit()
+
+        peer = read_file(config_file.format(interface)).splitlines()
+        self.assertIn('demand', peer)
+        self.assertIn('nodefaultroute', peer)
+        self.assertIn('nodefaultroute6', peer)
+        self.assertNotIn('defaultroute', peer)
+        self.assertNotIn('defaultroute6', peer)
+
+        frrconfig = self.getFRRconfig('')
+        self.assertNotIn(default_route, frrconfig)
+        self.assertNotIn(default_route6, frrconfig)
 
     def test_pppoe_default_route_survives_static_deletion(self):
         # T6991/T9054: The PPPoE default route must not be withdrawn from FRR
