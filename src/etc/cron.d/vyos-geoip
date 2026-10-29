@@ -1,1 +1,2 @@
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 30 4 * * 1 root sg vyattacfg "/usr/libexec/vyos/geoip-update.py" >/tmp/geoip-update.log 2>&1
