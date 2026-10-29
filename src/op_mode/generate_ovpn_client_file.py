@@ -135,7 +135,7 @@ if __name__ == '__main__':
     if not config.exists(['pki', 'certificate', cert, 'certificate']):
         exit(f'OpenVPN certificate "{cert}" does not exist!')
 
-    if not config.exists(['pki', 'certificate', cert, 'private', 'key']):
+    if not config.exists(['pki', 'certificate', key, 'private', 'key']):
         exit(f'OpenVPN certificate key "{key}" does not exist!')
 
     config = config.get_config_dict(
