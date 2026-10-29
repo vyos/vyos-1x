@@ -120,7 +120,7 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.assertIn(f'  interface {interface}', afiv4_config)
 
-    def test_02_mpls_disable_establish_hello(self):
+    def test_mpls_disable_establish_hello(self):
         router_id = '1.2.3.4'
         transport_ipv4_addr = '5.6.7.8'
         transport_ipv6_addr = '2001:db8:1111::1111'
@@ -187,6 +187,34 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
             self.assertNotIn(f'   disable-establish-hello', afiv4_config)
             self.assertIn(f'  interface {interface}', afiv6_config)
             self.assertNotIn(f'   disable-establish-hello', afiv6_config)
+
+    def test_mpls_neighbor_ttl_security(self):
+        router_id = '1.2.3.4'
+        transport_ipv4_addr = '5.6.7.8'
+        neighbor_1 = '192.0.2.1'
+        neighbor_2 = '192.0.2.2'
+        interfaces = Section.interfaces('ethernet')
+
+        self.cli_set(base_path + ['router-id', router_id])
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface])
+        self.cli_set(
+            base_path + ['discovery', 'transport-ipv4-address', transport_ipv4_addr]
+        )
+
+        # TTL value out of range
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(base_path + ['neighbor', neighbor_1, 'ttl-security', '255'])
+        self.cli_set(base_path + ['neighbor', neighbor_1, 'ttl-security', 'disable'])
+        self.cli_set(base_path + ['neighbor', neighbor_2, 'ttl-security', '10'])
+
+        # Commit changes
+        self.cli_commit()
+
+        # Validate configuration
+        frrconfig = self.getFRRconfig('mpls ldp', stop_section='^exit')
+        self.assertIn(f' neighbor {neighbor_1} ttl-security disable', frrconfig)
+        self.assertIn(f' neighbor {neighbor_2} ttl-security hops 10', frrconfig)
 
 
 if __name__ == '__main__':

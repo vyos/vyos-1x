@@ -19,7 +19,7 @@ mpls ldp
  neighbor {{ neighbor }} password {{ neighbor_config.password }}
 {%             endif %}
 {%             if neighbor_config.ttl_security is vyos_defined %}
-{%                 if neighbor_config.ttl_security.disable is vyos_defined %}
+{%                 if neighbor_config.ttl_security == 'disable' %}
  neighbor {{ neighbor }} ttl-security disable
 {%                 else %}
  neighbor {{ neighbor }} ttl-security hops {{ neighbor_config.ttl_security }}
