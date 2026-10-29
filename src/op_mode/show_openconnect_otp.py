@@ -65,8 +65,14 @@ def display_otp_ocserv(username, params, info):
     token_type = params['otp']['token_type']
     if token_type == 'hotp-time':
         token_type_acrn = 'totp'
+        otp_param = f'&period={interval}'
+    elif token_type == 'hotp-event':
+        # HOTP URIs require an initial counter; the users file is
+        # rendered without one, so the counter starts at 0
+        token_type_acrn = 'hotp'
+        otp_param = '&counter=0'
     key_base32 = b32encode(bytes.fromhex(key_hex)).decode()
-    otp_url = ''.join(["otpauth://",token_type_acrn,"/",username,"@",hostname,"?secret=",key_base32,"&digits=",otp_length,"&period=",interval])
+    otp_url = ''.join(["otpauth://",token_type_acrn,"/",username,"@",hostname,"?secret=",key_base32,"&digits=",otp_length,otp_param])
     qrcode,err = popen('qrencode -t ansiutf8', input=otp_url)
 
     if info == 'full':
@@ -81,6 +87,10 @@ def display_otp_ocserv(username, params, info):
             print(f"set vpn openconnect authentication local-users username {username} otp interval '{interval}'")
         if otp_length != "6":
             print(f"set vpn openconnect authentication local-users username {username} otp otp-length '{otp_length}'")
+        if token_type != 'hotp-time':
+            print(
+                f"set vpn openconnect authentication local-users username {username} otp token-type '{token_type}'"
+            )
     elif info == 'key-hex':
         print("# OTP key in hexadecimal: ")
         print(key_hex)
