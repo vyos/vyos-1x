@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -133,6 +134,177 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.verify_nftables(nftables_search, 'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_external_port_range(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        external_path = base_path + ['pool', 'external', external_name]
+
+        # only a numeric range is a valid port range
+        for port_range in ['2000', 'http', '0-1000', '1024-65536']:
+            with self.assertRaises(ConfigSessionError):
+                self.cli_set(external_path + ['external-port-range', port_range])
+
+        self.cli_set(external_path + ['range', '192.0.2.1/32'])
+        self.cli_set(external_path + ['per-user-limit', 'port', '1000'])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/31'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+
+        # start of the range above its end
+        self.cli_set(external_path + ['external-port-range', '3000-1000'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(external_path + ['external-port-range', '1000-2999'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 192.0.2.1 . 1000-1999'],
+                              ['100.64.0.1 : 192.0.2.1 . 2000-2999']],
+                             'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_range_host_bits(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        internal_path = base_path + ['pool', 'internal', internal_name]
+        external_path = base_path + ['pool', 'external', external_name]
+
+        # a prefix with host bits set is no valid range
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(external_path + ['range', '192.0.2.1/30'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(internal_path + ['range', '100.64.0.1/29'])
+
+        self.cli_set(external_path + ['range', '192.0.2.0/30'])
+        self.cli_set(internal_path + ['range', '100.64.0.0/29'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 192.0.2.0 . 1024-3023'],
+                              ['100.64.0.7 : 192.0.2.0 . 15024-17023']],
+                             'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_rule_pools(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        rule_path = base_path + ['rule', '10']
+
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', '192.0.2.1/32'])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/31'])
+
+        # source and translation nodes without a pool
+        self.cli_set(rule_path + ['source'])
+        self.cli_set(rule_path + ['translation'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(rule_path + ['source', 'pool', internal_name])
+        with self.assertRaisesRegex(ConfigSessionError, r'translation\s+pool\s+must\s+be\s+defined'):
+            self.cli_commit()
+        self.cli_set(rule_path + ['translation', 'pool', external_name])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 192.0.2.1 . 1024-3023']],
+                             'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_external_overlap(self):
+        pool_path = base_path + ['pool']
+
+        self.cli_set(pool_path + ['external', 'ext-01', 'range', '192.0.2.1/32'])
+        self.cli_set(pool_path + ['external', 'ext-02', 'range', '192.0.2.1/32'])
+        self.cli_set(pool_path + ['internal', 'int-01', 'range', '100.64.0.0/31'])
+        self.cli_set(pool_path + ['internal', 'int-02', 'range', '100.64.1.0/31'])
+        for rule, pool in [('10', '01'), ('20', '02')]:
+            self.cli_set(base_path + ['rule', rule, 'source', 'pool', f'int-{pool}'])
+            self.cli_set(base_path + ['rule', rule, 'translation', 'pool', f'ext-{pool}'])
+
+        # same external address and ports in pools of different rules
+        with self.assertRaisesRegex(ConfigSessionError, r'port\s+ranges\s+overlap'):
+            self.cli_commit()
+        self.cli_set(pool_path + ['external', 'ext-01', 'external-port-range', '1024-32767'])
+        self.cli_set(pool_path + ['external', 'ext-02', 'external-port-range', '32767-65535'])
+        with self.assertRaisesRegex(ConfigSessionError, r'port\s+ranges\s+overlap'):
+            self.cli_commit()
+        # the address may be shared on distinct port ranges
+        self.cli_set(pool_path + ['external', 'ext-02', 'external-port-range', '32768-65535'])
+
+        # external address in two ranges of the same pool
+        self.cli_set(pool_path + ['external', 'ext-01', 'range', '192.0.2.0-192.0.2.1'])
+        with self.assertRaisesRegex(ConfigSessionError, r'overlaps\s+with\s+range'):
+            self.cli_commit()
+        self.cli_delete(pool_path + ['external', 'ext-01', 'range', '192.0.2.0-192.0.2.1'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 192.0.2.1 . 1024-3023'],
+                              ['100.64.1.0 : 192.0.2.1 . 32768-34767']],
+                             'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_internal_overlap(self):
+        pool_path = base_path + ['pool']
+
+        self.cli_set(pool_path + ['external', 'ext-01', 'range', '192.0.2.1/32'])
+        self.cli_set(pool_path + ['external', 'ext-02', 'range', '192.0.2.2/32'])
+        self.cli_set(pool_path + ['internal', 'int-01', 'range', '100.64.0.0/29'])
+        self.cli_set(pool_path + ['internal', 'int-02', 'range', '100.64.0.4-100.64.0.5'])
+        for rule, pool in [('10', '01'), ('20', '02')]:
+            self.cli_set(base_path + ['rule', rule, 'source', 'pool', f'int-{pool}'])
+            self.cli_set(base_path + ['rule', rule, 'translation', 'pool', f'ext-{pool}'])
+
+        # same internal address in pools of different rules
+        with self.assertRaisesRegex(ConfigSessionError, r'overlaps\s+with\s+range'):
+            self.cli_commit()
+        self.cli_delete(pool_path + ['internal', 'int-02', 'range', '100.64.0.4-100.64.0.5'])
+        self.cli_set(pool_path + ['internal', 'int-02', 'range', '100.64.0.8-100.64.0.9'])
+
+        # internal address in two ranges of the same pool
+        self.cli_set(pool_path + ['internal', 'int-01', 'range', '100.64.0.0-100.64.0.7'])
+        with self.assertRaisesRegex(ConfigSessionError, r'overlaps\s+with\s+range'):
+            self.cli_commit()
+        self.cli_delete(pool_path + ['internal', 'int-01', 'range', '100.64.0.0-100.64.0.7'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.7 : 192.0.2.1 . 15024-17023'],
+                              ['100.64.0.9 : 192.0.2.2 . 3024-5023']],
+                             'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_external_internal_overlap(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+        external_path = base_path + ['pool', 'external', external_name]
+
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/29'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+
+        # external address taken from the internal pool
+        self.cli_set(external_path + ['range', '100.64.0.6-100.64.0.9'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(external_path + ['range', '100.64.0.6-100.64.0.9'])
+        self.cli_set(external_path + ['range', '100.64.0.8-100.64.0.9'])
+        self.cli_commit()
+
+        self.verify_nftables([['100.64.0.0 : 100.64.0.8 . 1024-3023'],
+                              ['100.64.0.7 : 100.64.0.8 . 15024-17023']],
+                             'ip cgnat', inverse=False, args='-s')
+
+    def test_cgnat_op_mode_allocation(self):
+        internal_name = 'int-01'
+        external_name = 'ext-01'
+
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', '192.0.2.1/32'])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', '100.64.0.0/31'])
+        self.cli_set(base_path + ['rule', '10', 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', '10', 'translation', 'pool', external_name])
+
+        for ports, port_ranges in [('2', ['1024-1025', '1026-1027']),
+                                   ('1', ['1024-1024', '1025-1025'])]:
+            self.cli_set(base_path + ['pool', 'external', external_name, 'per-user-limit', 'port', ports])
+            self.cli_commit()
+
+            out = self.op_mode(['show', 'nat', 'cgnat', 'allocation'])
+            for internal, port_range in zip(['100.64.0.0', '100.64.0.1'], port_ranges):
+                self.assertRegex(out, rf'{re.escape(internal)}\s+192\.0\.2\.1\s+{port_range}\b')
 
 
 if __name__ == '__main__':

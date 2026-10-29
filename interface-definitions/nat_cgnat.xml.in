@@ -40,7 +40,7 @@
                         <description>Numbered port range (e.g., 1001-1005)</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="port-range"/>
+                        <validator name="numeric" argument="--range 1-65535 --require-range"/>
                       </constraint>
                     </properties>
                     <defaultValue>1024-65535</defaultValue>
@@ -78,7 +78,6 @@
                       </valueHelp>
                       <constraint>
                         <validator name="ipv4-prefix"/>
-                        <validator name="ipv4-host"/>
                         <validator name="ipv4-range"/>
                       </constraint>
                     </properties>
@@ -126,7 +125,6 @@
                       </valueHelp>
                       <constraint>
                         <validator name="ipv4-prefix"/>
-                        <validator name="ipv4-host"/>
                         <validator name="ipv4-range"/>
                       </constraint>
                       <multi/>
