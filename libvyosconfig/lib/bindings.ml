@@ -558,7 +558,7 @@ let validate_tree_filter c_ptr rt_cache_path validator_dir =
         in
         error_message := out; Ctypes.Root.create ct_ret
     with Internal.Read_error msg ->
-        error_message := msg; c_ptr
+        error_message := msg; Ctypes.null
 
 let config_dict c_ptr_c c_ptr_r c_ptr_m path get_node with_defaults =
     let ct = Root.get c_ptr_c in
