@@ -329,7 +329,7 @@ def run(module):
         # although they may print their own warnings or status messages
         func(**args)
 
-def verify_cli_exists(cli_path: list, error_msg: str=''):
+def verify_cli_exists(cli_path: list, error_msg: str='', intf_key: str='intf_name'):
     """Decorator checks if CLI config exists using a dynamic path and error message"""
     def decorator(func):
         from functools import wraps
@@ -342,7 +342,7 @@ def verify_cli_exists(cli_path: list, error_msg: str=''):
             from vyos.configquery import ConfigTreeQuery
 
             config = ConfigTreeQuery()
-            interface = kwargs.get('intf_name')
+            interface = kwargs.get(intf_key)
 
             # Combine the base CLI path with the specific interface name
             path = cli_path + [interface] if interface else cli_path

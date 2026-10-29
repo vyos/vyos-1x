@@ -21,7 +21,7 @@ import vyos.opmode
 from vyos.ifconfig import WireGuardIf
 
 @vyos.opmode.verify_cli_exists(['interfaces', 'wireguard'],
-    'WireGuard interface {interface} is not configured!')
+    'WireGuard interface {interface} is not configured!', intf_key='interface')
 def reset_peer(interface: str, peer: typing.Optional[str] = None):
     intf = WireGuardIf(interface, create=False, debug=False)
     return intf.operational.reset_peer(peer)
