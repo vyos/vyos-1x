@@ -523,10 +523,9 @@ def get_config(config=None):
     # certificate is used by.
     # Required to check if we might need to run certbot behind a reverse proxy.
     if 'certificate' in pki:
+        haproxy = dict_search('system.load_balancing.haproxy', pki)
         for name, cert_config in pki['certificate'].items():
             if 'acme' not in cert_config:
-                continue
-            if not dict_search('system.load_balancing.haproxy', pki):
                 continue
             # Determine which service depends on ACME issued certificates
             # We only need to add services blocking the default certbot ports
@@ -534,13 +533,12 @@ def get_config(config=None):
             # as it runs on different ports.
             used_by = []
             # We start with HAProxy
-            for cert_list, _ in dict_search_recursive(
-                pki['system']['load_balancing']['haproxy'], 'certificate'):
-                if name in cert_list:
-                    used_by.append('haproxy')
+            if haproxy:
+                for cert_list, _ in dict_search_recursive(haproxy, 'certificate'):
+                    if name in cert_list:
+                        used_by.append('haproxy')
             # Check if OpenConnect consumes an ACME certificate
-            tmp = dict_search('system.vpn.openconnect.ssl.certificate', pki)
-            if tmp and tmp in cert_list:
+            if dict_search('system.vpn.openconnect.ssl.certificate', pki) == name:
                 used_by.append('openconnect')
 
             if used_by:
