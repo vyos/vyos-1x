@@ -68,7 +68,8 @@ def debug_peer(peer, tunnel):
             "ip address",
             "ip rule show",
             "ip route | head -100",
-            "ip route show table 220"
+            # charon creates table 220 only with its first route
+            "ip route show table all | grep -w 'table 220'"
         ]
         for debug_cmd in debug_commands:
             # call() output bypasses our buffer, flush to keep the order
