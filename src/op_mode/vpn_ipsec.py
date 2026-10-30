@@ -19,8 +19,10 @@ import re
 import argparse
 
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_active
 
 SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
+IPSEC_SERVICE = 'strongswan.service'
 
 
 def get_peer_connections(peer, tunnel, return_all = False):
@@ -38,14 +40,28 @@ def get_peer_connections(peer, tunnel, return_all = False):
     return matches
 
 
+def show_status():
+    if not is_systemd_service_active(IPSEC_SERVICE):
+        print('IPsec process not running')
+        return
+    call('swanctl --stats')
+
+
 def debug_peer(peer, tunnel):
     peer = peer.replace(':', '-')
+    ipsec_running = is_systemd_service_active(IPSEC_SERVICE)
     if not peer or peer == "all":
-        debug_commands = [
-            "swanctl --stats",
-            "swanctl -L",
-            "swanctl -l",
-            "swanctl -P",
+        debug_commands = []
+        if ipsec_running:
+            debug_commands = [
+                "swanctl --stats",
+                "swanctl -L",
+                "swanctl -l",
+                "swanctl -P",
+            ]
+        else:
+            print('IPsec process not running')
+        debug_commands += [
             "ip x sa show",
             "ip x policy show",
             "ip tunnel show",
@@ -55,7 +71,8 @@ def debug_peer(peer, tunnel):
             "ip route show table 220"
         ]
         for debug_cmd in debug_commands:
-            print(f'\n### {debug_cmd} ###')
+            # call() output bypasses our buffer, flush to keep the order
+            print(f'\n### {debug_cmd} ###', flush=True)
             call(debug_cmd)
         return
 
@@ -66,6 +83,10 @@ def debug_peer(peer, tunnel):
 
     if not conns:
         print('Peer not found, aborting')
+        return
+
+    if not ipsec_running:
+        print('IPsec process not running')
         return
 
     call(f'swanctl --list-conns --ike {peer}')
@@ -84,3 +105,5 @@ if __name__ == '__main__':
 
     if args.action == "vpn-debug":
         debug_peer(args.name, args.tunnel)
+    elif args.action == "status":
+        show_status()
