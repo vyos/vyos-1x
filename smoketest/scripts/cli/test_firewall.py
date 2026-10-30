@@ -2009,6 +2009,40 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
         self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
 
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vrf'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vif'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth3', 'vif-s'])
+        self.cli_delete(['interfaces', 'vti'])
+        self.cli_delete(['vrf'])
+
+    def test_zone_with_vrf_default_firewall(self):
+        # Local zone + VRF zone with default-firewall
+        self.cli_set(['firewall', 'ipv4', 'name', 'VRF-default', 'default-action', 'accept'])
+        self.cli_set(['firewall', 'zone', 'LOCAL', 'local-zone'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'member', 'vrf', 'VRF-1'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'default-firewall', 'name', 'VRF-default'])
+
+        self.cli_set(['vrf', 'name', 'VRF-1', 'table', '101'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vrf', 'VRF-1'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VZONE_LOCAL_OUT'],
+            ['oifname "eth0"', 'counter packets', 'jump NAME_VRF-default'],
+            ['oifname "eth0"', 'counter packets', 'return'],
+            # previously rendered as "jump NAME_" and failed the commit
+            ['oifname "VRF-1"', 'counter packets', 'jump NAME_VRF-default'],
+            ['oifname "VRF-1"', 'counter packets', 'return'],
+            ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
+        ]
+        self.verify_nftables_chain(nftables_search, 'ip vyos_filter', 'VZONE_LOCAL_OUT')
+
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vrf'])
+        self.cli_delete(['vrf', 'name', 'VRF-1'])
+
     def test_zone_without_member(self):
         self.cli_set(['firewall', 'zone', 'wan', 'default-action', 'drop'])
         error_message = 'Zone "wan" has no interfaces and is not the local zone'
