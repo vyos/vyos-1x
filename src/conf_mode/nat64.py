@@ -77,11 +77,6 @@ def verify(nat64) -> None:
             rules[num] = {'deleted': True}
             continue
 
-        # If the user changes the mode, recreate the instance else Jool fails with:
-        # Jool error: Sorry; you can't change an instance's framework for now.
-        if config_diff.is_node_changed(base_rule + [f'instance-{num}', 'mode']):
-            rules[num]['recreate'] = True
-
         # If the user changes the pool6, recreate the instance else Jool fails with:
         # Jool error: Sorry; you can't change a NAT64 instance's pool6 for now.
         if dict_search('source.prefix', rules[num]) and config_diff.is_node_changed(
@@ -100,15 +95,16 @@ def verify(nat64) -> None:
     ephemeral_port_min, ephemeral_port_max = map(int, tmp.split())
 
     if dict_search('source.rule', nat64):
-        # Ensure only 1 netfilter instance per namespace
-        nf_rules = filter(
-            lambda i: 'deleted' not in i and i.get('mode') == 'netfilter',
-            nat64['source']['rule'].values(),
-        )
-        next(nf_rules, None)  # Discard the first element
-        if next(nf_rules, None) is not None:
+        # https://nicmx.github.io/Jool/en/intro-jool.html
+        # Every instance uses the netfilter framework, and Jool supports only
+        # one of those per network namespace. Jool does not refuse a second
+        # instance, so the limit has to be enforced here.
+        active_rules = [
+            r for r, i in nat64['source']['rule'].items() if 'deleted' not in i
+        ]
+        if len(active_rules) > 1:
             raise ConfigError(
-                'Jool permits only 1 NAT64 netfilter instance (per network namespace)'
+                'Jool supports only 1 NAT64 netfilter instance (per network namespace)'
             )
 
         for rule, instance in nat64['source']['rule'].items():

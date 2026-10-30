@@ -108,6 +108,39 @@ class TestNAT64(VyOSUnitTestSHIM.TestCase):
             else:
                 self.fail(f'Unexpected protocol: {protocol}')
 
+    def test_snat64_single_instance(self):
+        # Pool ports must not overlap the kernel's local port range
+        tmp = sysctl_read(['net', 'ipv4', 'ip_local_port_range'])
+        _, local_port_max = map(int, tmp.split())
+        pool_port = f'{local_port_max +1}-{local_port_max +1000}'
+
+        rule_100_path = src_path + ['rule', '100']
+        self.cli_set(rule_100_path + ['source', 'prefix', '64:ff9b::/96'])
+        self.cli_set(
+            rule_100_path + ['translation', 'pool', '10', 'address', '192.0.2.10']
+        )
+        self.cli_set(rule_100_path + ['translation', 'pool', '10', 'port', pool_port])
+
+        rule_200_path = src_path + ['rule', '200']
+        self.cli_set(rule_200_path + ['source', 'prefix', '64:ff9c::/96'])
+        self.cli_set(
+            rule_200_path + ['translation', 'pool', '10', 'address', '192.0.2.20']
+        )
+        self.cli_set(rule_200_path + ['translation', 'pool', '10', 'port', pool_port])
+
+        # Jool supports only one netfilter NAT64 instance per network namespace,
+        # but does not refuse a second one - verify has to reject it
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Removing the second rule must make the config valid
+        self.cli_delete(rule_200_path)
+        self.cli_commit()
+
+        # The rejected commit must not have left an instance for rule 200 behind
+        self.assertTrue(os.path.exists('/run/jool/instance-100.json'))
+        self.assertFalse(os.path.exists('/run/jool/instance-200.json'))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
