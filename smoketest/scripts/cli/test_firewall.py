@@ -2555,5 +2555,55 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             cmdl(['date', '-s', f'@{int(wall + monotonic() - mono)}'], sudo=True)
             self.cli_delete(['system', 'time-zone'])
 
+    def test_prerouting_raw_fqdn(self):
+        domain = 'vyos.io'
+        address = '192.0.2.20'
+        address6 = '2001:db8::20'
+        hostmap_path = ['system', 'static-host-mapping', 'host-name']
+        prerouting_path = ['firewall', 'ipv4', 'prerouting', 'raw']
+        prerouting6_path = ['firewall', 'ipv6', 'prerouting', 'raw']
+
+        # Static mapping, so the test does not depend on external DNS
+        self.cli_set(hostmap_path + [domain, 'inet', address])
+        self.cli_set(hostmap_path + [domain, 'inet', address6])
+
+        self.cli_set(prerouting_path + ['rule', '1', 'action', 'notrack'])
+        self.cli_set(prerouting_path + ['rule', '1', 'destination', 'fqdn', domain])
+        self.cli_set(prerouting6_path + ['rule', '1', 'action', 'notrack'])
+        self.cli_set(prerouting6_path + ['rule', '1', 'destination', 'fqdn', domain])
+
+        self.cli_commit()
+
+        # Check FQDN set exists and the rule uses it
+        self.verify_nftables(
+            [
+                ['set FQDN_prerouting_raw_1_d'],
+                ['ip daddr @FQDN_prerouting_raw_1_d', 'notrack'],
+            ],
+            'ip vyos_filter',
+        )
+        self.verify_nftables(
+            [
+                ['set FQDN_prerouting_raw_1_d'],
+                ['ip6 daddr @FQDN_prerouting_raw_1_d', 'notrack'],
+            ],
+            'ip6 vyos_filter',
+        )
+
+        # Check domain resolver fills the sets after commit
+        self.assertTrue(
+            self.wait_for_domain_resolver(
+                'ip vyos_filter', 'FQDN_prerouting_raw_1_d', address
+            )
+        )
+        self.assertTrue(
+            self.wait_for_domain_resolver(
+                'ip6 vyos_filter', 'FQDN_prerouting_raw_1_d', address6
+            )
+        )
+
+        self.cli_delete(['system', 'static-host-mapping'])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
