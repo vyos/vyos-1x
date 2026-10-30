@@ -23,14 +23,16 @@ SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
 
 
 def get_peer_connections(peer, tunnel, return_all = False):
-    search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti))[\s]*{{'
+    search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti6?))[\s]*{{'
     matches = []
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
             if result:
                 suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
-                if return_all or (result[2] == suffix):
+                # a peer with split-by-family has a VTI child for each family
+                vti_children = suffix == 'vti' and result[2] == 'vti6'
+                if return_all or (result[2] == suffix) or vti_children:
                     matches.append(result[1])
     return matches
 
