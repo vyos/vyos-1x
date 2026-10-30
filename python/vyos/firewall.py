@@ -59,9 +59,10 @@ def fqdn_config_parse(config, node):
             suffix = path[5][0]
             set_name = f'{hook_name}_{priority}_{rule}_{suffix}'
 
-            if (path[0] == 'ipv4') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
+            fqdn_hooks = ['forward', 'input', 'output', 'prerouting', 'name']
+            if (path[0] == 'ipv4') and (path[1] in fqdn_hooks):
                 config['ip_fqdn'][set_name] = domain
-            elif (path[0] == 'ipv6') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
+            elif (path[0] == 'ipv6') and (path[1] in fqdn_hooks):
                 if path[1] == 'name':
                     set_name = f'name6_{priority}_{rule}_{suffix}'
                 config['ip6_fqdn'][set_name] = domain
