@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
 tunnel_path = ['interfaces', 'tunnel']
@@ -39,6 +40,13 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(tunnel_path)
         self.cli_delete(vpn_path)
         self.cli_commit()
+
+        # Deleting NHRP must also remove its nft tables, otherwise the
+        # multicast drop rules keep filtering the tunnel
+        tables = cmdl(['nft', 'list', 'tables'], sudo=True)
+        self.assertNotIn('vyos_nhrp_multicast', tables)
+        self.assertNotIn('vyos_nhrp_redirect', tables)
+
         # always forward to base class
         super().tearDown()
 
