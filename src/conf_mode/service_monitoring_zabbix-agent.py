@@ -65,13 +65,15 @@ def verify(config):
     if 'server' not in config:
         raise ConfigError('Server is required!')
 
-    if 'authentication' in config and dict_search("authentication.mode",
-                                                  config) == 'pre_shared_secret':
-        if 'id' not in config['authentication']['psk']:
+    if (
+        'authentication' in config
+        and dict_search('authentication.mode', config) == 'pre-shared-secret'
+    ):
+        if not dict_search('authentication.psk.id', config):
             raise ConfigError(
                 'PSK identity is required for pre-shared-secret authentication mode')
 
-        if 'secret' not in config['authentication']['psk']:
+        if not dict_search('authentication.psk.secret', config):
             raise ConfigError(
                 'PSK secret is required for pre-shared-secret authentication mode')
 

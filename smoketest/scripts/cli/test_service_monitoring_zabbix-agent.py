@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -28,6 +29,13 @@ base_path = ['service', 'monitoring', 'zabbix-agent']
 
 
 class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestZabbixAgent, cls).setUpClass()
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -85,9 +93,26 @@ class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):
 
     def test_02_zabbix_agent_psk_auth(self):
         secret = '8703ce4cb3f51279acba895e1421d69d8a7e2a18546d013d564ad87ac3957f29'
+
         self.cli_set(base_path + ['server', '127.0.0.1'])
         self.cli_set(base_path + ['authentication', 'mode', 'pre-shared-secret'])
+
+        # PSK identity and secret are mandatory in pre-shared-secret mode
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Secret without identity
+        self.cli_set(base_path + ['authentication', 'psk', 'secret', secret])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['authentication', 'psk', 'secret'])
+
+        # Identity without secret
         self.cli_set(base_path + ['authentication', 'psk', 'id', 'smoke_test'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Identity and secret - valid configuration
         self.cli_set(base_path + ['authentication', 'psk', 'secret', secret])
         self.cli_commit()
 
