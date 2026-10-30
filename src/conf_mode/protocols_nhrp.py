@@ -98,9 +98,12 @@ def generate(config_dict):
     if not has_frr_protocol_in_dict(config_dict, 'nhrp'):
         return None
 
-    if 'deleted' in config_dict['nhrp']:
-        return None
-    render(nhrp_nftables_conf, 'frr/nhrpd_nftables.conf.j2', config_dict['nhrp'])
+    nhrp = config_dict['nhrp']
+    # Without NHRP config the template only deletes its nft tables
+    if 'deleted' in nhrp:
+        nhrp = {}
+
+    render(nhrp_nftables_conf, 'frr/nhrpd_nftables.conf.j2', nhrp)
 
     return None
 
