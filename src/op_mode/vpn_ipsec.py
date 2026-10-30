@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import argparse
 
@@ -25,6 +26,8 @@ SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
 def get_peer_connections(peer, tunnel, return_all = False):
     search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti))[\s]*{{'
     matches = []
+    if not os.path.exists(SWANCTL_CONF):
+        return matches
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
@@ -39,7 +42,7 @@ def debug_peer(peer, tunnel):
     peer = peer.replace(':', '-')
     if not peer or peer == "all":
         debug_commands = [
-            "ipsec statusall",
+            "swanctl --stats",
             "swanctl -L",
             "swanctl -l",
             "swanctl -P",
@@ -65,9 +68,9 @@ def debug_peer(peer, tunnel):
         print('Peer not found, aborting')
         return
 
+    call(f'swanctl --list-conns --ike {peer}')
     for conn in conns:
-        command = f'/usr/sbin/ipsec statusall | grep {conn}'
-        call(command)
+        call(f'swanctl --list-sas --ike {peer} --child {conn}')
 
 
 if __name__ == '__main__':

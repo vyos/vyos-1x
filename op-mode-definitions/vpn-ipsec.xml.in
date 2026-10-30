@@ -285,7 +285,7 @@
                 <properties>
                   <help>Show status of IPsec process</help>
                 </properties>
-                <command>/usr/sbin/ipsec status</command>
+                <command>sudo /usr/sbin/swanctl --stats</command>
               </node>
             </children>
           </node>
