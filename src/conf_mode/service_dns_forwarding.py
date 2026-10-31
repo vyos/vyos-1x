@@ -34,8 +34,8 @@ pdns_rec_user_group = 'pdns'
 pdns_rec_run_dir = '/run/pdns-recursor'
 pdns_rec_lua_conf_file = f'{pdns_rec_run_dir}/recursor.conf.lua'
 pdns_rec_hostsd_lua_conf_file = f'{pdns_rec_run_dir}/recursor.vyos-hostsd.conf.lua'
-pdns_rec_hostsd_zones_file = f'{pdns_rec_run_dir}/recursor.forward-zones.conf'
-pdns_rec_config_file = f'{pdns_rec_run_dir}/recursor.conf'
+pdns_rec_hostsd_zones_file = f'{pdns_rec_run_dir}/recursor.forward-zones.yml'
+pdns_rec_config_file = f'{pdns_rec_run_dir}/recursor.yml'
 pdns_rec_systemd_override = '/run/systemd/system/pdns-recursor.service.d/override.conf'
 
 hostsd_tag = 'static'
@@ -288,10 +288,7 @@ def generate(dns):
 
     render(pdns_rec_systemd_override, 'dns-forwarding/override.conf.j2', dns)
 
-    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.j2', dns,
-           user=pdns_rec_user_group, group=pdns_rec_user_group)
-
-    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.j2', dns,
+    render(pdns_rec_config_file, 'dns-forwarding/recursor.yml.j2', dns,
            user=pdns_rec_user_group, group=pdns_rec_user_group)
 
     render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.j2', dns,
@@ -306,10 +303,13 @@ def generate(dns):
                     zone, user=pdns_rec_user_group, group=pdns_rec_user_group)
 
 
-    # if vyos-hostsd didn't create its files yet, create them (empty)
-    for file in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:
-        with open(file, 'a'):
-            pass
+    # if vyos-hostsd didn't create its files yet, create them (empty, the YAML
+    # file with an empty list of forward zones)
+    for file, content in [(pdns_rec_hostsd_lua_conf_file, ''),
+                          (pdns_rec_hostsd_zones_file, '[]\n')]:
+        if not os.path.exists(file):
+            with open(file, 'w') as f:
+                f.write(content)
         chown(file, user=pdns_rec_user_group, group=pdns_rec_user_group)
 
     return None
