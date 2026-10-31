@@ -192,6 +192,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_delete(['vrf'])
+        # left over when test_10 fails halfway
+        self.cli_delete(['interfaces', 'pppoe', 'pppoe10'])
         self.cli_commit()
 
         v4route = self.getFRRconfig('ip route')
@@ -804,6 +806,231 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             os.path.exists(dhcp_hook_iflist),
             'DHCP hook interface list file should be removed when no dhcp-interface routes exist',
         )
+
+    def test_08_blackhole_same_distance_as_next_hop(self):
+        if not get_interface_config('eth0'):
+            self.skipTest('eth0 is not available on this test harness')
+
+        # FRR staticd refuses a blackhole/reject route together with a
+        # next-hop or interface route of the same distance for one prefix. This
+        # must fail in verify() and not later in frr-reload.
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
+
+        vrf_path = ['vrf', 'name', 'black'] + base_path
+        bases = [
+            ('route', '203.0.113.0/24', '192.0.2.1', base_path),
+            ('route6', '2001:db8:100::/48', '2001:db8::1', base_path),
+            ('route', '203.0.113.0/24', '192.0.2.1', base_path + ['table', '80']),
+            ('route6', '2001:db8:100::/48', '2001:db8::1', base_path + ['table', '80']),
+            ('route', '203.0.113.0/24', '192.0.2.1', vrf_path),
+        ]
+
+        for route_type, prefix, next_hop, base in bases:
+            path = base + [route_type, prefix]
+            for discard in ['blackhole', 'reject']:
+                # Both default to distance 1
+                self.cli_set(path + [discard])
+                self.cli_set(path + ['next-hop', next_hop])
+                with self.assertRaisesRegex(ConfigSessionError, 'same distance'):
+                    self.cli_commit()
+
+                # The same applies to an interface route
+                self.cli_delete(path + ['next-hop'])
+                self.cli_set(path + ['interface', 'eth0'])
+                with self.assertRaisesRegex(ConfigSessionError, 'same distance'):
+                    self.cli_commit()
+
+                # An explicit, equal distance is rejected as well
+                self.cli_set(path + [discard, 'distance', '20'])
+                self.cli_set(path + ['interface', 'eth0', 'distance', '20'])
+                with self.assertRaisesRegex(ConfigSessionError, 'same distance'):
+                    self.cli_commit()
+
+                # A different distance is fine
+                self.cli_set(path + ['interface', 'eth0', 'distance', '30'])
+                self.cli_commit()
+
+                # So is a disabled next-hop with the same distance
+                self.cli_set(path + ['interface', 'eth0', 'distance', '20'])
+                self.cli_set(path + ['interface', 'eth0', 'disable'])
+                self.cli_commit()
+
+                self.cli_delete(path)
+                self.cli_commit()
+
+        # The validator accepts leading zeros, 01 is the default distance 1
+        path = base_path + ['route', '203.0.113.0/24']
+        self.cli_set(path + ['blackhole'])
+        self.cli_set(path + ['next-hop', '192.0.2.1', 'distance', '01'])
+        with self.assertRaisesRegex(ConfigSessionError, 'same distance'):
+            self.cli_commit()
+        self.cli_delete(path)
+
+        # A dhcp-interface route gets the default distance once the interface
+        # has a gateway, so reject it already when it is configured
+        self.cli_set(path + ['blackhole'])
+        self.cli_set(path + ['dhcp-interface', 'eth0'])
+        with self.assertRaisesRegex(ConfigSessionError, 'same distance'):
+            self.cli_commit()
+        self.cli_delete(path)
+        self.cli_commit()
+
+    def test_09_disabled_blackhole_next_to_next_hop(self):
+        # A disabled blackhole/reject route is not rendered and does not
+        # conflict with a next-hop of the same distance
+        for discard in ['blackhole', 'reject']:
+            path = base_path + ['route', '203.0.113.0/24']
+            self.cli_set(path + [discard, 'disable'])
+            self.cli_set(path + ['next-hop', '192.0.2.1'])
+            self.cli_commit()
+
+            frrconfig = self.getFRRconfig('ip route 203.0.113.0/24', end_marker='')
+            self.assertIn('ip route 203.0.113.0/24 192.0.2.1', frrconfig)
+            self.assertNotIn(discard, frrconfig)
+
+            # Enabling it again is refused
+            self.cli_delete(path + [discard, 'disable'])
+            with self.assertRaisesRegex(ConfigSessionError, 'same distance'):
+                self.cli_commit()
+
+            self.cli_delete(path)
+            self.cli_commit()
+
+        # blackhole and reject at once are refused, a disabled one is not
+        # rendered and does not count
+        path = base_path + ['route', '203.0.113.0/24']
+        self.cli_set(path + ['blackhole', 'disable'])
+        self.cli_set(path + ['reject'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('ip route 203.0.113.0/24', end_marker='')
+        self.assertIn('ip route 203.0.113.0/24 reject', frrconfig)
+        self.assertNotIn('blackhole', frrconfig)
+
+        self.cli_delete(path + ['blackhole', 'disable'])
+        with self.assertRaisesRegex(ConfigSessionError, 'both blackhole and reject'):
+            self.cli_commit()
+        self.cli_delete(path)
+
+        # the same applies to a route in a table
+        path = base_path + ['table', '80', 'route', '203.0.113.0/24']
+        self.cli_set(path + ['blackhole', 'distance', '250'])
+        self.cli_set(path + ['reject'])
+        with self.assertRaisesRegex(ConfigSessionError, 'both blackhole and reject'):
+            self.cli_commit()
+
+    def test_10_discard_default_route_next_to_pppoe_default_route(self):
+        if not get_interface_config('eth0'):
+            self.skipTest('eth0 is not available on this test harness')
+
+        # The default route of a PPPoE interface is rendered with the distance
+        # of the interface, 210 unless configured
+        interface_path = ['interfaces', 'pppoe', 'pppoe10']
+        distance = default_value(interface_path + ['default-route-distance'])
+        self.cli_set(interface_path + ['source-interface', 'eth0'])
+        self.cli_set(interface_path + ['authentication', 'username', 'vyos'])
+        self.cli_set(interface_path + ['authentication', 'password', 'vyos'])
+        self.cli_commit()
+
+        path = base_path + ['route', '0.0.0.0/0']
+        for discard in ['blackhole', 'reject']:
+            self.cli_set(path + [discard, 'distance', distance])
+            with self.assertRaisesRegex(
+                ConfigSessionError, 'PPPoE interface "pppoe10"'
+            ):
+                self.cli_commit()
+
+            # another distance is fine, so is a disabled route
+            self.cli_set(path + [discard, 'distance', str(int(distance) + 1)])
+            self.cli_commit()
+            self.cli_set(path + [discard, 'distance', distance])
+            self.cli_set(path + [discard, 'disable'])
+            self.cli_commit()
+            self.cli_delete(path)
+
+        # IPv6 is only checked when IPv6 is enabled on the interface
+        path = base_path + ['route6', '::/0']
+        self.cli_set(path + ['blackhole', 'distance', distance])
+        self.cli_commit()
+        self.cli_delete(path)
+        self.cli_set(interface_path + ['ipv6', 'address', 'autoconf'])
+        self.cli_commit()
+        self.cli_set(path + ['blackhole', 'distance', distance])
+        with self.assertRaisesRegex(ConfigSessionError, 'PPPoE interface "pppoe10"'):
+            self.cli_commit()
+        self.cli_delete(path)
+
+        # an interface without a default route does not conflict
+        path = base_path + ['route', '0.0.0.0/0']
+        self.cli_set(path + ['blackhole', 'distance', distance])
+        self.cli_set(interface_path + ['no-default-route'])
+        self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_delete(interface_path)
+        self.cli_commit()
+
+    def test_11_discard_default_route_next_to_dhcp_default_route(self):
+        # needs the DHCP server of the QEMU environment, see test_05
+        if not self.running_in_smoketest_harness():
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', interface]
+        distance = default_value(
+            interface_path + ['dhcp-options', 'default-route-distance']
+        )
+        self.cli_set(interface_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        # the conflict is only known once the lease has a router
+        self.wait_for_dhcp_router(interface)
+
+        path = base_path + ['route', '0.0.0.0/0', 'blackhole']
+        self.cli_set(path + ['distance', distance])
+        with self.assertRaisesRegex(
+            ConfigSessionError, f'DHCP interface "{interface}"'
+        ):
+            self.cli_commit()
+
+        self.cli_set(path + ['distance', str(int(distance) + 1)])
+        self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+
+        while process_named_running('dhclient', cmdline=interface, timeout=10):
+            sleep(0.250)
+
+    def test_12_pppoe_distance_changed_alone_conflicts_with_discard_route(self):
+        # A commit that only changes the interface does not run the check of
+        # the static routes. frr-reload refuses the conflict and the commit is
+        # rolled back, the configuration stays as it was.
+        if not get_interface_config('eth0'):
+            self.skipTest('eth0 is not available on this test harness')
+
+        interface_path = ['interfaces', 'pppoe', 'pppoe10']
+        self.cli_set(interface_path + ['source-interface', 'eth0'])
+        self.cli_set(interface_path + ['authentication', 'username', 'vyos'])
+        self.cli_set(interface_path + ['authentication', 'password', 'vyos'])
+        self.cli_set(interface_path + ['default-route-distance', '216'])
+        self.cli_set(base_path + ['route', '0.0.0.0/0', 'blackhole', 'distance', '215'])
+        self.cli_commit()
+
+        self.cli_set(interface_path + ['default-route-distance', '215'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        frrconfig = self.getFRRconfig('ip route 0.0.0.0/0', end_marker='')
+        self.assertIn('ip route 0.0.0.0/0 pppoe10 tag 210 216', frrconfig)
+        self.assertIn('ip route 0.0.0.0/0 blackhole 215', frrconfig)
+
+        self.cli_delete(base_path)
+        self.cli_delete(interface_path)
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
