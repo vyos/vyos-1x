@@ -618,6 +618,18 @@ def get_config(config=None):
         set_dependents('pppoe_server', conf)
     config['changed_pppoe_ifaces'] = changed_pppoe_ifaces
 
+    # active VRRP groups with a virtual MAC address, see verify()
+    vrrp_base = ['high-availability', 'vrrp', 'group']
+    config['rfc3768_vrrp_groups'] = {}
+    if not conf.exists(['high-availability', 'disable']):
+        config['rfc3768_vrrp_groups'] = {
+            group: conf.return_value(vrrp_base + [group, 'interface'])
+            for group in conf.list_nodes(vrrp_base)
+            if conf.exists(vrrp_base + [group, 'rfc3768-compatibility'])
+            and not conf.exists(vrrp_base + [group, 'disable'])
+            and conf.exists(vrrp_base + [group, 'interface'])
+        }
+
     return config
 
 
@@ -632,6 +644,14 @@ def verify(config):
         raise ConfigError(
             'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
         )
+
+    # T9521: the virtual MAC address of a VRRP group is not known to VPP
+    for group, iface in config.get('rfc3768_vrrp_groups', {}).items():
+        if iface.split('.')[0] in config.get('settings', {}).get('interface', {}):
+            raise ConfigError(
+                f'"rfc3768-compatibility" in VRRP group "{group}" is not '
+                f'supported on the VPP interface "{iface}"!'
+            )
 
     # Find PPPoE ifaces where the base matches any VPP interface (base or VLAN)
     pppoe_vpp_ifaces = [
