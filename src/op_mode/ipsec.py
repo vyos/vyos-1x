@@ -668,13 +668,12 @@ def reset_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
     peer_config = _get_sitetosite_peer_config(peer)
     # initiate SAs only if 'connection-type=initiate', as at commit a disabled
     # peer, a peer named '@...' or without a remote address is not started
-    remote_address = peer_config.get('remote_address', [])
     if (
-        peer_config.get('connection_type') == 'initiate'
+        peer_config['connection_type'] == 'initiate'
         and 'disable' not in peer_config
         and peer[0:1] != '@'
-        and remote_address
-        and 'any' not in remote_address
+        and 'remote_address' in peer_config
+        and 'any' not in peer_config['remote_address']
     ):
         _initiate_peer_with_childsas(peer, tunnel)
 

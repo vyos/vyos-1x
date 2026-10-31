@@ -971,8 +971,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         for name in not_started_peers:
             out = self.op_mode(['reset', 'vpn', 'ipsec', 'site-to-site', 'peer', name])
-            self.assertNotIn('Initiation was failed', out)
-            self.assertNotIn('Failed to initiate', out)
+            self.assertNotIn('initiate result', out)
 
     def test_dmvpn(self):
         ike_lifetime = '3600'
