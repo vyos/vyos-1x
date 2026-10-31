@@ -897,6 +897,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             'initiate',
         )
 
+        # IPsec is bound to this interface in setUpClass()
+        self.cli_set(
+            ethernet_path + [interface, 'vif', vif, 'address', f'{local_address}/24']
+        )
+
         psk_base_path = base_path + ['authentication', 'psk', connection_name]
         self.cli_set(psk_base_path + ['id', local_address])
         self.cli_set(psk_base_path + ['id', peer_ip])
@@ -972,6 +977,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for name in not_started_peers:
             out = self.op_mode(['reset', 'vpn', 'ipsec', 'site-to-site', 'peer', name])
             self.assertNotIn('initiate result', out)
+
+        self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
 
     def test_dmvpn(self):
         ike_lifetime = '3600'
