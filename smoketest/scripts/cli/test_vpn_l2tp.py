@@ -58,6 +58,17 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
 
         self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
+    def test_l2tp_does_not_rename_session_interface(self):
+        # T9299: ifname=l2tp%d makes accel-ppp rename pppN to l2tpN after the
+        # address is installed. zebra can keep the connected /32 on the
+        # deleted pppN name. The kernel ppp name must be left alone.
+        self.basic_config()
+        self.cli_commit()
+
+        conf = ConfigParser(allow_no_value=True)
+        conf.read(self._config_file)
+        self.assertNotIn('ifname', conf['l2tp'])
+
     def test_vpn_l2tp_dependence_ipsec_swanctl(self):
         # Test config vpn for tasks T3843 and T5926
 
