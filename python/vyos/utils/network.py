@@ -373,8 +373,13 @@ def mac2eui64(mac, prefix=None):
             return
 
 
-def check_port_availability(address: str = None, port: int = 0,
-                            protocol: str = 'tcp', vrf: str = None) -> bool:
+def check_port_availability(
+    address: str = None,
+    port: int = 0,
+    protocol: str = 'tcp',
+    vrf: str = None,
+    busy_only: bool = False,
+) -> bool:
     """
     Check if given port is available and not used by any service.
 
@@ -387,11 +392,14 @@ def check_port_availability(address: str = None, port: int = 0,
       vrf:   VRF name to test the bind in - when set, the socket is bound
              to the VRF master device via SO_BINDTODEVICE so that the
              port check runs in the correct L3 domain.
+      busy_only: an address that does not exist (yet) does not make the
+             port unavailable - only another socket holding it does
 
     Returns:
       False if a port is busy or IP address does not exists
       True if a port is free and IP address exists
     """
+    import errno
     import socket
     from ipaddress import ip_address
 
@@ -412,6 +420,9 @@ def check_port_availability(address: str = None, port: int = 0,
     try:
         addr_info = socket.getaddrinfo(address, port, socket.AF_UNSPEC, protocol)
     except socket.gaierror:
+        # e.g. a link-local address whose interface does not exist (yet)
+        if busy_only:
+            return True
         print(f'Invalid address: {address}')
         return False
 
@@ -426,7 +437,11 @@ def check_port_availability(address: str = None, port: int = 0,
                                  (vrf + '\0').encode())
                 s.bind(sockaddr)
                 return True # port is free to use
-        except OSError:
+        except OSError as e:
+            # An address that is not (yet) present is no port conflict - this
+            # includes a link-local address without its scope (EINVAL)
+            if busy_only and e.errno in (errno.EADDRNOTAVAIL, errno.EINVAL):
+                return True
             return False # port is already in use
 
     # if we reach this point, no socket was tested and we assume the port is
