@@ -51,6 +51,7 @@ lease_valid_states = [
     'backup',
 ]
 sort_valid_inet = [
+    'client_id',
     'end',
     'mac',
     'hostname',
@@ -111,8 +112,20 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             pool = lease.get('pool')
             hostname = lease.get('hostname')
             origin = lease.get('origin')
+            client_id = lease.get('client_id')
             data_entries.append(
-                [ipaddr, hw_addr, state, start, end, remain, pool, hostname, origin]
+                [
+                    ipaddr,
+                    hw_addr,
+                    state,
+                    start,
+                    end,
+                    remain,
+                    pool,
+                    hostname,
+                    origin,
+                    client_id,
+                ]
             )
 
         headers = [
@@ -125,6 +138,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             'Pool',
             'Hostname',
             'Origin',
+            'Client ID',
         ]
 
     if family == 'inet6':
