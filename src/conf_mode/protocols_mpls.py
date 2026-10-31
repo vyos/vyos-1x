@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from sys import exit
 
@@ -24,8 +25,10 @@ from vyos.configverify import has_frr_protocol_in_dict
 from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_write
 from vyos.configverify import verify_interface_exists
+from vyos.vpp.control_vpp import VPPControl
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -47,6 +50,15 @@ def verify(config_dict):
     if 'interface' in mpls:
         for interface in mpls['interface']:
             verify_interface_exists(mpls, interface)
+            # The entry of a VPP interface (vppbond0, vpplo1, ...) does not
+            # survive the load of the saved configuration at boot: the name
+            # does not match the interface name constraint and the interface
+            # does not exist yet.
+            if re.match(r'vpp(?!tap|tun)', interface):
+                raise ConfigError(
+                    f'MPLS is not supported on the VPP interface "{interface}", '
+                    f'only on physical interfaces and their VLANs!'
+                )
 
     # Checks to see if LDP is properly configured
     if 'ldp' in mpls:
@@ -116,6 +128,36 @@ def apply(config_dict):
             system_interfaces.append(os.path.basename(interface))
         for system_interface in system_interfaces:
             sysctl_write(['net', 'mpls', 'conf', system_interface, 'input'], 0)
+
+    # VPP drops labeled packets on an interface that has MPLS disabled,
+    # whatever the kernel setting is. linux-cp copies the state to the kernel
+    # interface of the pair, also when the pair is created later, as it is for
+    # a VLAN sub-interface after a rebuild. So enable it by the VPP name, found
+    # through the pair of the interface or of its parent.
+    if is_systemd_service_active('vpp.service'):
+        vpp = VPPControl()
+        enabled = vpp.mpls_enabled_interfaces()
+        pairs = {pair['kernel_name']: pair for pair in vpp.lcp_pairs_list()}
+
+        def vpp_name(name):
+            if name in pairs:
+                return pairs[name]['vpp_name_hw']
+            parent, _, vlan_id = name.rpartition('.')
+            parent_name = vpp_name(parent) if parent and vlan_id.isdigit() else None
+            return f'{parent_name}.{vlan_id}' if parent_name else None
+
+        wanted = []
+        for name in mpls.get('interface', {}):
+            vpp_ifname = vpp_name(name)
+            index = vpp.get_sw_if_index(vpp_ifname) if vpp_ifname else None
+            if index is None:
+                continue
+            wanted.append(index)
+            if index not in enabled:
+                vpp.set_interface_mpls(vpp_ifname, True)
+        for pair in pairs.values():
+            if pair['vpp_index_hw'] in enabled and pair['vpp_index_hw'] not in wanted:
+                vpp.set_interface_mpls(pair['vpp_name_hw'], False)
 
     return None
 

@@ -30,6 +30,7 @@ from vyos.configdict import is_vrf_changed
 from vyos.configdict import node_changed
 from vyos.configdict import get_flowtable_interfaces
 from vyos.configdiff import Diff
+from vyos.configdiff import get_commit_scripts
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_interface_exists
@@ -284,6 +285,27 @@ def get_config(config=None):
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
         set_dependents('static_arp', conf)
+
+    # MPLS of a VPP interface and of its VLANs, applied again after the update
+    # (see apply()), also when the interface is removed from VPP in the same
+    # commit. The script of the last VPP interface that is rebuilt in the
+    # commit does it, the VLANs of the others have to exist by then.
+    if (
+        dict_search(f'settings.interface.{ifname}', vpp_config) is not None
+        or is_node_changed(conf, ['vpp', 'settings', 'interface', ifname])
+    ) and conf.exists(['protocols', 'mpls', 'interface']):
+        vpp_nics = {
+            *(dict_search('settings.interface', vpp_config) or {}),
+            *node_changed(conf, ['vpp', 'settings', 'interface']),
+        }
+        pending = get_commit_scripts(conf)
+        called = getattr(conf, 'scripts_called', [])
+        if not any(
+            f'interfaces_ethernet_{nic}' in pending
+            and f'interfaces_ethernet_{nic}' not in called
+            for nic in vpp_nics - {ifname}
+        ):
+            set_dependents('mpls', conf)
 
     # Check vrf membership, to ensure firewall is updated
     if is_vrf_changed(conf, ifname):
@@ -565,6 +587,29 @@ def generate(ethernet):
 
 def apply(ethernet):
     ifname = ethernet['ifname']
+
+    # VPP keeps the MPLS count of a deleted VLAN, a VLAN of a VPP interface that
+    # is deleted needs MPLS off first. The update also deletes and creates a
+    # VLAN again when the protocol of a vif-s or the QoS mapping of a vif
+    # changes, these are handled the same way. The mpls dependent turns MPLS
+    # on again afterwards.
+    if dict_search(f'vpp.settings.interface.{ifname}', ethernet) is not None and (
+        is_systemd_service_running('vpp.service')
+    ):
+        vpp_api = VPPControl()
+        vlan_ids = [
+            *ethernet.get('vif_remove', {}),
+            *ethernet.get('vif_s_remove', {}),
+            *ethernet.get('vif_s', {}),
+            *[
+                vif_id
+                for vif_id, vif in ethernet.get('vif', {}).items()
+                if 'ingress_qos' in vif or 'egress_qos' in vif
+            ],
+        ]
+        for vlan_id in vlan_ids:
+            vpp_api.disable_mpls_tree(f'{ifname}.{vlan_id}')
+
     e = EthernetIf(ifname)
     if 'deleted' in ethernet:
         e.remove()
