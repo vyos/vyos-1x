@@ -41,7 +41,7 @@
 {% if peer[0:1] == '@' %}
         keyingtries = 0
         reauth_time = 0
-{% elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
+{% elif peer_conf.connection_type is vyos_defined('initiate') %}
         keyingtries = 0
 {%     if reauth and ike.key_exchange is vyos_defined('ikev2') %}
         reauth_time = {{ ike.lifetime }}s
@@ -115,7 +115,7 @@
                 mode = {{ vti_esp.mode }}
 {%     if peer[0:1] == '@' %}
                 start_action = none
-{%     elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
+{%     elif peer_conf.connection_type is vyos_defined('initiate') %}
                 start_action = start
 {%     elif peer_conf.connection_type is vyos_defined('trap') %}
                 start_action = trap
@@ -179,7 +179,7 @@
                 mode = {{ tunnel_esp.mode }}
 {%         if peer[0:1] == '@' %}
                 start_action = none
-{%         elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
+{%         elif peer_conf.connection_type is vyos_defined('initiate') %}
                 start_action = start
 {%         elif peer_conf.connection_type is vyos_defined('trap') %}
                 start_action = trap

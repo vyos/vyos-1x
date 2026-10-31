@@ -666,10 +666,14 @@ def reset_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
     """
     _terminate_peer(peer, tunnel)
     peer_config = _get_sitetosite_peer_config(peer)
-    # initiate SAs only if 'connection-type=initiate'
+    # initiate SAs only if 'connection-type=initiate', as at commit a disabled
+    # peer, a peer named '@...' or without a remote address is not started
     if (
-        'connection_type' in peer_config
-        and peer_config['connection_type'] == 'initiate'
+        peer_config['connection_type'] == 'initiate'
+        and 'disable' not in peer_config
+        and peer[0:1] != '@'
+        and 'remote_address' in peer_config
+        and 'any' not in peer_config['remote_address']
     ):
         _initiate_peer_with_childsas(peer, tunnel)
 
@@ -1069,6 +1073,7 @@ def _get_sitetosite_peer_config(peer: str):
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
+        with_recursive_defaults=True,
     )
     return peers_config
 

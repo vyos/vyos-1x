@@ -24,6 +24,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.utils.convert import encode_to_base64
 from vyos.utils.process import process_named_running
+from vyos.utils.process import rc_cmd
 from vyos.utils.file import read_file
 from vyos.xml_ref import default_value
 
@@ -883,6 +884,101 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         swanctl_conf = read_file(swanctl_file)
         self.assertIn(f'unique = never', swanctl_conf)
+
+    def test_site_to_site_reset_without_connection_type(self):
+        # T9543: a peer without 'connection-type' is started at commit, so
+        # 'reset vpn ipsec site-to-site peer' has to start it again as well.
+        local_address = '192.0.2.10'
+
+        self.assertEqual(
+            default_value(
+                base_path + ['site-to-site', 'peer', connection_name, 'connection-type']
+            ),
+            'initiate',
+        )
+
+        # IPsec is bound to this interface in setUpClass()
+        self.cli_set(
+            ethernet_path + [interface, 'vif', vif, 'address', f'{local_address}/24']
+        )
+
+        psk_base_path = base_path + ['authentication', 'psk', connection_name]
+        self.cli_set(psk_base_path + ['id', local_address])
+        self.cli_set(psk_base_path + ['id', peer_ip])
+        self.cli_set(psk_base_path + ['secret', secret])
+
+        peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
+        self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_base_path + ['authentication', 'local-id', local_address])
+        self.cli_set(peer_base_path + ['authentication', 'remote-id', peer_ip])
+        self.cli_set(peer_base_path + ['ike-group', ike_group])
+        self.cli_set(peer_base_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_base_path + ['local-address', local_address])
+        self.cli_set(peer_base_path + ['remote-address', peer_ip])
+
+        tunnel_base_path = peer_base_path + ['tunnel', '1']
+        self.cli_set(tunnel_base_path + ['local', 'prefix', '172.16.10.0/24'])
+        self.cli_set(tunnel_base_path + ['remote', 'prefix', '172.17.10.0/24'])
+        self.cli_commit()
+
+        # the peer is not reachable, the start at commit leaves an IKE SA
+        # that is still connecting
+        def ike_sa_id():
+            _, out = rc_cmd('sudo swanctl --list-sas')
+            found = re.search(rf'^{connection_name}: #(\d+),', out, re.MULTILINE)
+            return found.group(1) if found else None
+
+        up, first_id = self.wait_for_result(ike_sa_id, lambda x: x is not None)
+        self.assertTrue(up, 'peer without connection-type was not started')
+
+        out = self.op_mode(
+            ['reset', 'vpn', 'ipsec', 'site-to-site', 'peer', connection_name]
+        )
+        self.assertIn('initiate result: success', out)
+
+        up, second_id = self.wait_for_result(
+            ike_sa_id, lambda x: x is not None and x != first_id
+        )
+        self.assertTrue(
+            up, 'peer without connection-type was not started again by reset'
+        )
+
+        # a peer that is disabled, named '@...' or without a remote address is
+        # not started at commit, reset must not try to start it either
+        not_started_peers = {
+            '@dynamic': ('any', False),
+            'responder': ('any', False),
+            'disabled': (peer_ip, True),
+        }
+        for index, (name, (remote, disabled)) in enumerate(not_started_peers.items()):
+            not_started_path = base_path + ['site-to-site', 'peer', name]
+            self.cli_set(
+                not_started_path + ['authentication', 'mode', 'pre-shared-secret']
+            )
+            self.cli_set(
+                not_started_path + ['authentication', 'local-id', local_address]
+            )
+            self.cli_set(not_started_path + ['ike-group', ike_group])
+            self.cli_set(not_started_path + ['default-esp-group', esp_group])
+            self.cli_set(not_started_path + ['local-address', local_address])
+            self.cli_set(not_started_path + ['remote-address', remote])
+            self.cli_set(
+                not_started_path
+                + ['tunnel', '1', 'local', 'prefix', f'172.16.{20 + index}.0/24']
+            )
+            self.cli_set(
+                not_started_path
+                + ['tunnel', '1', 'remote', 'prefix', f'172.17.{20 + index}.0/24']
+            )
+            if disabled:
+                self.cli_set(not_started_path + ['disable'])
+        self.cli_commit()
+
+        for name in not_started_peers:
+            out = self.op_mode(['reset', 'vpn', 'ipsec', 'site-to-site', 'peer', name])
+            self.assertNotIn('initiate result', out)
+
+        self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
 
     def test_dmvpn(self):
         ike_lifetime = '3600'
