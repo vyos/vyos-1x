@@ -690,6 +690,98 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
+        self.assertNotIn(f'{connection_name}-vti6', swanctl_conf)
+
+        # Check one child SA per address family, some peers narrow a child SA
+        # that contains both families to IPv4 only
+        self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'split-by-family'])
+        self.cli_commit()
+        swanctl_conf = read_file(swanctl_file)
+        self.assertRegex(
+            swanctl_conf,
+            rf'{connection_name}-vti \{{[^}}]*local_ts = 0\.0\.0\.0/0\n[^}}]*remote_ts = 0\.0\.0\.0/0\n',
+        )
+        self.assertRegex(
+            swanctl_conf,
+            rf'{connection_name}-vti6 \{{[^}}]*local_ts = ::/0\n[^}}]*remote_ts = ::/0\n',
+        )
+        self.assertEqual(swanctl_conf.count(f'if_id_in = {if_id}'), 2)
+        self.assertEqual(swanctl_conf.count(f'if_id_out = {if_id}'), 2)
+        # the debug command finds the peer by the name of its children
+        for tunnel in ['vti', 'vti6', 'all']:
+            out = self.op_mode(
+                ['show', 'vpn', 'debug', 'peer', connection_name, 'tunnel', tunnel]
+            )
+            self.assertNotIn('Peer not found', out, msg=f'tunnel {tunnel}')
+
+        # A family without any prefix does not get a child SA
+        self.cli_set(
+            peer_base_path + ['vti', 'traffic-selector', 'local', 'prefix', '::/0']
+        )
+        self.cli_set(
+            peer_base_path + ['vti', 'traffic-selector', 'remote', 'prefix', '::/0']
+        )
+        self.cli_commit()
+        swanctl_conf = read_file(swanctl_file)
+        self.assertNotIn(f'{connection_name}-vti {{', swanctl_conf)
+        self.assertIn(f'{connection_name}-vti6 {{', swanctl_conf)
+        # a peer with only IPv6 prefixes has only the child of that family
+        out = self.op_mode(['show', 'vpn', 'debug', 'peer', connection_name])
+        self.assertNotIn('Peer not found', out)
+        out = self.op_mode(
+            ['show', 'vpn', 'debug', 'peer', connection_name, 'tunnel', 'vti']
+        )
+        self.assertNotIn('Peer not found', out)
+
+        # A side without prefixes uses the default with both families, so only
+        # the family of the prefixes of the other side gets a child SA
+        self.cli_delete(peer_base_path + ['vti', 'traffic-selector', 'remote'])
+        self.cli_commit()
+        swanctl_conf = read_file(swanctl_file)
+        self.assertNotIn(f'{connection_name}-vti {{', swanctl_conf)
+        self.assertRegex(
+            swanctl_conf,
+            rf'{connection_name}-vti6 \{{[^}}]*local_ts = ::/0\n[^}}]*remote_ts = ::/0\n',
+        )
+        self.cli_delete(peer_base_path + ['vti', 'traffic-selector', 'local'])
+        self.cli_set(
+            peer_base_path
+            + ['vti', 'traffic-selector', 'local', 'prefix', '192.0.2.0/24']
+        )
+        self.cli_commit()
+        swanctl_conf = read_file(swanctl_file)
+        self.assertNotIn(f'{connection_name}-vti6 {{', swanctl_conf)
+        self.assertRegex(
+            swanctl_conf,
+            rf'{connection_name}-vti \{{[^}}]*local_ts = 192\.0\.2\.0/24\n[^}}]*remote_ts = 0\.0\.0\.0/0\n',
+        )
+        self.cli_delete(peer_base_path + ['vti', 'traffic-selector', 'local'])
+        self.cli_set(
+            peer_base_path + ['vti', 'traffic-selector', 'local', 'prefix', '::/0']
+        )
+        self.cli_set(
+            peer_base_path + ['vti', 'traffic-selector', 'remote', 'prefix', '::/0']
+        )
+        self.cli_commit()
+
+        # A tunnel takes precedence over the VTI, so the option is rejected
+        self.cli_set(
+            peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24']
+        )
+        self.cli_set(
+            peer_base_path + ['tunnel', '1', 'remote', 'prefix', '172.17.10.0/24']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(peer_base_path + ['tunnel'])
+        self.cli_commit()
+
+        # A family with a local but no remote prefix is rejected
+        self.cli_set(
+            peer_base_path + ['vti', 'traffic-selector', 'local', 'prefix', '0.0.0.0/0']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
     def test_site_to_site_nist_800_77_cnsa_1_with_ppk(self):
         # Setup IKE group
