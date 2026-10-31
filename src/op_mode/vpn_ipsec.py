@@ -26,7 +26,7 @@ IPSEC_SERVICE = 'strongswan.service'
 
 
 def get_peer_connections(peer, tunnel, return_all = False):
-    search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti))[\s]*{{'
+    search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti6?))[\s]*{{'
     matches = []
     if not os.path.exists(SWANCTL_CONF):
         return matches
@@ -35,7 +35,9 @@ def get_peer_connections(peer, tunnel, return_all = False):
             result = re.match(search, line)
             if result:
                 suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
-                if return_all or (result[2] == suffix):
+                # a peer with split-by-family has a VTI child for each family
+                vti_children = suffix == 'vti' and result[2] == 'vti6'
+                if return_all or (result[2] == suffix) or vti_children:
                     matches.append(result[1])
     return matches
 
