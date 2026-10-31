@@ -565,14 +565,14 @@ start ()
 
     # As VyOS does not execute commands that are not present in the CLI we call
     # the script by hand to have a single source for the login banner and MOTD
-    ${vyos_conf_scripts_dir}/system_syslog.py || log_failure_msg "could not reset syslog"
-    ${vyos_conf_scripts_dir}/system_console.py || log_failure_msg "could not reset serial console"
-    ${vyos_conf_scripts_dir}/system_login_banner.py || log_failure_msg "could not reset motd and issue files"
-    ${vyos_conf_scripts_dir}/system_option.py || log_failure_msg "could not reset system option files"
-    ${vyos_conf_scripts_dir}/system_ip.py || log_failure_msg "could not reset system IPv4 options"
-    ${vyos_conf_scripts_dir}/system_ipv6.py || log_failure_msg "could not reset system IPv6 options"
-    ${vyos_conf_scripts_dir}/system_conntrack.py || log_failure_msg "could not reset conntrack subsystem"
-    ${vyos_conf_scripts_dir}/container.py || log_failure_msg "could not reset container subsystem"
+    python3 ${vyos_conf_scripts_dir}/system_syslog.py || log_failure_msg "could not reset syslog"
+    python3 ${vyos_conf_scripts_dir}/system_console.py || log_failure_msg "could not reset serial console"
+    python3 ${vyos_conf_scripts_dir}/system_login_banner.py || log_failure_msg "could not reset motd and issue files"
+    python3 ${vyos_conf_scripts_dir}/system_option.py || log_failure_msg "could not reset system option files"
+    python3 ${vyos_conf_scripts_dir}/system_ip.py || log_failure_msg "could not reset system IPv4 options"
+    python3 ${vyos_conf_scripts_dir}/system_ipv6.py || log_failure_msg "could not reset system IPv6 options"
+    python3 ${vyos_conf_scripts_dir}/system_conntrack.py || log_failure_msg "could not reset conntrack subsystem"
+    python3 ${vyos_conf_scripts_dir}/container.py || log_failure_msg "could not reset container subsystem"
 
     clear_or_override_config_files || log_failure_msg "could not reset config files"
 
@@ -613,7 +613,7 @@ start ()
     tmp=$(${vyos_libexec_dir}/read-saved-value.py --path "system host-name")
     hostnamectl set-hostname --static "$tmp"
 
-    ${vyos_conf_scripts_dir}/system_frr.py || log_failure_msg "could not reset FRR config"
+    python3 ${vyos_conf_scripts_dir}/system_frr.py || log_failure_msg "could not reset FRR config"
     # If for any reason FRR was not started by system_frr.py - start it anyways.
     # This is a safety net!
     systemctl start frr.service

@@ -42,4 +42,4 @@ if __name__ == '__main__':
 PYEND
 
 # Now re-generate the config
-sudo /usr/libexec/vyos/conf_mode/vpn_ipsec.py
+sudo python3 /usr/libexec/vyos/conf_mode/vpn_ipsec.py

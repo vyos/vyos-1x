@@ -39,7 +39,7 @@ logger.addHandler(logs_handler_syslog)
 logger.setLevel(logging.DEBUG)
 
 mdns_running_file = '/run/mdns_vrrp_active'
-mdns_update_command = '/usr/libexec/vyos/conf_mode/service_mdns_repeater.py'
+mdns_update_command = 'python3 /usr/libexec/vyos/conf_mode/service_mdns_repeater.py'
 
 # class for all operations
 class KeepalivedFifo:
