@@ -1224,6 +1224,7 @@
                         <regex>(initiate|trap|none)</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>initiate</defaultValue>
                   </leafNode>
                   <leafNode name="default-esp-group">
                     <properties>
