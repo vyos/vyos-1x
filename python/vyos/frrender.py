@@ -819,9 +819,14 @@ class FRRender:
         # A render which did not reach apply() must not count as applied
         self._pending = None
 
+        # The rendered file can differ from the one FRR runs although the
+        # configuration is unchanged: frr-reload.py rejected it, or a failed
+        # reload removed frr_applied_config_file (T9442)
         if (
             self.cached_config_dict == config_dict
             and self.cached_dhcp_gateways == dhcp_gateways
+            and read_file(self._frr_conf, None)
+            == read_file(frr_applied_config_file, None)
         ):
             debug('FRR:        NO CHANGES DETECTED')
             return False
@@ -936,7 +941,7 @@ class FRRender:
                 if 'protocols' not in vrf_config:
                     continue
 
-                # Do not mutate config_dict in-place — it is also stored as
+                # Do not mutate config_dict in-place - apply() stores it as
                 # cached_config_dict and in-place mutation breaks change
                 # detection on the next commit (T7931).
                 protocols = {
@@ -962,6 +967,8 @@ class FRRender:
         return True
 
     def apply(self, count_max=5):
+        pending, self._pending = self._pending, None
+
         # Do a config reload test
         cmdline = f'/usr/lib/frr/frr-reload.py --test'
         rc, emsg = rc_cmd(f'{cmdline} {self._frr_conf}')
@@ -990,10 +997,10 @@ class FRRender:
         if not reloaded:
             # frr-reload.py applies its changes through vtysh in several
             # steps, FRR can be left with a part of the new configuration.
-            # Forget the cached one, so that the next commit reloads FRR even
+            # Forget the applied one, so that the next commit reloads FRR even
             # if it returns to the previously applied configuration.
-            self.cached_config_dict = None
-            self.cached_dhcp_gateways = {}
+            if os.path.exists(frr_applied_config_file):
+                os.unlink(frr_applied_config_file)
             raise ConfigError(emsg)
 
         write_file(frr_applied_config_file, read_file(self._frr_conf))
@@ -1008,6 +1015,5 @@ class FRRender:
 
         # FRR runs the rendered configuration now, remember it for the change
         # detection of generate()
-        if self._pending is not None:
-            self.cached_config_dict, self.cached_dhcp_gateways = self._pending
-            self._pending = None
+        if pending is not None:
+            self.cached_config_dict, self.cached_dhcp_gateways = pending
