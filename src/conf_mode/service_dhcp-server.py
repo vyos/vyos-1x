@@ -16,6 +16,7 @@
 
 import os
 import re
+import shutil
 
 from sys import exit
 from sys import argv
@@ -33,6 +34,7 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.file import chmod_750
 from vyos.utils.file import chmod_775
 from vyos.utils.file import makedir
 from vyos.utils.file import write_file
@@ -49,6 +51,7 @@ airbag.enable()
 ctrl_socket = ''
 config_file = ''
 config_file_d2 = ''
+tsig_key_dir = ''
 lease_file = ''
 lease_file_glob = ''
 
@@ -59,16 +62,53 @@ cert_key_file = ''
 user_group = '_kea'
 
 
+def _remove_ddns_files():
+    """
+    Remove the DDNS configuration together with the key files it points to
+    """
+    for path in (tsig_key_dir, f'{tsig_key_dir}.new', f'{tsig_key_dir}.old'):
+        shutil.rmtree(path, ignore_errors=True)
+    if os.path.exists(config_file_d2):
+        os.unlink(config_file_d2)
+
+
+def _switch_key_dir(new_dir, key_dir, old_dir):
+    """
+    Put the complete new key directory in place of the old one. The old keys
+    stay usable if the switch fails.
+    """
+    had_old = os.path.lexists(key_dir)
+    try:
+        if had_old:
+            os.rename(key_dir, old_dir)
+        os.rename(new_dir, key_dir)
+    except OSError as e:
+        # the old keys have to be at their place again
+        if had_old and os.path.lexists(old_dir) and not os.path.lexists(key_dir):
+            try:
+                os.rename(old_dir, key_dir)
+            except OSError:
+                raise ConfigError(
+                    f'Cannot replace the key directory "{key_dir}": {e}. '
+                    f'The previous keys are in "{old_dir}"'
+                ) from e
+        shutil.rmtree(new_dir, ignore_errors=True)
+        raise ConfigError(f'Cannot replace the key directory "{key_dir}": {e}') from e
+    shutil.rmtree(old_dir, ignore_errors=True)
+
+
 def _override_for_vrf(vrf_name):
     """
     This function is intended to override global vars when vrf is enabled
     """
     global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global tsig_key_dir
     global ca_cert_file, cert_file, cert_key_file
 
     ctrl_socket = f'/run/kea/dhcp4-{vrf_name}-ctrl-socket'
     config_file = f'/run/kea/kea-{vrf_name}-dhcp4.conf'
     config_file_d2 = f'/run/kea/kea-{vrf_name}-dhcp-ddns.conf'
+    tsig_key_dir = f'/run/kea-{vrf_name}-dhcp-ddns-tsig'
     lease_file = f'/config/dhcp/dhcp4-{vrf_name}-leases.csv'
     lease_file_glob = f'/config/dhcp/dhcp4-{vrf_name}-leases*'
 
@@ -82,11 +122,13 @@ def _reset_vars():
     This function is intended to reset global vars when vrf is not enabled
     """
     global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global tsig_key_dir
     global ca_cert_file, cert_file, cert_key_file
 
     ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
     config_file = '/run/kea/kea-dhcp4.conf'
     config_file_d2 = '/run/kea/kea-dhcp-ddns.conf'
+    tsig_key_dir = '/run/kea-dhcp-ddns-tsig'
     lease_file = '/config/dhcp/dhcp4-leases.csv'
     lease_file_glob = '/config/dhcp/dhcp4-leases*'
 
@@ -686,6 +728,32 @@ def generate(dhcp):
         group=user_group,
     )
     if 'dynamic_dns_update' in dhcp:
+        # Kea refuses a TSIG secret in clear text, it is read from a file.
+        # The directory lies directly below /run, which only root can change,
+        # as the Kea user is able to modify everything inside /run/kea.
+        # The new files are written next to the old ones and switched over
+        # when complete, so a failure keeps the existing keys.
+        new_dir = f'{tsig_key_dir}.new'
+        old_dir = f'{tsig_key_dir}.old'
+        for path in (new_dir, old_dir):
+            shutil.rmtree(path, ignore_errors=True)
+            if os.path.lexists(path):
+                raise ConfigError(f'Cannot remove the old key directory "{path}"')
+        # root owns the directory, the Kea user can read the files but cannot
+        # create entries in it, as this script writes the files as root
+        makedir(new_dir, user='root', group=user_group)
+        chmod_750(new_dir)
+        for name, key_config in dhcp['dynamic_dns_update'].get('tsig_key', {}).items():
+            write_file(
+                f'{new_dir}/{name}',
+                key_config['secret'],
+                user=user_group,
+                group=user_group,
+                mode=0o600,
+            )
+        _switch_key_dir(new_dir, tsig_key_dir, old_dir)
+        dhcp['tsig_key_dir'] = tsig_key_dir
+
         render(
             config_file_d2,
             'dhcp-server/kea-dhcp-ddns.conf.j2',
@@ -712,11 +780,20 @@ def apply(dhcp):
         if os.path.exists(config_file):
             os.unlink(config_file)
 
+        _remove_ddns_files()
+
         return None
 
     result, output = kea_test_config('kea-dhcp4', config_file)
     if not result:
         raise ConfigError(f'Unexpected error with Kea configuration:\n{output}')
+
+    if 'dynamic_dns_update' in dhcp:
+        result, output = kea_test_config('kea-dhcp-ddns', config_file_d2)
+        if not result:
+            raise ConfigError(
+                f'Unexpected error with Kea DDNS configuration:\n{output}'
+            )
 
     for service in services:
         action = 'restart'
@@ -725,6 +802,10 @@ def apply(dhcp):
             action = 'stop'
 
         call(f'systemctl {action} {service}.service')
+
+    # the D2 daemon is stopped now, its configuration and key files can go
+    if 'dynamic_dns_update' not in dhcp:
+        _remove_ddns_files()
 
     return None
 

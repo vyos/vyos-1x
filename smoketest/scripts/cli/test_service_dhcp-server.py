@@ -27,6 +27,7 @@ from vyos.kea import kea_add_lease
 from vyos.kea import kea_delete_lease
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
+from vyos.utils.process import rc_cmd
 from vyos.utils.file import read_file
 from vyos.template import inc_ip
 from vyos.template import dec_ip
@@ -35,6 +36,7 @@ PROCESS_NAME = 'kea-dhcp4'
 D2_PROCESS_NAME = 'kea-dhcp-ddns'
 KEA4_CONF = '/var/run/kea/kea-dhcp4.conf'
 KEA4_D2_CONF = '/var/run/kea/kea-dhcp-ddns.conf'
+KEA4_TSIG_DIR = '/run/kea-dhcp-ddns-tsig'
 KEA4_CTRL = '/var/run/kea/dhcp4-ctrl-socket'
 HOSTSD_CLIENT = '/usr/bin/vyos-hostsd-client'
 base_path = ['service', 'dhcp-server']
@@ -1735,7 +1737,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             {
                 'name': 'domain-lan-updates',
                 'algorithm': 'HMAC-SHA256',
-                'secret': 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
+                'secret-file': '/run/kea-dhcp-ddns-tsig/domain-lan-updates',
             },
         )
         self.verify_config_object(
@@ -1744,8 +1746,26 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             {
                 'name': 'reverse-0-168-192',
                 'algorithm': 'HMAC-SHA256',
-                'secret': 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
+                'secret-file': '/run/kea-dhcp-ddns-tsig/reverse-0-168-192',
             },
+        )
+
+        # Kea refuses a TSIG secret in clear text, it is read from a file owned
+        # by the Kea user with mode 0600
+        for key, secret in [
+            ('domain-lan-updates', 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='),
+            ('reverse-0-168-192', 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='),
+        ]:
+            key_file = f'{KEA4_TSIG_DIR}/{key}'
+            # the smoketest user is not the Kea user and cannot read the file
+            self.assertEqual(cmdl(['cat', key_file], sudo=True), secret)
+            self.assertEqual(
+                cmdl(['stat', '-c', '%a %U', key_file], sudo=True), '600 _kea'
+            )
+
+        # the Kea user can read the key files but cannot create entries
+        self.assertEqual(
+            cmdl(['stat', '-c', '%a %U:%G', KEA4_TSIG_DIR], sudo=True), '750 root:_kea'
         )
 
         self.verify_config_value(
@@ -1797,6 +1817,118 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertTrue(process_named_running(D2_PROCESS_NAME))
+
+    def test_dhcp_dynamic_dns_update_removed(self):
+        # The D2 configuration names the key files, it has to go away together
+        # with them or a later start of the D2 daemon fails on the missing files
+        shared_net_name = 'SMOKE-DDNS-RM'
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        ddns = base_path + ['dynamic-dns-update']
+        key_file = f'{KEA4_TSIG_DIR}/smoke-key'
+
+        def set_dynamic_dns_update():
+            self.cli_set(ddns + ['send-updates', 'enable'])
+            self.cli_set(ddns + ['tsig-key', 'smoke-key', 'algorithm', 'sha256'])
+            self.cli_set(
+                ddns
+                + [
+                    'tsig-key',
+                    'smoke-key',
+                    'secret',
+                    'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
+                ]
+            )
+            self.cli_set(
+                ddns + ['forward-domain', 'domain.lan', 'key-name', 'smoke-key']
+            )
+            self.cli_set(
+                ddns
+                + [
+                    'forward-domain',
+                    'domain.lan',
+                    'dns-server',
+                    '1',
+                    'address',
+                    '192.168.0.1',
+                ]
+            )
+
+        self.cli_set(base_path + ['listen-interface', interface])
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['range', '0', 'start', inc_ip(subnet, 10)])
+        self.cli_set(pool + ['range', '0', 'stop', inc_ip(subnet, 20)])
+        set_dynamic_dns_update()
+        self.cli_commit()
+        self.assertTrue(os.path.exists(KEA4_D2_CONF))
+        self.assertTrue(os.path.exists(key_file))
+        self.assertTrue(process_named_running(D2_PROCESS_NAME))
+
+        # The Kea user cannot add entries to the key directory and cannot swap
+        # the directory, as its parent belongs to root
+        as_kea = ['sudo', 'runuser', '-u', '_kea', '--']
+        rc, out = rc_cmd(as_kea + ['cat', key_file])
+        self.assertEqual(rc, 0, msg='the Kea user cannot read its key file')
+        for tmp in (
+            ['touch', f'{KEA4_TSIG_DIR}/rogue'],
+            ['mv', KEA4_TSIG_DIR, f'{KEA4_TSIG_DIR}.rogue'],
+        ):
+            rc, _ = rc_cmd(as_kea + tmp)
+            self.assertNotEqual(rc, 0, msg=f'{tmp} worked as the Kea user')
+
+        # leftovers of an interrupted replacement do not survive a commit
+        for leftover in (f'{KEA4_TSIG_DIR}.new', f'{KEA4_TSIG_DIR}.old'):
+            cmdl(['mkdir', '-p', leftover], sudo=True)
+            cmdl(['touch', f'{leftover}/stale'], sudo=True)
+
+        # a replaced and a renamed key: the old file is gone, no leftovers
+        self.cli_delete(ddns + ['tsig-key', 'smoke-key'])
+        self.cli_set(ddns + ['tsig-key', 'smoke-key2', 'algorithm', 'sha256'])
+        self.cli_set(
+            ddns
+            + ['tsig-key', 'smoke-key2', 'secret', 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==']
+        )
+        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'key-name', 'smoke-key2'])
+        self.cli_commit()
+        self.assertEqual(
+            cmdl(['cat', f'{KEA4_TSIG_DIR}/smoke-key2'], sudo=True),
+            'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
+        )
+        self.assertFalse(os.path.exists(key_file))
+        self.assertFalse(os.path.exists(f'{KEA4_TSIG_DIR}.new'))
+        self.assertFalse(os.path.exists(f'{KEA4_TSIG_DIR}.old'))
+        self.assertTrue(process_named_running(D2_PROCESS_NAME))
+
+        self.cli_delete(ddns + ['tsig-key', 'smoke-key2'])
+        self.cli_set(ddns + ['tsig-key', 'smoke-key', 'algorithm', 'sha256'])
+        self.cli_set(
+            ddns
+            + [
+                'tsig-key',
+                'smoke-key',
+                'secret',
+                'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
+            ]
+        )
+        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'key-name', 'smoke-key'])
+        self.cli_commit()
+
+        # dynamic updates are removed, the service keeps running
+        self.cli_delete(ddns)
+        self.cli_commit()
+        self.assertFalse(os.path.exists(KEA4_D2_CONF))
+        self.assertFalse(os.path.exists(KEA4_TSIG_DIR))
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertFalse(process_named_running(D2_PROCESS_NAME))
+
+        # dynamic updates are configured again and the service is disabled
+        set_dynamic_dns_update()
+        self.cli_commit()
+        self.assertTrue(os.path.exists(key_file))
+
+        self.cli_set(base_path + ['disable'])
+        self.cli_commit()
+        self.assertFalse(os.path.exists(KEA4_D2_CONF))
+        self.assertFalse(os.path.exists(KEA4_TSIG_DIR))
 
     def test_dhcp_on_interface_with_vrf(self):
         self.cli_set(['interfaces', 'ethernet', 'eth1', 'address', '10.1.1.1/30'])
