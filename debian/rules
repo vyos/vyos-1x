@@ -189,6 +189,8 @@ override_dh_auto_install:
 	cp $(OCAML_DIR)/bin/vyconfd $(DIR_LIBVYOSCONFIG)/$(VYCONF)
 	cp $(OCAML_DIR)/bin/vyconf_cli $(DIR_LIBVYOSCONFIG)/$(VYCONF)
 	cp $(OCAML_DIR)/bin/vyconf_cli_compat $(DIR_LIBVYOSCONFIG)/$(VYCONF_BIN)
+	cp $(OCAML_DIR)/bin/list_reference_path $(DIR)/$(VYOS_LIBEXEC_DIR)/completion
+	cp $(OCAML_DIR)/bin/reference-path $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 	cp libvyosconfig/_build/libvyosconfig.so $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)/libvyosconfig.so.0
 
 	# OCaml binaries from former vyos-utils package

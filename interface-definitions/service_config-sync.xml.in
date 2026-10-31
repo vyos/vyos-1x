@@ -528,6 +528,18 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="exclude-path">
+            <properties>
+              <help>Exclude paths from sync</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_reference_path ${COMP_WORDS[COMP_CWORD]@Q}</script>
+              </completionHelp>
+              <constraint>
+                <validator name="reference-path"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
