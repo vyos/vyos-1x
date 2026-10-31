@@ -18,7 +18,11 @@ import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
+from vyos.frrender import mgmt_daemon
 from vyos.utils.file import read_file
+from vyos.utils.process import cmdl
+from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
 config_file = '/etc/frr/daemons'
@@ -218,6 +222,40 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
         self.assertIn(
             f'watchfrr_options="--timeout={default_watchfrr_timeout}"', daemons_config
         )
+
+    def test_frr_commit_retried_after_failure(self):
+        # T9442: a configuration FRR did not take must not count as applied,
+        # committing it again has to reach FRR
+        static_path = ['protocols', 'static', 'route']
+        route_applied = '192.0.2.0/24'
+        route_failed = '198.51.100.0/24'
+
+        self.cli_set(static_path + [route_applied, 'blackhole'])
+        self.cli_commit()
+
+        self.cli_set(static_path + [route_failed, 'blackhole'])
+        cmdl(['systemctl', 'stop', 'frr.service'], sudo=True)
+        try:
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+        finally:
+            cmdl(['systemctl', 'start', 'frr.service'], sudo=True)
+            # restarted on purpose, see base class tearDown()
+            self.__class__.mgmt_daemon_pid = process_named_running(mgmt_daemon)
+
+        # FRR starts with the previously applied configuration
+        frrconfig = self.getFRRconfig()
+        self.assertIn(f'ip route {route_applied} blackhole', frrconfig)
+        self.assertNotIn(f'ip route {route_failed} blackhole', frrconfig)
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig()
+        self.assertIn(f'ip route {route_applied} blackhole', frrconfig)
+        self.assertIn(f'ip route {route_failed} blackhole', frrconfig)
+
+        self.cli_delete(['protocols', 'static'])
+        self.cli_commit()
 
 
 if __name__ == '__main__':
