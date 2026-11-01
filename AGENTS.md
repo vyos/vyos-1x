@@ -210,20 +210,22 @@ Then run every test job the pipeline runs for the target branch, against that
 ISO:
 
 ```bash
-sudo make test-no-interfaces-no-vpp   # rolling, scutum, circinus
-sudo make test-no-interfaces          # sagitta (no VPP split there)
-sudo make test-interfaces             # CLI smoketests, interfaces only
-sudo make testc                       # config load tests
-sudo make testraid                    # RAID1 installation test
-sudo make test-vpp                    # only where VPP is enabled
-sudo make testcvpp                    # only where VPP is enabled
-sudo make testtpm                     # only where TPM tests are enabled
+sudo make test-no-interfaces-no-vpp    # rolling, scutum, circinus
+sudo make test-no-interfaces           # sagitta (no VPP split there)
+sudo make test-interfaces              # CLI smoketests, interfaces only
+sudo make testc                        # config load tests
+sudo make testraid                     # RAID1 installation test
+sudo make test-vpp                     # only where VPP is enabled
+sudo make testcvpp                     # only where VPP is enabled
+sudo make testtpm                      # only where TPM tests are enabled
+sudo make test-interface-naming        # only where interface naming tests are enabled
+sudo make test-interface-naming-vmware # only where interface naming tests are enabled
 ```
 
-Which of the optional jobs apply is not a guess: the per-branch flags
-(`test_cli_command`, `test_vpp`, `test_tpm_tests`) live in
-`.github/config/smoketest-branches.json`. Read that file for the target branch
-and run exactly the set it selects.
+Which of the optional jobs apply is not a guess: the `test` job matrix in
+`.github/workflows/package-smoketest.yml` on the target branch lists every make
+target the pipeline runs. Read it for the target branch and run exactly that
+set.
 
 All of them must pass. A failing or skipped-because-it-broke test is a reason to
 fix the change, not a reason to open the PR and let the pipeline report it. If a

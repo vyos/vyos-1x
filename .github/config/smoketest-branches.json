@@ -5,14 +5,9 @@
       "container_image": "vyos/vyos-build:rolling",
       "vyos_build_repo": "vyos/vyos-build",
       "use_pat": false,
-      "build_runner": ["ubuntu-24.04"],
+      "build_runner": ["ubuntu-26.04"],
       "build_version_format": "%Y.%m.%d-%H%M-integration",
       "install_build_deps": false,
-      "test_cli_command": "test-no-interfaces-no-vpp",
-      "test_tpm_tests": true,
-      "test_vpp": true,
-      "test_vpp_runner": ["ubuntu-24.04"],
-      "test_ifname": true,
       "mirror_enabled": true
     },
     "scutum": {
@@ -21,12 +16,9 @@
       "vyos_build_repo": "VyOS-Networks/vyos-build",
       "use_pat": true,
       "build_runner": ["self-hosted", "azure"],
+      "test_runners": { "vpp": ["self-hosted", "vpp"] },
       "build_version_format": "1.6-integration-%Y%m%d%H%M",
       "install_build_deps": true,
-      "test_cli_command": "test-no-interfaces-no-vpp",
-      "test_tpm_tests": true,
-      "test_vpp": true,
-      "test_vpp_runner": ["self-hosted", "vpp"],
       "smoketests_runner": ["self-hosted", "smoketests"],
       "mirror_enabled": false
     },
@@ -36,14 +28,10 @@
       "vyos_build_repo": "VyOS-Networks/vyos-build",
       "use_pat": true,
       "build_runner": ["self-hosted", "azure"],
+      "test_runners": { "vpp": ["self-hosted", "vpp"] },
       "build_version_format": "1.5-integration-%Y%m%d%H%M",
       "install_build_deps": true,
-      "test_cli_command": "test-no-interfaces-no-vpp",
-      "test_tpm_tests": true,
-      "test_vpp": true,
-      "test_vpp_runner": ["self-hosted", "vpp"],
       "smoketests_runner": ["self-hosted", "smoketests"],
-      "test_ifname": false,
       "mirror_enabled": false
     },
     "sagitta": {
@@ -55,10 +43,6 @@
       "smoketests_runner": ["self-hosted", "smoketests"],
       "build_version_format": "1.4-integration-%Y%m%d%H%M",
       "install_build_deps": true,
-      "test_cli_command": "test-no-interfaces",
-      "test_tpm_tests": false,
-      "test_vpp": false,
-      "test_ifname": false,
       "mirror_enabled": false
     }
   }
