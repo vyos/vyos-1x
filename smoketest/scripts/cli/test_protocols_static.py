@@ -18,6 +18,7 @@ import os
 import unittest
 
 from time import sleep
+from time import time
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
@@ -25,6 +26,7 @@ from vyos.template import is_ipv6
 from vyos.template import get_dhcp_router
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -192,6 +194,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_delete(['vrf'])
+        # left over when test_10 or test_11 fail halfway
+        self.cli_delete(['interfaces', 'pppoe', 'pppoe10'])
         self.cli_commit()
 
         v4route = self.getFRRconfig('ip route')
@@ -917,6 +921,82 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         with self.assertRaisesRegex(ConfigSessionError, 'both blackhole and reject'):
             self.cli_commit()
 
+
+    def assert_frrender_error(self, since, needle):
+        # journald stores an entry asynchronously
+        def errors():
+            return cmdl(['sudo', 'journalctl', '--no-pager', '--quiet', '--output', 'cat',
+                         '--priority', 'err', '--identifier', 'vyos-frrender',
+                         '--since', f'@{since}'])
+        found, output = self.wait_for_result(errors, lambda tmp: needle in tmp)
+        self.assertTrue(found, f'{needle} not logged as an error, journal: {output!r}')
+
+    def test_10_pppoe_default_route_drops_blackhole(self):
+        if not get_interface_config('eth0'):
+            self.skipTest('eth0 is not available on this test harness')
+
+        # The default route of a PPPoE interface changes without a commit of
+        # the static routes, FRR would refuse a blackhole route of the same
+        # distance. The blackhole route is not rendered and an error is logged.
+        start = int(time())
+        interface_path = ['interfaces', 'pppoe', 'pppoe10']
+        self.cli_set(interface_path + ['source-interface', 'eth0'])
+        self.cli_set(interface_path + ['authentication', 'username', 'vyos'])
+        self.cli_set(interface_path + ['authentication', 'password', 'vyos'])
+        self.cli_set(interface_path + ['default-route-distance', '20'])
+        self.cli_set(base_path + ['route', '0.0.0.0/0', 'blackhole'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('ip route 0.0.0.0/0', end_marker='')
+        self.assertIn('ip route 0.0.0.0/0 pppoe10 tag 210 20', frrconfig)
+        self.assertIn('ip route 0.0.0.0/0 blackhole', frrconfig)
+
+        # an interface-only commit to the distance of the blackhole route
+        self.cli_set(interface_path + ['default-route-distance', '1'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('ip route 0.0.0.0/0', end_marker='')
+        self.assertIn('ip route 0.0.0.0/0 pppoe10 tag 210', frrconfig)
+        self.assertNotIn('blackhole', frrconfig)
+        self.assert_frrender_error(start, '"ip route 0.0.0.0/0 blackhole"')
+
+        # another distance renders the blackhole route again
+        self.cli_set(interface_path + ['default-route-distance', '20'])
+        self.cli_commit()
+        frrconfig = self.getFRRconfig('ip route 0.0.0.0/0', end_marker='')
+        self.assertIn('ip route 0.0.0.0/0 blackhole', frrconfig)
+
+        self.cli_delete(base_path)
+        self.cli_delete(interface_path)
+        self.cli_commit()
+
+    def test_11_dhcp_default_route_drops_blackhole(self):
+        # needs the DHCP server of the QEMU environment, see test_05
+        if not self.running_in_smoketest_harness():
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        start = int(time())
+        interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', interface]
+        distance = default_value(interface_path + ['dhcp-options', 'default-route-distance'])
+        self.cli_set(base_path + ['route', '0.0.0.0/0', 'blackhole', 'distance', distance])
+        self.cli_set(interface_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        # the lease event renders the DHCP default route, the blackhole route
+        # of the same distance is dropped
+        router = self.wait_for_dhcp_router(interface)
+        self.assert_in_frrconfig(f'ip route 0.0.0.0/0 {router} {interface} tag 210 {distance}')
+        frrconfig = self.getFRRconfig('ip route 0.0.0.0/0', end_marker='')
+        self.assertNotIn('blackhole', frrconfig)
+        self.assert_frrender_error(start, f'"ip route 0.0.0.0/0 blackhole {distance}"')
+
+        self.cli_delete(base_path)
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+
+        while process_named_running('dhclient', cmdline=interface, timeout=10):
+            sleep(0.250)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

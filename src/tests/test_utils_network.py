@@ -61,3 +61,18 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertFalse(vyos.utils.network.check_port_availability('192.0.2.1', 443))
         # We do not have 2001:db8::1 configured on this system
         self.assertFalse(vyos.utils.network.check_port_availability('2001:db8::1', 80, protocol='udp'))
+
+    def test_normalize_prefix(self):
+        normalize_prefix = vyos.utils.network.normalize_prefix
+        # canonical notation, host bits cleared - as FRR stores a route
+        self.assertEqual(normalize_prefix('0.0.0.0/0'), '0.0.0.0/0')
+        self.assertEqual(normalize_prefix('10.1.2.3/8'), '10.0.0.0/8')
+        self.assertEqual(normalize_prefix('::/0'), '::/0')
+        self.assertEqual(normalize_prefix('0::/0'), '::/0')
+        self.assertEqual(normalize_prefix('::0/0'), '::/0')
+        self.assertEqual(normalize_prefix('2001:0DB8::/32'), '2001:db8::/32')
+        self.assertEqual(normalize_prefix('2001:db8::1/32'), '2001:db8::/32')
+        self.assertEqual(normalize_prefix('2001:db8::1/128'), '2001:db8::1/128')
+        # anything that cannot be parsed is returned as is
+        for prefix in ['foo', '192.0.2.0', '192.0.2.0/33', '010.0.0.0/8', '::/x']:
+            self.assertEqual(normalize_prefix(prefix), prefix)
