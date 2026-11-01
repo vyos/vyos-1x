@@ -590,3 +590,26 @@ def has_frr_protocol_in_dict(config_dict: dict, protocol: str) -> bool:
     if config_dict and protocol in config_dict:
         return True
     return False
+
+
+def verify_vrrp_vmac_not_on_vpp(groups: dict, vpp_interfaces) -> None:
+    """
+    With "rfc3768-compatibility" keepalived puts the virtual IP address of a
+    VRRP group on a macvlan interface with the virtual MAC address. VPP does
+    not know this interface, the address is not reachable through a VPP
+    interface. A VLAN of a VPP interface is handled by VPP as well.
+
+    groups is the dict of the VRRP groups, vpp_interfaces the interfaces
+    "vpp settings interface". A disabled group is not used by keepalived.
+    """
+    for group, group_config in groups.items():
+        interface = group_config.get('interface', '')
+        if (
+            'rfc3768_compatibility' in group_config
+            and 'disable' not in group_config
+            and interface.split('.')[0] in vpp_interfaces
+        ):
+            raise ConfigError(
+                f'"rfc3768-compatibility" in VRRP group "{group}" '
+                f'is not supported on the VPP interface "{interface}"!'
+            )
