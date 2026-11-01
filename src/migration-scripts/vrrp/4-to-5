@@ -1,0 +1,67 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T9521:
+#   With "rfc3768-compatibility" keepalived puts the virtual IP address on a
+#   macvlan interface that VPP does not know, so the address is not reachable
+#   through a VPP interface. The option is now refused there, remove it from
+#   the groups it was configured on so the configuration keeps loading. The
+#   virtual IP address then stays on the interface itself.
+#   A disabled group and "high-availability disable" are left alone, like the
+#   verification does. A VPP interface ("interfaces vpp ...", for example a
+#   bonding) is handled by VPP like an interface of "vpp settings interface".
+
+from vyos.configtree import ConfigTree
+
+base = ['high-availability', 'vrrp']
+vpp_interfaces = ['vpp', 'settings', 'interface']
+vpp_interface_types = ['interfaces', 'vpp']
+
+
+def vpp_interface_names(config: ConfigTree) -> list:
+    names = []
+    if config.exists(vpp_interfaces):
+        names.extend(config.list_nodes(vpp_interfaces))
+    if config.exists(vpp_interface_types):
+        for interface_type in config.list_nodes(vpp_interface_types):
+            names.extend(config.list_nodes(vpp_interface_types + [interface_type]))
+    return names
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base + ['group']):
+        # Nothing to do
+        return
+
+    if config.exists(['high-availability', 'disable']):
+        return
+
+    vpp = vpp_interface_names(config)
+    if not vpp:
+        return
+
+    for group in config.list_nodes(base + ['group']):
+        group_base = base + ['group', group]
+        if not config.exists(group_base + ['rfc3768-compatibility']):
+            continue
+        if config.exists(group_base + ['disable']):
+            continue
+        if not config.exists(group_base + ['interface']):
+            continue
+
+        # a VLAN of a VPP interface is handled by VPP as well
+        interface = config.return_value(group_base + ['interface'])
+        if interface.split('.')[0] in vpp:
+            config.delete(group_base + ['rfc3768-compatibility'])

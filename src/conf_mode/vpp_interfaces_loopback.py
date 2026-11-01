@@ -18,6 +18,7 @@ from vyos import ConfigError
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_vrrp_vmac_not_on_vpp
 from vyos.configverify import verify_mtu_parent
 from vyos.configverify import verify_vlan_config
 from vyos.configdep import set_dependents, call_dependents
@@ -27,6 +28,7 @@ from vyos.ifconfig.vpp import VPPLoopbackInterface
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
 from vyos.vpp.config_verify import verify_vpp_remove_interface
+from vyos.vpp.utils import get_active_vrrp_groups
 
 # MTU VPP creates a loopback with when none is configured
 VPP_LOOPBACK_DEFAULT_MTU = 9000
@@ -52,6 +54,9 @@ def get_config(config=None) -> dict:
     if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
+
+    # T9521: the virtual MAC address of a VRRP group is not known to VPP
+    config['vrrp_groups'] = get_active_vrrp_groups(conf)
 
     # A VLAN sub-interface inherits the parent MTU when its own is unset; set it
     # explicitly so a removed sub-interface MTU reverts to the parent instead of
@@ -105,6 +110,8 @@ def verify(config):
     if 'deleted' in config:
         verify_vpp_remove_interface(config['ifname'], config['vpp'], match_vlans=True)
         return None
+
+    verify_vrrp_vmac_not_on_vpp(config['vrrp_groups'], [config['ifname']])
 
     if not is_systemd_service_active('vpp.service'):
         raise ConfigError(
