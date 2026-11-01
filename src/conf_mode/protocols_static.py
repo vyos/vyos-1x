@@ -28,7 +28,6 @@ from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.xml_ref import default_value
 from vyos.utils.file import write_file
-from vyos.template import get_dhcp_router
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -80,38 +79,19 @@ def verify(config_dict):
     # FRR staticd refuses a blackhole or reject route and a next-hop or
     # interface route for the same prefix with the same distance, which only
     # shows up when frr-reload fails after the commit. Routes in a table are
-    # checked as well, blackhole and reject at once is refused there too.
+    # checked as well, blackhole and reject at once is refused there too. The
+    # default routes of DHCP and PPPoE interfaces change without a commit of
+    # this node, FRRender drops a blackhole or reject route next to them.
     def route_distance(base, route, prefix, node, config, name=None):
+        # Compare the numbers, the validator accepts leading zeros
+        if 'distance' in config:
+            return int(config['distance'])
         # the default distance comes from the CLI definition, a tag node needs
-        # a value in the path. Compare the numbers, the validator accepts
-        # leading zeros.
+        # a value in the path
         path = base + [route, prefix, node]
         if name:
             path.append(name)
-        distance = config.get('distance', default_value(path + ['distance']))
-        return int(distance)
-
-    def generated_defaults(route, prefix):
-        # same conditions and distances as the default routes in staticd.frr.j2
-        if route == 'route' and prefix == '0.0.0.0/0':
-            for name, config in static.get('dhcp', {}).items():
-                # the template renders the route only when a gateway is known,
-                # an existing configuration that conflicts before that keeps
-                # loading
-                if get_dhcp_router(name) is None:
-                    continue
-                if 'no_default_route' not in config.get('dhcp_options', {}):
-                    distance = dict_search(
-                        'dhcp_options.default_route_distance', config
-                    )
-                    yield 'DHCP', name, int(distance or 1)
-        if (route, prefix) in [('route', '0.0.0.0/0'), ('route6', '::/0')]:
-            for name, config in static.get('pppoe', {}).items():
-                if 'no_default_route' in config:
-                    continue
-                if route == 'route6' and 'ipv6' not in config:
-                    continue
-                yield 'PPPoE', name, int(config.get('default_route_distance') or 1)
+        return int(default_value(path + ['distance']))
 
     # the CLI path of the routes, a table or a VRF changes it
     static_base = ['protocols', 'static']
@@ -156,19 +136,6 @@ def verify(config_dict):
                                     f'Cannot use {discard} and {node} "{name}" '
                                     f'with the same distance {discard_distance} '
                                     f'for prefix "{prefix}"!'
-                                )
-
-                    # The default routes of DHCP and PPPoE interfaces are
-                    # rendered into the same prefix. A commit that changes only
-                    # such an interface does not run this check, frr-reload
-                    # refuses it and the commit is rolled back.
-                    if base == static_base:
-                        for kind, name, distance in generated_defaults(route, prefix):
-                            if distance == discard_distance:
-                                raise ConfigError(
-                                    f'Cannot use {discard} and the default route '
-                                    f'of {kind} interface "{name}" with the same '
-                                    f'distance {distance} for prefix "{prefix}"!'
                                 )
 
                     # A dhcp-interface route has no distance option, it is

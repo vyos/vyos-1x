@@ -13,6 +13,8 @@ set protocols static route 10.0.0.0/8 next-hop 192.0.2.140 distance '123'
 set protocols static route 10.0.0.0/8 next-hop 192.0.2.140 interface 'eth0'
 set protocols static route 172.16.0.0/16 next-hop 172.18.203.254 bfd multi-hop source-address '172.18.203.254'
 set protocols static route 172.16.0.0/16 next-hop 172.18.203.254 bfd profile 'foo'
+set protocols static route 192.0.2.0/24 blackhole disable
+set protocols static route 192.0.2.0/24 next-hop 198.51.100.1
 set protocols static route6 2001:db8:1::/48 next-hop fe80::1 bfd multi-hop source-address 'fe80::1'
 set protocols static route6 2001:db8:1::/48 next-hop fe80::1 bfd profile 'bar'
 set protocols static route6 2001:db8:1::/48 next-hop fe80::1 interface 'eth0.203'
@@ -21,6 +23,10 @@ set protocols static route6 2001:db8:2::/48 next-hop fe80::1 bfd profile 'bar'
 set protocols static route6 2001:db8:2::/48 next-hop fe80::1 interface 'eth0.203'
 set protocols static route6 2001:db8:3::/48 next-hop fe80::1 bfd
 set protocols static route6 2001:db8:3::/48 next-hop fe80::1 interface 'eth0.203'
+set protocols static route6 2001:db8:4::/48 next-hop fe80::1 interface 'eth0.203'
+set protocols static route6 2001:db8:4::/48 reject disable
+set protocols static table 100 route 203.0.113.0/24 blackhole
+set protocols static table 100 route 203.0.113.0/24 reject disable
 set service lldp interface all
 set service ntp allow-client address '0.0.0.0/0'
 set service ntp allow-client address '::/0'

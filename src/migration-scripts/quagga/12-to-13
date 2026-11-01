@@ -15,10 +15,10 @@
 
 # T9482:
 #   FRR staticd refuses a blackhole or reject route next to a next-hop or
-#   interface route of the same prefix with the same distance. The route
-#   configured first is kept, VyOS renders the blackhole and reject route last,
-#   so it is the one that is dropped. Make this visible in the CLI by setting
-#   "disable" on that blackhole or reject route.
+#   interface route of the same prefix with the same distance. frr-reload adds
+#   all new lines in one transaction, so on boot such a configuration lost
+#   every static route. Set "disable" on that blackhole or reject route, the
+#   next-hop or interface route is kept.
 #   A prefix with both a blackhole and a reject route rendered only the
 #   blackhole route, the reject route gets "disable" the same way.
 
