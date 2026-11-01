@@ -16,6 +16,7 @@
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_vrrp_vmac_not_on_vpp
 from vyos.configdict import has_vlan_subinterface_configured
 from vyos.configdict import is_node_changed
 from vyos.configdict import leaf_node_changed
@@ -38,6 +39,7 @@ from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
 from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import get_active_vrrp_groups
 
 
 def _get_bond_mode(mode_name: str) -> int:
@@ -94,6 +96,9 @@ def get_config(config=None) -> dict:
     if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
+
+    # T9521: the virtual MAC address of a VRRP group is not known to VPP
+    config['vrrp_groups'] = get_active_vrrp_groups(conf)
 
     config['vpp_ifaces'] = cli_ifaces_list(conf, 'candidate')
 
@@ -185,6 +190,9 @@ def verify(config):
 
     if 'remove_vpp' in config:
         return None
+
+    if 'deleted' not in config:
+        verify_vrrp_vmac_not_on_vpp(config['vrrp_groups'], [ifname])
 
     verify_vpp_remove_xconnect_interface(config)
     verify_vpp_remove_bridge_interface(config)
