@@ -17,14 +17,21 @@
 # distance 211 is FRR-only and will not appear in the kernel while 210 is
 # installed — do not warn "still missing after add" for those.
 #
-# Skip restoration only when FRR already has this gw+dev at the requested
-# distance (running-config, same string iptovtysh writes). A kernel
-# default via the same gw (operator static, or another distance) must not
-# hide a missing DHCP route at IF_METRIC.
+# Skip restoration when FRR already has this gw+dev at the requested
+# distance (running-config, same string iptovtysh writes) AND, for the
+# primary distance, the kernel default is not confirmed absent. FRR can
+# still show the line while the nexthop is inactive and the kernel route
+# is gone. A backup distance is FRR-only: the kernel keeps the best one.
+# A kernel default via the same gw at another distance must not hide a
+# missing DHCP route at IF_METRIC.
 #
 # If option 3 changes across a same-IP RENEW, drop defaults via gateways
 # that disappeared from $new_routers. Delete with the same per-router
-# metric 01-vyos-cleanup uses.
+# metric 01-vyos-cleanup uses. Do not delete when that next-hop is a
+# configured static default at the same distance: tag 210 is what the
+# DHCP wrapper writes, and FRR also uses it for other VyOS routes, so
+# `no ip route … tag 210` is not proof the route is DHCP-owned. If the
+# config cannot be read, leave the route in place.
 #
 # RFC3442 classless routes: stock ignores option 3, but VyOS BOUND still
 # installs the option-3 default (enter-hook wrapper). Keepers are the
@@ -33,9 +40,12 @@
 # prefix-only option 121 + option 3 lost 0/0 at the first renew, and an
 # FRR-touching commit can drop the RFC3442 0/0 and leave only option 3
 # — deleting that blackholes off-link traffic (alexk37). Do not mutate
-# $new_routers. Truncated or unknown option-121 encodings fail closed
-# (same return 1 as 01-vyos-cleanup / 02-vyos-dhcp-renew-rfc3442): skip
-# stale-delete rather than treat a partial parse as "no keepers".
+# $new_routers. 02-vyos-dhcp-renew-rfc3442 installs a classless 0/0 only
+# when option 121 changes, so a same-lease RENEW still restores an
+# option-3 gateway that matches that default, at IF_METRIC. Truncated or
+# unknown option-121 encodings fail closed (same return 1 as
+# 01-vyos-cleanup / 02-vyos-dhcp-renew-rfc3442): skip stale-delete rather
+# than treat a partial parse as "no keepers".
 #
 # 06-vyos-nodefaultroute sets VYOS_NO_DEFAULT_ROUTE. Skip stale-delete
 # entirely: a force-sent option 3 plus an operator static default via the
@@ -86,6 +96,48 @@ _frr_default_present() {
         needle="${needle} ${VRF_OPTION}"
     fi
     vtysh -c "show running-config no-header" 2>/dev/null | grep -Fqx "$needle"
+}
+
+# 0 = protocols static has 0/0 via $1 at distance $2 (do not delete it).
+# 1 = no such static. 2 = config could not be read (do not delete).
+# Tag 210 is not ownership: the DHCP wrapper and other VyOS routes use it,
+# and `no ip route … tag 210` can remove an untagged static with the same
+# prefix, nexthop, and distance.
+_operator_static_owns() {
+    local gw="$1"
+    local distance="$2"
+    CHECK_GW="$gw" CHECK_DISTANCE="$distance" CHECK_VRF="${VRF_OPTION:-}" \
+        python3 - <<'PY'
+import os
+import sys
+
+try:
+    from vyos.config import Config
+    config = Config()
+except Exception:
+    sys.exit(2)
+
+gw = os.environ['CHECK_GW']
+want = os.environ['CHECK_DISTANCE']
+vrf = os.environ.get('CHECK_VRF', '').split()
+bases = ['protocols static route 0.0.0.0/0']
+if len(vrf) == 2 and vrf[0] == 'vrf':
+    bases.insert(0, f'vrf name {vrf[1]} protocols static route 0.0.0.0/0')
+try:
+    for base in bases:
+        node = f'{base} next-hop {gw}'
+        if not config.exists(node) or config.exists(f'{node} disable'):
+            continue
+        if config.exists(f'{node} distance'):
+            dist = config.return_value(f'{node} distance')
+        else:
+            dist = '1'
+        if str(dist) == want:
+            sys.exit(0)
+except Exception:
+    sys.exit(2)
+sys.exit(1)
+PY
 }
 
 # Gateways of RFC3442 0.0.0.0/0 entries (option 121). Shared decoder:
@@ -145,6 +197,20 @@ if [ -n "$rfc3442_parse_ok" ] &&
             if_metric=$((if_metric + 1))
             continue
         fi
+        _operator_static_owns "${router}" "${if_metric}"
+        own_st=$?
+        if [ "$own_st" -ne 1 ]; then
+            if [ "$own_st" -eq 0 ]; then
+                logmsg info \
+                    "RENEW/REBIND: keeping operator static default via ${router} dev ${interface} metric ${if_metric}"
+            else
+                logmsg warn \
+                    "RENEW/REBIND: could not read static config; not removing default via ${router} dev ${interface}"
+                stale_still_present=1
+            fi
+            if_metric=$((if_metric + 1))
+            continue
+        fi
         logmsg info \
             "RENEW/REBIND: removing stale default via ${router} dev ${interface} metric ${if_metric}"
         ip -4 route del default via "${router}" dev "${interface}" \
@@ -167,11 +233,11 @@ if [ -n "$rfc3442_parse_ok" ] &&
     done
 fi
 
-# RFC3442 0/0: the rfc3442 hook owns that default. Prefix-only option 121
-# still uses option 3 (VyOS BOUND installs it). Parse failure: do not add.
-if [ -z "$rfc3442_parse_ok" ] ||
-    [ -n "$rfc3442_default_gws" ] ||
-    [ -z "$new_routers" ]; then
+# 02- installs a classless 0/0 only when option 121 changes. A same-lease
+# RENEW still restores an option-3 gateway that matches that default.
+# Prefix-only option 121 uses option 3 as before. Parse failure or no
+# option 3: do not add.
+if [ -z "$rfc3442_parse_ok" ] || [ -z "$new_routers" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
@@ -184,9 +250,35 @@ fi
 base_metric="${IF_METRIC:-210}"
 if_metric="$base_metric"
 for router in $new_routers; do
+    if [ -n "$rfc3442_default_gws" ]; then
+        # Only the option-3 gateway that is the RFC3442 default. 02-
+        # installs that route at IF_METRIC, not at the option-3 index.
+        rfc3442_owned=
+        for gw in $rfc3442_default_gws; do
+            if [ "$gw" = "$router" ]; then
+                rfc3442_owned=1
+                break
+            fi
+        done
+        if [ -z "$rfc3442_owned" ]; then
+            if_metric=$((if_metric + 1))
+            continue
+        fi
+        if_metric="$base_metric"
+    fi
     if _frr_default_present "${router}" "${if_metric}"; then
-        if_metric=$((if_metric + 1))
-        continue
+        # Backup distances are FRR-only. The primary is also a kernel
+        # route when the nexthop is up; status 1 is confirmed absent.
+        if [ "$if_metric" != "$base_metric" ]; then
+            if_metric=$((if_metric + 1))
+            continue
+        fi
+        _default_via_present "${router}"
+        kernel_st=$?
+        if [ "$kernel_st" -ne 1 ]; then
+            if_metric=$((if_metric + 1))
+            continue
+        fi
     fi
 
     logmsg info \
