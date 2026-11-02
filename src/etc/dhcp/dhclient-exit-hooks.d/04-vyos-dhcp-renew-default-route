@@ -59,10 +59,11 @@
 # same nexthop must not be touched.
 #
 # Adds still use the enter-hook ip() wrapper so FRR gets tag/distance.
-# After a stale-gateway delete, re-check the kernel with /usr/sbin/ip: if
-# that default is still present, skip the replacement add (otherwise the
-# new nexthop ECMP-joins the leftover). ip/jq inspect failure is the same
-# skip — do not treat "could not read the table" as "route gone".
+# After a stale-gateway delete, re-check the FRR line at that distance.
+# A kernel default via the same gateway is not that route: an operator
+# static at distance 1 still matches, and blocking on it skips the new
+# option-3 distances. If the FRR line remains, or vtysh cannot be read,
+# skip the replacement add.
 
 RUN="yes"
 
@@ -93,16 +94,32 @@ _default_via_present() {
     return 2
 }
 
-# FRR staticd already has 0/0 via $1 at distance $2 on $interface?
-# Same string as 03-vyos-ipwrapper iptovtysh. Kernel .metric is not this.
-_frr_default_present() {
+# FRR staticd 0/0 via $1 at distance $2 on $interface.
+# 0 = present, 1 = confirmed absent, 2 = vtysh failed.
+# Same string as 03-vyos-ipwrapper iptovtysh. Kernel .metric is not this,
+# and a kernel default via the same gateway can be another distance.
+_frr_default_status() {
     local gw="$1"
     local distance="$2"
-    local needle="ip route 0.0.0.0/0 ${gw} ${interface} tag 210 ${distance}"
+    local needle cfg grep_status
+    needle="ip route 0.0.0.0/0 ${gw} ${interface} tag 210 ${distance}"
     if [ -n "$VRF_OPTION" ]; then
         needle="${needle} ${VRF_OPTION}"
     fi
-    vtysh -c "show running-config no-header" 2>/dev/null | grep -Fqx "$needle"
+    cfg=$(vtysh -c "show running-config no-header" 2>/dev/null) || return 2
+    printf '%s\n' "$cfg" | grep -Fqx "$needle"
+    grep_status=$?
+    if [ "$grep_status" -le 1 ]; then
+        return "$grep_status"
+    fi
+    return 2
+}
+
+# True only when that FRR line is present. Inspect failure is not present.
+_frr_default_present() {
+    local st=0
+    _frr_default_status "$1" "$2" || st=$?
+    [ "$st" -eq 0 ]
 }
 
 # 0 = this route's static config has 0/0 via $1 at distance $2
@@ -279,17 +296,18 @@ if [ -n "$rfc3442_parse_ok" ] &&
         ip -4 route del default via "${router}" dev "${interface}" \
             metric "${if_metric}" >/dev/null 2>&1
         # Wrapper exit is not a gate (vtysh "no ip route" fails if already
-        # gone). Kernel table is: leftover still present → do not add a
-        # replacement (ECMP over old+new). Inspect failure is the same skip.
-        _default_via_present "${router}"
-        present_st=$?
+        # gone). The FRR line at this distance is the leftover that would
+        # ECMP-join a replacement. A kernel default via the same gateway
+        # can be an operator static at another distance.
+        present_st=0
+        _frr_default_status "${router}" "${if_metric}" || present_st=$?
         if [ "$present_st" -eq 0 ]; then
             logmsg warn \
-                "RENEW/REBIND: stale default still present via ${router} dev ${interface}"
+                "RENEW/REBIND: stale default still in FRR via ${router} dev ${interface} metric ${if_metric}"
             stale_still_present=1
         elif [ "$present_st" -eq 2 ]; then
             logmsg warn \
-                "RENEW/REBIND: failed to inspect stale default via ${router} dev ${interface}"
+                "RENEW/REBIND: failed to inspect FRR default via ${router} dev ${interface} metric ${if_metric}"
             stale_still_present=1
         fi
         if_metric=$((if_metric + 1))
