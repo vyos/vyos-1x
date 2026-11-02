@@ -1,0 +1,38 @@
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T9329: The InfluxDB output used to unconditionally skip verification of the
+# remote server certificate (`insecure_skip_verify = true`). Certificate
+# verification is now enabled by default and can be configured via the new
+# 'tls' node. Preserve the previous behavior for existing HTTPS endpoints by
+# explicitly setting 'tls insecure'.
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'monitoring', 'telegraf', 'influxdb']
+
+
+def migrate(config: ConfigTree) -> None:
+    url_path = base + ['url']
+    if not config.exists(url_path):
+        # Nothing to do
+        return
+
+    # Prevent migration for already enabled TLS
+    if config.exists(base + ['tls']):
+        return
+
+    url = config.return_value(url_path)
+    if url.lower().startswith('https://'):
+        config.set(base + ['tls', 'insecure'])

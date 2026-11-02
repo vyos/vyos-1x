@@ -1,0 +1,29 @@
+set interfaces ethernet eth0 offload gro
+set interfaces ethernet eth0 offload gso
+set interfaces ethernet eth0 offload sg
+set interfaces ethernet eth0 offload tso
+set interfaces loopback lo
+set service monitoring telegraf influxdb authentication organization 'vyos'
+set service monitoring telegraf influxdb authentication token 'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT=='
+set service monitoring telegraf influxdb port '8443'
+set service monitoring telegraf influxdb tls insecure
+set service monitoring telegraf influxdb url 'https://localhost'
+set service ntp allow-client address '127.0.0.0/8'
+set service ntp allow-client address '169.254.0.0/16'
+set service ntp allow-client address '10.0.0.0/8'
+set service ntp allow-client address '172.16.0.0/12'
+set service ntp allow-client address '192.168.0.0/16'
+set service ntp allow-client address '::1/128'
+set service ntp allow-client address 'fe80::/10'
+set service ntp allow-client address 'fc00::/7'
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set system config-management commit-revisions '100'
+set system console device @SERIAL_DEVICE@ kernel
+set system console device @SERIAL_DEVICE@ speed '@SERIAL_SPEED@'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'

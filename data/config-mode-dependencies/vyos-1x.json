@@ -91,6 +91,7 @@
         "haproxy": ["load-balancing_haproxy"],
         "https": ["service_https"],
         "ipsec": ["vpn_ipsec"],
+        "monitoring": ["service_monitoring_telegraf"],
         "openconnect": ["vpn_openconnect"],
         "rpki": ["protocols_rpki"],
         "ssh": ["service_ssh"],
