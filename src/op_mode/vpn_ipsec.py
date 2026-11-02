@@ -14,17 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import argparse
 
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_active
 
 SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
+IPSEC_SERVICE = 'strongswan.service'
 
 
 def get_peer_connections(peer, tunnel, return_all = False):
     search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti))[\s]*{{'
     matches = []
+    if not os.path.exists(SWANCTL_CONF):
+        return matches
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
@@ -35,24 +40,40 @@ def get_peer_connections(peer, tunnel, return_all = False):
     return matches
 
 
+def show_status():
+    if not is_systemd_service_active(IPSEC_SERVICE):
+        print('IPsec process not running')
+        return
+    call('swanctl --stats')
+
+
 def debug_peer(peer, tunnel):
     peer = peer.replace(':', '-')
+    ipsec_running = is_systemd_service_active(IPSEC_SERVICE)
     if not peer or peer == "all":
-        debug_commands = [
-            "ipsec statusall",
-            "swanctl -L",
-            "swanctl -l",
-            "swanctl -P",
+        debug_commands = []
+        if ipsec_running:
+            debug_commands = [
+                "swanctl --stats",
+                "swanctl -L",
+                "swanctl -l",
+                "swanctl -P",
+            ]
+        else:
+            print('IPsec process not running')
+        debug_commands += [
             "ip x sa show",
             "ip x policy show",
             "ip tunnel show",
             "ip address",
             "ip rule show",
             "ip route | head -100",
-            "ip route show table 220"
+            # charon creates table 220 only with its first route
+            "ip route show table all | grep -w 'table 220'"
         ]
         for debug_cmd in debug_commands:
-            print(f'\n### {debug_cmd} ###')
+            # call() output bypasses our buffer, flush to keep the order
+            print(f'\n### {debug_cmd} ###', flush=True)
             call(debug_cmd)
         return
 
@@ -65,9 +86,13 @@ def debug_peer(peer, tunnel):
         print('Peer not found, aborting')
         return
 
+    if not ipsec_running:
+        print('IPsec process not running')
+        return
+
+    call(f'swanctl --list-conns --ike {peer}')
     for conn in conns:
-        command = f'/usr/sbin/ipsec statusall | grep {conn}'
-        call(command)
+        call(f'swanctl --list-sas --ike {peer} --child {conn}')
 
 
 if __name__ == '__main__':
@@ -81,3 +106,5 @@ if __name__ == '__main__':
 
     if args.action == "vpn-debug":
         debug_peer(args.name, args.tunnel)
+    elif args.action == "status":
+        show_status()
