@@ -20,6 +20,7 @@ from unittest.mock import patch
 from vyos import ConfigError
 from vyos import frrender
 from vyos.frrender import FRRender
+from vyos.frrender import drop_conflicting_discard_routes
 
 # generate() only renders known protocols, so this renders an empty file but
 # still differs from the empty cache of a new instance
@@ -134,3 +135,79 @@ class TestFRRenderCache(TestCase):
             self.frr.apply()
         self.assertEqual(len(tries), 5)
         self.assertFalse(self.frr.generate(config))
+
+
+class TestDropConflictingDiscardRoutes(TestCase):
+    def drop(self, lines):
+        output, messages = drop_conflicting_discard_routes('\n'.join(lines))
+        return output.splitlines(), messages
+
+    def test_no_conflict(self):
+        lines = ['!',
+                 'ip route 0.0.0.0/0 blackhole 200',
+                 'ip route 0.0.0.0/0 pppoe0 tag 210 ',
+                 'ip route 10.0.0.0/8 blackhole',
+                 'ip route 10.0.0.0/8 192.0.2.1 tag 5 10',
+                 'ip mroute 224.1.0.0/24 eth0 1',
+                 '!']
+        self.assertEqual(self.drop(lines), (lines, []))
+
+    def test_pppoe_default_route(self):
+        # rendered without a distance, so both use distance 1
+        output, messages = self.drop(['ip route 0.0.0.0/0 blackhole',
+                                      'ip route 0.0.0.0/0 pppoe0 tag 210 '])
+        self.assertEqual(output, ['ip route 0.0.0.0/0 pppoe0 tag 210 '])
+        self.assertEqual(len(messages), 1)
+        self.assertIn('"ip route 0.0.0.0/0 blackhole"', messages[0])
+
+    def test_dhcp_default_route_distance(self):
+        output, _ = self.drop(['ip route 0.0.0.0/0 reject tag 5 210',
+                               'ip route 0.0.0.0/0 192.0.2.1 eth0 tag 210 210'])
+        self.assertEqual(output, ['ip route 0.0.0.0/0 192.0.2.1 eth0 tag 210 210'])
+
+    def test_explicit_default_distance(self):
+        output, _ = self.drop(['ipv6 route ::/0 blackhole 1',
+                               'ipv6 route ::/0 pppoe0 tag 210 '])
+        self.assertEqual(output, ['ipv6 route ::/0 pppoe0 tag 210 '])
+
+    def test_vrf(self):
+        # the default route of an interface in a VRF is rendered into it, with
+        # a double space after "ip"
+        lines = ['vrf red',
+                 ' ip route 0.0.0.0/0 blackhole 210',
+                 ' ip  route 0.0.0.0/0 192.0.2.1 eth1 tag 210 210',
+                 'exit-vrf',
+                 '!',
+                 'ip route 0.0.0.0/0 blackhole 210']
+        output, messages = self.drop(lines)
+        self.assertEqual(output, [lines[0], lines[2], lines[3], lines[4], lines[5]])
+        self.assertIn('in VRF "red"', messages[0])
+
+    def test_table(self):
+        lines = ['ip route 0.0.0.0/0 blackhole table 100',
+                 'ip route 0.0.0.0/0 192.0.2.1 eth0 table 100',
+                 'ip route 0.0.0.0/0 blackhole table 200',
+                 'ip route 0.0.0.0/0 pppoe0 tag 210 ']
+        output, messages = self.drop(lines)
+        self.assertEqual(output, lines[1:])
+        self.assertIn('in table 100', messages[0])
+
+    def test_options(self):
+        # option values must not be taken for the distance
+        lines = ['ip route 10.0.0.0/8 blackhole tag 20',
+                 'ip route 10.0.0.0/8 192.0.2.1 bfd multi-hop source 192.0.2.10 '
+                 'profile 20 nexthop-vrf blue',
+                 'ip route 10.1.0.0/16 blackhole 20',
+                 'ip route 10.1.0.0/16 eth0 tag 20 30']
+        output, _ = self.drop(lines)
+        self.assertEqual(output, lines[1:])
+
+    def test_spelling(self):
+        # FRR stores both as the same route
+        output, _ = self.drop(['ipv6 route 2001:db8::/32 blackhole',
+                               'ipv6 route 2001:0db8::1/32 2001:db8::1'])
+        self.assertEqual(output, ['ipv6 route 2001:0db8::1/32 2001:db8::1'])
+
+    def test_only_discard_routes(self):
+        lines = ['ip route 10.0.0.0/8 blackhole', 'ip route 10.0.0.0/8 reject 5']
+        self.assertEqual(self.drop(lines), (lines, []))

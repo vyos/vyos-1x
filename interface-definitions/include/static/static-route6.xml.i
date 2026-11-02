@@ -30,7 +30,7 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/static/static-route-distance.xml.i>
+        #include <include/static/static-route-distance-default.xml.i>
         #include <include/static/static-route-segments.xml.i>
         #include <include/static/static-route-vrf.xml.i>
       </children>
@@ -48,7 +48,7 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/static/static-route-distance.xml.i>
+        #include <include/static/static-route-distance-default.xml.i>
         #include <include/generic-interface.xml.i>
         #include <include/static/static-route-segments.xml.i>
         #include <include/static/static-route-vrf.xml.i>

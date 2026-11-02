@@ -19,6 +19,8 @@ from json import loads
 from socket import AF_INET
 from socket import AF_INET6
 from socket import AF_UNSPEC
+from socket import inet_ntop
+from socket import inet_pton
 from vyos.utils.process import cmdl
 
 def _are_same_ip(one, two):
@@ -994,3 +996,22 @@ def fqdn_resolve(
             addresses = [item[4][0] for item in res]
 
     return frozenset(addresses) if addresses else None
+
+def normalize_prefix(prefix: str) -> str:
+    """
+    Return the prefix as FRR stores it: host bits cleared and the address in
+    its canonical notation. A prefix that cannot be parsed is returned as is.
+    inet_pton() is what FRR parses a prefix with, and is several times faster
+    than the ipaddress module.
+    """
+    address, _, length = prefix.partition('/')
+    family, bits = (AF_INET6, 128) if ':' in address else (AF_INET, 32)
+    try:
+        length = int(length)
+        value = int.from_bytes(inet_pton(family, address), 'big')
+    except (OSError, ValueError):
+        return prefix
+    if not 0 <= length <= bits:
+        return prefix
+    value &= ~((1 << (bits - length)) - 1)
+    return f'{inet_ntop(family, value.to_bytes(bits // 8, "big"))}/{length}'

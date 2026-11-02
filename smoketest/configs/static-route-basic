@@ -53,6 +53,12 @@ protocols {
                 }
             }
         }
+        route 192.0.2.0/24 {
+            blackhole {
+            }
+            next-hop 198.51.100.1 {
+            }
+        }
         route6 2001:db8:1::/48 {
             next-hop fe80::1 {
                 bfd {
@@ -82,6 +88,21 @@ protocols {
                 bfd {
                 }
                 interface eth0.203
+            }
+        }
+        route6 2001:db8:4::/48 {
+            next-hop fe80::1 {
+                interface eth0.203
+            }
+            reject {
+            }
+        }
+        table 100 {
+            route 203.0.113.0/24 {
+                blackhole {
+                }
+                reject {
+                }
             }
         }
     }

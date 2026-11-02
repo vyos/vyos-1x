@@ -47,6 +47,75 @@ def debug(message):
         return
     print(message)
 
+# options of a static route in staticd.frr.j2 which are followed by a value
+static_route_options = ['tag', 'table', 'nexthop-vrf', 'segments', 'source', 'profile']
+
+def drop_conflicting_discard_routes(output: str) -> tuple:
+    """
+    FRR staticd refuses a blackhole or reject route next to another route of
+    the same prefix and distance, and frr-reload.py then loses every static
+    route of that reload. protocols_static.py refuses this for static routes,
+    but the default route of a DHCP or PPPoE interface changes without a
+    commit of the static routes. Drop the blackhole and reject routes of such
+    a prefix from the rendered configuration.
+
+    Returns the configuration and a message for every dropped route.
+    """
+    from vyos.utils.network import normalize_prefix
+
+    lines = output.splitlines()
+    routes = {}
+    vrf = None
+    for index, line in enumerate(lines):
+        tokens = line.split()
+        if len(tokens) == 2 and tokens[0] == 'vrf':
+            vrf = tokens[1]
+            continue
+        if tokens == ['exit-vrf']:
+            vrf = None
+            continue
+        # <afi> route <prefix> <next-hop> [options]
+        if len(tokens) < 4 or tokens[0] not in ['ip', 'ipv6'] or tokens[1] != 'route':
+            continue
+
+        table = None
+        distance = None
+        options = iter(tokens[4:])
+        for token in options:
+            if token in static_route_options:
+                value = next(options, None)
+                if token == 'table':
+                    table = value
+            elif token.isdigit() and distance is None:
+                distance = int(token)
+        # FRR uses distance 1 if none is given
+        key = (vrf, tokens[0], table, normalize_prefix(tokens[2]), distance or 1)
+        routes.setdefault(key, []).append((index, tokens[3] in ['blackhole', 'reject']))
+
+    drop = []
+    messages = []
+    for (vrf, _, table, prefix, distance), entries in routes.items():
+        discards = [index for index, discard in entries if discard]
+        if not discards or len(discards) == len(entries):
+            continue
+        context = ''
+        if vrf:
+            context += f' in VRF "{vrf}"'
+        if table:
+            context += f' in table {table}'
+        for index in discards:
+            drop.append(index)
+            messages.append(f'Static route "{lines[index].strip()}"{context} not '
+                            f'applied, FRR refuses a blackhole or reject route '
+                            f'next to another route of prefix {prefix} with the '
+                            f'same distance {distance}')
+
+    if not drop:
+        return output, messages
+    drop = set(drop)
+    output = os.linesep.join(line for index, line in enumerate(lines) if index not in drop)
+    return output, messages
+
 frr_config_file: str = '/run/frr/config/vyos.frr.conf'
 # Configuration of the last successful reload, for consumers which have no
 # cached configuration of their own
@@ -952,6 +1021,17 @@ class FRRender:
 
         # remove any accidentally added empty newline to not confuse FRR
         output = os.linesep.join([s for s in output.splitlines() if s])
+
+        # T9482: the default route of a DHCP or PPPoE interface can collide with
+        # a blackhole or reject route, FRR would refuse the whole reload
+        output, errors = drop_conflicting_discard_routes(output)
+        if errors:
+            from systemd import journal
+            for error in errors:
+                debug(error)
+                # journal fields must be upper case, else they are dropped
+                journal.send(error, PRIORITY=journal.LOG_ERR,
+                             SYSLOG_IDENTIFIER='vyos-frrender')
 
         if '!!' in output:
             raise ConfigError('FRR configuration contains "!!" which is not allowed')
