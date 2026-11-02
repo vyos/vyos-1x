@@ -249,6 +249,15 @@ def get_config(config=None):
         ):
             openvpn['tun_mtu'] = dco_default_mtu
 
+    # Before tls-auth was rendered in site-to-site mode, a raw option was the
+    # only way to use the key. Left without a direction it is bidirectional,
+    # but OpenVPN keeps a direction rendered ahead of it - so render none.
+    if openvpn.get('mode') == 'site-to-site':
+        for option in dict_search('openvpn_option', openvpn) or []:
+            tmp = option.split()
+            if tmp and tmp[0].lstrip('-') == 'tls-auth':
+                openvpn['raw_tls_auth'] = True
+
     # Check vrf membership, to ensure firewall is updated
     if is_vrf_changed(conf, ifname):
         set_dependents('firewall', conf)
@@ -449,7 +458,7 @@ def verify_pki(openvpn):
                 if not verify_ca_chain(sorted_chain, pki['ca']):
                     raise ConfigError(f'CA certificates are not a valid chain')
 
-        if mode != 'client' and 'auth_key' not in tls:
+        if mode != 'client':
             if 'certificate' not in tls:
                 raise ConfigError(f'Missing "tls certificate" on openvpn interface {interface}')
 

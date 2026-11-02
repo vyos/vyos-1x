@@ -200,6 +200,12 @@ dh none
 tls-auth /run/openvpn/{{ ifname }}_auth.key 1
 {%         elif mode == 'server' %}
 tls-auth /run/openvpn/{{ ifname }}_auth.key 0
+{%         elif mode == 'site-to-site' and raw_tls_auth is not vyos_defined %}
+{%             if tls.role is vyos_defined('active') %}
+tls-auth /run/openvpn/{{ ifname }}_auth.key 1
+{%             elif tls.role is vyos_defined('passive') %}
+tls-auth /run/openvpn/{{ ifname }}_auth.key 0
+{%             endif %}
 {%         endif %}
 {%     endif %}
 {%     if tls.role is vyos_defined('active') %}
