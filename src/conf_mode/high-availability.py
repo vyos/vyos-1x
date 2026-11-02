@@ -168,10 +168,13 @@ def verify(ha):
                 raise ConfigError(f'Cannot set both port and fwmark for virtual-server "{vs}"')
             if 'real_server' not in vs_config:
                 raise ConfigError(f'Real-server ip is required but not set for virtual-server "{vs}"')
-        # Real-server
-        for rs, rs_config in vs_config['real_server'].items():
-            if 'port' not in rs_config:
-                raise ConfigError(f'Port is required but not set for virtual-server "{vs}" real-server "{rs}"')
+
+            # Real-server
+            for rs, rs_config in vs_config['real_server'].items():
+                if 'port' not in rs_config:
+                    raise ConfigError(
+                        f'Port is required but not set for virtual-server "{vs}" real-server "{rs}"'
+                    )
 
 
 def _validate_health_check(group, group_config):

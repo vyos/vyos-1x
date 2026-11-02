@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig.vrrp import VRRP
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
@@ -152,6 +153,36 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'real_server {rs} {rport}', config)
             self.assertIn(f'{proto.upper()}_CHECK', config)
             self.assertIn(f'connect_timeout {connection_timeout}', config)
+
+    def test_03_ha_virtual_server_real_server_port(self):
+        vserver_base = base_path + ['virtual-server']
+
+        # Real-server port is verified for every virtual-server, not only
+        # the last one - serv-a is invalid, serv-b is valid
+        self.cli_set(vserver_base + ['serv-a', 'address', '203.0.113.111'])
+        self.cli_set(vserver_base + ['serv-a', 'port', '2222'])
+        self.cli_set(vserver_base + ['serv-a', 'real-server', '192.0.2.21'])
+
+        self.cli_set(vserver_base + ['serv-b', 'address', '203.0.113.112'])
+        self.cli_set(vserver_base + ['serv-b', 'port', '3333'])
+        self.cli_set(
+            vserver_base + ['serv-b', 'real-server', '192.0.2.31', 'port', '22']
+        )
+
+        # real-server port is missing on the first virtual-server
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # With the port set on serv-a the config is valid and commits
+        self.cli_set(
+            vserver_base + ['serv-a', 'real-server', '192.0.2.21', 'port', '22']
+        )
+        self.cli_commit()
+
+        # Every real-server must be rendered with its port
+        config = read_file(KEEPALIVED_CONF)
+        self.assertIn('real_server 192.0.2.21 22', config)
+        self.assertIn('real_server 192.0.2.31 22', config)
 
 
 if __name__ == '__main__':
