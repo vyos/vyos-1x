@@ -1945,17 +1945,8 @@ class Interface(Control):
                 # Kill exit is not a gate: systemctl kill fails when already
                 # inactive. Do not systemctl stop: ExecStop is dhclient -x and
                 # waits DefaultTimeoutStopSec after SIGKILL (smoketest hang).
-                rc_cmd(
-                    [
-                        'systemctl',
-                        'kill',
-                        '--kill-whom=all',
-                        '-s',
-                        'SIGKILL',
-                        systemd_service,
-                    ],
-                    netns=netns,
-                )
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
 
                 if not has_lease:
                     # No DHCPRELEASE to send. Still masked+killed so
@@ -2115,17 +2106,8 @@ class Interface(Control):
                 rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
                 # Kill while still masked so Restart=always cannot start a
                 # replacement that would reacquire the lease (CodeRabbit).
-                rc_cmd(
-                    [
-                        'systemctl',
-                        'kill',
-                        '--kill-whom=all',
-                        '-s',
-                        'SIGKILL',
-                        systemd_service,
-                    ],
-                    netns=netns,
-                )
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
             finally:
                 rc_cmd(
                     ['systemctl', 'unmask', '--runtime', systemd_service], netns=netns
@@ -2218,17 +2200,8 @@ class Interface(Control):
                 # is dhclient -x and can block after SIGKILL. Mask so
                 # Restart=always cannot start a replacement.
                 rc_cmd(['systemctl', 'mask', '--runtime', systemd_service], netns=netns)
-                rc_cmd(
-                    [
-                        'systemctl',
-                        'kill',
-                        '--kill-whom=all',
-                        '-s',
-                        'SIGKILL',
-                        systemd_service,
-                    ],
-                    netns=netns,
-                )
+                rc_cmd(['systemctl', 'kill', '--kill-whom=all', '-s', 'SIGKILL',
+                        systemd_service], netns=netns)
             try:
                 # Exact cmdline match (eth0 is not eth0.100). Kill every
                 # remaining client, not only the first PID.
