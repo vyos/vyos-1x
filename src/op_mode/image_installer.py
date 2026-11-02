@@ -73,6 +73,8 @@ from vyos.utils.file import write_file
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
 from vyos.utils.process import rc_cmd
+from vyos.utils.system import get_secure_boot_state
+from vyos.utils.system import verify_secure_boot_signature
 from vyos.version import get_version_data
 
 # define text messages
@@ -89,6 +91,8 @@ MSG_ERR_MISSING_ARCHITECTURE: str = 'The new image version data does not specify
 MSG_ERR_MISSING_FLAVOR: str = 'The new image version data does not specify flavor, cannot check compatibility (is it a legacy release image?)'
 MSG_ERR_CORRUPT_CURRENT_IMAGE: str = 'Version data in the current image is malformed: missing flavor and/or architecture fields. Upgrade compatibility cannot be checked.'
 MSG_ERR_UNSUPPORTED_SIGNATURE_TYPE: str = 'Unsupported signature type, signature cannot be verified.'
+MSG_ERR_MISSING_KERNEL: str = 'The new image does not contain a Linux Kernel.'
+MSG_ERR_SECURE_BOOT_SIGNATURE: str = 'Secure Boot is enabled, but the Linux Kernel of the new image is not signed by an enrolled key. The new image would not boot.'
 MSG_INFO_INSTALL_WELCOME: str = 'Welcome to VyOS installation!\nThis command will install VyOS to your permanent storage.'
 MSG_INFO_INSTALL_EXIT: str = 'Exiting from VyOS installation'
 MSG_INFO_INSTALL_SUCCESS: str = 'The image installed successfully; please reboot now.'
@@ -954,6 +958,29 @@ def validate_compatibility(iso_path: str, force: bool = False) -> None:
         cleanup()
         exit(MSG_INFO_INSTALL_EXIT)
 
+def validate_secure_boot(iso_path: str, force: bool = False) -> None:
+    """Check that the Linux Kernel of the new image can be booted with Secure Boot
+
+    Args:
+        iso_path (str): a path to the mounted ISO image
+    """
+    kernel = Path(f'{iso_path}/live/vmlinuz')
+    if not kernel.is_file():
+        print(MSG_ERR_MISSING_KERNEL)
+        cleanup()
+        exit(MSG_INFO_INSTALL_EXIT)
+
+    if not get_secure_boot_state():
+        return
+
+    if not verify_secure_boot_signature(str(kernel)):
+        print(MSG_ERR_SECURE_BOOT_SIGNATURE)
+        if force:
+            Warning('Secure Boot signature check overridden by --force')
+            return
+        cleanup()
+        exit(MSG_INFO_INSTALL_EXIT)
+
 def install_image() -> None:
     """Install an image to a disk
     """
@@ -1292,6 +1319,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             cleanup()
             exit('Image checksum verification failed.')
 
+        print('Validating Secure Boot signature')
+        validate_secure_boot(DIR_ISO_MOUNT, force=force)
+
         # mount rootfs (to get a system version)
         Path(DIR_ROOTFS_SRC).mkdir(mode=0o755, parents=True)
         disk.partition_mount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs',
@@ -1455,7 +1485,7 @@ def parse_arguments() -> Namespace:
         help='a path (HTTP or local file) to an image that needs to be installed'
     )
     parser.add_argument('--force', action='store_true',
-        help='Ignore flavor compatibility requirements.'
+        help='Ignore flavor compatibility and Secure Boot signature requirements.'
     )
     # parser.add_argument('--image_new_name', help='a new name for image')
     args: Namespace = parser.parse_args()

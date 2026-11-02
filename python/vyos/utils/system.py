@@ -213,3 +213,24 @@ def get_secure_boot_certificates(kernel: str='/boot/vmlinuz') -> list:
             subject = None
 
     return certificates
+
+def verify_secure_boot_signature(kernel: str) -> bool:
+    """
+    Return True if the given Linux Kernel image is signed by one of the
+    Machine Owner Keys (MOK) enrolled in the UEFI firmware, which is what
+    shim checks before the Kernel is booted.
+    """
+    from glob import glob
+    from tempfile import TemporaryDirectory
+    with TemporaryDirectory() as tmp_dir:
+        # mokutil always exports into the current working directory
+        run(['mokutil', '--export'], cwd=tmp_dir, capture_output=True)
+        for der in sorted(glob(f'{tmp_dir}/MOK-*.der')):
+            pem = f'{der}.pem'
+            if run(['openssl', 'x509', '-inform', 'DER', '-in', der, '-out', pem],
+                   capture_output=True).returncode != 0:
+                continue
+            if run(['sbverify', '--cert', pem, kernel],
+                   capture_output=True).returncode == 0:
+                return True
+    return False
