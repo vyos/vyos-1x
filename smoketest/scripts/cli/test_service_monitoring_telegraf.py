@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -24,7 +25,9 @@ from vyos.utils.file import read_file
 
 PROCESS_NAME = 'telegraf'
 TELEGRAF_CONF = '/run/telegraf/telegraf.conf'
+TELEGRAF_CERT_DIR = '/run/telegraf/certs'
 base_path = ['service', 'monitoring', 'telegraf']
+pki_base = ['pki']
 prometheus_base_path = ['service', 'monitoring', 'prometheus']
 org = 'log@in.local'
 token = 'GuRJc12tIzfjnYdKRAIYbxdWd2aTpOT9PVYNddzDnFV4HkAcD7u7-kndTFXjGuXzJN6TTxmrvPODB4mnFcseDV=='
@@ -32,6 +35,38 @@ port = '8888'
 url = 'https://foo.local'
 bucket = 'main'
 inputs = ['cpu', 'disk', 'mem', 'net', 'system', 'kernel', 'interrupts', 'syslog']
+
+ca_cert_name = 'telegraf_ca'
+ca_cert = """
+MIIBqTCCAU+gAwIBAgIQGYypTyo8m8+//pir9JcJ/DAKBggqhkjOPQQDAjAgMQ8w
+DQYDVQQKEwZ0ZXN0ZXIxDTALBgNVBAMTBHRlc3QwIBcNMjYxMTAyMDgzODM4WhgP
+MjEyNjEwMDkwOTM4MzhaMCAxDzANBgNVBAoTBnRlc3RlcjENMAsGA1UEAxMEdGVz
+dDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPljKF03H5AEFZxlS6/FUoPUpGxB
+vi6fk6vg6fheYJ18K0ktIsymAc3bF90ixkRMGjiDlmbrIXaWQ6JYWGW5XGejaTBn
+MA4GA1UdDwEB/wQEAwICpDATBgNVHSUEDDAKBggrBgEFBQcDATAPBgNVHRMBAf8E
+BTADAQH/MB0GA1UdDgQWBBTbpL33CaFEiBDFWEpthItzZRSI2TAQBgNVHREECTAH
+ggVsb2NhbDAKBggqhkjOPQQDAgNIADBFAiBDPInnpAXq3GpTUWx0zW8CeQArRE/M
+K0G/m43nt0UVAwIhAPIE7I8tvkq0feemYOoXh5Cfz4fpSK+VrCh7p5Vs92WZ
+"""
+
+client_cert_name = 'telegraf_client'
+client_cert = """
+MIIBqDCCAU6gAwIBAgIRAKXAefczQUevhL4DnMMK3RQwCgYIKoZIzj0EAwIwKzEP
+MA0GA1UEChMGdGVzdGVyMRgwFgYDVQQDEw9sb2dzLnZ5b3MubG9jYWwwIBcNMjYx
+MTAyMDgzOTEwWhgPMjA3NjEwMjAwOTM5MTBaMCsxDzANBgNVBAoTBnRlc3RlcjEY
+MBYGA1UEAxMPbG9ncy52eW9zLmxvY2FsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcD
+QgAEjAcVO/xkZZ0l5TKVvBEcAXFf4Rhtq7LXC/sQAKCmA97vRd8WPASmFFQQbHWd
+sXKWVmdRJe7vATajAgC3sR9Tr6NRME8wDgYDVR0PAQH/BAQDAgWgMBMGA1UdJQQM
+MAoGCCsGAQUFBwMBMAwGA1UdEwEB/wQCMAAwGgYDVR0RBBMwEYIPbG9ncy52eW9z
+LmxvY2FsMAoGCCqGSM49BAMCA0gAMEUCIG9Efm57FEBSkDSP0rz6oliTe1MLEYG1
+leRFR8qdpjSoAiEAhkFJc4iA9km1rnz1rXG1OaALsQhVzwaaH4Zc6oZirl8=
+"""
+
+client_cert_key = """
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg3RyGlV3TOLgwEWso
+PzavYp12RrGdbhxVDTl5b9+LDtWhRANCAASMBxU7/GRlnSXlMpW8ERwBcV/hGG2r
+stcL+xAAoKYD3u9F3xY8BKYUVBBsdZ2xcpZWZ1El7u8BNqMCALexH1Ov
+"""
 
 class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -276,6 +311,97 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_discard()
+
+    def test_09_influxdb_tls(self):
+        # T9329: InfluxDB output must be able to use the on-box PKI to
+        # authenticate the remote endpoint
+
+        server_name = 'logs.vyos.local'
+        ca_file = f'{TELEGRAF_CERT_DIR}/influxdb-ca.pem'
+        cert_file = f'{TELEGRAF_CERT_DIR}/influxdb-cert.pem'
+        key_file = f'{TELEGRAF_CERT_DIR}/influxdb-cert.key'
+
+        ca_path = pki_base + ['ca', ca_cert_name]
+        cert_path = pki_base + ['certificate', client_cert_name]
+        self.cli_set(ca_path + ['certificate', ca_cert.replace('\n', '')])
+        self.cli_set(cert_path + ['certificate', client_cert.replace('\n', '')])
+        self.cli_set(cert_path + ['private', 'key', client_cert_key.replace('\n', '')])
+
+        self.basic_influxdb_setup()
+
+        tls_path = base_path + ['influxdb', 'tls']
+
+        # Referenced PKI objects must exist
+        self.cli_set(tls_path + ['ca-certificate', 'not-existing'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(tls_path + ['ca-certificate', ca_cert_name])
+        self.cli_set(tls_path + ['certificate', 'not-existing'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(tls_path + ['certificate', client_cert_name])
+        self.cli_set(tls_path + ['server-name', server_name])
+
+        # 'ca-certificate' and 'no-verify' are mutually exclusive
+        self.cli_set(tls_path + ['no-verify'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(tls_path + ['no-verify'])
+
+        # Verify that TLS options have no effect as 'url' does not use HTTPS
+        url_http = url.replace('https://', 'http://')
+        self.cli_set(base_path + ['influxdb', 'url', url_http])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['influxdb', 'url', url])
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn(f'tls_ca = "{ca_file}"', config)
+        self.assertIn(f'tls_cert = "{cert_file}"', config)
+        self.assertIn(f'tls_key = "{key_file}"', config)
+        self.assertIn(f'tls_server_name = "{server_name}"', config)
+        self.assertNotIn('insecure_skip_verify', config)
+        for file in [ca_file, cert_file, key_file]:
+            with self.subTest(file=file):
+                self.assertTrue(os.path.isfile(file))
+                self.assertGreater(os.stat(file).st_size, 0)
+
+        # PKI objects in use must not be deleted
+        self.cli_delete(pki_base + ['ca', ca_cert_name])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Backwards compatibility: skip verification if no TLS options are set
+        self.cli_delete(tls_path)
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn('insecure_skip_verify = true', config)
+        self.assertNotIn('tls_ca', config)
+        self.assertNotIn('tls_cert', config)
+        self.assertNotIn('tls_key', config)
+        for file in [ca_file, cert_file, key_file]:
+            with self.subTest(file=file):
+                self.assertFalse(os.path.exists(file))
+
+        # Only server-name set - verification enabled using system CA store
+        self.cli_delete(tls_path)
+        self.cli_set(tls_path + ['server-name', server_name])
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn(f'tls_server_name = "{server_name}"', config)
+        self.assertNotIn('insecure_skip_verify', config)
+
+        self.cli_delete(ca_path)
+        self.cli_delete(cert_path)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

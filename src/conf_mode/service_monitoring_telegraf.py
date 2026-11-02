@@ -23,10 +23,20 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import is_node_changed
+from vyos.configverify import verify_pki_ca_certificate
+from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
+from vyos.pki import encode_certificate
+from vyos.pki import find_chain
+from vyos.pki import load_certificate
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.convert import human_to_seconds
+from vyos.utils.dict import dict_search_args
+from vyos.utils.file import makedir
+from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
@@ -35,11 +45,122 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-cache_dir = f'/etc/telegraf/.cache'
-config_telegraf = f'/run/telegraf/telegraf.conf'
+cache_dir = '/etc/telegraf/.cache'
+config_dir = '/run/telegraf'
+cert_dir = f'{config_dir}/certs'
+config_telegraf = f'/{config_dir}/telegraf.conf'
 custom_scripts_dir = '/etc/telegraf/custom_scripts'
 syslog_telegraf = '/etc/rsyslog.d/50-telegraf.conf'
 systemd_override = '/run/systemd/system/telegraf.service.d/10-override.conf'
+
+# Output plugins (CLI node names, mangled) supporting the 'tls' node
+# defined in 'include/monitoring/telegraf-output-tls.xml.i'
+supported_tls_outputs = ['influxdb']
+
+
+def _cleanup_tls_certs():
+    if os.path.isdir(cert_dir):
+        rmtree(cert_dir, ignore_errors=True)
+
+
+def _verify_tls(monitoring: dict, output: str) -> None:
+    """Verify the common 'tls' node of a Telegraf output plugin"""
+
+    tls = dict_search_args(monitoring, output, 'tls')
+    if not tls:
+        return
+
+    cli_output = output.replace('_', '-')
+    if 'no_verify' in tls and 'ca_certificate' in tls:
+        raise ConfigError(
+            f'Telegraf {cli_output} TLS options "ca-certificate" '
+            'and "no-verify" are mutually exclusive!'
+        )
+
+    if 'ca_certificate' in tls:
+        verify_pki_ca_certificate(monitoring, tls['ca_certificate'])
+
+    if 'certificate' in tls:
+        verify_pki_certificate(
+            monitoring, tls['certificate'], no_password_protected=True
+        )
+
+    url = dict_search_args(monitoring, output, 'url')
+    if url and not url.lower().startswith('https://'):
+        raise ConfigError(
+            f'Telegraf {cli_output} TLS options have no effect as "url" does not use HTTPS!'
+        )
+
+
+def _client_certificate_chain(monitoring: dict, cert_name: str) -> str:
+    """
+    Return the PEM encoded client certificate followed by all intermediate CA
+    certificates found in the PKI configuration.
+    """
+    pki_cert = monitoring['pki']['certificate'][cert_name]
+    leaf = load_certificate(pki_cert['certificate'])
+
+    ca_certs = set()
+    for ca_config in (dict_search_args(monitoring, 'pki', 'ca') or {}).values():
+        ca_cert = load_certificate(ca_config.get('certificate', ''))
+        if ca_cert:
+            ca_certs.add(ca_cert)
+
+    chain = find_chain(leaf, ca_certs)
+    return '\n'.join(encode_certificate(cert) for cert in chain)
+
+
+def _generate_tls(monitoring: dict, output: str):
+    """
+    Write PKI objects referenced by the 'tls' node of a Telegraf output plugin
+    to disk and store the resulting file paths in the config dict for the
+    template engine.
+    """
+
+    tls = dict_search_args(monitoring, output, 'tls')
+    if not tls:
+        return
+
+    prefix = os.path.join(cert_dir, output.replace('_', '-'))
+
+    user = group = 'telegraf'
+    owner = dict(user=user, group=group)
+    # The file's owner can read and write to the file, while everyone else can only read it
+    cert_mode = 0o644
+    # The owner can read and write the file
+    key_mode = 0o600
+
+    if 'ca_certificate' in tls:
+        ca_name = tls['ca_certificate']
+        pki_ca = monitoring['pki']['ca'][ca_name]
+        tls['ca_certificate_file'] = f'{prefix}-ca.pem'
+        write_file(
+            tls['ca_certificate_file'],
+            wrap_certificate(pki_ca['certificate']),
+            mode=cert_mode,
+            **owner,
+        )
+
+    if 'certificate' in tls:
+        cert_name = tls['certificate']
+        pki_cert = monitoring['pki']['certificate'][cert_name]
+        tls['certificate_file'] = f'{prefix}-cert.pem'
+        tls['certificate_key_file'] = f'{prefix}-cert.key'
+
+        # Include intermediate CA certificates, otherwise mutual TLS fails if
+        # the server only trusts the root CA
+        write_file(
+            tls['certificate_file'],
+            _client_certificate_chain(monitoring, cert_name),
+            mode=cert_mode,
+            **owner,
+        )
+        write_file(
+            tls['certificate_key_file'],
+            wrap_private_key(pki_cert['private']['key']),
+            mode=key_mode,
+            **owner,
+        )
 
 def get_nft_filter_chains():
     """ Get nft chains for table filter """
@@ -74,9 +195,13 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    monitoring = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                      get_first_key=True,
-                                      no_tag_node_value_mangle=True)
+    monitoring = conf.get_config_dict(
+        base,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_pki=True,
+    )
 
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: monitoring.update({'restart_required': {}})
@@ -262,9 +387,17 @@ def verify(monitoring):
                 'same VRF for FRR metrics to be relayed locally!'
             )
 
+    # Verify TLS settings of all outputs supporting them
+    for output in supported_tls_outputs:
+        _verify_tls(monitoring, output)
+
     return None
 
 def generate(monitoring):
+    # Re-create PKI files referenced by output plugins - always start from
+    # an empty directory so no stale certificates/keys are left behind
+    _cleanup_tls_certs()
+
     if not monitoring:
         # Delete config and systemd files
         config_files = [config_telegraf, systemd_override, syslog_telegraf]
@@ -277,6 +410,12 @@ def generate(monitoring):
             rmtree(cache_dir, ignore_errors=True)
 
         return None
+
+    # Telegraf must own its runtime directory (e.g. for the PID file), ensure
+    # it is created with proper ownership before the certificate directory
+    makedir(config_dir, user='telegraf', group='telegraf')
+    for output in supported_tls_outputs:
+        _generate_tls(monitoring, output)
 
     # Create telegraf cache dir
     if not os.path.exists(cache_dir):

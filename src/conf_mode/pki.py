@@ -103,6 +103,10 @@ sync_search = [
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['service', 'stunnel'],
+    },
+    {
+        'keys': ['certificate', 'ca_certificate'],
+        'path': ['service', 'monitoring', 'telegraf'],
     }
 ]
 
