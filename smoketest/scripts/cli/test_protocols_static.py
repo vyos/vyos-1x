@@ -1018,10 +1018,15 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         )
         self.assert_in_frrconfig(route_str)
 
-        cmdl([
-            'vtysh', '-c', 'configure terminal',
-            '-c', f'no ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}',
-        ])
+        cmdl(
+            [
+                'vtysh',
+                '-c',
+                'configure terminal',
+                '-c',
+                f'no ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}',
+            ]
+        )
 
         def default_gone():
             frrconfig = self.getFRRconfig()
@@ -1040,12 +1045,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             out = cmdl(['/usr/sbin/ip', '-4', 'route', 'show', 'default'])
             return router in out and interface in out
 
-        result, _ = self.wait_for_result(
-            kernel_has_default, True, pause=1, timeout=30
-        )
-        self.assertTrue(
-            result, 'IPv4 default not reinstalled after RENEW (T9085)'
-        )
+        result, _ = self.wait_for_result(kernel_has_default, True, pause=1, timeout=30)
+        self.assertTrue(result, 'IPv4 default not reinstalled after RENEW (T9085)')
 
         self.cli_delete(interface_path + ['address'])
         self.cli_commit()
