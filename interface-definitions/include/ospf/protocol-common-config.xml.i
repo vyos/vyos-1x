@@ -167,12 +167,7 @@
                 </constraint>
               </properties>
             </leafNode>
-            <leafNode name="no-summary">
-              <properties>
-                <help>Do not inject inter-area routes into the stub</help>
-                <valueless/>
-              </properties>
-            </leafNode>
+            #include <include/ospfv3/no-summary.xml.i>
           </children>
         </node>
       </children>
