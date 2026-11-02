@@ -1053,6 +1053,103 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         while process_named_running('dhclient', cmdline=interface, timeout=10):
             sleep(0.250)
 
+    def test_13_dhcp_renew_reinstalls_kernel_only_loss(self):
+        # T9085: FRR still has the default line and the kernel route is
+        # gone. An identical vtysh add does not call static_install_path.
+        # `ip route del` of zebra's own proto is put back (no
+        # --allow_delete). Replace with proto boot, which is not a
+        # selfroute, then delete that. The FRR line stays.
+        if not self.running_in_smoketest_harness():
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', interface]
+        default_distance = default_value(
+            interface_path + ['dhcp-options', 'default-route-distance']
+        )
+        self.cli_set(interface_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        router = self.wait_for_dhcp_router(interface)
+        route_str = (
+            f'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}'
+        )
+        self.assert_in_frrconfig(route_str)
+
+        cmdl(
+            [
+                '/usr/sbin/ip',
+                '-4',
+                'route',
+                'replace',
+                'default',
+                'via',
+                router,
+                'dev',
+                interface,
+                'proto',
+                'boot',
+                'metric',
+                '20',
+            ]
+        )
+
+        def boot_route_installed():
+            out = cmdl(['/usr/sbin/ip', '-4', 'route', 'show', 'default'])
+            return 'proto boot' in out and router in out and interface in out
+
+        installed, _ = self.wait_for_result(
+            boot_route_installed, True, pause=1, timeout=10
+        )
+        self.assertTrue(
+            installed,
+            'zebra put the DHCP default back after proto boot replace',
+        )
+        self.assertIn(route_str, self.getFRRconfig())
+
+        cmdl(
+            [
+                '/usr/sbin/ip',
+                '-4',
+                'route',
+                'del',
+                'default',
+                'via',
+                router,
+                'dev',
+                interface,
+                'proto',
+                'boot',
+            ]
+        )
+
+        def kernel_gone_frr_kept():
+            if route_str not in self.getFRRconfig():
+                return False
+            out = cmdl(['/usr/sbin/ip', '-4', 'route', 'show', 'default'])
+            return not (router in out and interface in out)
+
+        gone, _ = self.wait_for_result(kernel_gone_frr_kept, True, pause=1, timeout=10)
+        self.assertTrue(gone, 'kernel default still present or FRR line was removed')
+
+        cmdl(['systemctl', 'kill', '-s', 'SIGUSR1', f'dhclient@{interface}.service'])
+        self.assert_in_frrconfig(route_str)
+
+        def kernel_has_default():
+            out = cmdl(['/usr/sbin/ip', '-4', 'route', 'show', 'default'])
+            return router in out and interface in out
+
+        result, _ = self.wait_for_result(kernel_has_default, True, pause=1, timeout=30)
+        self.assertTrue(
+            result,
+            'kernel default not reinstalled after RENEW while FRR kept the line',
+        )
+
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+        while process_named_running('dhclient', cmdline=interface, timeout=10):
+            sleep(0.250)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
