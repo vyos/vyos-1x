@@ -2064,57 +2064,72 @@ class Interface(Control):
         except Exception:
             released = False
         finally:
-            if restored_route and prev_route is None:
+            # Unmask even when cleanup raises. os.remove used to catch only
+            # FileNotFoundError, so any other OSError left dhclient@
+            # runtime-masked and the next start failed.
+            try:
+                if restored_route and prev_route is None:
+                    rc_cmd(
+                        [
+                            'ip',
+                            'route',
+                            'del',
+                            f'{restored_route}/32',
+                            'dev',
+                            interface,
+                        ],
+                        vrf=vrf,
+                        netns=netns,
+                    )
+                if restored_cidr:
+                    rc_cmd(
+                        ['ip', 'addr', 'del', restored_cidr, 'dev', interface],
+                        netns=netns,
+                    )
+                if restored_link:
+                    rc_cmd(['ip', 'link', 'set', 'dev', interface, 'down'], netns=netns)
+                if os.path.isfile(release_pid):
+                    try:
+                        with open(release_pid) as f:
+                            pid = int(f.read().strip())
+                        os.kill(pid, 9)
+                    except (ValueError, ProcessLookupError, OSError):
+                        pass
+                    try:
+                        os.remove(release_pid)
+                    except OSError:
+                        pass
+                try:
+                    os.remove(temp_lf)
+                except OSError:
+                    pass
+                if released:
+                    for path in (
+                        f'{lease_dir}/dhclient_{interface}.leases',
+                        f'{lease_dir}/dhclient_{interface}.lease',
+                    ):
+                        try:
+                            os.remove(path)
+                        except OSError:
+                            pass
+                rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
+                # Kill while still masked so Restart=always cannot start a
+                # replacement that would reacquire the lease (CodeRabbit).
                 rc_cmd(
-                    ['ip', 'route', 'del', f'{restored_route}/32', 'dev', interface],
-                    vrf=vrf,
+                    [
+                        'systemctl',
+                        'kill',
+                        '--kill-whom=all',
+                        '-s',
+                        'SIGKILL',
+                        systemd_service,
+                    ],
                     netns=netns,
                 )
-            if restored_cidr:
+            finally:
                 rc_cmd(
-                    ['ip', 'addr', 'del', restored_cidr, 'dev', interface], netns=netns
+                    ['systemctl', 'unmask', '--runtime', systemd_service], netns=netns
                 )
-            if restored_link:
-                rc_cmd(['ip', 'link', 'set', 'dev', interface, 'down'], netns=netns)
-            if os.path.isfile(release_pid):
-                try:
-                    with open(release_pid) as f:
-                        pid = int(f.read().strip())
-                    os.kill(pid, 9)
-                except (ValueError, ProcessLookupError, OSError):
-                    pass
-                try:
-                    os.remove(release_pid)
-                except FileNotFoundError:
-                    pass
-            try:
-                os.remove(temp_lf)
-            except FileNotFoundError:
-                pass
-            if released:
-                for path in (
-                    f'{lease_dir}/dhclient_{interface}.leases',
-                    f'{lease_dir}/dhclient_{interface}.lease',
-                ):
-                    try:
-                        os.remove(path)
-                    except FileNotFoundError:
-                        pass
-            rc_cmd(['systemctl', 'reset-failed', systemd_service], netns=netns)
-            # Kill while still masked so Restart=always cannot start a
-            # replacement that would reacquire the lease (CodeRabbit).
-            rc_cmd(
-                [
-                    'systemctl',
-                    'kill',
-                    '--kill-whom=all',
-                    '-s',
-                    'SIGKILL',
-                    systemd_service,
-                ],
-                netns=netns,
-            )
-            rc_cmd(['systemctl', 'unmask', '--runtime', systemd_service], netns=netns)
         return released
 
     def set_dhcp(
