@@ -30,12 +30,15 @@
 # at IF_METRIC.
 #
 # If option 3 changes across a same-IP RENEW, drop defaults via gateways
-# that disappeared from $new_routers. Delete with the same per-router
-# metric 01-vyos-cleanup uses. Do not delete when that next-hop is a
-# configured static default at the same distance: tag 210 is what the
-# DHCP wrapper writes, and FRR also uses it for other VyOS routes, so
-# `no ip route … tag 210` is not proof the route is DHCP-owned. If the
-# config cannot be read, leave the route in place.
+# that disappeared from $new_routers, and drop a kept gateway's old
+# distance when its option-3 position moved. A at 210 and B at 211 must
+# not both remain after the list flips to B A: the add would put B at
+# 210 beside the leftover A. Delete with the same per-router metric
+# 01-vyos-cleanup uses. Do not delete when that next-hop is a configured
+# static default at the same distance: tag 210 is what the DHCP wrapper
+# writes, and FRR also uses it for other VyOS routes, so `no ip route …
+# tag 210` is not proof the route is DHCP-owned. If the config cannot
+# be read, leave the route in place.
 #
 # RFC3442 classless routes: stock ignores option 3, but VyOS BOUND still
 # installs the option-3 default (enter-hook wrapper). Keepers are the
@@ -187,6 +190,39 @@ if [ -n "$new_rfc3442_classless_static_routes" ]; then
     fi
 fi
 
+# Distance the add loop below will install for $1. Empty (return 1)
+# when this hook will not install that gateway: RFC3442 is present and
+# the gateway is not one of its defaults. Same walk as the add loop,
+# including the IF_METRIC force for an RFC3442 default.
+_new_router_metric() {
+    local want="$1"
+    local metric="${IF_METRIC:-210}"
+    local base="$metric"
+    local router owned gw
+    for router in $new_routers; do
+        if [ -n "$rfc3442_default_gws" ]; then
+            owned=
+            for gw in $rfc3442_default_gws; do
+                if [ "$gw" = "$router" ]; then
+                    owned=1
+                    break
+                fi
+            done
+            if [ -z "$owned" ]; then
+                metric=$((metric + 1))
+                continue
+            fi
+            metric="$base"
+        fi
+        if [ "$router" = "$want" ]; then
+            echo "$metric"
+            return 0
+        fi
+        metric=$((metric + 1))
+    done
+    return 1
+}
+
 # no-default-route: do not delete operator statics or force-sent option 3.
 # Malformed option 121: do not delete on a partial/empty keeper set.
 stale_still_present=
@@ -196,16 +232,28 @@ if [ -n "$rfc3442_parse_ok" ] &&
     [ "$old_routers" != "$effective_new_routers" ]; then
     if_metric="${IF_METRIC:-210}"
     for router in $old_routers; do
-        skip=
-        for keep in $effective_new_routers; do
-            if [ "$router" = "$keep" ]; then
-                skip=1
-                break
+        # Kept at the same distance: leave it. Kept at a new distance:
+        # the old route is stale. Not installed by the add loop (RFC3442
+        # non-default): membership in the keeper set still protects it.
+        new_metric=""
+        if new_metric=$(_new_router_metric "$router"); then
+            if [ "$new_metric" = "$if_metric" ]; then
+                if_metric=$((if_metric + 1))
+                continue
             fi
-        done
-        if [ -n "$skip" ]; then
-            if_metric=$((if_metric + 1))
-            continue
+        else
+            new_metric=""
+            skip=
+            for keep in $effective_new_routers; do
+                if [ "$router" = "$keep" ]; then
+                    skip=1
+                    break
+                fi
+            done
+            if [ -n "$skip" ]; then
+                if_metric=$((if_metric + 1))
+                continue
+            fi
         fi
         _operator_static_owns "${router}" "${if_metric}"
         own_st=$?
@@ -221,8 +269,13 @@ if [ -n "$rfc3442_parse_ok" ] &&
             if_metric=$((if_metric + 1))
             continue
         fi
-        logmsg info \
-            "RENEW/REBIND: removing stale default via ${router} dev ${interface} metric ${if_metric}"
+        if [ -n "$new_metric" ]; then
+            logmsg info \
+                "RENEW/REBIND: removing default via ${router} dev ${interface} metric ${if_metric} (now ${new_metric})"
+        else
+            logmsg info \
+                "RENEW/REBIND: removing stale default via ${router} dev ${interface} metric ${if_metric}"
+        fi
         ip -4 route del default via "${router}" dev "${interface}" \
             metric "${if_metric}" >/dev/null 2>&1
         # Wrapper exit is not a gate (vtysh "no ip route" fails if already
