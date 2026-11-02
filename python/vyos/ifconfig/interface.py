@@ -77,8 +77,51 @@ def _mask_to_prefixlen(mask: str):
         return None
 
 
+def _isc_expire_epoch(value: str):
+    """Unix time of an ISC `expire` value. None means it does not expire.
+
+    Forms dhclient writes: `never`, `epoch <seconds>`, and
+    `<wday> YYYY/MM/DD HH:MM:SS` (UTC). Unparseable values are None so the
+    caller keeps the lease.
+    """
+    parts = value.split()
+    if not parts or parts[0] == 'never':
+        return None
+    if parts[0] == 'epoch' and len(parts) >= 2:
+        try:
+            return int(parts[1])
+        except ValueError:
+            return None
+    if len(parts) >= 3:
+        import calendar
+        import time
+
+        stamp = f'{parts[-2]} {parts[-1]}'
+        try:
+            return int(calendar.timegm(time.strptime(stamp, '%Y/%m/%d %H:%M:%S')))
+        except ValueError:
+            return None
+    return None
+
+
+def _lease_usable(info: dict) -> bool:
+    """True when the record has an address that is not past `expire`."""
+    if not info.get('addr'):
+        return False
+    expire = info.get('expire')
+    if expire is None:
+        return True
+    import time
+
+    return expire > int(time.time())
+
+
 def _isc_lease_info(path: str) -> dict:
-    """Lease addr/prefix/router/server from ISC `lease { }` or script env dump."""
+    """Lease addr/prefix/router/server from ISC `lease { }` or script env dump.
+
+    `expire` is a unix time when the record carries one. ISC `expire never`
+    and a missing timestamp leave it unset.
+    """
     info: dict = {}
     try:
         with open(path) as f:
@@ -99,6 +142,10 @@ def _isc_lease_info(path: str) -> dict:
                 info['router'] = line.split()[2].split(',')[0]
             elif line.startswith('option dhcp-server-identifier '):
                 info['server'] = line.split()[2]
+            elif line.startswith('expire '):
+                expire = _isc_expire_epoch(line[len('expire ') :])
+                if expire is not None:
+                    info['expire'] = expire
         return info
     # VyOS dhclient-script env dump (reason='BOUND', new_ip_address=...)
     kv = {}
@@ -117,6 +164,12 @@ def _isc_lease_info(path: str) -> dict:
         info['router'] = kv['new_routers'].split()[0]
     if kv.get('new_dhcp_server_identifier'):
         info['server'] = kv['new_dhcp_server_identifier']
+    raw_expiry = kv.get('new_expiry')
+    if raw_expiry:
+        try:
+            info['expire'] = int(raw_expiry)
+        except ValueError:
+            pass
     return info
 
 
@@ -800,8 +853,14 @@ class Interface(Control):
         >>> Interface('eth0').set_mac('00:50:ab:cd:ef:01')
         """
 
-        # If MAC is unchanged, bail out early
-        if mac == self.get_mac():
+        # Case-insensitive: `ip -json` returns lowercase, the validator
+        # accepts A-F. A case-only difference must not flap the link.
+        current = self.get_mac()
+        if (
+            isinstance(current, str)
+            and isinstance(mac, str)
+            and mac.lower() == current.lower()
+        ):
             return None
 
         # MAC address can only be changed if interface is in 'down' state
@@ -1845,11 +1904,14 @@ class Interface(Control):
             f'{lease_dir}/dhclient_{interface}.lease',
         ):
             if os.path.isfile(path) and os.path.getsize(path) > 0:
-                info = _isc_lease_info(path)
-                if info.get('addr'):
+                parsed = _isc_lease_info(path)
+                # Do not keep `info` from an expired file: has_lease must
+                # follow the record we will actually RELEASE.
+                if _lease_usable(parsed):
+                    info = parsed
                     source_lease = path
                     break
-        has_lease = bool(info.get('addr'))
+        has_lease = source_lease is not None
         # Nothing to release and nothing Restart=always can respawn. Skip
         # mask/unmask (two daemon-reloads per non-DHCP interface per commit).
         # Live includes activating, so auto-restart during RestartSec is not
@@ -2420,19 +2482,15 @@ class Interface(Control):
             if not mac and os.path.exists(f'/sys/class/net/{self.ifname}/device'):
                 mac = permanent_mac(self.ifname)
             if mac:
-                if mac != self.get_mac():
+                # Case-insensitive, same as set_mac(). Otherwise an uppercase
+                # configured MAC sets mac_changed on every commit and
+                # restarts dhclient. The lease files stay: a client DB has
+                # no hardware ethernet line, and deleting it on the commit
+                # that applies a shared MAC drops a seeded INIT-REBOOT.
+                live = self.get_mac()
+                if not isinstance(live, str) or mac.lower() != live.lower():
                     mac_changed = True
                 self.set_mac(mac)
-
-        if mac_changed:
-            # New chaddr: drop the ISC DB so the next start sends DISCOVER
-            # instead of INIT-REBOOT with the old hardware address.
-            lease_dir = directories['isc_dhclient_dir']
-            for suffix in ('leases', 'lease'):
-                try:
-                    os.remove(f'{lease_dir}/dhclient_{self.ifname}.{suffix}')
-                except FileNotFoundError:
-                    pass
 
         # If interface is connected to NETNS we don't have to check all other
         # settings like MTU/IPv6/sysctl values, etc.
