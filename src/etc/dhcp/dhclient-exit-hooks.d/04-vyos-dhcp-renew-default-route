@@ -18,12 +18,16 @@
 # installed — do not warn "still missing after add" for those.
 #
 # Skip restoration when FRR already has this gw+dev at the requested
-# distance (running-config, same string iptovtysh writes) AND, for the
-# primary distance, the kernel default is not confirmed absent. FRR can
-# still show the line while the nexthop is inactive and the kernel route
-# is gone. A backup distance is FRR-only: the kernel keeps the best one.
-# A kernel default via the same gw at another distance must not hide a
-# missing DHCP route at IF_METRIC.
+# distance (running-config, same string iptovtysh writes) and, for the
+# primary distance, the kernel default is not confirmed absent. When FRR
+# still has the primary line and the kernel route is confirmed absent,
+# withdraw that line before adding it back. An identical `ip route` is a
+# northbound no-op: staticd does not call static_install_path, so zebra
+# never resends the route. Do not withdraw when an operator static owns
+# that gateway and distance, or when the config cannot be read. A backup
+# distance is FRR-only: the kernel keeps the best one. A kernel default
+# via the same gw at another distance must not hide a missing DHCP route
+# at IF_METRIC.
 #
 # If option 3 changes across a same-IP RENEW, drop defaults via gateways
 # that disappeared from $new_routers. Delete with the same per-router
@@ -98,8 +102,11 @@ _frr_default_present() {
     vtysh -c "show running-config no-header" 2>/dev/null | grep -Fqx "$needle"
 }
 
-# 0 = protocols static has 0/0 via $1 at distance $2 (do not delete it).
+# 0 = this route's static config has 0/0 via $1 at distance $2
+#     (do not delete it).
 # 1 = no such static. 2 = config could not be read (do not delete).
+# A VRF interface is checked only against that VRF. A global static with
+# the same gateway and distance is not ownership of the VRF route.
 # Tag 210 is not ownership: the DHCP wrapper and other VyOS routes use it,
 # and `no ip route … tag 210` can remove an untagged static with the same
 # prefix, nexthop, and distance.
@@ -120,9 +127,12 @@ except Exception:
 gw = os.environ['CHECK_GW']
 want = os.environ['CHECK_DISTANCE']
 vrf = os.environ.get('CHECK_VRF', '').split()
-bases = ['protocols static route 0.0.0.0/0']
+# VRF DHCP defaults live under `vrf name <id> protocols static`.
+# Do not also match a global static: that leaves the stale VRF route.
 if len(vrf) == 2 and vrf[0] == 'vrf':
-    bases.insert(0, f'vrf name {vrf[1]} protocols static route 0.0.0.0/0')
+    bases = [f'vrf name {vrf[1]} protocols static route 0.0.0.0/0']
+else:
+    bases = ['protocols static route 0.0.0.0/0']
 try:
     for base in bases:
         node = f'{base} next-hop {gw}'
@@ -279,6 +289,27 @@ for router in $new_routers; do
             if_metric=$((if_metric + 1))
             continue
         fi
+        # Kernel confirmed absent while FRR still has this line. Adding
+        # the same vtysh command does not call static_install_path.
+        # Withdraw first so the add is a real northbound change. Do not
+        # withdraw an operator static at this gateway and distance.
+        _operator_static_owns "${router}" "${if_metric}"
+        own_st=$?
+        if [ "$own_st" -ne 1 ]; then
+            if [ "$own_st" -eq 0 ]; then
+                logmsg warn \
+                    "RENEW/REBIND: kernel default missing via ${router} dev ${interface}; operator static owns it, not withdrawing"
+            else
+                logmsg warn \
+                    "RENEW/REBIND: kernel default missing via ${router} dev ${interface}; could not read static config, not withdrawing"
+            fi
+            if_metric=$((if_metric + 1))
+            continue
+        fi
+        logmsg info \
+            "RENEW/REBIND: withdrawing FRR default via ${router} dev ${interface} metric ${if_metric} so it can be reinstalled"
+        ip -4 route del default via "${router}" dev "${interface}" \
+            metric "${if_metric}" >/dev/null 2>&1
     fi
 
     logmsg info \
