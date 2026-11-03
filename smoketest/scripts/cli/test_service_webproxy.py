@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -21,10 +22,12 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
+from vyos.utils.file import file_permissions
 from vyos.utils.file import read_file
 
 PROCESS_NAME = 'squid'
 PROXY_CONF = '/etc/squid/squid.conf'
+LDAP_PASSWORD_FILE = '/run/squid-ldap.secret'
 base_path = ['service', 'webproxy']
 listen_if = 'dum3632'
 listen_ip = '192.0.2.1'
@@ -182,11 +185,27 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'auth_param basic children {auth_children}', config)
         self.assertIn(f'auth_param basic credentialsttl {cred_ttl} minute', config)
         self.assertIn(f'auth_param basic realm "{realm}"', config)
-        self.assertIn(f'auth_param basic program /usr/lib/squid/basic_ldap_auth -v 3 -b "{ldap_base_dn}" -D "{ldap_bind_dn}" -w "{ldap_password}" -f "{ldap_filter}" -u "{ldap_attr}" -p 389 -ZZ -R -h "{ldap_server}"', config)
+        self.assertIn(
+            f'auth_param basic program /usr/lib/squid/basic_ldap_auth -v 3 -b "{ldap_base_dn}" -D "{ldap_bind_dn}" -W {LDAP_PASSWORD_FILE} -f "{ldap_filter}" -u "{ldap_attr}" -p 389 -ZZ -R -h "{ldap_server}"',
+            config,
+        )
         self.assertIn(f'acl auth proxy_auth REQUIRED', config)
+        self.assertNotIn(ldap_password, config)
+
+        # Only root and the proxy user can read the password file
+        self.assertEqual(read_file(LDAP_PASSWORD_FILE, sudo=True), ldap_password)
+        self.assertEqual(file_permissions(LDAP_PASSWORD_FILE), '0600')
+        self.assertEqual(
+            cmdl(['stat', '-c', '%U:%G', LDAP_PASSWORD_FILE]), 'proxy:proxy'
+        )
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # Password file is removed when LDAP authentication is disabled
+        self.cli_delete(base_path + ['authentication'])
+        self.cli_commit()
+        self.assertFalse(os.path.exists(LDAP_PASSWORD_FILE))
 
     def test_04_cache_peer(self):
         self.cli_set(base_path + ['listen-address', listen_ip])

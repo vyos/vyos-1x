@@ -51,7 +51,7 @@ auth_param basic realm "{{ authentication.realm }}"
 {# LDAP based Authentication #}
 {%     if authentication.method is vyos_defined %}
 {%         if authentication.ldap is vyos_defined and authentication.method is vyos_defined('ldap') %}
-auth_param basic program /usr/lib/squid/basic_ldap_auth -v {{ authentication.ldap.version }} -b "{{ authentication.ldap.base_dn }}" {{ '-D "' ~ authentication.ldap.bind_dn ~ '"' if authentication.ldap.bind_dn is vyos_defined }} {{ '-w "' ~ authentication.ldap.password ~ '"' if authentication.ldap.password is vyos_defined }} {{ '-f "' ~ authentication.ldap.filter_expression ~ '"' if authentication.ldap.filter_expression is vyos_defined }} {{ '-u "' ~ authentication.ldap.username_attribute ~ '"' if authentication.ldap.username_attribute is vyos_defined }} -p {{ authentication.ldap.port }} {{ '-ZZ' if authentication.ldap.use_ssl is vyos_defined }} -R -h "{{ authentication.ldap.server }}"
+auth_param basic program /usr/lib/squid/basic_ldap_auth -v {{ authentication.ldap.version }} -b "{{ authentication.ldap.base_dn }}" {{ '-D "' ~ authentication.ldap.bind_dn ~ '"' if authentication.ldap.bind_dn is vyos_defined }} {{ '-W ' ~ ldap_password_file if authentication.ldap.password is vyos_defined }} {{ '-f "' ~ authentication.ldap.filter_expression ~ '"' if authentication.ldap.filter_expression is vyos_defined }} {{ '-u "' ~ authentication.ldap.username_attribute ~ '"' if authentication.ldap.username_attribute is vyos_defined }} -p {{ authentication.ldap.port }} {{ '-ZZ' if authentication.ldap.use_ssl is vyos_defined }} -R -h "{{ authentication.ldap.server }}"
 {%         endif %}
 acl auth proxy_auth REQUIRED
 http_access allow auth
