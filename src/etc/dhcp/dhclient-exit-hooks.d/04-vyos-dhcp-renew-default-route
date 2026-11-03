@@ -96,21 +96,51 @@ _default_via_present() {
 
 # FRR staticd 0/0 via $1 at distance $2 on $interface.
 # 0 = present, 1 = confirmed absent, 2 = vtysh failed.
-# Same string as 03-vyos-ipwrapper iptovtysh. Kernel .metric is not this,
-# and a kernel default via the same gateway can be another distance.
+# In the default VRF, show running-config has the iptovtysh line.
+# In a VRF it is indented inside `vrf NAME` / `exit-vrf`, with no
+# trailing "vrf NAME". Kernel .metric is not this distance, and a
+# kernel default via the same gateway can be another distance.
+_frr_vrf_block_has_route() {
+    local vrf_name="$1"
+    local needle="$2"
+    local line inside= stripped
+    while IFS= read -r line || [ -n "$line" ]; do
+        if [ "$inside" != 1 ]; then
+            if [ "$line" = "vrf ${vrf_name}" ]; then
+                inside=1
+            fi
+            continue
+        fi
+        if [ "$line" = "exit-vrf" ]; then
+            return 1
+        fi
+        stripped=${line#"${line%%[![:space:]]*}"}
+        if [ "$stripped" = "$needle" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 _frr_default_status() {
     local gw="$1"
     local distance="$2"
-    local needle cfg grep_status
+    local needle cfg match_status vrf_name
     needle="ip route 0.0.0.0/0 ${gw} ${interface} tag 210 ${distance}"
-    if [ -n "$VRF_OPTION" ]; then
-        needle="${needle} ${VRF_OPTION}"
-    fi
     cfg=$(vtysh -c "show running-config no-header" 2>/dev/null) || return 2
-    printf '%s\n' "$cfg" | grep -Fqx "$needle"
-    grep_status=$?
-    if [ "$grep_status" -le 1 ]; then
-        return "$grep_status"
+    match_status=0
+    if [ -n "$VRF_OPTION" ]; then
+        vrf_name=${VRF_OPTION#vrf }
+        if [ -z "$vrf_name" ] || [ "$vrf_name" = "$VRF_OPTION" ]; then
+            return 2
+        fi
+        printf '%s\n' "$cfg" | _frr_vrf_block_has_route "$vrf_name" "$needle" \
+            || match_status=$?
+    else
+        printf '%s\n' "$cfg" | grep -Fqx "$needle" || match_status=$?
+    fi
+    if [ "$match_status" -le 1 ]; then
+        return "$match_status"
     fi
     return 2
 }
