@@ -399,6 +399,71 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn('data-ciphers-fallback CHACHA20-POLY1305', config)
         self.assertDcoDataPath(interface, multipoint=False)
 
+    def test_openvpn_site2site_tls_auth(self):
+        # Site-to-site has no client or server mode, so the tls-auth key
+        # direction is derived from the TLS role instead
+        interface = 'vtun5001'
+        path = base_path + [interface]
+        auth_key = f'/run/openvpn/{interface}_auth.key'
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'auth-key', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'role', 'active'])
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256gcm'])
+
+        # the auth-key only signs handshake packets, it does not replace the
+        # certificate
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_commit()
+
+        # the active peer initiates TLS and takes the client key direction
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('tls-client', config)
+        self.assertIn(f'tls-auth {auth_key} 1', config)
+
+        # the passive peer waits for TLS and takes the server key direction
+        self.cli_set(path + ['tls', 'role', 'passive'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('tls-server', config)
+        self.assertIn(f'tls-auth {auth_key} 0', config)
+
+    def test_openvpn_site2site_raw_tls_auth(self):
+        # A raw tls-auth without a direction is bidirectional, but OpenVPN
+        # keeps a direction rendered ahead of it - so none must be rendered
+        interface = 'vtun5002'
+        path = base_path + [interface]
+        auth_key = f'/run/openvpn/{interface}_auth.key'
+        override = f'/run/systemd/system/openvpn@{interface}.service.d/20-override.conf'
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '192.168.0.1'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'auth-key', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'role', 'active'])
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes256gcm'])
+        self.cli_set(path + ['openvpn-option', f'--tls-auth {auth_key}'])
+        self.cli_commit()
+
+        self.assertNotIn('tls-auth', read_file(f'/run/openvpn/{interface}.conf'))
+        self.assertIn(f'--tls-auth {auth_key}', read_file(override))
+
+        # once the raw option is gone, the rendered one is back
+        self.cli_delete(path + ['openvpn-option'])
+        self.cli_commit()
+
+        self.assertIn(
+            f'tls-auth {auth_key} 1', read_file(f'/run/openvpn/{interface}.conf')
+        )
+
     def test_openvpn_site2site_shared_secret_aead(self):
         # OpenVPN's static key mode only does CBC and exits on an AEAD cipher,
         # which in site-to-site mode can also come in as the fallback cipher
