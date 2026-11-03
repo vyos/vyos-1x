@@ -20,6 +20,7 @@ import json
 
 from sys import exit
 from shutil import rmtree
+from urllib.parse import urlsplit
 
 from vyos.config import Config
 from vyos.configdict import is_node_changed
@@ -248,6 +249,23 @@ def verify(monitoring):
                     f'Authentication "username" and "password" are mandatory!'
                 )
 
+    # Verify Prometheus inputs
+    if 'prometheus' in monitoring and 'input' in monitoring['prometheus']:
+        for input_id, input_config in monitoring['prometheus']['input'].items():
+            if 'url' not in input_config:
+                raise ConfigError(
+                    f'Monitoring prometheus input "{input_id}" "url" is mandatory!'
+                )
+            url = input_config['url']
+            parsed_url = urlsplit(url)
+
+            if parsed_url.username is not None or parsed_url.password is not None:
+                raise ConfigError(
+                    f'Monitoring prometheus input "{input_id}" '
+                    'URL must not contain embedded credentials; '
+                    'configure username and password separately!'
+                )
+
     # Verify local FRR metrics relay
     if 'frr_metrics' in monitoring:
         if 'not_configured' in monitoring['frr_metrics']:
@@ -289,7 +307,7 @@ def generate(monitoring):
         os.mkdir(custom_scripts_dir)
 
     # Render telegraf configuration and systemd override
-    render(config_telegraf, 'telegraf/telegraf.j2', monitoring, user='telegraf', group='telegraf')
+    render(config_telegraf, 'telegraf/telegraf.j2', monitoring, permission=0o600, user='telegraf', group='telegraf')
     render(systemd_override, 'telegraf/override.conf.j2', monitoring)
     render(syslog_telegraf, 'telegraf/syslog_telegraf.j2', monitoring)
 

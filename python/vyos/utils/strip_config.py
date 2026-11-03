@@ -115,6 +115,7 @@ __secret_paths = [
   {"path": ["service", "monitoring", "telegraf", "influxdb", "authentication", "token"], "func": __anonymize_password},
   {"path": ["service", "monitoring", "telegraf", "azure-data-explorer", "authentication", "client-secret"], "func": __anonymize_password},
   {"path": ["service", "monitoring", "telegraf", "splunk", "authentication", "token"], "func": __anonymize_password},
+  {"base_path": ["service", "monitoring", "telegraf", "prometheus", "input"], "secret_path": ["password"], "func": __anonymize_password},
 
   # SNMPv3 passwords
   {"base_path": ["service", "snmp", "v3", "user"], "secret_path": ["privacy", "encrypted-password"], "func": __anonymize_password},
