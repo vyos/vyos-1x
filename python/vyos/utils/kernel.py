@@ -182,6 +182,40 @@ def get_kernel_serial_console() -> Tuple[Optional[str], Optional[str], Optional[
     return (None, None, None)
 
 
+def get_kernel_primary_console(cmdline: str | None = None) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Extract type, number and speed of the console the kernel uses as
+    /dev/console. With multiple console= arguments this is the last one, e.g.
+    "console=tty0 console=ttyS0,115200" boots on ttyS0 while
+    "console=ttyS0,115200 console=tty0" boots on tty0.
+
+    Args:
+        cmdline: kernel command line to parse, defaults to /proc/cmdline
+
+    Returns:
+        tuple: (console_type, console_num, console_speed), speed is None if
+               not specified. (None, None, None) if no console= is present.
+    """
+    import re
+
+    if cmdline is None:
+        cmdline = read_file(CMDLINE_PATH)
+
+    # speed may carry parity/bits/flow suffixes, e.g. 115200n8
+    console_re = re.compile(
+        r'console=(?P<console_type>[a-zA-Z]+)(?P<console_num>\d+)(?:,(?P<console_speed>\d+)\S*)?'
+    )
+    for part in reversed(cmdline.split()):
+        if m := console_re.fullmatch(part):
+            return (
+                m.group('console_type'),
+                m.group('console_num'),
+                m.group('console_speed'),
+            )
+
+    return (None, None, None)
+
+
 def get_kernel_boot_arg(argument=None) -> str | None:
     """Read and parse kernel boot arguments from the kernel command line.
 
