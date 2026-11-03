@@ -17,9 +17,12 @@
 
 from vyos.configtree import ConfigTree
 from vyos.flavor import get_image_serial_console
+from vyos.system import compat
 from vyos.system import disk
+from vyos.system import image
 from vyos.system.grub import CFG_VYOS_VARS
 from vyos.system.grub import vars_read
+from vyos.utils.kernel import get_kernel_primary_console
 
 base = ['system', 'console']
 
@@ -35,6 +38,25 @@ def migrate(config: ConfigTree) -> None:
         console_type, console_num = 'ttyS', '0'
     serial_console = f'{console_type}{console_num}'
 
+    if not config.exists(base + ['device', serial_console]):
+        return
+
+    # A container shares the kernel command line of its host, which says
+    # nothing about the console of VyOS itself
+    if image.is_running_as_container():
+        return
+
+    # An installed legacy image keeps GRUB in compat mode. The GRUB structure
+    # update then rewrites the GRUB vars on every boot before migration runs,
+    # so they may not reflect the boot console - use the console the kernel
+    # booted with instead
+    if compat.mode():
+        kernel_type, kernel_num, _ = get_kernel_primary_console()
+        if kernel_type is not None:
+            if f'{kernel_type}{kernel_num}' == serial_console:
+                config.set(base + ['device', serial_console, 'kernel'])
+            return
+
     root_dir = disk.find_persistence()
     vars_file: str = f'{root_dir}/{CFG_VYOS_VARS}'
     vars_current: dict[str, str] = vars_read(vars_file)
@@ -46,5 +68,4 @@ def migrate(config: ConfigTree) -> None:
 
     # Check if VyOS installation uses serial boot console
     if vars_current['console_type'] == console_type:
-        if config.exists(base + ['device', serial_console]):
-            config.set(base + ['device', serial_console, 'kernel'])
+        config.set(base + ['device', serial_console, 'kernel'])
