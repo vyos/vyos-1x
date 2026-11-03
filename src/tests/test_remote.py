@@ -16,11 +16,14 @@ import os
 import tempfile
 import threading
 import unittest
+from base64 import b64encode
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from urllib.parse import urlsplit
 
 from vyos.remote import HttpC
+
+AUTH_HEADER = 'Basic ' + b64encode(b'vyos:secret').decode()
 
 
 class HeadRejectHandler(BaseHTTPRequestHandler):
@@ -50,14 +53,54 @@ class Head501Handler(HeadRejectHandler):
     head_status = 501
 
 
+class RedirectHandler(BaseHTTPRequestHandler):
+    body = b'192.0.2.1\n'
+    location = '/redirected.txt'
+
+    def _respond(self, send_body):
+        self.server.requests.append(
+            (self.command, self.path, self.headers.get('Authorization')))
+        if self.path == '/list.txt':
+            self.send_response(302)
+            self.send_header('Location',
+                             self.location.format(port=self.server.server_address[1]))
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.send_header('Content-Length', str(len(self.body)))
+        self.end_headers()
+        if send_body:
+            self.wfile.write(self.body)
+
+    def do_HEAD(self):
+        self._respond(send_body=False)
+
+    def do_GET(self):
+        self._respond(send_body=True)
+
+    def log_message(self, format, *args):
+        pass
+
+
+class SameOriginRedirectHandler(RedirectHandler):
+    location = '/redirected.txt'
+
+
+class CrossHostRedirectHandler(RedirectHandler):
+    # Same server, but 'localhost' is a different host from '127.0.0.1'
+    location = 'http://localhost:{port}/redirected.txt'
+
+
 class TestHttpCDownload(unittest.TestCase):
-    def _download_from_server(self, handler):
+    def _download_from_server(self, handler, userinfo=''):
         server = HTTPServer(('127.0.0.1', 0), handler)
+        server.requests = []
         port = server.server_address[1]
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
 
-        url = f'http://127.0.0.1:{port}/list.txt'
+        url = f'http://{userinfo}127.0.0.1:{port}/list.txt'
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             tmp_path = tmp.name
 
@@ -72,11 +115,31 @@ class TestHttpCDownload(unittest.TestCase):
             thread.join(timeout=1)
             os.unlink(tmp_path)
 
+        return server.requests
+
     def test_download_without_head_support_405(self):
         self._download_from_server(Head405Handler)
 
     def test_download_without_head_support_501(self):
         self._download_from_server(Head501Handler)
+
+    def test_download_redirect_to_other_host_drops_auth(self):
+        requests = self._download_from_server(CrossHostRedirectHandler,
+                                              userinfo='vyos:secret@')
+        self.assertEqual(requests, [
+            ('HEAD', '/list.txt', AUTH_HEADER),
+            ('HEAD', '/redirected.txt', None),
+            ('GET', '/redirected.txt', None),
+        ])
+
+    def test_download_redirect_to_same_origin_keeps_auth(self):
+        requests = self._download_from_server(SameOriginRedirectHandler,
+                                              userinfo='vyos:secret@')
+        self.assertEqual(requests, [
+            ('HEAD', '/list.txt', AUTH_HEADER),
+            ('HEAD', '/redirected.txt', AUTH_HEADER),
+            ('GET', '/redirected.txt', AUTH_HEADER),
+        ])
 
 
 if __name__ == '__main__':

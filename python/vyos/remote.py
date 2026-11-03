@@ -444,6 +444,9 @@ class HttpC:
                     # In case the server does not supply the header.
                     except KeyError:
                         size = None
+            # Do not send credentials to a different host after a redirect
+            if s.should_strip_auth(self.urlstring, final_urlstring):
+                s.auth = None
             with s.get(final_urlstring, stream=True, timeout=self.timeout) as r:
                 r.raise_for_status()
                 if size is None:
