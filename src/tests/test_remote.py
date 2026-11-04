@@ -17,6 +17,7 @@ import tempfile
 import threading
 import unittest
 from base64 import b64encode
+from unittest import mock
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 from urllib.parse import urlsplit
@@ -24,6 +25,7 @@ from urllib.parse import urlsplit
 from vyos.remote import HttpC
 
 AUTH_HEADER = 'Basic ' + b64encode(b'vyos:secret').decode()
+NETRC_AUTH_HEADER = 'Basic ' + b64encode(b'vyos_netrc:secret_netrc').decode()
 
 
 class HeadRejectHandler(BaseHTTPRequestHandler):
@@ -59,11 +61,13 @@ class RedirectHandler(BaseHTTPRequestHandler):
 
     def _respond(self, send_body):
         self.server.requests.append(
-            (self.command, self.path, self.headers.get('Authorization')))
+            (self.command, self.path, self.headers.get('Authorization'))
+        )
         if self.path == '/list.txt':
             self.send_response(302)
-            self.send_header('Location',
-                             self.location.format(port=self.server.server_address[1]))
+            self.send_header(
+                'Location', self.location.format(port=self.server.server_address[1])
+            )
             self.end_headers()
             return
         self.send_response(200)
@@ -117,6 +121,15 @@ class TestHttpCDownload(unittest.TestCase):
 
         return server.requests
 
+    def _use_netrc_default_entry(self):
+        # A 'default' entry matches any host, including a redirect target
+        with tempfile.NamedTemporaryFile('w', delete=False) as netrc:
+            netrc.write('default login vyos_netrc password secret_netrc\n')
+        self.addCleanup(os.unlink, netrc.name)
+        patcher = mock.patch.dict(os.environ, {'NETRC': netrc.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_download_without_head_support_405(self):
         self._download_from_server(Head405Handler)
 
@@ -124,22 +137,56 @@ class TestHttpCDownload(unittest.TestCase):
         self._download_from_server(Head501Handler)
 
     def test_download_redirect_to_other_host_drops_auth(self):
-        requests = self._download_from_server(CrossHostRedirectHandler,
-                                              userinfo='vyos:secret@')
-        self.assertEqual(requests, [
-            ('HEAD', '/list.txt', AUTH_HEADER),
-            ('HEAD', '/redirected.txt', None),
-            ('GET', '/redirected.txt', None),
-        ])
+        requests = self._download_from_server(
+            CrossHostRedirectHandler, userinfo='vyos:secret@'
+        )
+        self.assertEqual(
+            requests,
+            [
+                ('HEAD', '/list.txt', AUTH_HEADER),
+                ('HEAD', '/redirected.txt', None),
+                ('GET', '/redirected.txt', None),
+            ],
+        )
 
     def test_download_redirect_to_same_origin_keeps_auth(self):
-        requests = self._download_from_server(SameOriginRedirectHandler,
-                                              userinfo='vyos:secret@')
-        self.assertEqual(requests, [
-            ('HEAD', '/list.txt', AUTH_HEADER),
-            ('HEAD', '/redirected.txt', AUTH_HEADER),
-            ('GET', '/redirected.txt', AUTH_HEADER),
-        ])
+        requests = self._download_from_server(
+            SameOriginRedirectHandler, userinfo='vyos:secret@'
+        )
+        self.assertEqual(
+            requests,
+            [
+                ('HEAD', '/list.txt', AUTH_HEADER),
+                ('HEAD', '/redirected.txt', AUTH_HEADER),
+                ('GET', '/redirected.txt', AUTH_HEADER),
+            ],
+        )
+
+    def test_download_redirect_to_other_host_ignores_netrc(self):
+        self._use_netrc_default_entry()
+        requests = self._download_from_server(
+            CrossHostRedirectHandler, userinfo='vyos:secret@'
+        )
+        self.assertEqual(
+            requests,
+            [
+                ('HEAD', '/list.txt', AUTH_HEADER),
+                ('HEAD', '/redirected.txt', None),
+                ('GET', '/redirected.txt', None),
+            ],
+        )
+
+    def test_download_redirect_to_other_host_ignores_netrc_without_userinfo(self):
+        self._use_netrc_default_entry()
+        requests = self._download_from_server(CrossHostRedirectHandler)
+        self.assertEqual(
+            requests,
+            [
+                ('HEAD', '/list.txt', NETRC_AUTH_HEADER),
+                ('HEAD', '/redirected.txt', None),
+                ('GET', '/redirected.txt', None),
+            ],
+        )
 
 
 if __name__ == '__main__':
