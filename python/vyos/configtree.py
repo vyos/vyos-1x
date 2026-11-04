@@ -12,6 +12,7 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+# pylint: disable=too-many-lines
 import os
 import re
 import json
@@ -73,7 +74,7 @@ _PROTOTYPES = {
     ),
     'diff_tree': ([c_bool, c_char_p, c_void_p, c_void_p], c_void_p),
     'diff_compare': ([c_bool, c_char_p, c_void_p, c_void_p], c_char_p),
-    'diff_show': ([c_void_p, c_void_p, c_void_p, c_char_p], c_char_p),
+    'diff_show': ([c_bool, c_void_p, c_void_p, c_void_p, c_char_p], c_char_p),
     'tree_union': ([c_void_p, c_void_p], c_void_p),
     'tree_merge': ([c_bool, c_void_p, c_void_p], c_void_p),
     'mask_inclusive': ([c_void_p, c_void_p], c_void_p),
@@ -651,7 +652,8 @@ def diff_compare(left, right, path=None, commands=False, libpath=LIBPATH):
     return res
 
 
-def diff_show(rt, left, right, path=None, libpath=LIBPATH):
+def diff_show(rt, left, right, path=None, diff_comments=True, libpath=LIBPATH):
+    # pylint: disable=too-many-arguments
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
         raise TypeError('Arguments must be instances of ConfigTree')
     path = path or []
@@ -661,7 +663,9 @@ def diff_show(rt, left, right, path=None, libpath=LIBPATH):
 
     lib = get_lib(libpath)
 
-    res = lib.diff_show(rt.get_tree(), left.get_tree(), right.get_tree(), path_str)
+    res = lib.diff_show(
+        diff_comments, rt.get_tree(), left.get_tree(), right.get_tree(), path_str
+    )
     res = res.decode()
     if res == '#1@':
         msg = lib.get_error().decode()
@@ -928,7 +932,7 @@ def validate_tree(
 
 
 class DiffTree:
-    # pylint: disable=too-many-instance-attributes,too-few-public-methods
+    # pylint: disable=too-many-instance-attributes,too-few-public-methods,too-many-arguments
     def __init__(self, left, right, path=None, diff_comments=False, libpath=LIBPATH):
         if left is None:
             left = ConfigTree(config_string='\n')
@@ -951,7 +955,9 @@ class DiffTree:
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        res = self.__lib.diff_tree(diff_comments, path_str, left.get_tree(), right.get_tree())
+        res = self.__lib.diff_tree(
+            diff_comments, path_str, left.get_tree(), right.get_tree()
+        )
 
         # full diff config_tree and python dict representation
         self.full = ConfigTree(address=res)

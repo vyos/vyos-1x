@@ -448,13 +448,13 @@ let diff_compare cmds path c_ptr_l c_ptr_r =
         | D.Incommensurable -> error_message := "Incommensurable"; "#1@"
         | D.Empty_comparison -> error_message := "Empty comparison"; "#1@"
 
-let diff_show r_ptr c_ptr_l c_ptr_r path =
+let diff_show diff_comments r_ptr c_ptr_l c_ptr_r path =
     let path = split_on_whitespace path in
     let rt = Root.get r_ptr in
     let ct_l = Root.get c_ptr_l in
     let ct_r = Root.get c_ptr_r in
     try
-        (DS.diff_show[@alert "-exn"]) rt path ct_l ct_r
+        (DS.diff_show[@alert "-exn"]) ~diff_comments:diff_comments rt path ct_l ct_r
     with
         | D.Incommensurable -> error_message := "Incommensurable"; "#1@"
         | D.Empty_comparison -> error_message := "Empty comparison"; "#1@"
@@ -657,7 +657,7 @@ struct
   let () = I.internal "return_values" ((ptr void) @-> string @-> returning string) return_values
   let () = I.internal "diff_tree" (bool @-> string @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) diff_tree
   let () = I.internal "diff_compare" (bool @-> string @-> (ptr void) @-> (ptr void) @-> returning string) diff_compare
-  let () = I.internal "diff_show" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning string) diff_show
+  let () = I.internal "diff_show" (bool @-> (ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning string) diff_show
   let () = I.internal "tree_union" ((ptr void) @-> (ptr void) @-> returning (ptr void)) tree_union
   let () = I.internal "tree_merge" (bool @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) tree_merge
   let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> string @-> returning int) reference_tree_to_json
