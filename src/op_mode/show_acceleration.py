@@ -16,7 +16,6 @@
 
 import sys
 import os
-import re
 import argparse
 
 from tabulate import tabulate
@@ -24,7 +23,6 @@ from tabulate import tabulate
 from vyos import qat
 from vyos.config import Config
 from vyos.utils.process import call
-from vyos.utils.process import popen
 
 qat_init_script = '/etc/init.d/qat_service'
 
@@ -98,32 +96,15 @@ def show_qat_status():
 
 # Return QAT devices
 def get_qat_devices():
-    data_st, err = popen(f'{qat_init_script} status', decode='utf-8')
-    if not err:
-        elm_lst = re.findall(r'qat_dev\d', data_st)
-        print('\n'.join(elm_lst))
+    for device in qat.get_driver_status():
+        print(device['name'])
 
 
-# Return QAT path in sysfs
+# Return QAT path in debugfs
 def get_qat_proc_path(qat_dev):
-    q_type = ""
-    q_bsf  = ""
-    output, err = popen(f'{qat_init_script} status', decode='utf-8')
-    if not err:
-        # Parse QAT service output
-        data_st = output.split("\n")
-        for elm_str in range(len(data_st)):
-            if re.search(qat_dev, data_st[elm_str]):
-                elm_list = data_st[elm_str].split(", ")
-                for elm in range(len(elm_list)):
-                    if re.search('type', elm_list[elm]):
-                        q_list = elm_list[elm].split(": ")
-                        q_type=q_list[1]
-                    elif re.search('bsf', elm_list[elm]):
-                        q_list = elm_list[elm].split(": ")
-                        q_bsf = q_list[1]
-        if q_type and q_bsf:
-            return f'/sys/kernel/debug/qat_{q_type}_{q_bsf}/'
+    for device in qat.get_driver_status():
+        if device['name'] == qat_dev:
+            return f"/sys/kernel/debug/qat_{device['type']}_{device['address']}/"
 
     print(f'Could not determine the debugfs path for {qat_dev}')
     sys.exit(1)
