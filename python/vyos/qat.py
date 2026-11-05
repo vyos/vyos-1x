@@ -23,16 +23,15 @@ from the kernel and can never be inferred from the configuration session.
 """
 
 import os
-
-from glob import glob
+import re
 
 from vyos.utils.file import read_file
+from vyos.utils.process import rc_cmd
 
 # Intel vendor ID, as it appears in /sys/bus/pci/devices/*/vendor
 PCI_VENDOR_ID_INTEL = '0x8086'
 
 # PCI device ID -> chipset name, for the QAT drivers VyOS ships.
-# Keep in sync with verify() in src/conf_mode/system_acceleration.py.
 PCI_DEVICE_IDS = {
     '0x0435': 'DH895',
     '0x18ee': 'QAT_200XX',
@@ -43,32 +42,28 @@ PCI_DEVICE_IDS = {
 }
 
 PCI_DEVICES_PATH = '/sys/bus/pci/devices'
-DEBUGFS_PATH = '/sys/kernel/debug'
 PROC_CRYPTO = '/proc/crypto'
+ADF_CTL = '/usr/sbin/adf_ctl'
+
+# A device line of "adf_ctl status":
+#  qat_dev0 - type: c3xxx,  inst_id: 0,  node_id: 0,  bsf: 0000:01:00.0,
+#  #accel: 3 #engines: 6 state: up
+ADF_CTL_DEVICE = re.compile(
+    r'^\s*(?P<name>qat_dev\d+) - type: (?P<type>[^,]+),'
+    r'.*\bbsf: (?P<address>[^,]+),.*\bstate: (?P<state>\w+)',
+    re.MULTILINE,
+)
 
 
 def _read_sysfs(path):
     return read_file(path, defaultonfailure=None)
 
 
-def get_debugfs_path(address: str):
-    """Return the debugfs directory the QAT driver created for a PCI device.
-
-    The directory is named qat_<type>_<pci address>, where <type> depends on
-    which driver bound the device. Match on the address so that the type does
-    not have to be known in advance. Returns None when no such directory
-    exists, which is the case while the device has not been started.
-    """
-    found = glob(os.path.join(DEBUGFS_PATH, f'qat_*_{address}'))
-    return found[0] if found else None
-
-
 def find_devices() -> list:
     """Return the QAT devices present on the PCI bus.
 
-    Each entry carries the PCI address, the chipset name, the kernel driver
-    bound to the device (None when no driver is bound) and the debugfs
-    directory created by that driver (None when the device has not started).
+    Each entry carries the PCI address, the chipset name and the kernel driver
+    bound to the device (None when no driver is bound).
     """
     devices = []
 
@@ -100,7 +95,6 @@ def find_devices() -> list:
                 'address': address,
                 'chipset': PCI_DEVICE_IDS[device_id],
                 'driver': driver,
-                'debugfs': get_debugfs_path(address),
             }
         )
 
@@ -113,26 +107,37 @@ DEVICE_STATE_NOT_STARTED = 'not started'
 DEVICE_STATE_STARTED = 'started'
 DEVICE_STATE_UNKNOWN = 'unknown'
 
+ADF_CTL_STATES = {'up': DEVICE_STATE_STARTED, 'down': DEVICE_STATE_NOT_STARTED}
 
-def debugfs_mounted() -> bool:
-    """Return True when debugfs is mounted.
 
-    The QAT driver reports per-device state below it. Without debugfs a bound
-    device cannot be told apart from a started one, so report the difference
-    rather than guessing.
+def parse_adf_ctl_status(output: str) -> list:
+    """Return the devices listed in "adf_ctl status" output as dictionaries."""
+    return [match.groupdict() for match in ADF_CTL_DEVICE.finditer(output)]
+
+
+def get_driver_status() -> list:
+    """Return the devices reported by "adf_ctl status".
+
+    Empty when the driver cannot be queried.
     """
-    return os.path.ismount(DEBUGFS_PATH)
+    _, output = rc_cmd(f'{ADF_CTL} status')
+    return parse_adf_ctl_status(output)
 
 
-def get_device_state(device: dict) -> str:
-    """Return the state of a device returned by find_devices()."""
+def get_device_state(device: dict, driver_status: list) -> str:
+    """Return the state of a device returned by find_devices().
+
+    driver_status is the list returned by get_driver_status(). Only the driver
+    knows whether a device is started: its debugfs directory outlives a stop.
+    """
     if device['driver'] is None:
         return DEVICE_STATE_NO_DRIVER
-    if device['debugfs'] is not None:
-        return DEVICE_STATE_STARTED
-    if not debugfs_mounted():
-        return DEVICE_STATE_UNKNOWN
-    return DEVICE_STATE_NOT_STARTED
+
+    for entry in driver_status:
+        if entry['address'] == device['address']:
+            return ADF_CTL_STATES.get(entry['state'], DEVICE_STATE_UNKNOWN)
+
+    return DEVICE_STATE_UNKNOWN
 
 
 def _parse_proc_crypto(data: str):
