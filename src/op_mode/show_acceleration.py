@@ -52,6 +52,7 @@ def show_qat_status():
     it should be doing.
     """
     devices = detect_qat_dev()
+    driver_status = qat.get_driver_status()
 
     print('Intel QAT\n')
     print(
@@ -61,7 +62,7 @@ def show_qat_status():
                     device['address'],
                     device['chipset'],
                     device['driver'] if device['driver'] else 'none',
-                    qat.get_device_state(device),
+                    qat.get_device_state(device, driver_status),
                 ]
                 for device in devices
             ],
@@ -89,8 +90,7 @@ def show_qat_status():
             '         be offloaded to the QAT device.'
         )
 
-    # The Intel userspace tooling reports additional detail when it is present.
-    # It is not required for any of the above.
+    # qat_service adds the qat_devN names and engine counts when it is present.
     if os.path.exists(qat_init_script):
         print()
         call(f'{qat_init_script} status')
