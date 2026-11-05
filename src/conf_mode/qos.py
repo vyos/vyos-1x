@@ -356,10 +356,7 @@ def apply_interface(qos, ifname):
 
     # Only tear down the ingress qdisc if this interface actually has an
     # ingress QoS policy bound. Otherwise this would remove an unrelated
-    # ingress redirect/mirror configuration (see set_mirror_redirect())
-    # that call_dependents() just re-created, and it would never come
-    # back as only directions present in interface_config are re-applied
-    # below.
+    # ingress redirect/mirror configuration (see set_mirror_redirect()).
     if 'ingress' in interface_config:
         run(f'tc qdisc del dev {ifname} parent ffff:')
     run(f'tc qdisc del dev {ifname} root')
@@ -391,13 +388,13 @@ def apply(qos):
         run(f'tc qdisc del dev {interface} parent ffff:')
         run(f'tc qdisc del dev {interface} root')
 
+    if qos and 'interface' in qos:
+        for ifname in qos['interface']:
+            apply_interface(qos, ifname)
+
+    # Re-apply mirror and redirect last: an ingress QoS policy re-creates the
+    # ingress qdisc, which would drop a redirect filter installed before
     call_dependents()
-
-    if not qos or 'interface' not in qos:
-        return None
-
-    for ifname in qos['interface']:
-        apply_interface(qos, ifname)
 
     return None
 

@@ -1582,6 +1582,29 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         filter_output = get_tc_filter_details(interface)
         self.assertNotIn('pedit', filter_output)
 
+    def test_29_policy_limiter_with_redirect(self):
+        # Limiter and redirect share the ingress qdisc, both must be installed
+        interface = self._interfaces[0]
+        redirect = 'dum21354'
+        policy_name = 'qos-redirect'
+
+        self.cli_set(['interfaces', 'dummy', redirect])
+        self.cli_set(['interfaces', 'ethernet', interface, 'redirect', redirect])
+        self.cli_set(base_path + ['interface', interface, 'ingress', policy_name])
+        self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'bandwidth', '10mbit'])
+        self.cli_commit()
+
+        actions = []
+        for tc_filter in get_tc_filter_json(interface, 'ingress'):
+            if 'options' in tc_filter and 'actions' in tc_filter['options']:
+                actions += [action['kind'] for action in tc_filter['options']['actions']]
+        self.assertIn('mirred', actions)
+        self.assertIn('police', actions)
+
+        # committed together with the base_path removal in tearDown()
+        self.cli_delete(['interfaces', 'ethernet', interface, 'redirect'])
+        self.cli_delete(['interfaces', 'dummy', redirect])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

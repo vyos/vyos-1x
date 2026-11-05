@@ -1825,7 +1825,8 @@ class Interface(Control):
                 )
                 return None
 
-            _, err = self._popen(f'tc qdisc add dev {source_if} handle ffff: ingress')
+            # replace keeps an ingress qdisc of a QoS policy in place
+            _, err = self._popen(f'tc qdisc replace dev {source_if} handle ffff: ingress')
             if err: print(f'tc qdisc add for redirect failed!')
 
             _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
