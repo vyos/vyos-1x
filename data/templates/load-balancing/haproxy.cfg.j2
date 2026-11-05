@@ -64,7 +64,8 @@ frontend {{ front }}-http
     mode http
 {%             if front_config.listen_address is vyos_defined %}
 {%                 for address, server_config in front_config.listen_address.items() %}
-    bind {{ address | bracketize_ipv6 }}:80 {{ 'accept-proxy' if server_config.accept_proxy is vyos_defined }}
+{%                     set address, _, interface = address.partition('%') %}
+    bind {{ address | bracketize_ipv6 }}:80 {{ 'interface ' ~ interface if interface }} {{ 'accept-proxy' if server_config.accept_proxy is vyos_defined }}
 {%                 endfor %}
 {%             else %}
     bind [::]:80 v4v6
@@ -84,7 +85,8 @@ frontend {{ front }}
 {%         set ssl_directive = 'ssl' if ssl_front else '' %}
 {%         if front_config.listen_address is vyos_defined %}
 {%             for address, server_config in front_config.listen_address.items() %}
-    bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ ssl_directive }} {{ ssl_front | join(' ') }} {{ 'accept-proxy' if server_config.accept_proxy is vyos_defined }}
+{%                 set address, _, interface = address.partition('%') %}
+    bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ 'interface ' ~ interface if interface }} {{ ssl_directive }} {{ ssl_front | join(' ') }} {{ 'accept-proxy' if server_config.accept_proxy is vyos_defined }}
 {%             endfor %}
 {%         else %}
     bind [::]:{{ front_config.port }} v4v6 {{ ssl_directive }} {{ ssl_front | join(' ') }}
