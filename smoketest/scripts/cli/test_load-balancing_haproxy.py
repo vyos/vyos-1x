@@ -14,19 +14,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
-import time
 import textwrap
 import unittest
 
+from contextlib import contextmanager
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import Interface
 from vyos.template import get_default_port
 from vyos.utils.process import call
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.network import check_port_availability
+from vyos.utils.network import is_ipv6_link_local
+from vyos.utils.system import sysctl_read
 
 PROCESS_NAME = 'haproxy'
 HAPROXY_CONF = '/run/haproxy/haproxy.cfg'
@@ -36,6 +40,17 @@ proxy_interface = 'eth1'
 haproxy_service_name = 'https_front'
 haproxy_service_port = '4433'
 haproxy_backend_name = 'bk-01'
+
+
+@contextmanager
+def allocate_port(port, address):
+    """Keep TCP address:port busy with nc while the block runs"""
+    call(f'sudo nc -lk -s {address} -p {port} &')
+    try:
+        yield
+    finally:
+        call('sudo pkill nc')
+
 
 valid_ca_cert = """
 MIIDnTCCAoWgAwIBAgIUewSDtLiZbhg1YEslMnqRl1shoPcwDQYJKoZIhvcNAQEL
@@ -777,13 +792,10 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         addr_listen = '::1'  # HAProxy listen-address
         addr_busy = '127.0.0.1'  # IP address kept busy by nc (different from the first)
 
-        # Run the netcat command to bind to the specified address and port
-        call(f'sudo nc -lk -s {addr_busy} -p {shared_port} &')
+        with allocate_port(shared_port, address=addr_busy):
+            # nc runs in the background - make sure it holds the port
+            self.assert_port_availability(False, address=addr_busy, port=shared_port)
 
-        # Give nc a moment to bind before we commit
-        time.sleep(0.5)
-
-        try:
             backend_path = base_path + ['backend', backend]
             self.cli_set(backend_path + ['mode', 'tcp'])
             self.cli_set(backend_path + ['server', 'srv-m', 'address', '192.0.2.14'])
@@ -803,9 +815,6 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
             self.cli_set(service_path + ['listen-address', addr_busy])
             with self.assertRaises(ConfigSessionError) as e:
                 self.cli_commit()
-        finally:
-            # Always clean up nc regardless of test outcome
-            call('sudo pkill nc')
 
         self.assertTrue(process_named_running(PROCESS_NAME))
         config = read_file(HAPROXY_CONF)
@@ -814,22 +823,29 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'bind {addr_busy}:{shared_port}', config)
         self.assertIn(f'bind [{addr_listen}]:{shared_port}', config)
 
-    def assert_port_availability(self, expected, address=None):
-        """ Assert availability of the service port.
+    def assert_port_availability(
+        self, expected, address=None, port=haproxy_service_port, vrf=None
+    ):
+        """Assert availability of a port, the service port by default.
 
         A commit returns once systemd reports the unit active - the workers
         binding and releasing the listen sockets follow a moment later, so
-        poll instead of sampling once. """
+        poll instead of sampling once."""
 
         result, last = self.wait_for_result(
-            lambda: check_port_availability(address=address,
-                                            port=int(haproxy_service_port),
-                                            protocol='tcp'),
-            expected, pause=0.5, timeout=10)
+            lambda: check_port_availability(
+                address=address, port=int(port), protocol='tcp', vrf=vrf
+            ),
+            expected,
+            pause=0.5,
+            timeout=10,
+        )
 
-        self.assertTrue(result,
-            f'port {haproxy_service_port} on address "{address or "any"}" '
-            f'is available={last}, expected available={expected}')
+        self.assertTrue(
+            result,
+            f'port {port} on address "{address or "any"}" '
+            f'is available={last}, expected available={expected}',
+        )
 
     def test_reverse_proxy_listen_address_lifecycle(self):
         """T8977: adding then removing a listen-address must revert haproxy to wildcard."""
@@ -879,6 +895,146 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
         # Check port availability without address (default to 'any'), must yield false
         self.assert_port_availability(False)
+
+    def test_reverse_proxy_listen_address_not_assigned(self):
+        # HAProxy fails its whole configuration when it cannot bind one
+        # listen-address - refuse an address that is not present (e.g. a VRRP
+        # address on the backup router without ip_nonlocal_bind)
+        addr_listen = '192.0.2.15'  # not assigned to any interface
+        listen_path = base_path + ['service', haproxy_service_name, 'listen-address']
+
+        # With ip_nonlocal_bind=1 the address is allowed - switch it off
+        nonlocal_bind = sysctl_read(['net', 'ipv4', 'ip_nonlocal_bind'])
+        call('sudo sysctl -wq net.ipv4.ip_nonlocal_bind=0')
+
+        # The address does not exist - commit must fail
+        self.base_config()
+        self.cli_set(listen_path + [addr_listen])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Restore the previous ip_nonlocal_bind value
+        call(f'sudo sysctl -wq net.ipv4.ip_nonlocal_bind={nonlocal_bind}')
+
+        # tearDown() expects HAProxy running - listen on any address
+        self.cli_delete(listen_path)
+        self.cli_commit()
+
+    def test_reverse_proxy_listen_address_vrf(self):
+        # Moving a running HAProxy into a VRF must accept a listen-address of
+        # that VRF and restart HAProxy in it - a reload stays in the old VRF
+        vrf = 'haproxy-smoke'
+        dummy = 'dum4433'
+        addr_listen = '192.0.2.1'
+
+        # Remove the VRF also when this test fails, it would break the
+        # remaining tests. HAProxy goes too, a VRF in use cannot be removed.
+        def remove_vrf():
+            self.cli_delete(base_path)
+            self.cli_delete(['interfaces', 'dummy', dummy])
+            self.cli_delete(['vrf', 'name', vrf])
+            self.cli_commit()
+
+        self.addCleanup(remove_vrf)
+
+        # The listen-address exists only inside the VRF
+        self.cli_set(['vrf', 'name', vrf, 'table', '4433'])
+        self.cli_set(['interfaces', 'dummy', dummy, 'vrf', vrf])
+        self.cli_set(['interfaces', 'dummy', dummy, 'address', f'{addr_listen}/32'])
+
+        # HAProxy runs outside the VRF first
+        self.base_config()
+        self.cli_commit()
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # Move HAProxy into the VRF and listen on its address - the address
+        # must be found in the VRF, and HAProxy must be restarted there
+        self.cli_set(base_path + ['vrf', vrf])
+        self.cli_set(
+            base_path + ['service', haproxy_service_name, 'listen-address', addr_listen]
+        )
+        self.cli_commit()
+
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'bind {addr_listen}:{haproxy_service_port}', config)
+        # HAProxy holds the port inside the VRF
+        self.assert_port_availability(False, address=addr_listen, vrf=vrf)
+
+    def test_reverse_proxy_vrf_default(self):
+        # "vrf default" is the default routing table, not a VRF device
+        self.base_config()
+        self.cli_set(base_path + ['vrf', 'default'])
+        self.cli_commit()
+
+        # HAProxy runs and holds the port on any address
+        self.assert_port_availability(False)
+
+    def test_reverse_proxy_listen_address_link_local(self):
+        # HAProxy cannot parse "fe80::1%eth0" - it is bound with the
+        # "interface" option instead. Without the interface it is refused.
+        dummy = 'dum4434'
+
+        # The dummy interface gets a link-local address automatically
+        self.cli_set(['interfaces', 'dummy', dummy])
+        self.cli_commit()
+
+        # Find the link-local address of the dummy interface
+        link_local = [
+            addr.split('/')[0]
+            for addr in Interface(dummy).get_addr_v6()
+            if is_ipv6_link_local(addr)
+        ]
+        self.assertTrue(link_local, f'No IPv6 link-local address on {dummy}')
+        listen_path = base_path + ['service', haproxy_service_name, 'listen-address']
+
+        # Link-local address without interface - commit must fail
+        self.base_config()
+        self.cli_set(listen_path + [link_local[0]])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # A shell command after "%" must be refused and never run
+        inject_file = '/tmp/haproxy-smoke-inject'
+        self.cli_delete(listen_path)
+        self.cli_set(listen_path + [f'{link_local[0]}%lo;touch${{IFS}}{inject_file}'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.assertFalse(os.path.exists(inject_file))
+
+        # Link-local address with interface - commit must pass
+        self.cli_delete(listen_path)
+        self.cli_set(listen_path + [f'{link_local[0]}%{dummy}'])
+        self.cli_commit()
+
+        # HAProxy gets the address and interface separately and holds the port
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(
+            f'bind [{link_local[0]}]:{haproxy_service_port} interface {dummy}', config
+        )
+        self.assert_port_availability(False, address=f'{link_local[0]}%{dummy}')
+
+        # Clean up: remove the listen-address and the dummy interface it uses
+        self.cli_delete(listen_path)
+        self.cli_delete(['interfaces', 'dummy', dummy])
+        self.cli_commit()
+
+    def test_reverse_proxy_listen_address_ipv6_new(self):
+        # A new IPv6 address cannot be used for about a second (duplicate
+        # address detection). Adding it together with the listen-address, as
+        # on boot, must still commit.
+        addr_listen = '2001:db8::15'
+
+        self.cli_set(
+            ['interfaces', 'ethernet', proxy_interface, 'address', f'{addr_listen}/64']
+        )
+        self.base_config()
+        self.cli_set(
+            base_path + ['service', haproxy_service_name, 'listen-address', addr_listen]
+        )
+        self.cli_commit()
+
+        # HAProxy holds the port on the new address
+        self.assert_port_availability(False, address=addr_listen)
 
 
 if __name__ == '__main__':
