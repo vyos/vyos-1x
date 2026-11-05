@@ -90,7 +90,7 @@ def show_qat_status():
 
     # qat_service adds the qat_devN names and engine counts when it is present.
     if os.path.exists(qat_init_script):
-        print()
+        print(flush=True)
         call(f'{qat_init_script} status')
 
 
