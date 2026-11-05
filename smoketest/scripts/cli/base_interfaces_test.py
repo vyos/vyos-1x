@@ -628,6 +628,28 @@ class BasicInterfaceTest:
                 self.assertFalse(is_mirrored_to(interface, mirror, 'ffff'))
                 self.assertFalse(is_mirrored_to(interface, mirror, '1'))
 
+        def test_span_mirror_vlan_target_created_later(self):
+            if not self._test_mirror:
+                self.skipTest(MSG_TESTCASE_UNSUPPORTED)
+
+            # VLAN of a bond, which is committed after ethernet interfaces
+            bond = 'bond21354'
+            mirror = f'{bond}.10'
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface, 'mirror', 'ingress', mirror])
+            self.cli_set(['interfaces', 'bonding', bond, 'vif', '10'])
+            self.cli_commit()
+
+            for interface in self._interfaces:
+                self.assertTrue(is_mirrored_to(interface, mirror, 'ffff'))
+
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'mirror'])
+            self.cli_delete(['interfaces', 'bonding', bond])
+            self.cli_commit()
+
         def test_redirect_target_created_later(self):
             if not self._test_redirect:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)

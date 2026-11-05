@@ -604,6 +604,10 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
 
+        # Check if it is a monitor interface
+        mirror = is_mirror_intf(config, f'{ifname}.{vif}')
+        if mirror: dict['vif'][vif].update({'is_mirror_intf' : mirror})
+
         # Check if any DHCP options changed which require a client restart
         dhcp = is_node_changed(config, base + [ifname, 'vif', vif, 'dhcp-options'])
         if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : {}})
@@ -633,6 +637,10 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
+
+        # Check if it is a monitor interface
+        mirror = is_mirror_intf(config, f'{ifname}.{vif_s}')
+        if mirror: dict['vif_s'][vif_s].update({'is_mirror_intf' : mirror})
 
         # Check if any DHCP options changed which require a client restart
         dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'dhcp-options'])
@@ -665,6 +673,11 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
             bridge = is_member(config, f'{ifname}.{vif_s}.{vif_c}', 'bridge')
             if bridge: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
                 {'is_bridge_member' : bridge})
+
+            # Check if it is a monitor interface
+            mirror = is_mirror_intf(config, f'{ifname}.{vif_s}.{vif_c}')
+            if mirror: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
+                {'is_mirror_intf' : mirror})
 
             # Check if any DHCP options changed which require a client restart
             dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'])

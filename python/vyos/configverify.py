@@ -188,18 +188,30 @@ def verify_mirror_redirect(config):
         # limitation from the past
         raise ConfigError('Cannot use QoS together with mirror!')
 
+    def vlan_configured(interface, vlan):
+        # vif or vif-s, or a vif-c below a vif-s
+        if len(vlan) == 1:
+            return (('vif' in interface and vlan[0] in interface['vif']) or
+                    ('vif-s' in interface and vlan[0] in interface['vif-s']))
+        if len(vlan) == 2 and 'vif-s' in interface and vlan[0] in interface['vif-s']:
+            vif_s = interface['vif-s'][vlan[0]]
+            return 'vif-c' in vif_s and vlan[1] in vif_s['vif-c']
+        return False
+
     def verify_target(kind, target):
         # T6393: interface types are committed in priority order, the target
         # may only be defined on the CLI and not (yet) exist in the Kernel.
         # tc(8) can not reach a target in another netns
+        ifname, *vlan = target.split('.')
         for interfaces in getattr(config, 'interfaces_root', {}).values():
-            if target in interfaces:
-                if 'netns' in interfaces[target]:
+            if ifname in interfaces:
+                if 'netns' in interfaces[ifname]:
                     raise ConfigError(
                         f'Requested {kind} interface "{target}" is in a '
                         'network namespace!'
                     )
-                return
+                if not vlan or vlan_configured(interfaces[ifname], vlan):
+                    return
         if not interface_exists(target):
             raise ConfigError(f'Requested {kind} interface "{target}" does not exist!')
 

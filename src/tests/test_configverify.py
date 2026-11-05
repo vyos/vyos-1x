@@ -26,7 +26,13 @@ class TestVerifyMirrorRedirect(TestCase):
         'dummy': {'dum4711': {}, 'dum4712': {'netns': 'NS4711'}},
         'ethernet': {
             'eth0': {},
-            'eth1': {'vif': {'100': {'address': ['192.0.2.1/24']}}},
+            'eth1': {
+                'vif': {'100': {'address': ['192.0.2.1/24']}},
+                'vif-s': {'200': {'vif-c': {'300': {}}}},
+            },
+        },
+        'virtual-ethernet': {
+            'veth4711': {'netns': 'NS4711', 'vif': {'10': {}}},
         },
         'tunnel': {'tun4711': {'encapsulation': 'gre'}},
         # "tun4712" is a WireGuard peer name here, not an interface
@@ -49,18 +55,27 @@ class TestVerifyMirrorRedirect(TestCase):
         )
         verify_mirror_redirect(self._config('eth0', redirect='tun4711'))
         verify_mirror_redirect(self._config('eth0.100', mirror={'ingress': 'tun4711'}))
+        # VLAN sub-interface targets install the filter just the same
+        verify_mirror_redirect(self._config('eth0', mirror={'egress': 'eth1.100'}))
+        verify_mirror_redirect(self._config('eth0', redirect='eth1.200'))
+        verify_mirror_redirect(self._config('eth0', mirror={'ingress': 'eth1.200.300'}))
 
     def test_target_missing(self):
         with self.assertRaisesRegex(ConfigError, 'mirror interface "tun4712"'):
             verify_mirror_redirect(self._config('eth0', mirror={'ingress': 'tun4712'}))
         with self.assertRaisesRegex(ConfigError, 'redirect interface "tun4712"'):
             verify_mirror_redirect(self._config('eth0', redirect='tun4712'))
-        # VLAN target defined on the CLI but not existing in the kernel
-        with self.assertRaises(ConfigError):
-            verify_mirror_redirect(self._config('eth0', mirror={'egress': 'eth1.100'}))
+        # VLAN target neither defined on the CLI nor existing in the kernel
+        with self.assertRaisesRegex(ConfigError, 'does not exist'):
+            verify_mirror_redirect(self._config('eth0', mirror={'egress': 'eth1.101'}))
+        with self.assertRaisesRegex(ConfigError, 'does not exist'):
+            verify_mirror_redirect(self._config('eth0', redirect='eth1.200.301'))
         # a target in another netns is out of reach for tc(8)
         with self.assertRaisesRegex(ConfigError, 'network namespace'):
             verify_mirror_redirect(self._config('eth0', mirror={'ingress': 'dum4712'}))
+        # ... as is a VLAN sub-interface of an interface in another netns
+        with self.assertRaisesRegex(ConfigError, 'network namespace'):
+            verify_mirror_redirect(self._config('eth0', redirect='veth4711.10'))
         # without any knowledge of the CLI the kernel is the only reference
         with self.assertRaises(ConfigError):
             verify_mirror_redirect({'ifname': 'eth0', 'mirror': {'ingress': 'tun4711'}})
