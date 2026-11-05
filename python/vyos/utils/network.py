@@ -394,7 +394,6 @@ def check_port_availability(address: str = None, port: int = 0,
       False if a port is busy or IP address does not exists
       True if a port is free and IP address exists
     """
-    import errno
     import socket
     from ipaddress import ip_address
 
@@ -428,14 +427,8 @@ def check_port_availability(address: str = None, port: int = 0,
             # When a VRF is specified, bind the socket to the VRF master
             # device so the address is resolved in that VRF's L3 domain.
             if vrf:
-                try:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE,
-                                 (vrf + '\0').encode())
-                except OSError as e:
-                    # nothing can listen in a VRF that does not exist (yet)
-                    if e.errno == errno.ENODEV:
-                        return True
-                    raise
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE,
+                             (vrf + '\0').encode())
             try:
                 s.bind(sockaddr)
                 return True # port is free to use
