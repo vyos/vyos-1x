@@ -1583,7 +1583,8 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('pedit', filter_output)
 
     def test_29_policy_limiter_with_redirect(self):
-        # Limiter and redirect share the ingress qdisc, both must be installed
+        # Limiter and redirect share the ingress qdisc: the traffic is policed
+        # first, what is not dropped gets redirected
         interface = self._interfaces[0]
         redirect = 'dum21354'
         policy_name = 'qos-redirect'
@@ -1597,9 +1598,10 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         actions = []
         for tc_filter in get_tc_filter_json(interface, 'ingress'):
             if 'options' in tc_filter and 'actions' in tc_filter['options']:
-                actions += [action['kind'] for action in tc_filter['options']['actions']]
-        self.assertIn('mirred', actions)
-        self.assertIn('police', actions)
+                actions.append([action['kind'] for action in tc_filter['options']['actions']])
+        # filters in priority order: the policer passes conforming traffic on
+        # to the redirect, our own redirect catches whatever no class matched
+        self.assertEqual(actions, [['police', 'mirred'], ['mirred']])
 
         # committed together with the base_path removal in tearDown()
         self.cli_delete(['interfaces', 'ethernet', interface, 'redirect'])

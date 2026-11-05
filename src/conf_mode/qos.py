@@ -150,6 +150,10 @@ def get_config(config=None):
             type_node = path.split(" ")[1] # return only interface type node
             set_dependents(type_node, conf, ifname.split(".")[0])
 
+        # T6393: an ingress policy redirects its traffic after policing it
+        if 'interface' in qos and ifname in qos['interface'] and conf.exists(f'{path} redirect'):
+            qos['interface'][ifname]['redirect'] = conf.return_value(f'{path} redirect')
+
     for policy in qos.get('policy', []):
         if policy in ['random_detect']:
             for rd_name in list(qos['policy'][policy]):
@@ -376,6 +380,10 @@ def apply_interface(qos, ifname):
             continue
 
         shaper_type, shaper_config = get_shaper(qos, interface_config, direction)
+        # tc rejects the whole filter if the redirect target does not exist (yet)
+        if (direction == 'ingress' and 'redirect' in interface_config and
+                interface_config['redirect'] in interfaces()):
+            shaper_config = dict(shaper_config, redirect=interface_config['redirect'])
         shaper_type(ifname).update(shaper_config, direction)
 
     return None

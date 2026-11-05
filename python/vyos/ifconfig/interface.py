@@ -1781,13 +1781,8 @@ class Interface(Control):
             self._popen(f'tc qdisc del dev {source_if} root 2>/dev/null')
             self._popen(f'tc qdisc del dev {source_if} ingress 2>/dev/null')
         else:
-            # keep the QoS qdiscs, only remove our own (mirred) filters
-            for tc_filter, _ in self._mirred_filters(source_if, 'ffff:'):
-                self._popen(
-                    f'tc filter del dev {source_if} parent ffff: '
-                    f'handle {tc_filter["options"]["fh"]} pref {tc_filter["pref"]} '
-                    f'protocol {tc_filter["protocol"]} {tc_filter["kind"]}'
-                )
+            # keep the QoS qdiscs and filters, only remove our own redirect filter
+            self._popen(f'tc filter del dev {source_if} parent ffff: pref 65000 2>/dev/null')
 
         # Apply interface mirror policy
         if 'mirror' in config:
@@ -1829,8 +1824,10 @@ class Interface(Control):
             _, err = self._popen(f'tc qdisc replace dev {source_if} handle ffff: ingress')
             if err: print(f'tc qdisc add for redirect failed!')
 
+            # Lowest priority: an ingress QoS policy polices and redirects the
+            # traffic it matches first, see vyos.qos.base
             _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
-                                 f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
+                                 f'all prio 65000 u32 match u32 0 0 flowid 1:1 action mirred '\
                                  f'egress redirect dev {target_if}')
             if err: print('tc filter for redirect failed')
 
