@@ -66,7 +66,8 @@ def tunnel_identity(conf):
     """
     The Kernel identifies a GRE tunnel by the tuple of local address, remote
     address, source-interface and key, see ip_tunnel_find() in
-    net/ipv4/ip_tunnel.c. Two tunnels collide iff these tuples match.
+    net/ipv4/ip_tunnel.c. Two tunnels of the same encapsulation collide if
+    these tuples match.
 
     An unconfigured endpoint is stored as the any address, so "0.0.0.0" and
     "::" compare equal to an endpoint which is not set at all. A zero GRE key
@@ -211,11 +212,9 @@ def verify(tunnel):
         # Prevent the same key for 2 tunnels with same source-address/encap. T2920
         ours = tunnel_identity(tunnel)
         for o_tunnel, o_tunnel_conf in tunnel['other_tunnels'].items():
-            # no match on encapsulation - bail out
-            our_encapsulation = tunnel['encapsulation']
-            their_encapsulation = o_tunnel_conf['encapsulation']
-            if our_encapsulation in gre_encapsulations and their_encapsulation \
-                not in gre_encapsulations:
+            # no match on encapsulation - bail out. The Kernel keeps gre and
+            # gretap tunnels in tables of their own, so they never collide
+            if o_tunnel_conf['encapsulation'] != tunnel['encapsulation']:
                 continue
 
             try:

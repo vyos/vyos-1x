@@ -619,6 +619,31 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
 
             self.assertNotIn('ikey', conf['linkinfo']['info_data'])
 
+    def test_gre_and_gretap_tunnel_same_key(self):
+        # The Kernel keeps gre and gretap tunnels in tables of their own, so
+        # both may share local address, remote address and GRE key
+        ip_key = '60'
+        tunnels = {
+            'tun10': 'gre',
+            'tun20': 'gretap',
+        }
+
+        for tunnel, encapsulation in tunnels.items():
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', encapsulation])
+            self.cli_set(self._base_path + [tunnel, 'source-address', self.local_v4])
+            self.cli_set(self._base_path + [tunnel, 'remote', remote_ip4])
+            self.cli_set(self._base_path + [tunnel, 'parameters', 'ip', 'key', ip_key])
+
+        self.cli_commit()
+
+        for tunnel, encapsulation in tunnels.items():
+            conf = get_interface_config(tunnel)
+
+            self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
+            self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
+            self.assertEqual(remote_ip4, conf['linkinfo']['info_data']['remote'])
+            self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
+
     def test_tunnel_gre_key_leading_zero(self):
         # iproute2 parses the key with strtoul(3) and base 0, so a leading zero
         # makes it octal - "00" is the very same zero key as "0" and must be
