@@ -325,13 +325,19 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        # A zero key is no key at all for such a tunnel - with an any
-        # source-address and no remote it catches every packet, exactly as a
-        # keyless tunnel would
+        # A zero key on a single tunnel stays accepted for backwards
+        # compatibility
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '0'])
+        self.cli_commit()
+
+        # It does not tell a second such tunnel apart, though
+        self.cli_set(self._base_path + ['tun1281', 'encapsulation', encapsulation])
+        self.cli_set(self._base_path + ['tun1281', 'source-address', src_addr])
+        self.cli_set(self._base_path + ['tun1281', 'parameters', 'ip', 'key', '0'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
+        self.cli_delete(self._base_path + ['tun1281'])
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', key])
 
         self.cli_commit()
@@ -646,16 +652,20 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_tunnel_gre_key_leading_zero(self):
         # iproute2 parses the key with strtoul(3) and base 0, so a leading zero
-        # makes it octal - "00" is the very same zero key as "0" and must be
-        # refused for a tunnel which carries no endpoint at all
+        # makes it octal - "00" is the very same zero key as "0" and must
+        # collide with it on a tunnel which carries no endpoint at all
         interface = 'tun1281'
 
-        self.cli_set(self._base_path + [interface, 'encapsulation', 'gre'])
-        self.cli_set(self._base_path + [interface, 'source-address', '0.0.0.0'])
+        for tunnel in ['tun1280', interface]:
+            self.cli_set(self._base_path + [tunnel, 'encapsulation', 'gre'])
+            self.cli_set(self._base_path + [tunnel, 'source-address', '0.0.0.0'])
+        self.cli_set(self._base_path + ['tun1280', 'parameters', 'ip', 'key', '0'])
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '00'])
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+        self.cli_delete(self._base_path + ['tun1280'])
 
         # "010" is octal 8 and does identify the tunnel
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', '010'])

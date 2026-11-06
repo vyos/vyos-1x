@@ -187,24 +187,20 @@ def verify(tunnel):
             if 'direction' not in tunnel['parameters']['erspan']:
                 raise ConfigError('ERSPAN version 2 requires direction to be set!')
 
-    # If tunnel source is any and the gre key does not identify the tunnel
+    # If tunnel source is any and gre key is not set. A zero key is accepted
+    # for backwards compatibility - it only fails to identify a tunnel which
+    # carries no remote either, and the collision check below refuses that
+    # as soon as a second such tunnel exists
     interface = tunnel['ifname']
     if (
         tunnel['encapsulation'] in ['gre']
         and dict_search('source_address', tunnel) == '0.0.0.0'
+        and dict_search('parameters.ip.key', tunnel) == None
     ):
-        # The source-address being the any address, a tunnel without a remote
-        # carries no endpoint at all - a zero key does not tell such a tunnel
-        # apart from a keyless one either
-        identity = tunnel_identity(tunnel)
-        if identity.key is None:
-            # Only a tunnel which has no remote either is asked for a
-            # non-zero key, a zero one does identify the rest
-            tmp = 'set to a non-zero value' if identity.remote is None else 'set'
-            raise ConfigError(
-                f'"parameters ip key" must be {tmp} for {interface} when '
-                'encapsulation is GRE!'
-            )
+        raise ConfigError(
+            f'"parameters ip key" must be set for {interface} when '
+            'encapsulation is GRE!'
+        )
 
     gre_encapsulations = ['gre', 'gretap']
     if tunnel['encapsulation'] in gre_encapsulations and 'other_tunnels' in tunnel:
