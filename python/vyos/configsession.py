@@ -401,6 +401,19 @@ class ConfigSession(object):
         except LoadConfigError as e:
             raise ConfigSessionError(e) from e
 
+    def load_legacy(self, file_path):
+        """Load with the 'legacy' variety of vyos.load_config (one
+        'cli-shell-api loadFile'), not the legacy config backend. Raise if
+        loadFile reports a path it could not apply."""
+        from vyos.load_config import load
+        from vyos.load_config import check_legacy_output
+        from vyos.load_config import LoadConfigError
+
+        try:
+            check_legacy_output(load(file_path, switch='legacy'))
+        except LoadConfigError as e:
+            raise ConfigSessionError(e) from e
+
     def load_config_obj(self, config_obj: ConfigObj):
         if isinstance(config_obj, ConfigTree):
             with NamedTemporaryFile() as f:
