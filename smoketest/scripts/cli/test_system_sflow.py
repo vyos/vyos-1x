@@ -128,6 +128,26 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
             else:
                 self.assertIn(f'collector {{ ip = {server} udpport = {default_port} }}', hsflowd)
 
+    def test_sflow_agent_address_zone_index(self):
+        # T9322: a link-local agent-address with a zone index must be checked
+        # against the interface it names, and a missing one must be reported
+        # as ConfigError instead of aborting the commit with a traceback
+        interface = 'dum0'
+        address = 'fe80::1'
+
+        self.cli_set(['interfaces', 'dummy', interface, 'address', f'{address}/64'])
+        for ethernet in Section.interfaces('ethernet'):
+            self.cli_set(base_path + ['interface', ethernet])
+        self.cli_set(base_path + ['server', '2001:db8::1'])
+
+        # zone points to an interface the address is not assigned to
+        self.cli_set(base_path + ['agent-address', f'{address}%dum99'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['agent-address', f'{address}%{interface}'])
+        self.cli_commit()
+
     def test_vrf(self):
         interface = 'eth0'
         server = '192.0.2.1'
