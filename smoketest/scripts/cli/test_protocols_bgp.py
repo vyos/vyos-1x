@@ -226,6 +226,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # cleanup any possible VRF mess
         self.cli_delete(['vrf'])
+        # left over when test_bgp_112 fails halfway
+        self.cli_delete(['interfaces', 'ethernet', self.missing_ethernet])
         # always destrox the entire bgpd configuration to make the processes
         # life as hard as possible
         self.cli_delete(base_path)
@@ -2533,6 +2535,30 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' route-target export {both_rt}', frrconfig)
         self.assertIn(f' route-target import {extra_import_rt}', frrconfig)
         self.assertNotIn(f' route-target export {extra_import_rt}', frrconfig)
+
+    def test_bgp_112_neighbors_with_missing_nic(self):
+        # T9515: an ethernet interface on the CLI whose NIC is missing fails
+        # its own node. This must not keep BGP neighbors on that interface
+        # out of FRR - neither an interface based neighbor nor IPv4/IPv6
+        # neighbors on a subnet of one of its VLAN subinterfaces.
+        interface = self.missing_ethernet
+        interface_path = ['interfaces', 'ethernet', interface]
+        neighbors = ['192.0.2.2', '2001:db8::2']
+        self.cli_set(interface_path + ['description', 'T9515'])
+        self.cli_set(interface_path + ['vif', '100', 'address', '192.0.2.1/24'])
+        self.cli_set(interface_path + ['vif', '100', 'address', '2001:db8::1/64'])
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'remote-as', 'external'])
+        for neighbor in neighbors:
+            self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', 'external'])
+        with self.assertRaisesRegex(ConfigSessionError, f'Interface "{interface}" does not exist'):
+            self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f' neighbor {interface} interface remote-as external', frrconfig)
+        for neighbor in neighbors:
+            self.assertIn(f' neighbor {neighbor} remote-as external', frrconfig)
+
+        self.cli_delete(interface_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

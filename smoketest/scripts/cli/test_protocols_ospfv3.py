@@ -53,6 +53,8 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         self.cli_delete(base_path)
+        # left over when test_ospfv3_11 fails halfway
+        self.cli_delete(['interfaces', 'ethernet', self.missing_ethernet])
         self.cli_commit()
 
         frrconfig = self.getFRRconfig('router ospf6', stop_section='^exit')
@@ -393,6 +395,25 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_set(originate + ['metric-type', '2'])
         self.cli_commit()
         verify('2')
+
+    def test_ospfv3_11_interface_with_missing_nic(self):
+        # T9515: an ethernet interface on the CLI whose NIC is missing fails
+        # its own node. This must not keep OSPFv3 on that interface out of FRR.
+        interface = self.missing_ethernet
+        interface_path = ['interfaces', 'ethernet', interface]
+        self.cli_set(interface_path + ['description', 'T9515'])
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['interface', interface, 'area', default_area])
+        with self.assertRaisesRegex(ConfigSessionError, f'Interface "{interface}" does not exist'):
+            self.cli_commit()
+
+        frrconfig = self.getFRRconfig('router ospf6', stop_section='^exit')
+        self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
+
+        frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
+        self.assertIn(f' ipv6 ospf6 area {default_area}', frrconfig)
+
+        self.cli_delete(interface_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
