@@ -61,6 +61,8 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertFalse(vyos.utils.network.check_port_availability('192.0.2.1', 443))
         # We do not have 2001:db8::1 configured on this system
         self.assertFalse(vyos.utils.network.check_port_availability('2001:db8::1', 80, protocol='udp'))
+        # the default VRF is not a device and must behave like no VRF at all
+        self.assertTrue(vyos.utils.network.check_port_availability('127.0.0.1', 8080, vrf='default'))
 
     def test_normalize_prefix(self):
         normalize_prefix = vyos.utils.network.normalize_prefix

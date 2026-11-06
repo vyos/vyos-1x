@@ -252,6 +252,20 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'dummy', interface])
         self.cli_delete(['vrf', 'name', vrf])
 
+    def test_vrf_default(self):
+        # "vrf default" has no VRF master device and must behave like no VRF
+        # at all - the port check used to report a bogus port conflict
+        self.cli_set(
+            base_path + ['api', 'keys', 'id', 'key-01', 'key', 'MySuperSecretVyOS']
+        )
+        self.cli_set(base_path + ['vrf', 'default'])
+        self.cli_commit()
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        ports = {c.laddr.port for c in psutil.net_connections(kind='tcp')
+                 if c.status == psutil.CONN_LISTEN}
+        self.assertIn(443, ports)
+
     def test_certificate(self):
         cert_name = 'test_https'
         dh_name = 'dh-test'

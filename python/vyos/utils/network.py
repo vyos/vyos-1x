@@ -417,19 +417,23 @@ def check_port_availability(address: str = None, port: int = 0,
         print(f'Invalid address: {address}')
         return False
 
+    # the default VRF has no master device - an unbound socket already uses it
+    if vrf == 'default':
+        vrf = None
+
     for family, socktype, proto, canonname, sockaddr in addr_info:
-        try:
-            with socket.socket(family, socktype, proto) as s:
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                # When a VRF is specified, bind the socket to the VRF master
-                # device so the address is resolved in that VRF's L3 domain.
-                if vrf:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE,
-                                 (vrf + '\0').encode())
+        with socket.socket(family, socktype, proto) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # When a VRF is specified, bind the socket to the VRF master
+            # device so the address is resolved in that VRF's L3 domain.
+            if vrf:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE,
+                             (vrf + '\0').encode())
+            try:
                 s.bind(sockaddr)
                 return True # port is free to use
-        except OSError:
-            return False # port is already in use
+            except OSError:
+                return False # port is already in use
 
     # if we reach this point, no socket was tested and we assume the port is
     # already in use - better safe then sorry
