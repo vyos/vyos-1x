@@ -242,6 +242,12 @@ class QoSBase:
             import pprint
             pprint.pprint(config)
 
+        # T6393: traffic of an ingress limiter on an interface with "redirect"
+        # is redirected after policing, see qos.py apply_interface()
+        redirect = []
+        if 'redirect' in config:
+            redirect = ['action', 'mirred', 'egress', 'redirect', 'dev', config['redirect']]
+
         if 'class' in config:
             # T9134: every class match is installed as its own tc filter, and
             # tc ties a filter priority ("prio"/"pref") to a single protocol -
@@ -431,6 +437,7 @@ class QoSBase:
                             # add pedit before flowid for filters without police
                             if dscp_action:
                                 filter_cmd += dscp_action
+                            filter_cmd += redirect
                             filter_cmd += ['flowid', f'{self._parent:x}:{cls:x}']
                             self._cmdl(filter_cmd)
 
@@ -450,6 +457,9 @@ class QoSBase:
                                 filter_cmd += ['conform-exceed', str(action)]
                             if 'not_exceed' in cls_config:
                                 action = cls_config['not_exceed']
+                                # "ok" would end the action chain before the redirect
+                                if redirect and action == 'ok':
+                                    action = 'pipe'
                                 filter_cmd[-1] += f'/{action}'
 
                             if 'bandwidth' in cls_config:
@@ -468,6 +478,7 @@ class QoSBase:
                             filter_cmd += dscp_action
 
                         cls = int(cls)
+                        filter_cmd += redirect
                         filter_cmd += ['flowid', f'{self._parent:x}:{cls:x}']
                         self._cmdl(filter_cmd)
 
@@ -547,6 +558,9 @@ class QoSBase:
                     filter_cmd += ['conform-exceed', str(action)]
                     if 'not_exceed' in config['default']:
                         action = config['default']['not_exceed']
+                        # "ok" would end the action chain before the redirect
+                        if redirect and action == 'ok':
+                            action = 'pipe'
                         filter_cmd[-1] += f'/{action}'
 
                 if 'bandwidth' in config['default']:
@@ -560,6 +574,8 @@ class QoSBase:
                 if 'mtu' in config['default']:
                     mtu = config['default']['mtu']
                     filter_cmd += ['mtu', str(mtu)]
+
+                filter_cmd += redirect
 
                 if 'class' in config:
                     filter_cmd += ['flowid', f'{self._parent:x}:{default_cls_id:x}']

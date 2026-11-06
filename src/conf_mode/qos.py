@@ -150,6 +150,10 @@ def get_config(config=None):
             type_node = path.split(" ")[1] # return only interface type node
             set_dependents(type_node, conf, ifname.split(".")[0])
 
+        # T6393: an ingress policy redirects its traffic after policing it
+        if 'interface' in qos and ifname in qos['interface'] and conf.exists(f'{path} redirect'):
+            qos['interface'][ifname]['redirect'] = conf.return_value(f'{path} redirect')
+
     for policy in qos.get('policy', []):
         if policy in ['random_detect']:
             for rd_name in list(qos['policy'][policy]):
@@ -356,10 +360,7 @@ def apply_interface(qos, ifname):
 
     # Only tear down the ingress qdisc if this interface actually has an
     # ingress QoS policy bound. Otherwise this would remove an unrelated
-    # ingress redirect/mirror configuration (see set_mirror_redirect())
-    # that call_dependents() just re-created, and it would never come
-    # back as only directions present in interface_config are re-applied
-    # below.
+    # ingress redirect/mirror configuration (see set_mirror_redirect()).
     if 'ingress' in interface_config:
         run(f'tc qdisc del dev {ifname} parent ffff:')
     run(f'tc qdisc del dev {ifname} root')
@@ -379,6 +380,10 @@ def apply_interface(qos, ifname):
             continue
 
         shaper_type, shaper_config = get_shaper(qos, interface_config, direction)
+        # tc rejects the whole filter if the redirect target does not exist (yet)
+        if (direction == 'ingress' and 'redirect' in interface_config and
+                interface_config['redirect'] in interfaces()):
+            shaper_config = dict(shaper_config, redirect=interface_config['redirect'])
         shaper_type(ifname).update(shaper_config, direction)
 
     return None
@@ -391,13 +396,13 @@ def apply(qos):
         run(f'tc qdisc del dev {interface} parent ffff:')
         run(f'tc qdisc del dev {interface} root')
 
+    if qos and 'interface' in qos:
+        for ifname in qos['interface']:
+            apply_interface(qos, ifname)
+
+    # Re-apply mirror and redirect last: an ingress QoS policy re-creates the
+    # ingress qdisc, which would drop a redirect filter installed before
     call_dependents()
-
-    if not qos or 'interface' not in qos:
-        return None
-
-    for ifname in qos['interface']:
-        apply_interface(qos, ifname)
 
     return None
 
