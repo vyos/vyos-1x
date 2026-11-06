@@ -9,7 +9,7 @@ ExecStart=
 ExecStart={{ vrf_command }}/usr/bin/telegraf --config /run/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d --pidfile /run/telegraf/telegraf.pid
 PIDFile=/run/telegraf/telegraf.pid
 EnvironmentFile=
-Environment=INFLUX_TOKEN={{ influxdb.authentication.token }}
+EnvironmentFile=-{{ telegraf_env_file }}
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_SYS_ADMIN CAP_BPF CAP_DAC_OVERRIDE
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 Restart=always
