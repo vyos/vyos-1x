@@ -92,6 +92,21 @@ class VTIUpDownDB:
     # indicates the named interface wants to be up due to an established
     # connection <connection name> using the <protocol> protocol.
     #
+    # Connection entries are a multiset: the same ifspec is stored once per
+    # established CHILD_SA, because a connection can transiently have more
+    # than one -- when the peer establishes a new SA before the old one has
+    # timed out. The interface must stay up until the last of them is gone.
+    # Persistent entries remain unique.
+    #
+    # The count is exact only while every up-client is eventually matched by a
+    # down-client, which holds because the updown plugin implements child_updown
+    # and is not invoked for rekeys of either the IKE_SA or the CHILD_SA. Should
+    # a teardown be lost anyway - e.g., charon killed outright - the leaked
+    # occurrence holds the interface up rather than dropping one that is still
+    # carrying traffic, and it does not outlive the daemon: this file lives in
+    # /tmp, and remove_vti_updown_db() discards it when the IPsec configuration
+    # goes away.
+    #
     # The configuration tree and ipsec daemon connection up-down hook
     # modify this file as needed and use it to determine when a
     # particular event or configuration change should lead to changing
@@ -99,7 +114,11 @@ class VTIUpDownDB:
 
     def __init__(self, f):
         self._fileHandle = f
-        self._ifspecs = set([entry.strip() for entry in f.read().split(" ") if entry and not entry.isspace()])
+        self._ifspecs = [
+            entry.strip()
+            for entry in f.read().split(" ")
+            if entry and not entry.isspace()
+        ]
         self._ifsUp = set()
         self._ifsDown = set()
 
@@ -108,20 +127,26 @@ class VTIUpDownDB:
         Adds a new entry to the DB.
 
         If an interface name, connection name, and protocol are supplied,
-        creates a connection entry.
+        creates a connection entry. Connection entries are counted, so one is
+        stored per established CHILD_SA even when they share an ifspec.
 
         If only an interface name is specified, creates a persistent entry
-        for the given interface.
+        for the given interface. Persistent entries are not counted.
         """
         ifspec = f"{interface}:{connection}:{protocol}" if (connection is not None and protocol is not None) else interface
-        if ifspec not in self._ifspecs:
-            self._ifspecs.add(ifspec)
-            self._ifsUp.add(interface)
-            self._ifsDown.discard(interface)
+        if ':' not in ifspec and ifspec in self._ifspecs:
+            return
+
+        self._ifspecs.append(ifspec)
+        self._ifsUp.add(interface)
+        self._ifsDown.discard(interface)
 
     def remove(self, interface, connection = None, protocol = None):
         """
         Removes a matching entry from the DB.
+
+        For a connection entry a single occurrence is removed, so the interface
+        is only brought down once the last CHILD_SA using it has gone away.
 
         If no matching entry can be found, the operation returns successfully.
         """
@@ -147,8 +172,14 @@ class VTIUpDownDB:
 
     def removeAllOtherInterfaces(self, interface_list):
         """ Removes all interfaces not included in the given list from the DB """
-        updated_ifspecs = set([ifspec for ifspec in self._ifspecs if ifspec.split(':')[0] in interface_list])
-        removed_ifspecs = self._ifspecs - updated_ifspecs
+        updated_ifspecs = [
+            ifspec for ifspec in self._ifspecs if ifspec.split(':')[0] in interface_list
+        ]
+        removed_ifspecs = [
+            ifspec
+            for ifspec in self._ifspecs
+            if ifspec.split(':')[0] not in interface_list
+        ]
         self._ifspecs = updated_ifspecs
         interfaces_to_bring_down = [ifspec.split(':')[0] for ifspec in removed_ifspecs]
         self._ifsDown.update(interfaces_to_bring_down)
