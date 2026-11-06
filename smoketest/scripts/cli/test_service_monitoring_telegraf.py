@@ -19,11 +19,14 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
+from vyos.utils.file import file_permissions
 from vyos.utils.file import read_file
 
 PROCESS_NAME = 'telegraf'
 TELEGRAF_CONF = '/run/telegraf/telegraf.conf'
+TELEGRAF_ENV = '/run/telegraf/telegraf.env'
 base_path = ['service', 'monitoring', 'telegraf']
 prometheus_base_path = ['service', 'monitoring', 'prometheus']
 org = 'log@in.local'
@@ -276,6 +279,29 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_discard()
+
+    def test_09_influxdb_token(self):
+        new_token = 'A' * 86 + '=='
+
+        self.basic_influxdb_setup()
+
+        # Token is only readable by root and not exposed by systemd
+        self.assertEqual(read_file(TELEGRAF_ENV, sudo=True), f'INFLUX_TOKEN={token}')
+        self.assertEqual(file_permissions(TELEGRAF_ENV), '0600')
+        self.assertNotIn(
+            token, cmdl(['systemctl', 'show', '-p', 'Environment', 'telegraf.service'])
+        )
+
+        pid = process_named_running(PROCESS_NAME)
+
+        # A reload keeps the old environment, a new token needs a restart
+        self.cli_set(base_path + ['influxdb', 'authentication', 'token', new_token])
+        self.cli_commit()
+
+        new_pid = process_named_running(PROCESS_NAME, timeout=10)
+        self.assertNotEqual(pid, new_pid)
+        environ = read_file(f'/proc/{new_pid}/environ', sudo=True)
+        self.assertIn(f'INFLUX_TOKEN={new_token}', environ)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
