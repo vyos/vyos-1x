@@ -43,6 +43,7 @@ from ftplib import error_reply
 from ftplib import parse150
 from requests import Session
 from requests.adapters import HTTPAdapter
+from requests.auth import AuthBase
 from urllib.parse import unquote
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
@@ -115,6 +116,32 @@ class SourceAdapter(HTTPAdapter):
             block=block,
             **pool_kwargs
         )
+
+
+class NoAuth(AuthBase):
+    """
+    Explicitly send no credentials. Unlike `auth=None`, this also stops
+    requests from falling back to .netrc.
+    """
+
+    def __call__(self, request):
+        return request
+
+
+class NoRedirectNetrcSession(Session):
+    """
+    requests session that never takes credentials from .netrc for a redirect
+    target. A .netrc 'default' entry matches any host, so a redirect could
+    otherwise hand it to a third party. Proxy and CA settings from the
+    environment are kept, which `trust_env = False` would drop.
+    """
+
+    def rebuild_auth(self, prepared_request, response):
+        headers = prepared_request.headers
+        if 'Authorization' in headers and self.should_strip_auth(
+            response.request.url, prepared_request.url
+        ):
+            del headers['Authorization']
 
 @contextmanager
 def umask(mask: int):
@@ -411,7 +438,7 @@ class HttpC:
         self.vrf = vrf
 
     def _establish(self):
-        session = Session()
+        session = NoRedirectNetrcSession()
         adapter = SourceAdapter(self.source_pair, vrf=self.vrf)
         session.mount(self.urlstring, adapter)
         session.headers.update({'User-Agent': 'VyOS/' + get_version()})
@@ -444,6 +471,9 @@ class HttpC:
                     # In case the server does not supply the header.
                     except KeyError:
                         size = None
+            # Do not send credentials to a different host after a redirect
+            if s.should_strip_auth(self.urlstring, final_urlstring):
+                s.auth = NoAuth()
             with s.get(final_urlstring, stream=True, timeout=self.timeout) as r:
                 r.raise_for_status()
                 if size is None:
