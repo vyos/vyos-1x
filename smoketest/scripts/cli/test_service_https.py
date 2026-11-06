@@ -28,6 +28,7 @@ from base_vyostest_shim import ignore_warning
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import call
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.pki import CERT_BEGIN
 from vyos.pki import encode_certificate
@@ -140,6 +141,7 @@ server {
 """
 
 PROCESS_NAME = 'nginx'
+config_file_tmp_dir = '/run/vyos-http-api'
 
 
 class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
@@ -907,6 +909,48 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         ops = self._api_get_background_operations()
         self.assertLessEqual(len(ops), max_ops)
         self.assertFalse(any(o.get('op_id') == op_ids[0] for o in ops))
+
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_config_file_string_cleanup(self):
+        url = f'https://{address}/config-file'
+        conf_interface = 'dum7'
+        marker_valid = 'smoketest-config-file-valid'
+        marker_invalid = 'smoketest-config-file-invalid'
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
+        self.cli_commit()
+
+        valid = (
+            f'interfaces {{\n dummy {conf_interface} {{\n'
+            f' description {marker_valid}\n }}\n}}\n'
+        )
+        payload = {'data': json.dumps({'op': 'merge', 'string': valid}), 'key': key}
+        r = request('POST', url, verify=False, data=payload)
+        self.assertEqual(r.status_code, 200)
+        # Merge applied: the loader read the flushed temp file
+        self.assertIn(marker_valid, self.op_mode(['show', 'configuration', 'commands']))
+
+        # Unparsable input (leaf value not followed by a newline) makes the
+        # merge fail after the config was copied to /tmp; the copy must go too
+        invalid = (
+            f'interfaces {{ dummy {conf_interface} {{'
+            f' description {marker_invalid} }} }}'
+        )
+        payload = {'data': json.dumps({'op': 'merge', 'string': invalid}), 'key': key}
+        r = request('POST', url, verify=False, data=payload)
+        self.assertFalse(r.json().get('success'))
+
+        self.assertEqual(
+            cmdl(['stat', '-c', '%a:%U', config_file_tmp_dir], sudo=True), '700:root'
+        )
+        # Submitted config may hold secrets: no file may still contain it
+        # once the request has returned, whether the request failed or not
+        grep = ['grep', '-rlD', 'skip', '-e', marker_valid, '-e', marker_invalid]
+        out = cmdl(grep + ['/tmp', config_file_tmp_dir], sudo=True, expect=[0, 1])
+        self.assertEqual(out, '')
+
+        self.cli_delete(['interfaces', 'dummy', conf_interface])
 
 
 if __name__ == '__main__':

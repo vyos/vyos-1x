@@ -22,7 +22,9 @@ import asyncio
 import json
 import copy
 import logging
+import os
 import traceback
+from tempfile import NamedTemporaryFile
 from threading import Lock
 from typing import Union
 from typing import Callable
@@ -696,6 +698,17 @@ async def retrieve_background_operations(
     return success(result)
 
 
+config_file_tmp_dir = '/run/vyos-http-api'
+
+
+def _load_or_merge(session, data: ConfigFileModel, path):
+    match data.op:
+        case 'load':
+            session.migrate_and_load_config(path)
+        case 'merge':
+            session.merge_config(path, destructive=data.destructive)
+
+
 @router.post('/config-file')
 async def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
     state = SessionState()
@@ -716,19 +729,19 @@ async def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTask
 
             elif op in ('load', 'merge'):
                 if data.file:
-                    path = data.file
+                    _load_or_merge(session, data, data.file)
                 elif data.string:
-                    path = '/tmp/config.file'
-                    with open(path, 'w') as f:
+                    # The config may contain secrets, so write it to a private
+                    # temp file (0600, root-only dir) instead of a fixed /tmp path
+                    os.makedirs(config_file_tmp_dir, mode=0o700, exist_ok=True)
+                    with NamedTemporaryFile(
+                        'w', prefix='config-', dir=config_file_tmp_dir
+                    ) as f:
                         f.write(data.string)
+                        f.flush()
+                        _load_or_merge(session, data, f.name)
                 else:
                     return error(400, 'Missing required field "file | string"')
-
-                match op:
-                    case 'load':
-                        session.migrate_and_load_config(path)
-                    case 'merge':
-                        session.merge_config(path, destructive=data.destructive)
 
                 config = Config(session_env=env)
                 d = get_config_diff(config)
