@@ -24,6 +24,7 @@ from ipaddress import IPv6Interface
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import node_changed
+from vyos.configverify import verify_vrrp_vmac_not_on_vpp
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.template import is_ipv4
@@ -57,6 +58,12 @@ def get_config(config=None):
     if conf.exists(conntrack_path):
         ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
+    # T9521: interfaces that are handled by VPP, a virtual MAC address of
+    # keepalived is not known to VPP
+    vpp_ifaces = conf.list_nodes(['vpp', 'settings', 'interface'])
+    if vpp_ifaces:
+        ha['vpp_interfaces'] = vpp_ifaces
+
     if node_changed(conf, base + ['vrrp', 'snmp']):
         ha.update({'restart_required': {}})
 
@@ -68,6 +75,8 @@ def verify(ha):
 
     used_vrid_if = []
     if 'vrrp' in ha and 'group' in ha['vrrp']:
+        verify_vrrp_vmac_not_on_vpp(ha['vrrp']['group'], ha.get('vpp_interfaces', []))
+
         for group, group_config in ha['vrrp']['group'].items():
             # Check required fields
             if 'vrid' not in group_config:
