@@ -67,16 +67,20 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None,
         os.makedirs(dirname, mode=0o755, exist_ok=False)
         chown(dirname, user, group)
 
+    def opener(path, flags):
+        set_mode = mode or 0o664
+        return os.open(path, flags, mode=set_mode)
+
     try:
         """ Write a file to string """
         bytes = 0
-        with open(fname, 'w' if not append else 'a') as f:
+        with open(fname, 'w' if not append else 'a', opener=opener) as f:
+            chmod(f.fileno(), mode)
+            chown(f.fileno(), user, group)
             bytes = f.write(data)
             if trailing_newline and not data.endswith('\n'):
                 f.write('\n')
                 bytes += 1
-        chown(fname, user, group)
-        chmod(fname, mode)
         return bytes
     except Exception as e:
         if defaultonfailure is not None:
