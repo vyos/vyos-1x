@@ -42,53 +42,64 @@ def get_config(config=None):
 
 
 def verify(config_dict):
-    if not config_dict or 'deleted' in config_dict:
+    if not has_frr_protocol_in_dict(config_dict, 'nhrp'):
         return None
-    if 'tunnel' in config_dict:
-        for name, nhrp_conf in config_dict['tunnel'].items():
-            if not config_dict['if_tunnel'] or name not in config_dict['if_tunnel']:
-                raise ConfigError(f'Tunnel interface "{name}" does not exist')
 
-            tunnel_conf = config_dict['if_tunnel'][name]
-            if 'address' in tunnel_conf:
-                address_list = dict_search('address', tunnel_conf)
-                for tunip in address_list:
-                    if ipaddress.ip_network(tunip,
-                                            strict=False).prefixlen != 32:
+    nhrp = config_dict['nhrp']
+    if 'deleted' in nhrp:
+        return None
+
+    if_tunnel = nhrp.get('if_tunnel', {})
+    for name, nhrp_conf in nhrp.get('tunnel', {}).items():
+        if name not in if_tunnel:
+            raise ConfigError(f'Tunnel interface "{name}" does not exist')
+
+        tunnel_conf = if_tunnel[name]
+        if 'address' in tunnel_conf:
+            address_list = dict_search('address', tunnel_conf)
+            for tunip in address_list:
+                if ipaddress.ip_network(tunip, strict=False).prefixlen != 32:
+                    raise ConfigError(
+                        f'Tunnel {name} is used for NHRP, Netmask should be /32!'
+                    )
+
+        if 'encapsulation' not in tunnel_conf or tunnel_conf['encapsulation'] != 'gre':
+            raise ConfigError(f'Tunnel "{name}" is not an mGRE tunnel')
+
+        if 'network_id' not in nhrp_conf:
+            raise ConfigError(f'network-id is not specified in tunnel "{name}"')
+
+        if 'remote' in tunnel_conf:
+            raise ConfigError(f'Tunnel "{name}" cannot have a remote address defined')
+
+        map_tunnelip = dict_search('map.tunnel_ip', nhrp_conf)
+        if map_tunnelip:
+            for map_name, map_conf in map_tunnelip.items():
+                if 'nbma' not in map_conf:
+                    raise ConfigError(
+                        f'nbma-address missing on map {map_name} on tunnel {name}'
+                    )
+
+        nhs_tunnelip = dict_search('nhs.tunnel_ip', nhrp_conf)
+        nbma_list = []
+        if nhs_tunnelip:
+            for nhs_name, nhs_conf in nhs_tunnelip.items():
+                if 'nbma' not in nhs_conf:
+                    raise ConfigError(
+                        f'nbma-address missing on map nhs {nhs_name} on tunnel {name}'
+                    )
+                if nhs_name != 'dynamic':
+                    if len(list(dict_search('nbma', nhs_conf))) > 1:
                         raise ConfigError(
-                            f'Tunnel {name} is used for NHRP, Netmask should be /32!')
-
-            if 'encapsulation' not in tunnel_conf or tunnel_conf['encapsulation'] != 'gre':
-                raise ConfigError(f'Tunnel "{name}" is not an mGRE tunnel')
-
-            if 'network_id' not in nhrp_conf:
-                raise ConfigError(f'network-id is not specified in tunnel "{name}"')
-
-            if 'remote' in tunnel_conf:
-                raise ConfigError(f'Tunnel "{name}" cannot have a remote address defined')
-
-            map_tunnelip = dict_search('map.tunnel_ip', nhrp_conf)
-            if map_tunnelip:
-                for map_name, map_conf in map_tunnelip.items():
-                    if 'nbma' not in map_conf:
-                        raise ConfigError(f'nbma-address missing on map {map_name} on tunnel {name}')
-
-            nhs_tunnelip = dict_search('nhs.tunnel_ip', nhrp_conf)
-            nbma_list = []
-            if nhs_tunnelip:
-                for nhs_name, nhs_conf in nhs_tunnelip.items():
-                    if 'nbma' not in nhs_conf:
-                        raise ConfigError(f'nbma-address missing on map nhs {nhs_name} on tunnel {name}')
-                    if nhs_name != 'dynamic':
-                        if len(list(dict_search('nbma', nhs_conf))) > 1:
-                            raise ConfigError(
-                                f'Static nhs tunnel-ip {nhs_name} cannot contain multiple nbma-addresses')
-                    for nbma_ip in dict_search('nbma', nhs_conf):
-                        if nbma_ip not in nbma_list:
-                            nbma_list.append(nbma_ip)
-                        else:
-                            raise ConfigError(
-                                f'Nbma address {nbma_ip} cannot be mapped to several tunnel-ip')
+                            f'Static nhs tunnel-ip {nhs_name} cannot contain multiple nbma-addresses'
+                        )
+                for nbma_ip in dict_search('nbma', nhs_conf):
+                    if nbma_ip not in nbma_list:
+                        nbma_list.append(nbma_ip)
+                    else:
+                        raise ConfigError(
+                            f'Nbma address {nbma_ip} cannot be mapped to several tunnel-ip'
+                        )
     return None
 
 
@@ -124,4 +135,3 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         exit(1)
-

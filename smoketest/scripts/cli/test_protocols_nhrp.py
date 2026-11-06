@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
@@ -24,6 +26,13 @@ tunnel_path = ['interfaces', 'tunnel']
 nhrp_path = ['protocols', 'nhrp']
 vpn_path = ['vpn', 'ipsec']
 PROCESS_NAME = 'nhrpd'
+
+
+def wrapped_error_regex(message):
+    # Commit errors are line-wrapped when printed, so build a regex that
+    # matches the message across arbitrary whitespace including newlines
+    return r'\s+'.join(re.escape(word) for word in message.split())
+
 
 class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -224,6 +233,116 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search_multicast, 'ip vyos_nhrp_multicast')
 
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_03_nhrp_verify(self):
+        tunnel_if = 'tun100'
+        tunnel_ip = '172.16.253.134/32'
+        tunnel_source = '192.0.2.134'
+        nhs_tunnelip = '172.16.253.1'
+        nhs_nbmaip = '192.0.2.1'
+        map_tunnelip = '172.16.253.135'
+        map_nbmaip = '192.0.2.135'
+        nhrp_tunnel_path = nhrp_path + ['tunnel', tunnel_if]
+
+        # NHRP references a tunnel interface that does not exist
+        self.cli_set(nhrp_tunnel_path + ['network-id', '1'])
+        self.cli_set(nhrp_tunnel_path + ['shortcut'])
+        err_msg = wrapped_error_regex(f'Tunnel interface "{tunnel_if}" does not exist')
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # Tunnel is not mGRE
+        self.cli_set(tunnel_path + [tunnel_if, 'address', tunnel_ip])
+        self.cli_set(tunnel_path + [tunnel_if, 'encapsulation', 'gretap'])
+        self.cli_set(tunnel_path + [tunnel_if, 'source-address', tunnel_source])
+        self.cli_set(tunnel_path + [tunnel_if, 'remote', '192.0.2.10'])
+        err_msg = wrapped_error_regex(f'Tunnel "{tunnel_if}" is not an mGRE tunnel')
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_set(tunnel_path + [tunnel_if, 'encapsulation', 'gre'])
+
+        # mGRE tunnel must not have a remote address
+        err_msg = wrapped_error_regex(
+            f'Tunnel "{tunnel_if}" cannot have a remote address defined'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_delete(tunnel_path + [tunnel_if, 'remote'])
+        self.cli_commit()
+
+        # Tunnel address must be /32
+        self.cli_set(tunnel_path + [tunnel_if, 'address', '172.16.252.134/24'])
+        err_msg = wrapped_error_regex('Netmask should be /32!')
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_delete(tunnel_path + [tunnel_if, 'address', '172.16.252.134/24'])
+
+        # network-id is mandatory
+        self.cli_delete(nhrp_tunnel_path + ['network-id'])
+        err_msg = wrapped_error_regex(
+            f'network-id is not specified in tunnel "{tunnel_if}"'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_set(nhrp_tunnel_path + ['network-id', '1'])
+        self.cli_commit()
+
+        # map requires nbma
+        self.cli_set(nhrp_tunnel_path + ['map', 'tunnel-ip', map_tunnelip])
+        err_msg = wrapped_error_regex(
+            f'nbma-address missing on map {map_tunnelip} on tunnel {tunnel_if}'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_set(
+            nhrp_tunnel_path + ['map', 'tunnel-ip', map_tunnelip, 'nbma', map_nbmaip]
+        )
+        self.cli_commit()
+
+        # nhs requires nbma
+        self.cli_set(nhrp_tunnel_path + ['nhs', 'tunnel-ip', nhs_tunnelip])
+        err_msg = wrapped_error_regex(
+            f'nbma-address missing on map nhs {nhs_tunnelip} on tunnel {tunnel_if}'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_set(
+            nhrp_tunnel_path + ['nhs', 'tunnel-ip', nhs_tunnelip, 'nbma', nhs_nbmaip]
+        )
+        self.cli_commit()
+
+        # Static nhs accepts a single nbma address only
+        self.cli_set(
+            nhrp_tunnel_path + ['nhs', 'tunnel-ip', nhs_tunnelip, 'nbma', '192.0.2.2']
+        )
+        err_msg = wrapped_error_regex(
+            f'Static nhs tunnel-ip {nhs_tunnelip} cannot contain multiple nbma-addresses'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_delete(
+            nhrp_tunnel_path + ['nhs', 'tunnel-ip', nhs_tunnelip, 'nbma', '192.0.2.2']
+        )
+        self.cli_commit()
+
+        # nbma address cannot be shared by several nhs entries
+        self.cli_set(
+            nhrp_tunnel_path + ['nhs', 'tunnel-ip', '172.16.253.2', 'nbma', nhs_nbmaip]
+        )
+        err_msg = wrapped_error_regex(
+            f'Nbma address {nhs_nbmaip} cannot be mapped to several tunnel-ip'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.cli_delete(nhrp_tunnel_path + ['nhs', 'tunnel-ip', '172.16.253.2'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'interface {tunnel_if}', stop_section='^exit')
+        self.assertIn(' ip nhrp network-id 1', frrconfig)
+        self.assertIn(f' ip nhrp nhs {nhs_tunnelip} nbma {nhs_nbmaip}', frrconfig)
+        self.assertIn(f' ip nhrp map {map_tunnelip} {map_nbmaip}', frrconfig)
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
