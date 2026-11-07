@@ -69,19 +69,16 @@ class WWANIf(Interface):
         # A bearer can report "connected" before its ipv4-config/ipv6-config
         # is populated over D-Bus - retry briefly rather than mistaking that
         # delay for "no static config".
-        result = {}
+        bearer = method = None
 
         def _ready():
-            result['bearer'] = self._get_active_bearer()
-            result['method'] = (
-                dict_search(f'bearer.{family}-config.method', result['bearer'])
-                if result['bearer']
-                else None
-            )
-            return result['method'] not in (None, '', '--')
+            nonlocal bearer, method
+            bearer = self._get_active_bearer()
+            method = dict_search(f'bearer.{family}-config.method', bearer)
+            return method not in (None, '', '--')
 
         wait_for(_ready, interval=0.5, timeout=5)
-        return result['bearer'], result['method']
+        return bearer, method
 
     def add_addr(self, addr: str, vrf_changed: bool = False) -> bool:
         if addr not in ('dhcp', 'dhcpv6'):
