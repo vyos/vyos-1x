@@ -196,6 +196,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf'])
         # left over when test_10 or test_11 fail halfway
         self.cli_delete(['interfaces', 'pppoe', 'pppoe10'])
+        # left over when test_12 fails halfway
+        self.cli_delete(['interfaces', 'ethernet', self.missing_ethernet])
         self.cli_commit()
 
         v4route = self.getFRRconfig('ip route')
@@ -997,6 +999,22 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
         while process_named_running('dhclient', cmdline=interface, timeout=10):
             sleep(0.250)
+
+    def test_12_route_committed_next_to_missing_interface(self):
+        # T9515: an ethernet interface on the CLI whose NIC is missing fails
+        # its own node. This must not keep the static route of the same
+        # commit out of FRR.
+        interface = self.missing_ethernet
+        interface_path = ['interfaces', 'ethernet', interface]
+        self.cli_set(interface_path + ['description', 'T9515'])
+        self.cli_set(base_path + ['route', '198.51.100.0/24', 'blackhole'])
+        with self.assertRaisesRegex(ConfigSessionError, f'Interface "{interface}" does not exist'):
+            self.cli_commit()
+
+        frrconfig = self.getFRRconfig('ip route 198.51.100.0/24', end_marker='')
+        self.assertIn('ip route 198.51.100.0/24 blackhole', frrconfig)
+
+        self.cli_delete(interface_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

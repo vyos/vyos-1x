@@ -55,6 +55,8 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         self.cli_delete(base_path)
+        # left over when test_ospf_24 fails halfway
+        self.cli_delete(['interfaces', 'ethernet', self.missing_ethernet])
         self.cli_commit()
 
         frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
@@ -815,6 +817,24 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('capability opaque', frrconfig)
 
         self.cli_delete(vrf_base)
+
+    def test_ospf_24_interface_with_missing_nic(self):
+        # T9515: an ethernet interface on the CLI whose NIC is missing fails
+        # its own node. This must not keep OSPF on that interface out of FRR.
+        interface = self.missing_ethernet
+        interface_path = ['interfaces', 'ethernet', interface]
+        self.cli_set(interface_path + ['description', 'T9515'])
+        self.cli_set(base_path + ['interface', interface, 'area', '0'])
+        with self.assertRaisesRegex(ConfigSessionError, f'Interface "{interface}" does not exist'):
+            self.cli_commit()
+
+        frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
+        self.assertIn('router ospf', frrconfig)
+
+        frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
+        self.assertIn(' ip ospf area 0', frrconfig)
+
+        self.cli_delete(interface_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
