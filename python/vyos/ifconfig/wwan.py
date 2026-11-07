@@ -21,7 +21,6 @@ from vyos.defaults import directories
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.misc import wait_for
-from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.wwan import get_bearer_address
@@ -224,13 +223,7 @@ class WWANIf(Interface):
         if previous and previous != cidr:
             self.del_addr(previous)
 
-        if not is_intf_addr_assigned(self.ifname, cidr):
-            tmp = ['ip', 'addr', 'add', cidr, 'dev', self.ifname]
-            if family == 'ipv4':
-                tmp += ['brd', '+']
-            self._cmdl(tmp)
-            self._addr.append(cidr)
-
+        self.add_addr(cidr)
         set_bearer_address(self.ifname, family, cidr)
         self._set_bearer_router(family, bearer)
         self._apply_bearer_dns(bearer, family)
@@ -322,10 +315,7 @@ class WWANIf(Interface):
     def _clear_bearer_address(self, family):
         cidr = get_bearer_address(self.ifname, family)
         if cidr:
-            if is_intf_addr_assigned(self.ifname, cidr):
-                self._cmdl(['ip', 'addr', 'del', cidr, 'dev', self.ifname])
-            if cidr in self._addr:
-                self._addr.remove(cidr)
+            self.del_addr(cidr)
             set_bearer_address(self.ifname, family, None)
         self._set_bearer_router(family, None)
         self._set_hostsd_name_servers(family, None)
