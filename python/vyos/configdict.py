@@ -508,14 +508,14 @@ def get_wwan_interfaces(conf, vrf=None):
             continue
 
         # get_interface_dict() drops dhcp_options unless "address dhcp" is
-        # configured, but the distance applies to the IPv6 route as well
+        # configured, but both options apply to the IPv6 route as well
         from vyos.xml_ref import default_value
 
         path = ['interfaces', 'wwan', ifname, 'dhcp-options', 'default-route-distance']
         tmp = conf.return_value(path) if conf.exists(path) else default_value(path)
         if tmp is not None:
             options.update({'default_route_distance': tmp})
-        if dict_search('dhcp_options.no_default_route', ifconfig) is not None:
+        if conf.exists(['interfaces', 'wwan', ifname, 'dhcp-options', 'no-default-route']):
             options.update({'no_default_route': {}})
         if 'vrf' in ifconfig:
             if vrf == ifconfig['vrf']:
