@@ -24,6 +24,7 @@ from vyos.config import ConfigDict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
 from vyos.utils.wwan import bearer_families
+from vyos.xml_ref import default_value
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -502,13 +503,12 @@ def get_wwan_interfaces(conf, vrf=None):
 
         # get_interface_dict() drops dhcp_options unless "address dhcp" is
         # configured, but both options apply to the IPv6 route as well
-        from vyos.xml_ref import default_value
-
-        path = ['interfaces', 'wwan', ifname, 'dhcp-options', 'default-route-distance']
+        dhcp_options = ['interfaces', 'wwan', ifname, 'dhcp-options']
+        path = dhcp_options + ['default-route-distance']
         tmp = conf.return_value(path) if conf.exists(path) else default_value(path)
         if tmp is not None:
             options.update({'default_route_distance': tmp})
-        if conf.exists(['interfaces', 'wwan', ifname, 'dhcp-options', 'no-default-route']):
+        if conf.exists(dhcp_options + ['no-default-route']):
             options.update({'no_default_route': {}})
         if 'vrf' in ifconfig:
             if vrf == ifconfig['vrf']:
