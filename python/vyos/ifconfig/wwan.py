@@ -134,9 +134,8 @@ class WWANIf(Interface):
         What the previous session left behind is dropped for a family the new
         one does not supply (yet) or hands to a DHCP(v6) client, and the
         configured DHCP(v6) client or SLAAC is started for it as a commit
-        does. Returns True once every configured family is settled, False if
-        the settings of one are still missing and the caller should try
-        again."""
+        does. Returns False if there is no connected bearer yet, or a static
+        one lacks its address, and the caller should try again."""
         self.config = config
         address = config.get('address') or []
         families = []
@@ -157,7 +156,7 @@ class WWANIf(Interface):
                 continue
             self._forget_bearer(family)
             self._apply_fallback(family)
-            if method != 'dhcp':
+            if bearer is None:
                 complete = False
         return complete
 
