@@ -75,7 +75,16 @@ class WWANIf(Interface):
             nonlocal bearer, method
             bearer = self._get_active_bearer()
             method = dict_search(f'bearer.{family}-config.method', bearer)
-            return method not in (None, '', '--')
+            # No connected bearer, nothing it could still populate
+            if bearer is None:
+                return True
+            # ModemManager publishes both families when the bearer connects,
+            # so one being populated means the other is never coming
+            return any(
+                dict_search(f'bearer.{tmp}-config.method', bearer)
+                not in (None, '', '--')
+                for tmp in ('ipv4', 'ipv6')
+            )
 
         wait_for(_ready, interval=0.5, timeout=5)
         return bearer, method
