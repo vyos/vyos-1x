@@ -91,13 +91,13 @@ class WWANIf(Interface):
 
         bearer, method = self._wait_for_bearer_method(family)
 
-        if method in (None, '', '--', 'dhcp'):
+        if method != 'static':
             self._forget_bearer(family)
             return super().add_addr(addr, vrf_changed=vrf_changed)
 
-        # method == 'static' (the common case for QMI raw-ip modems): apply
-        # the bearer's own address/gateway/DNS directly, since a DHCP(v6)
-        # client would never get a reply from it.
+        # The common case for QMI raw-ip modems: apply the bearer's own
+        # address/gateway/DNS directly, since a DHCP(v6) client would never
+        # get a reply from it.
         return self._apply_bearer_address(bearer, family)
 
     def set_ipv6_autoconf(self, autoconf):
@@ -116,7 +116,7 @@ class WWANIf(Interface):
         # genuinely needs host-side SLAAC (e.g. Intel XMM-based).
         bearer, method = self._wait_for_bearer_method('ipv6')
 
-        if method in (None, '', '--', 'dhcp'):
+        if method != 'static':
             self._forget_bearer('ipv6')
             return super().set_ipv6_autoconf(autoconf)
 
@@ -144,7 +144,7 @@ class WWANIf(Interface):
         complete = True
         for family in families:
             bearer, method = self._wait_for_bearer_method(family)
-            if method not in (None, '', '--', 'dhcp'):
+            if method == 'static':
                 if not self._apply_bearer_address(bearer, family):
                     self._forget_bearer(family)
                     complete = False
@@ -200,7 +200,8 @@ class WWANIf(Interface):
         prefix = f'bearer.{family}-config'
         address = dict_search(f'{prefix}.address', bearer)
         plen = dict_search(f'{prefix}.prefix', bearer)
-        if not address or not plen:
+        # mmcli reports a field it does not know as '--'
+        if not address or not plen or '--' in (address, plen):
             return False
         cidr = f'{address}/{plen}'
 
