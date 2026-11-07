@@ -10,6 +10,10 @@ WorkingDirectory=/run/dhcp6c
 EnvironmentFile=-/run/dhcp6c/dhcp6c.%i.options
 PIDFile=/run/dhcp6c/dhcp6c.%i.pid
 ExecStart=/usr/sbin/dhcp6c $DHCP6C_OPTS
+# T6301: dhcp6c removes all leases at once on SIGTERM, but then waits ~30s for
+# a Reply to its Release. Do not block commits on a server that never answers.
+ExecStop=/bin/sh -c 'kill -TERM ${MAINPID}; timeout 5 tail -s 0.1 --pid=${MAINPID} -f /dev/null || kill -KILL ${MAINPID}'
+SuccessExitStatus=KILL
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10
