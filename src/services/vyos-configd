@@ -185,6 +185,7 @@ def initialization(config_manager: ConfigManager, socket):
     scripts_called = []
     setattr(config, 'scripts_called', scripts_called)
     setattr(config, 'frr_commit_failed', False)
+    setattr(config, 'frr_failed_interfaces', [])
 
     config_manager.set_config(config)
 
@@ -246,6 +247,11 @@ def process_node_data(config_manager: ConfigManager, data) -> tuple[Response, st
         module = config_manager.components[script_name].module
         if hasattr(module, 'get_frrender_dict'):
             setattr(config, 'frr_commit_failed', True)
+        elif script_name in ('interfaces_ethernet', 'interfaces_bonding') and tag_value:
+            # EVPN of this interface is rendered by FRR, see call_frr_render()
+            if_type = script_name.removeprefix('interfaces_')
+            failed_interfaces = getattr(config, 'frr_failed_interfaces', [])
+            failed_interfaces.append(['interfaces', if_type, tag_value])
 
     return result, out
 
@@ -260,6 +266,17 @@ def call_frr_render(frr, config):
         try:
             with frr_render_lock():
                 tmp = get_frrender_dict(config)
+                # A failed interface node is not committed: render its committed
+                # EVPN config, not the rejected one from the session tree
+                for path in getattr(config, 'frr_failed_interfaces', []):
+                    ifname = path[-1]
+                    if 'interfaces' in tmp and ifname in tmp['interfaces']:
+                        del tmp['interfaces'][ifname]
+                    evpn_path = path + ['evpn']
+                    if config.exists_effective(evpn_path):
+                        evpn = config.get_config_dict(evpn_path, effective=True,
+                                                      key_mangling=('-', '_'))
+                        tmp.setdefault('interfaces', {})[ifname] = evpn
                 if frr.generate(tmp):
                     # only apply a new FRR configuration if anything changed
                     # in comparison to the previous applied configuration
