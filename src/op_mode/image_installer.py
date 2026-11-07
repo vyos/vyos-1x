@@ -38,6 +38,7 @@ from os import lstat
 from os import walk
 from stat import S_IFMT
 from stat import S_IMODE
+from stat import S_ISDIR
 from stat import S_ISLNK
 from json import loads
 from json import dumps
@@ -407,6 +408,14 @@ def id_map(old_file: str, new_file: str) -> dict[int, int]:
     return mapping
 
 
+def _is_plain_dir(path: Path) -> bool:
+    """True if path exists and is a directory, not a symlink to one"""
+    try:
+        return S_ISDIR(lstat(path).st_mode)
+    except FileNotFoundError:
+        return False
+
+
 def copy_ownership(
     src: str, dst: str, uid_map: dict[int, int] = None, gid_map: dict[int, int] = None
 ) -> None:
@@ -428,6 +437,12 @@ def copy_ownership(
     uid_map = uid_map or {}
     gid_map = gid_map or {}
     for root, dirs, files in walk(src):
+        # Only descend where dst still has a plain directory to match:
+        # a symlink swapped in there would let the lchown()/chmod() below
+        # follow it outside dst, and a plain file would make the next
+        # level's lstat() raise NotADirectoryError.
+        dirs[:] = [name for name in dirs if _is_plain_dir(
+            Path(dst, Path(root, name).relative_to(src)))]
         for name in ['.'] + dirs + files if root == src else dirs + files:
             src_path = Path(root, name)
             dst_path = Path(dst, src_path.relative_to(src))
