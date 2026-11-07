@@ -6,8 +6,58 @@ firewall {
         address-group bad+name {
             address 192.0.2.1
         }
+        ipv6-address-group bad_name {
+            address 2001:db8::99
+        }
+        ipv6-address-group bad+name {
+            address 2001:db8::2
+        }
+        ipv6-address-group srv+v6 {
+            address 2001:db8::1
+        }
+        ipv6-network-group net+v6 {
+            network 2001:db8:1::/64
+        }
         port-group bad+name {
             port 80
+        }
+    }
+    ipv6-name TEST6 {
+        default-action drop
+        rule 10 {
+            action accept
+            destination {
+                group {
+                    network-group net+v6
+                }
+            }
+            source {
+                group {
+                    address-group srv+v6
+                }
+            }
+        }
+        rule 20 {
+            action drop
+            source {
+                group {
+                    address-group !srv+v6
+                }
+            }
+        }
+        rule 30 {
+            action accept
+            destination {
+                group {
+                    port-group bad+name
+                }
+            }
+            protocol tcp
+            source {
+                group {
+                    address-group bad+name
+                }
+            }
         }
     }
     name TEST1 {

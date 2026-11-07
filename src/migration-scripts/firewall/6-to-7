@@ -91,6 +91,11 @@ icmpv6_translations = {
 
 v4_groups = ["address-group", "network-group", "port-group"]
 v6_groups = ["ipv6-address-group", "ipv6-network-group", "port-group"]
+# ipv6-name rules reference IPv6 groups as address-group/network-group
+v6_type_map = {
+    'address-group': 'ipv6-address-group',
+    'network-group': 'ipv6-network-group',
+}
 
 valid_group_name_pattern = re.compile(r'^[A-Za-z0-9_.-]+$')
 invalid_group_name_pattern = re.compile(r'[^A-Za-z0-9_.-]')
@@ -308,7 +313,8 @@ def migrate(config: ConfigTree) -> None:
                                 group_name = config.return_value(base + ['ipv6-name', name, 'rule', rule, direction, 'group', group_type])
 
                                 translated_group_name = group_name[1:] if group_name.startswith('!') else group_name
-                                key = (group_type, translated_group_name)
+                                v6_type = v6_type_map.get(group_type, group_type)
+                                key = (v6_type, translated_group_name)
                                 if key in translated_dict:
                                     if group_name.startswith('!'):
                                         new_group_name = '!' + translated_dict[key]
