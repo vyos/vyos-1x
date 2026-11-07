@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.config import ConfigDict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
+from vyos.utils.wwan import bearer_families
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -495,15 +496,7 @@ def get_wwan_interfaces(conf, vrf=None):
         if 'disable' in ifconfig:
             continue
 
-        options = {}
-        address = ifconfig.get('address', [])
-        if 'dhcp' in address:
-            options.update({'ipv4': {}})
-        if (
-            'dhcpv6' in address
-            or dict_search('ipv6.address.autoconf', ifconfig) is not None
-        ):
-            options.update({'ipv6': {}})
+        options = {family: {} for family in bearer_families(ifconfig)}
         if not options:
             continue
 

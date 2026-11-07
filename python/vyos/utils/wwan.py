@@ -168,6 +168,17 @@ def start_modem_manager(ifname: str) -> None:
 
     return None
 
+def bearer_families(config: dict) -> list:
+    """ Address families a WWAN interface is configured to get from the
+    bearer of its modem, as a list of 'ipv4' and/or 'ipv6' """
+    families = []
+    address = config.get('address', [])
+    if 'dhcp' in address:
+        families.append('ipv4')
+    if 'dhcpv6' in address or dict_search('ipv6.address.autoconf', config) != None:
+        families.append('ipv6')
+    return families
+
 def connect_options(config: dict) -> str:
     """ Build the mmcli --simple-connect option string for a WWAN interface.
 
@@ -175,14 +186,12 @@ def connect_options(config: dict) -> str:
     get_interface_dict() in conf_mode or op_mode_config_dict() in an op-mode
     context - both are key-mangled the same way, so both are accepted here.
     """
-    ip_type = 'ipv4'
-    address = config.get('address', [])
-    slaac = dict_search('ipv6.address.autoconf', config) != None
-    if 'dhcp' in address and ('dhcpv6' in address or slaac):
+    families = bearer_families(config)
+    if families == ['ipv4', 'ipv6']:
         ip_type = 'ipv4v6'
-    elif 'dhcpv6' in address or slaac:
+    elif families == ['ipv6']:
         ip_type = 'ipv6'
-    elif 'dhcp' in address:
+    else:
         ip_type = 'ipv4'
 
     options = f'ip-type={ip_type},apn=' + config['apn']

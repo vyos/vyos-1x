@@ -23,6 +23,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.misc import wait_for
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.wwan import bearer_families
 from vyos.utils.wwan import get_bearer_address
 from vyos.utils.wwan import get_bearer_router
 from vyos.utils.wwan import modem_index
@@ -139,17 +140,8 @@ class WWANIf(Interface):
         does. Returns False if there is no connected bearer yet, or a static
         one lacks its address, and the caller should try again."""
         self.config = config
-        address = config.get('address') or []
-        families = []
-        if 'dhcp' in address:
-            families.append('ipv4')
-        if (
-            'dhcpv6' in address
-            or dict_search('ipv6.address.autoconf', config) is not None
-        ):
-            families.append('ipv6')
         complete = True
-        for family in families:
+        for family in bearer_families(config):
             bearer, method = self._wait_for_bearer_method(family)
             if method == 'static':
                 if not self._apply_bearer_address(bearer, family):
