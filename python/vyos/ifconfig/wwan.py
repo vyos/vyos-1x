@@ -13,8 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from json import loads
 
+from vyos.defaults import directories
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.misc import wait_for
@@ -292,6 +295,12 @@ class WWANIf(Interface):
             pass
         if family == 'ipv4':
             self.set_dhcp(False)
+            # A client which ended without a STOP event leaves the router of
+            # its last lease behind, and FRR would install a second default
+            # route towards it
+            lease = directories['isc_dhclient_dir'] + f'/dhclient_{self.ifname}.lease'
+            if os.path.exists(lease):
+                os.remove(lease)
         else:
             self.set_dhcpv6(False)
 
