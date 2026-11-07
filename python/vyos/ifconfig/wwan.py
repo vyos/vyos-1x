@@ -286,9 +286,6 @@ class WWANIf(Interface):
 
         # A client which cannot get a lease keeps restarting and is never
         # "active", which stop_systemd_unit() would leave alone
-        state = cmdl(['systemctl', 'show', '--value', '-p', 'ActiveState', unit])
-        if state not in ('active', 'activating', 'reloading'):
-            return None
         try:
             cmdl(['systemctl', 'stop', unit])
         except OSError:
