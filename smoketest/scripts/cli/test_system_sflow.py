@@ -148,6 +148,8 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['agent-address', f'{address}%{interface}'])
         self.cli_commit()
 
+        self.cli_delete(['interfaces', 'dummy', interface])
+
     def test_vrf(self):
         interface = 'eth0'
         server = '192.0.2.1'

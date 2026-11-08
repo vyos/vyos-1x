@@ -56,8 +56,6 @@ class TestVyOSUtilsNetwork(TestCase):
     def test_is_addr_assigned_zone_index_honours_vrf(self):
         # the interface named by the zone index has to be part of the VRF
         # asked for, just like any other candidate
-        from unittest.mock import patch
-
         tmp = {'master': 'red', 'linkinfo': {'info_kind': 'dummy'}}
         with patch('netifaces.interfaces', return_value=['lo', 'dum0']), patch(
             'vyos.utils.network.get_interface_config', return_value=tmp
@@ -122,7 +120,7 @@ class TestVyOSUtilsNetwork(TestCase):
                 )
 
     def test_is_intf_addr_assigned_rejects_invalid(self):
-        # T9207: a range used to raise ValueError out of the ipaddress module
+        # anything but a single address is rejected
         for addr in ['192.0.2.1-192.0.2.2', 'VyOS', '']:
             with self.assertRaises(ValueError) as e:
                 vyos.utils.network.is_intf_addr_assigned('lo', addr)

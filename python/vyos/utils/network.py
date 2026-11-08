@@ -513,16 +513,16 @@ def is_ipv6_link_local(addr):
 def is_addr_assigned(
     ip_address: str, vrf=None, include_vrf=False, allow_nonlocal: bool = False
 ) -> bool:
-    """ Verify if the given IPv4/IPv6 address is assigned to any interface """
-    from netifaces import interfaces # pylint: disable = no-name-in-module
-    from vyos.utils.network import get_interface_config
-    from vyos.utils.dict import dict_search
+    """
+    Verify if the given IPv4/IPv6 address is assigned to any interface.
+
+    Raises ValueError if ip_address is not a single address.
+    """
     from vyos.utils.system import sysctl_read
     from vyos.template import is_ipv4
     from vyos.template import is_ipv6
 
-    # An address with a zone index ("fe80::1%eth0") is always looked up on the
-    # interface it names, nonlocal bind does not apply to it.
+    # A zone index pins the address to one interface, nonlocal bind does not apply
     if allow_nonlocal and '%' not in ip_address:
         if is_ipv4(ip_address) and \
            sysctl_read(['net', 'ipv4', 'ip_nonlocal_bind']) == '1':
@@ -531,38 +531,15 @@ def is_addr_assigned(
            sysctl_read(['net', 'ipv6', 'ip_nonlocal_bind']) == '1':
             return True
 
-    # A zone index ("fe80::1%eth0") names the one interface the address has to
-    # be assigned to. It still has to pass the VRF filter below.
-    candidates = interfaces()
-    if '%' in ip_address:
-        ip_address, zone = ip_address.split('%', 1)
-        candidates = [zone] if zone in candidates else []
-
-    for interface in candidates:
-        # Only an interface of the requested VRF may satisfy the lookup - an
-        # enslaved interface and a VRF device alike belong to their own L3
-        # domain, not to the default one. Naming the VRF device is the way to
-        # ask for the addresses it carries itself.
-        if not include_vrf and interface != vrf:
-            tmp = get_interface_config(interface)
-            if dict_search('master', tmp) != vrf:
-                continue
-            if dict_search('linkinfo.info_kind', tmp) == 'vrf':
-                continue
-
-        if is_intf_addr_assigned(interface, ip_address):
-            return True
-
-    return False
+    return bool(get_interfaces_by_ip(ip_address, vrf=vrf, include_vrf=include_vrf))
 
 def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     """
-    Verify if the given IPv4/IPv6 address is assigned to specific interface.
-    It can check both a single IP address (e.g. 192.0.2.1) or an assigned CIDR
-    address 192.0.2.1/24.
+    Verify if the given IPv4/IPv6 address is assigned to a specific interface.
+    A plain address (192.0.2.1) matches whatever prefix length it is assigned
+    with, a CIDR address (192.0.2.1/24) has to match the prefix length as well.
 
-    A zone index ("%interface" suffix) is rejected - the interface to check
-    against is this function's own argument.
+    Raises ValueError if addr is not a single address or carries a zone index.
     """
     import jmespath
 
@@ -570,37 +547,20 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     from vyos.template import is_ip
     from ipaddress import ip_interface
 
-    # A zone index is a caller-side mistake, not bad operator input: the
-    # interface to check against is already an argument of this function. Keep
-    # it separate from the address check so the two are told apart. Note that
-    # is_ip() does not cover this - the ipaddress module accepts a zone index
-    # since Python 3.9, while "ip --json address show" never reports one, so
-    # such a value could only ever match by ignoring the zone, which reported
-    # an address as assigned to the wrong interface.
+    # ipaddress accepts "fe80::1%eth0" - the interface to check is ifname
     if '%' in addr:
         raise ValueError(f'{addr} carries a zone index, pass the interface as "ifname"')
     if not is_ip(addr):
         raise ValueError(f'{addr} is not a valid IPv4 or IPv6 address')
 
-    # Pass the command as a list and let rc_cmd() enter the namespace, so
-    # neither ifname nor netns reach a shell
     rc, out = rc_cmd(['ip', '--json', 'address', 'show', 'dev', ifname], netns=netns)
     if rc != 0:
         return False
 
     wanted = ip_interface(addr)
-    addresses = jmespath.search(
-        '[].addr_info[].{address: local, prefixlen: prefixlen}', loads(out)
-    )
-    # An address without a prefix length matches on the address alone, however
-    # it is written (2001:0DB8::1 is 2001:db8::1) and whatever prefix length it
-    # is assigned with. A CIDR address has to match the prefix length as well.
-    with_prefix = '/' in addr
-    for address_info in addresses or []:
-        address = address_info['address']
-        prefixlen = address_info['prefixlen']
-        assigned = ip_interface(f'{address}/{prefixlen}')
-        if (wanted == assigned) if with_prefix else (wanted.ip == assigned.ip):
+    for info in jmespath.search('[].addr_info[]', loads(out)) or []:
+        assigned = ip_interface(f"{info['local']}/{info['prefixlen']}")
+        if wanted.ip == assigned.ip and ('/' not in addr or wanted == assigned):
             return True
 
     return False
@@ -915,11 +875,13 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
     Returns:
         list: List of interface names (str) that have the given IP address assigned.
               Returns an empty list if no interface has the IP assigned.
+    Raises:
+        ValueError: ip_address is not a single address.
     """
     import netifaces
     from vyos.utils.dict import dict_search
 
-    # A zone index names the one interface to look at, see is_addr_assigned()
+    # A zone index ("fe80::1%eth0") names the one interface to look at
     candidates = netifaces.interfaces()
     if '%' in ip_address:
         ip_address, zone = ip_address.split('%', 1)
