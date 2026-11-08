@@ -480,6 +480,46 @@ def get_pppoe_interfaces(conf, vrf=None):
 
     return pppoe_interfaces
 
+
+def get_wwan_interfaces(conf, vrf=None):
+    """Common helper function to retrieve all WWAN interfaces from the current
+    CLI session that can get an address from the bearer of their modem and
+    thus contribute a default route."""
+    from vyos.utils.wwan import bearer_families
+    from vyos.xml_ref import default_value
+
+    wwan_interfaces = {}
+    conf.set_level([])  # required for list_nodes()
+    for ifname in conf.list_nodes(['interfaces', 'wwan']):
+        # always reset config level, as get_interface_dict() will alter it
+        conf.set_level([])
+        _, ifconfig = get_interface_dict(conf, ['interfaces', 'wwan'], ifname)
+
+        if 'disable' in ifconfig:
+            continue
+
+        options = {family: {} for family in bearer_families(ifconfig)}
+        if not options:
+            continue
+
+        # get_interface_dict() drops dhcp_options unless "address dhcp" is
+        # configured, but both options apply to the IPv6 route as well
+        dhcp_options = ['interfaces', 'wwan', ifname, 'dhcp-options']
+        path = dhcp_options + ['default-route-distance']
+        tmp = conf.return_value(path) if conf.exists(path) else default_value(path)
+        if tmp is not None:
+            options.update({'default_route_distance': tmp})
+        if conf.exists(dhcp_options + ['no-default-route']):
+            options.update({'no_default_route': {}})
+        if 'vrf' in ifconfig:
+            if vrf == ifconfig['vrf']:
+                wwan_interfaces.update({ifname: options})
+        else:
+            if vrf is None:
+                wwan_interfaces.update({ifname: options})
+
+    return wwan_interfaces
+
 def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pki=False):
     """
     Common utility function to retrieve and mangle the interfaces configuration

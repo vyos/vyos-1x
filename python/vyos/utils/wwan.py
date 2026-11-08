@@ -167,6 +167,17 @@ def start_modem_manager(ifname: str) -> None:
 
     return None
 
+def bearer_families(config: dict) -> list:
+    """ Address families a WWAN interface is configured to get from the
+    bearer of its modem, as a list of 'ipv4' and/or 'ipv6' """
+    families = []
+    address = config.get('address', [])
+    if 'dhcp' in address:
+        families.append('ipv4')
+    if 'dhcpv6' in address or dict_search('ipv6.address.autoconf', config) != None:
+        families.append('ipv6')
+    return families
+
 def connect_options(config: dict) -> str:
     """ Build the mmcli --simple-connect option string for a WWAN interface.
 
@@ -174,14 +185,12 @@ def connect_options(config: dict) -> str:
     get_interface_dict() in conf_mode or op_mode_config_dict() in an op-mode
     context - both are key-mangled the same way, so both are accepted here.
     """
-    ip_type = 'ipv4'
-    address = config.get('address', [])
-    slaac = dict_search('ipv6.address.autoconf', config) != None
-    if 'dhcp' in address and ('dhcpv6' in address or slaac):
+    families = bearer_families(config)
+    if families == ['ipv4', 'ipv6']:
         ip_type = 'ipv4v6'
-    elif 'dhcpv6' in address or slaac:
+    elif families == ['ipv6']:
         ip_type = 'ipv6'
-    elif 'dhcp' in address:
+    else:
         ip_type = 'ipv4'
 
     options = f'ip-type={ip_type},apn=' + config['apn']
@@ -189,6 +198,75 @@ def connect_options(config: dict) -> str:
         options += ',user={username},password={password}'.format(**config['authentication'])
 
     return options
+
+# What WWANIf applied from the static bearer of an interface, per address
+# family: its gateway, for the FRR renderer to build the default route from, and
+# the address it installed, so only that one is ever removed again. Same /run
+# directory as above.
+bearer_state_dir = admin_disconnect_dir
+
+
+def _bearer_state_file(ifname: str, family: str, key: str) -> str:
+    return os.path.join(bearer_state_dir, f'{ifname}.{family}-{key}')
+
+
+def _set_bearer_state(ifname: str, family: str, key: str, value) -> None:
+    path = _bearer_state_file(ifname, family, key)
+    if not value:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        return None
+    # Imported here as it pulls in shutil, random and the compression modules
+    import tempfile
+
+    os.makedirs(bearer_state_dir, exist_ok=True)
+    # The FRR renderer reads this while it is being written, so a reader
+    # must never see a truncated or partial value
+    fd, tmp_path = tempfile.mkstemp(dir=bearer_state_dir, prefix='.tmp-')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            f.write(value)
+        os.chmod(tmp_path, 0o644)
+        os.replace(tmp_path, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def _get_bearer_state(ifname: str, family: str, key: str):
+    try:
+        with open(_bearer_state_file(ifname, family, key)) as f:
+            return f.read().strip() or None
+    except FileNotFoundError:
+        return None
+
+
+def set_bearer_router(ifname: str, family: str, router) -> None:
+    """Record the gateway of the static bearer of a WWAN interface, or forget
+    it when router is empty - the bearer is gone or does not have one"""
+    _set_bearer_state(ifname, family, 'router', router)
+
+
+def get_bearer_router(ifname: str, family: str):
+    """Return the recorded gateway of a static bearer, or None"""
+    return _get_bearer_state(ifname, family, 'router')
+
+
+def set_bearer_address(ifname: str, family: str, address) -> None:
+    """Record the address (CIDR) installed from the static bearer of a WWAN
+    interface, or forget it when address is empty"""
+    _set_bearer_state(ifname, family, 'address', address)
+
+
+def get_bearer_address(ifname: str, family: str):
+    """Return the recorded address (CIDR) installed from a static bearer"""
+    return _get_bearer_state(ifname, family, 'address')
+
 
 def _admin_disconnect_marker(ifname: str) -> str:
     return os.path.join(admin_disconnect_dir, f'{ifname}.disconnected')
