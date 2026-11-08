@@ -97,6 +97,13 @@ class TestOPModeShow(VyOSUnitTestSHIM.TestCase):
                                              op_user, op_password)
                 self.assertFalse(out)
                 self.assertIn('You do not have a permission to execute VyOS command', err)
+
+            # Tag node values end up in a shell command run as root, a newline
+            # must not be able to start a second command
+            out, err = self.ssh_send_cmd(f"{op_runner} show interfaces ethernet $'eth0\\nid'",
+                                         op_user, op_password)
+            self.assertFalse(out)
+            self.assertIn('contains special characters', err)
         finally:
             self.cli_delete(login_path + ['user', op_user])
             self.cli_delete(login_path + ['operator-group', op_group])
