@@ -20,7 +20,6 @@ from json import loads
 from vyos.defaults import directories
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
-from vyos.utils.misc import wait_for
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.wwan import bearer_families
@@ -72,6 +71,8 @@ class WWANIf(Interface):
         # A bearer can report "connected" before its ipv4-config/ipv6-config
         # is populated over D-Bus - retry briefly rather than mistaking that
         # delay for "no static config".
+        from vyos.utils.misc import wait_for
+
         bearer = method = None
 
         def _ready():
