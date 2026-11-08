@@ -138,6 +138,8 @@ PROCESS_NAME = 'ocserv-main'
 config_file = '/run/ocserv/ocserv.conf'
 auth_file = '/run/ocserv/ocpasswd'
 otp_file = '/run/ocserv/users.oath'
+radius_cfg_file = '/run/ocserv/radiusclient.conf'
+radius_servers_file = '/run/ocserv/radius_servers'
 
 listen_if = 'dum116'
 listen_address = '100.64.0.1/32'
@@ -264,6 +266,34 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         # Verify TLS string
         daemon_config = read_file(config_file)
         self.assertIn('tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0:-ARCFOUR-128:-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2"', daemon_config)
+
+    def test_ocserv_radius_accounting(self):
+        auth_server = '192.0.2.10'
+        auth_key = 'auth-secret'
+        acct_server = '192.0.2.20'
+        acct_key = 'acct-secret'
+        v4_subnet = '192.0.2.0/24'
+        listen_ip_no_cidr = ip_from_cidr(listen_address)
+
+        self.cli_set(base_path + ['authentication', 'mode', 'radius'])
+        self.cli_set(base_path + ['authentication', 'radius', 'server', auth_server, 'key', auth_key])
+        self.cli_set(base_path + ['accounting', 'mode', 'radius'])
+        self.cli_set(base_path + ['accounting', 'radius', 'server', acct_server, 'key', acct_key])
+        self.cli_set(base_path + ['network-settings', 'client-ip-settings', 'subnet', v4_subnet])
+        self.cli_set(base_path + ['ssl', 'ca-certificate', cert_name])
+        self.cli_set(base_path + ['ssl', 'certificate', cert_name])
+        self.cli_set(base_path + ['listen-address', listen_ip_no_cidr])
+        self.cli_commit()
+
+        radius_cfg = read_file(radius_cfg_file)
+        self.assertIn(f'authserver {auth_server}', radius_cfg)
+        self.assertIn(f'acctserver {acct_server}', radius_cfg)
+
+        # Both servers must have their shared secret, otherwise radcli fails
+        # accounting with "no secret for server"
+        servers = read_file(radius_servers_file)
+        self.assertRegex(servers, rf'(?m)^{auth_server}\s+{auth_key}$')
+        self.assertRegex(servers, rf'(?m)^{acct_server}\s+{acct_key}$')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -232,7 +232,7 @@ def generate(ocserv):
         return None
 
     if 'radius' in ocserv['authentication']['mode']:
-        if dict_search(ocserv, 'accounting.mode.radius'):
+        if dict_search('accounting.mode.radius', ocserv) is not None:
             # Render radius client configuration
             render(radius_cfg, 'ocserv/radius_conf.j2', ocserv)
             merged_servers = (
