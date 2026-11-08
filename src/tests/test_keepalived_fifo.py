@@ -30,7 +30,6 @@
 # proven end to end and not just "the regex matched it".
 
 import os
-import re
 import unittest
 
 from helper import prepare_module
@@ -41,11 +40,8 @@ fifo_module = prepare_module(
     os.path.join(_here, '../system/keepalived-fifo.py'), 'keepalived_fifo'
 )
 
-# same pattern as regex_notify in KeepalivedFifo.pipe_process() - kept
-# separate here since it is a local variable there, not importable
-NOTIFY_RE = re.compile(
-    r'^(?P<type>\w+) "(?P<name>[^"]+)" (?P<state>\w+) (?P<priority>\d+)$', re.MULTILINE
-)
+# the production pattern itself, so a regression in the daemon is caught here
+NOTIFY_RE = fifo_module.NOTIFY_RE
 
 
 class TestNotifyRegex(unittest.TestCase):

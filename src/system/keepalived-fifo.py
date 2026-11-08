@@ -41,6 +41,11 @@ logger.setLevel(logging.DEBUG)
 mdns_running_file = '/run/mdns_vrrp_active'
 mdns_update_command = 'python3 /usr/libexec/vyos/conf_mode/service_mdns_repeater.py'
 
+NOTIFY_RE = re.compile(
+    r'^(?P<type>\w+) "(?P<name>[^"]+)" (?P<state>\w+) (?P<priority>\d+)$',
+    re.MULTILINE,
+)
+
 
 def lookup_transition_script(vrrp_config_dict, kind, name, state):
     """Look up the configured transition-script command for a VRRP
@@ -52,7 +57,7 @@ def lookup_transition_script(vrrp_config_dict, kind, name, state):
     reassembled into a delimited path.
 
     T9256 defect 1 was originally "the notify regex rejects names
-    containing ':'". Widening the regex (see regex_notify in
+    containing ':'". Widening the regex (see NOTIFY_RE in
     pipe_process()) only fixes matching the name out of the notify line.
     The two call sites here used to hand dict_search() an f-string path
     like f'group.{name}.transition_script.{state}' - dict_search() splits
@@ -141,10 +146,6 @@ class KeepalivedFifo:
         # accepted without complaint (T9256). Matching on the delimiter
         # itself, rather than trying to enumerate the accepted character
         # set, is what actually tracks what the CLI allows.
-        regex_notify = re.compile(
-            r'^(?P<type>\w+) "(?P<name>[^"]+)" (?P<state>\w+) (?P<priority>\d+)$',
-            re.MULTILINE,
-        )
         while self.stopme.is_set() is False:
             # wait for a new message event from pipe_wait
             self.message_event.wait()
@@ -155,7 +156,7 @@ class KeepalivedFifo:
                 while self.message_queue.empty() is not True:
                     message = self.message_queue.get()
                     logger.debug(f'Received message: {message}')
-                    notify_message = regex_notify.search(message)
+                    notify_message = NOTIFY_RE.search(message)
                     # try to process a message if it looks valid
                     if notify_message:
                         n_type = notify_message.group('type')
