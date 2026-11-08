@@ -24,7 +24,6 @@ would have done.
 """
 
 import os
-import tempfile
 
 from time import sleep
 
@@ -219,6 +218,9 @@ def _set_bearer_state(ifname: str, family: str, key: str, value) -> None:
         except FileNotFoundError:
             pass
         return None
+    # Imported here as it pulls in shutil, random and the compression modules
+    import tempfile
+
     os.makedirs(bearer_state_dir, exist_ok=True)
     # The FRR renderer reads this while it is being written, so a reader
     # must never see a truncated or partial value
