@@ -23,8 +23,6 @@ from vyos.config import Config
 from vyos.config import ConfigDict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmdl
-from vyos.utils.wwan import bearer_families
-from vyos.xml_ref import default_value
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -487,6 +485,9 @@ def get_wwan_interfaces(conf, vrf=None):
     """Common helper function to retrieve all WWAN interfaces from the current
     CLI session that can get an address from the bearer of their modem and
     thus contribute a default route."""
+    from vyos.utils.wwan import bearer_families
+    from vyos.xml_ref import default_value
+
     wwan_interfaces = {}
     conf.set_level([])  # required for list_nodes()
     for ifname in conf.list_nodes(['interfaces', 'wwan']):
