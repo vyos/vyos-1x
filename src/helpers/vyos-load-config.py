@@ -43,31 +43,32 @@ file_name = args.config_file if args.config_file else default_config_file
 
 # pylint: disable=consider-using-with
 file_path = tempfile.NamedTemporaryFile(delete=False).name
-err = get_config_file(file_name, file_path)
-if err:
-    os.remove(file_path)
-    sys.exit(err)
-
-if args.migrate:
-    migrate = ConfigMigrate(file_path)
-    try:
-        migrate.run()
-    except ConfigMigrateError as e:
-        os.remove(file_path)
-        sys.exit(e)
-
-config = Config()
-
-if config.vyconf_session is not None:
-    out, err = config.vyconf_session.load_config(file_path)
+# Remove the temp copy in finally - an exception would otherwise leave the
+# config in /tmp
+try:
+    err = get_config_file(file_name, file_path)
     if err:
-        os.remove(file_path)
-        sys.exit(out)
-    print(out)
-else:
-    load_config(file_path)
+        sys.exit(err)
 
-os.remove(file_path)
+    if args.migrate:
+        migrate = ConfigMigrate(file_path)
+        try:
+            migrate.run()
+        except ConfigMigrateError as e:
+            sys.exit(e)
+
+    config = Config()
+
+    if config.vyconf_session is not None:
+        out, err = config.vyconf_session.load_config(file_path)
+        if err:
+            sys.exit(out)
+        print(out)
+    else:
+        load_config(file_path)
+finally:
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
 if config.session_changed():
     print("Load complete. Use 'commit' to make changes effective.")

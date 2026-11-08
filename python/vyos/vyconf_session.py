@@ -251,25 +251,27 @@ class VyconfSession:
         from vyos.remote import get_config_file
 
         file_path = tempfile.NamedTemporaryFile(delete=False).name
-        err = get_config_file(file_name, file_path)
-        if err:
-            os.remove(file_path)
-            return str(err), Errnum.INVALID_VALUE
-        if not cached:
-            if migrate:
-                config_migrate = ConfigMigrate(file_path)
-                try:
-                    config_migrate.run()
-                except ConfigMigrateError as e:
-                    os.remove(file_path)
-                    return repr(e), 1
+        # Remove the temp copy in finally so an exception can't leave the
+        # config behind. Cached loads too: vyconfd reads the whole file into
+        # memory before it replies and never opens it again.
+        try:
+            err = get_config_file(file_name, file_path)
+            if err:
+                return str(err), Errnum.INVALID_VALUE
+            if not cached:
+                if migrate:
+                    config_migrate = ConfigMigrate(file_path)
+                    try:
+                        config_migrate.run()
+                    except ConfigMigrateError as e:
+                        return repr(e), 1
 
-        out = vyconf_client.send_request(
-            'load', token=self.__token, location=file_path, cached=cached
-        )
-
-        if not cached:
-            os.remove(file_path)
+            out = vyconf_client.send_request(
+                'load', token=self.__token, location=file_path, cached=cached
+            )
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
         return self.output(out), out.status
 
@@ -285,23 +287,28 @@ class VyconfSession:
         from vyos.remote import get_config_file
 
         file_path = tempfile.NamedTemporaryFile(delete=False).name
-        err = get_config_file(file_name, file_path)
-        if err:
-            os.remove(file_path)
-            return str(err), Errnum.INVALID_VALUE
-        if migrate:
-            config_migrate = ConfigMigrate(file_path)
-            try:
-                config_migrate.run()
-            except ConfigMigrateError as e:
+        # Remove the temp copy in finally so an exception can't leave the
+        # config behind
+        try:
+            err = get_config_file(file_name, file_path)
+            if err:
+                return str(err), Errnum.INVALID_VALUE
+            if migrate:
+                config_migrate = ConfigMigrate(file_path)
+                try:
+                    config_migrate.run()
+                except ConfigMigrateError as e:
+                    return repr(e), 1
+
+            out = vyconf_client.send_request(
+                'merge',
+                token=self.__token,
+                location=file_path,
+                destructive=destructive,
+            )
+        finally:
+            if os.path.exists(file_path):
                 os.remove(file_path)
-                return repr(e), 1
-
-        out = vyconf_client.send_request(
-            'merge', token=self.__token, location=file_path, destructive=destructive
-        )
-
-        os.remove(file_path)
 
         return self.output(out), out.status
 

@@ -49,51 +49,52 @@ paths = [shlex.split(s) for s in args.paths] if args.paths else []
 
 # pylint: disable=consider-using-with
 file_path = tempfile.NamedTemporaryFile(delete=False).name
-err = get_config_file(file_name, file_path)
-if err:
-    os.remove(file_path)
-    sys.exit(err)
-
-if args.migrate:
-    migrate = ConfigMigrate(file_path)
-    try:
-        migrate.run()
-    except ConfigMigrateError as e:
-        os.remove(file_path)
-        sys.exit(e)
-
-with open(file_path) as f:
-    merge_str = f.read()
-
-merge_ct = ConfigTree(merge_str)
-
-if paths:
-    mask = ConfigTree('')
-    for p in paths:
-        mask.set(p)
-
-    merge_ct = mask_inclusive(merge_ct, mask)
-
-with open(file_path, 'w') as f:
-    f.write(merge_ct.to_string())
-
-config = Config()
-
-if config.vyconf_session is not None:
-    out, err = config.vyconf_session.merge_config(
-        file_path, destructive=args.destructive
-    )
+# Remove the temp copy in finally - an exception (e.g. a parse error) would
+# otherwise leave the config in /tmp
+try:
+    err = get_config_file(file_name, file_path)
     if err:
+        sys.exit(err)
+
+    if args.migrate:
+        migrate = ConfigMigrate(file_path)
+        try:
+            migrate.run()
+        except ConfigMigrateError as e:
+            sys.exit(e)
+
+    with open(file_path) as f:
+        merge_str = f.read()
+
+    merge_ct = ConfigTree(merge_str)
+
+    if paths:
+        mask = ConfigTree('')
+        for p in paths:
+            mask.set(p)
+
+        merge_ct = mask_inclusive(merge_ct, mask)
+
+    with open(file_path, 'w') as f:
+        f.write(merge_ct.to_string())
+
+    config = Config()
+
+    if config.vyconf_session is not None:
+        out, err = config.vyconf_session.merge_config(
+            file_path, destructive=args.destructive
+        )
+        if err:
+            sys.exit(out)
+        print(out)
+    else:
+        session_ct = config.get_config_tree()
+        merge_res = merge(session_ct, merge_ct, destructive=args.destructive)
+
+        load_explicit(merge_res)
+finally:
+    if os.path.exists(file_path):
         os.remove(file_path)
-        sys.exit(out)
-    print(out)
-else:
-    session_ct = config.get_config_tree()
-    merge_res = merge(session_ct, merge_ct, destructive=args.destructive)
-
-    load_explicit(merge_res)
-
-os.remove(file_path)
 
 if config.session_changed():
     print("Merge complete. Use 'commit' to make changes effective.")
