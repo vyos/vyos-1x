@@ -20,7 +20,6 @@ alternatives for competing use cases, and a base for profiling the
 performance of each.
 """
 
-import re
 import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -153,7 +152,8 @@ def load_legacy(config_obj: ConfigObj):
 
     Returns the text printed by 'cli-shell-api loadFile', which reports a
     path it cannot apply as 'Set [...] failed' / 'Delete [...] failed' and
-    still exits 0; see check_legacy_output.
+    still exits 0; to catch validation errors before legacy load, use
+    vyos.configtree.validate_tree.
     """
     if isinstance(config_obj, ConfigTree):
         config_file = NamedTemporaryFile(delete=False).name
@@ -170,15 +170,6 @@ def load_legacy(config_obj: ConfigObj):
     finally:
         if isinstance(config_obj, ConfigTree):
             Path(config_file).unlink()
-
-
-def check_legacy_output(out: str) -> None:
-    """Raise LoadConfigError with the text of 'cli-shell-api loadFile' if it
-    reports a path it could not set or delete. loadFile exits 0 in that case,
-    having applied the rest, which the explicit variety raised on.
-    """
-    if out and re.search(r'^(Set|Delete) \[.*\] failed$', out, re.M):
-        raise LoadConfigError(out.strip())
 
 def load(config_obj: ConfigObj, strict: bool = True,
          switch: Variety = 'legacy'):
