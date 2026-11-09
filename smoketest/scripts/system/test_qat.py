@@ -72,6 +72,21 @@ class TestQATDriverStatus(unittest.TestCase):
             },
         )
 
+    def test_short_address(self):
+        # The short form shown in Intel's documentation, with no PCI domain.
+        line = 'qat_dev0 - type: c6xx, inst_id: 0, bsf: 06:00:0, #accel: 5 #engines: 10 state: up'
+        devices = qat.parse_adf_ctl_status(line)
+        self.assertEqual([device['address'] for device in devices], ['0000:06:00.0'])
+
+    def test_canonical_pci_address(self):
+        for address, expected in (
+            ('06:00:0', '0000:06:00.0'),
+            ('0000:3D:01.7', '0000:3d:01.7'),
+            ('0001:5e:00.1', '0001:5e:00.1'),
+            ('garbage', 'garbage'),
+        ):
+            self.assertEqual(qat.canonical_pci_address(address), expected)
+
     def test_query(self):
         with patch.object(qat, 'rc_cmd', return_value=(0, ADF_CTL_STATUS)) as rc_cmd:
             devices = qat.get_driver_status()
@@ -109,6 +124,17 @@ class TestQATDeviceState(unittest.TestCase):
 
     def test_same_bus_as_stopped_device(self):
         self.assertEqual(self.state('0000:3d:01.7'), qat.DEVICE_STATE_STARTED)
+
+    def test_short_address(self):
+        status = 'qat_dev0 - type: c6xx, inst_id: 0, bsf: 06:00:0, #accel: 5 #engines: 10 state: down'
+        device = {'address': '0000:06:00.0', 'driver': 'c6xx'}
+        self.assertEqual(
+            qat.get_device_state(device, qat.parse_adf_ctl_status(status)),
+            qat.DEVICE_STATE_NOT_STARTED,
+        )
+
+    def test_address_case(self):
+        self.assertEqual(self.state('0000:3D:00.0'), qat.DEVICE_STATE_NOT_STARTED)
 
     def test_not_listed_by_driver(self):
         self.assertEqual(self.state('0000:99:00.0'), qat.DEVICE_STATE_UNKNOWN)

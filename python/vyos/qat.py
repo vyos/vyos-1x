@@ -110,9 +110,33 @@ DEVICE_STATE_UNKNOWN = 'unknown'
 ADF_CTL_STATES = {'up': DEVICE_STATE_STARTED, 'down': DEVICE_STATE_NOT_STARTED}
 
 
+def canonical_pci_address(address: str) -> str:
+    """Return a PCI address in the sysfs form, for example 0000:06:00.0.
+
+    Intel's QAT documentation also shows status output with 06:00:0, which has
+    no domain. Anything unparsable is returned unchanged.
+    """
+    fields = re.split(r'[:.]', address.strip())
+    if len(fields) == 3:
+        fields.insert(0, '0')
+    try:
+        domain, bus, device, function = (int(field, 16) for field in fields)
+    except ValueError:
+        return address
+    return f'{domain:04x}:{bus:02x}:{device:02x}.{function:x}'
+
+
 def parse_adf_ctl_status(output: str) -> list:
-    """Return the devices listed in "adf_ctl status" output as dictionaries."""
-    return [match.groupdict() for match in ADF_CTL_DEVICE.finditer(output)]
+    """Return the devices listed in "adf_ctl status" output as dictionaries.
+
+    The address is converted to the sysfs form.
+    """
+    devices = []
+    for match in ADF_CTL_DEVICE.finditer(output):
+        device = match.groupdict()
+        device['address'] = canonical_pci_address(device['address'])
+        devices.append(device)
+    return devices
 
 
 def get_driver_status() -> list:
@@ -133,8 +157,9 @@ def get_device_state(device: dict, driver_status: list) -> str:
     if device['driver'] is None:
         return DEVICE_STATE_NO_DRIVER
 
+    address = canonical_pci_address(device['address'])
     for entry in driver_status:
-        if entry['address'] == device['address']:
+        if entry['address'] == address:
             return ADF_CTL_STATES.get(entry['state'], DEVICE_STATE_UNKNOWN)
 
     return DEVICE_STATE_UNKNOWN
