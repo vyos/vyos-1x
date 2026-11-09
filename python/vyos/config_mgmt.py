@@ -37,11 +37,13 @@ from tabulate import tabulate
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.configtree import ConfigTreeError
+from vyos.configtree import DiffTree
+from vyos.configtree import validate_tree
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.configtree import diff_compare
-from vyos.load_config import load
-from vyos.load_config import check_legacy_output
+from vyos.load_config import load_legacy
+from vyos.load_config import migrate
 from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
@@ -347,6 +349,9 @@ Proceed ?"""
                 session.load_config_obj(revert_ct)
             else:
                 check_session_unchanged()
+                # Since we are re-loading the penultimate commit, it is not
+                # necessary to check validate_tree on the content of legacy
+                # load, as is generally recommended.
                 session.load_legacy(revert_ct)
 
             session.commit()
@@ -403,10 +408,26 @@ Proceed ?"""
             )
             return msg, 1
 
+        check_session_unchanged()
+
+        # legacy load is faster than, say, 'explicit', but suffers from a
+        # bug: validation errors are only caught on commit. Erring to the
+        # side of caution, we run validate_tree on the lines to be added.
         rollback_ct = self.get_config_tree_revision(rev)
         try:
-            check_session_unchanged()
-            check_legacy_output(load(rollback_ct, switch='legacy'))
+            migrate_ct = migrate(rollback_ct)
+        except LoadConfigError as e:
+            raise ConfigMgmtError(e) from e
+
+        session_ct = self.working_config
+        diff = DiffTree(session_ct, migrate_ct)
+        out = validate_tree(diff.add)
+        if out:
+            msg = f'Errors applying rollback: {out}'
+            raise ConfigMgmtError(msg)
+
+        try:
+            load_legacy(migrate_ct)
             print('Rollback diff has been applied.')
             print('Use "compare" to review the changes or "commit" to apply them.')
         except LoadConfigError as e:

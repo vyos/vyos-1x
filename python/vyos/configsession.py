@@ -401,16 +401,22 @@ class ConfigSession(object):
         except LoadConfigError as e:
             raise ConfigSessionError(e) from e
 
-    def load_legacy(self, file_path):
-        """Load with the 'legacy' variety of vyos.load_config (one
-        'cli-shell-api loadFile'), not the legacy config backend. Raise if
-        loadFile reports a path it could not apply."""
-        from vyos.load_config import load
-        from vyos.load_config import check_legacy_output
+    def load_legacy(self, config_obj):
+        """Convenience version of load_config above with argument type
+        config_tree | file path and translation of error.
+
+        This does not perform a validation check before load; that can be
+        done in the caller with vyos.configtree.validate_tree.
+        (Since legacy load treats validation errors as commit errors.)
+        This does not perform an automatic migration; that can be done in
+        the caller with vyos.load_config.migrate.
+        """
+        # pylint: disable=import-outside-toplevel
+        from vyos.load_config import load_legacy
         from vyos.load_config import LoadConfigError
 
         try:
-            check_legacy_output(load(file_path, switch='legacy'))
+            load_legacy(config_obj)
         except LoadConfigError as e:
             raise ConfigSessionError(e) from e
 
