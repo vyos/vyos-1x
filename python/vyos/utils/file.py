@@ -62,21 +62,31 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None,
 
     If directory of file is not present, it is auto-created.
     """
+    from stat import S_IMODE
+
     dirname = os.path.dirname(fname)
     if dirname and not os.path.isdir(dirname):
         os.makedirs(dirname, mode=0o755, exist_ok=False)
         chown(dirname, user, group)
 
+    def opener(path, flags):
+        if os.path.exists(fname):
+            cur_mode = S_IMODE(os.stat(fname).st_mode)
+        else:
+            cur_mode = 0o664
+        set_mode = mode & cur_mode if mode else cur_mode
+        return os.open(path, flags, mode=set_mode)
+
     try:
         """ Write a file to string """
         bytes = 0
-        with open(fname, 'w' if not append else 'a') as f:
+        with open(fname, 'w' if not append else 'a', opener=opener) as f:
+            chown(f.fileno(), user, group)
+            chmod(f.fileno(), mode)
             bytes = f.write(data)
             if trailing_newline and not data.endswith('\n'):
                 f.write('\n')
                 bytes += 1
-        chown(fname, user, group)
-        chmod(fname, mode)
         return bytes
     except Exception as e:
         if defaultonfailure is not None:
