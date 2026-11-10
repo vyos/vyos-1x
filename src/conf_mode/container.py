@@ -453,13 +453,16 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
             cap = cap.upper().replace('-', '_')
             out.append(f'AddCapability={cap}')
 
+    exec_parts = []
+
     if 'command' in container_config:
-        command = container_config['command'].strip()
+        exec_parts.append(container_config['command'].strip())
 
-        if 'arguments' in container_config:
-            command += ' ' + container_config['arguments'].strip()
+    if 'arguments' in container_config:
+        exec_parts.append(container_config['arguments'].strip())
 
-        out.append(f'Exec={command}')
+    if exec_parts:
+        out.append('Exec=' + ' '.join(exec_parts))
 
     if 'device' in container_config:
         for dev, dev_config in container_config['device'].items():

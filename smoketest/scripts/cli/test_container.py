@@ -139,6 +139,21 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(l['Config']['Healthcheck']['Timeout'], 1000000000)
         self.assertEqual(l['Config']['Healthcheck']['Retries'], 2)
 
+    def test_arguments_without_command(self):
+        cont_name = 'args-test'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        # busybox has no entrypoint, so the arguments become the command
+        self.cli_set(base_path + ['name', cont_name, 'arguments', 'sleep 3600'])
+        self.cli_commit()
+
+        self.assertTrue(self.is_running(cont_name))
+
+        l = cmd_to_json(['container', 'inspect', cont_name])
+        self.assertEqual(l['Config']['Cmd'], ['sleep', '3600'])
+
     def test_name_server(self):
         cont_name = 'dns-test'
         net_name = 'net-test'
