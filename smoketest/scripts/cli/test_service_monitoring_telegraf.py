@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -302,6 +303,76 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         self.assertNotEqual(pid, new_pid)
         environ = read_file(f'/proc/{new_pid}/environ', sudo=True)
         self.assertIn(f'INFLUX_TOKEN={new_token}', environ)
+
+    def test_10_azure_data_explorer(self):
+        database = 'vyos_metrics'
+        client_id = 'vyos-client'
+        client_secret = 'vyos-secret'
+        new_client_secret = 'vyos-new-secret'
+        tenant_id = 'vyos-tenant'
+        azure_path = base_path + ['azure-data-explorer']
+
+        self.cli_set(azure_path + ['url', url])
+        self.cli_set(azure_path + ['database', database])
+        self.cli_set(azure_path + ['authentication', 'client-id', client_id])
+        self.cli_set(azure_path + ['authentication', 'client-secret', client_secret])
+        self.cli_set(azure_path + ['authentication', 'tenant-id', tenant_id])
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn('[[outputs.azure_data_explorer]]', config)
+        self.assertIn(f'endpoint_url = "{url}"', config)
+        self.assertIn(f'database = "{database}"', config)
+        self.assertIn('metrics_grouping_type = "TablePerMetric"', config)
+        # Credentials must never be rendered into the world-readable config
+        self.assertNotIn(client_secret, config)
+
+        # Credentials are only readable by root and not exposed by systemd
+        self.assertEqual(
+            read_file(TELEGRAF_ENV, sudo=True),
+            f'AZURE_CLIENT_ID={client_id}\n'
+            f'AZURE_CLIENT_SECRET={client_secret}\n'
+            f'AZURE_TENANT_ID={tenant_id}',
+        )
+        self.assertEqual(file_permissions(TELEGRAF_ENV), '0600')
+        self.assertNotIn(
+            client_secret,
+            cmdl(['systemctl', 'show', '-p', 'Environment', 'telegraf.service']),
+        )
+
+        # The running process must see the credentials, not only the file
+        pid = process_named_running(PROCESS_NAME)
+        environ = read_file(f'/proc/{pid}/environ', sudo=True)
+        self.assertIn(f'AZURE_CLIENT_ID={client_id}', environ)
+        self.assertIn(f'AZURE_CLIENT_SECRET={client_secret}', environ)
+        self.assertIn(f'AZURE_TENANT_ID={tenant_id}', environ)
+
+        # A reload keeps the old environment, a new secret needs a restart
+        self.cli_set(
+            azure_path + ['authentication', 'client-secret', new_client_secret]
+        )
+        self.cli_commit()
+
+        # A new PID proves a restart, the old secret must be gone from it
+        new_pid = process_named_running(PROCESS_NAME, timeout=10)
+        self.assertNotEqual(pid, new_pid)
+        environ = read_file(f'/proc/{new_pid}/environ', sudo=True)
+        self.assertIn(f'AZURE_CLIENT_SECRET={new_client_secret}', environ)
+        self.assertNotIn(client_secret, environ)
+
+        # Adding InfluxDB must keep the Azure credentials in the env file
+        self.basic_influxdb_setup()
+        env = read_file(TELEGRAF_ENV, sudo=True)
+        self.assertIn(f'INFLUX_TOKEN={token}', env)
+        self.assertIn(f'AZURE_CLIENT_SECRET={new_client_secret}', env)
+
+        # Removing all secrets removes the file
+        self.cli_delete(azure_path)
+        self.cli_delete(base_path + ['influxdb'])
+        self.cli_set(base_path + ['prometheus-client'])
+        self.cli_commit()
+        self.assertFalse(os.path.exists(TELEGRAF_ENV))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

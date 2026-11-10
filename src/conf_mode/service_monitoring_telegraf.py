@@ -87,6 +87,12 @@ def get_config(config=None):
     if tmp:
         monitoring.update({'restart_required': {}})
 
+    # Azure credentials are only read from the environment at startup,
+    # changing them requires a restart, a reload is not enough
+    tmp = is_node_changed(conf, base + ['azure-data-explorer', 'authentication'])
+    if tmp:
+        monitoring.update({'restart_required': {}})
+
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrieved.
     monitoring = conf.merge_defaults(monitoring, recursive=True)
@@ -104,13 +110,6 @@ def get_config(config=None):
             monitoring['azure_data_explorer']['group_metrics'] = 'SingleTable'
         else:
             monitoring['azure_data_explorer']['group_metrics'] = 'TablePerMetric'
-        # Set azure env
-        if 'authentication' in monitoring['azure_data_explorer']:
-            auth_config = monitoring['azure_data_explorer']['authentication']
-            if {'client_id', 'client_secret', 'tenant_id'} <= set(auth_config):
-                os.environ['AZURE_CLIENT_ID'] = auth_config['client_id']
-                os.environ['AZURE_CLIENT_SECRET'] = auth_config['client_secret']
-                os.environ['AZURE_TENANT_ID'] = auth_config['tenant_id']
 
     # Ignore default XML values if config doesn't exists
     # Delete key from dict
@@ -305,12 +304,23 @@ def generate(monitoring):
     render(systemd_override, 'telegraf/override.conf.j2', monitoring)
     render(syslog_telegraf, 'telegraf/syslog_telegraf.j2', monitoring)
 
-    # Pass the InfluxDB token in an EnvironmentFile instead of Environment=,
-    # which any user can read via "systemctl show". Written atomically so the
-    # file is never readable by others.
+    # Secrets reach telegraf through a root-only EnvironmentFile. Environment=
+    # would expose them to every user via "systemctl show". Written atomically
+    # so the file is never readable by others.
+    env_dict = {}
+
     token = dict_search('influxdb.authentication.token', monitoring)
     if token:
-        write_file_atomic(telegraf_env, f'INFLUX_TOKEN={token}\n')
+        env_dict['INFLUX_TOKEN'] = token
+
+    for key in ['client_id', 'client_secret', 'tenant_id']:
+        value = dict_search(f'azure_data_explorer.authentication.{key}', monitoring)
+        if value:
+            env_dict[f'AZURE_{key.upper()}'] = value
+
+    if env_dict:
+        data = ''.join(f'{key}={value}\n' for key, value in env_dict.items())
+        write_file_atomic(telegraf_env, data)
     elif os.path.isfile(telegraf_env):
         os.unlink(telegraf_env)
 
