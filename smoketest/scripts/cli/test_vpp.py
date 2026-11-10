@@ -26,6 +26,7 @@ from collections import defaultdict
 from json import loads
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import wrapped_error_regex
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.convert import range_str_to_list
@@ -118,12 +119,6 @@ def get_address(interface):
         if isinstance(data, list) and len(data) > 0:
             ip_address = data[0]['addr_info'][0]['local']
             return ip_address
-
-
-def wrapped_error_regex(message):
-    # Commit errors are line-wrapped when printed, so build a regex that
-    # matches the message across arbitrary whitespace including newlines
-    return r'\s+'.join(re.escape(word) for word in message.split())
 
 
 def get_isolated_cpus():

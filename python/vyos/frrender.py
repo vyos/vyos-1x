@@ -729,11 +729,13 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
             if 'rpki' in vrf_config.get('protocols', []):
                 rpki = conf.get_config_dict(rpki_vrf_path, key_mangling=('-', '_'), get_first_key=True,
                                             with_pki=True, with_recursive_defaults=True)
-                rpki_ssh_key_base = '/run/frr/id_rpki'
+                # The same cache can be in several VRFs, so add the VRF name.
+                # '.' is used as separator, as it is not allowed in a VRF name
+                rpki_ssh_key_base = f'/run/frr/id_rpki.{vrf_name}'
                 for cache, cache_config in rpki.get('cache',{}).items():
                     if 'ssh' in cache_config:
-                        cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
-                        cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
+                        cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}.{cache}.pub'
+                        cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}.{cache}'
                 dict_set_nested(f'{protocol_dict_path}.rpki', rpki, vrf)
             elif conf.exists_effective(rpki_vrf_path):
                 dict_set_nested(f'{protocol_dict_path}.rpki', deleted_protocol, vrf)
