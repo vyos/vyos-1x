@@ -240,7 +240,7 @@ let has_unsafe_characters cmd =
   (* XXX: this function is highly restrictive now,
      until we are completely certain that shell escape
      cannot happen down the line inside VyOS op mode scripts.
-     Alphanumeric characters, hyphens, dots, and whitespace
+     Alphanumeric characters, hyphens, dots, and plain spaces
      should allow operator users to use most commands
      that take interface names, FQDNs, and config entities
      like IPsec peer names.
@@ -256,7 +256,7 @@ let has_unsafe_characters cmd =
    *)
   let () = Logs.debug @@ fun m -> m "Checking the command for unsafe characters" in
   try
-    let _ = Pcre2.exec ~pat:{|[^a-zA-Z0-9_\-\.\s]|} cmd in
+    let _ = Pcre2.exec ~pat:{|[^a-zA-Z0-9_\-\. ]|} cmd in
     let () =
       Printf.fprintf stderr "Command [%s] contains special characters \
         that operator-level users are not allowed to use\n" cmd
