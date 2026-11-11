@@ -79,6 +79,18 @@ class TestVyOSUtilsNetwork(TestCase):
         self.assertEqual(vyos.utils.network.get_interfaces_by_ip('::1%lo'), ['lo'])
         self.assertEqual(vyos.utils.network.get_interfaces_by_ip('::1%eth99'), [])
 
+    def test_get_interfaces_by_ip_rejects_invalid(self):
+        # an invalid address is reported the same way whether the zone index
+        # names an interface, names none or is missing
+        for addr in ['VyOS', 'VyOS%lo', 'VyOS%eth99', '::1%lo-::2%lo', '%lo']:
+            for func in [
+                vyos.utils.network.get_interfaces_by_ip,
+                vyos.utils.network.is_addr_assigned,
+            ]:
+                with self.assertRaises(ValueError) as e:
+                    func(addr)
+                self.assertIn('not a valid IPv4 or IPv6 address', str(e.exception))
+
     def test_is_intf_addr_assigned(self):
         self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '127.0.0.1'))
         self.assertTrue(vyos.utils.network.is_intf_addr_assigned('lo', '127.0.0.1/8'))
