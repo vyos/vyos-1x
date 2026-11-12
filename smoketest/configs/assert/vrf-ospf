@@ -6,6 +6,7 @@ set interfaces ethernet eth2 offload gro
 set interfaces ethernet eth2 vrf 'blue'
 set protocols ospf area 0 network '192.0.2.0/24'
 set protocols ospf capability opaque
+set protocols ospf compatible rfc1583
 set protocols ospf interface eth0 authentication md5 key-id 10 md5-key 'ospfkey'
 set protocols ospf interface eth0 passive disable
 set protocols ospf log-adjacency-changes
@@ -34,6 +35,7 @@ set system syslog local facility all level 'info'
 set system syslog local facility local7 level 'debug'
 set system time-zone 'Europe/Berlin'
 set vrf name blue protocols ospf area 0 network '172.18.201.0/24'
+set vrf name blue protocols ospf compatible rfc1583
 set vrf name blue protocols ospf interface eth2 authentication md5 key-id 30 md5-key 'vyoskey456'
 set vrf name blue protocols ospf interface eth2 dead-interval '40'
 set vrf name blue protocols ospf interface eth2 hello-interval '10'

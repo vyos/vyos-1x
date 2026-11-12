@@ -334,6 +334,25 @@
     </leafNode>
   </children>
 </node>
+<node name="compatible">
+  <properties>
+    <help>OSPF compatibility list</help>
+  </properties>
+  <children>
+    <leafNode name="rfc1583">
+      <properties>
+        <help>Enable RFC1583 criteria for handling AS external routes</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="rfc7474">
+      <properties>
+        <help>Enable strict RFC7474 sequence number validation for cryptographic authentication</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 #include <include/ospf/default-information.xml.i>
 <leafNode name="default-metric">
   <properties>
@@ -634,12 +653,6 @@
         </constraint>
       </properties>
       <defaultValue>cisco</defaultValue>
-    </leafNode>
-    <leafNode name="rfc1583-compatibility">
-      <properties>
-        <help>Enable RFC1583 criteria for handling AS external routes</help>
-        <valueless/>
-      </properties>
     </leafNode>
     #include <include/router-id.xml.i>
   </children>
