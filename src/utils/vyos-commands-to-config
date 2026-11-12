@@ -16,7 +16,6 @@
 #
 
 import sys
-import json
 
 from vyos.configtree import ConfigTree
 from vyos.utils.config import parse_commands
