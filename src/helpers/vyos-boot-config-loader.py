@@ -110,8 +110,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Must specify boot config file.")
         sys.exit(1)
-    else:
-        file_name = sys.argv[1]
+    file_name = sys.argv[1]
 
     # Set user and group options, so that others will be able to commit
     # Currently, the only caller does 'sg CFG_GROUP', but that may change
