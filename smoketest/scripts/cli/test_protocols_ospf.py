@@ -86,7 +86,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'abr-type', abr_type])
         self.cli_set(base_path + ['capability', 'opaque'])
-        self.cli_set(base_path + ['parameters', 'rfc1583-compatibility'])
+        self.cli_set(base_path + ['compatible', 'rfc1583'])
         self.cli_set(base_path + ['log-adjacency-changes', 'detail'])
         self.cli_set(base_path + ['default-metric', metric])
         self.cli_set(base_path + ['passive-interface', 'default'])
@@ -742,17 +742,17 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(' ospf router-id 192.0.2.1', frrconfig)
 
     def test_ospf_22_rfc1583_canonical_form(self):
-        # FRR prints "compatible rfc1583". The CLI option "parameters
-        # rfc1583-compatibility" must be rendered in this form: if the alias
-        # form "ospf rfc1583compatibility" is rendered, frr-reload finds the
-        # line missing on every reload, removes the setting and adds it again,
+        # FRR prints "compatible rfc1583". The CLI option "compatible rfc1583"
+        # must be rendered in this form: if the alias form
+        # "ospf rfc1583compatibility" is rendered, frr-reload finds the line
+        # missing on every reload, removes the setting and adds it again,
         # which runs an extra SPF on each FRR reload, whatever it changed.
         #
         # This reads the generated FRR config file: FRR accepts both forms, so
         # vtysh cannot tell which one we rendered.
         frr_conf = '/run/frr/config/vyos.frr.conf'
         alias_form = r'(?m)^ ospf rfc1583compatibility'
-        rfc1583 = base_path + ['parameters', 'rfc1583-compatibility']
+        rfc1583 = base_path + ['compatible', 'rfc1583']
 
         # the router-id keeps "router ospf" configured when the node is
         # deleted below, so the delete is tested against a running instance
@@ -780,7 +780,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(vrf_base + ['table', '1000'])
         vrf_params = vrf_base + ['protocols', 'ospf', 'parameters']
         self.cli_set(vrf_params + ['router-id', '1.1.1.1'])
-        self.cli_set(vrf_params + ['rfc1583-compatibility'])
+        self.cli_set(vrf_base + ['protocols', 'ospf', 'compatible', 'rfc1583'])
         self.cli_commit()
 
         frrconfig = read_file(frr_conf)
