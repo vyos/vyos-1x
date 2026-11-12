@@ -66,6 +66,8 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_delete(self._base_path + [interface])
             self.cli_set(self._base_path + [interface, 'duplex', 'auto'])
             self.cli_set(self._base_path + [interface, 'speed', 'auto'])
+        # left over when test_evpn_missing_nic fails halfway
+        self.cli_delete(self._base_path + [self.missing_ethernet])
 
         self.cli_commit()
 
@@ -365,6 +367,19 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         for interface in self._interfaces:
             frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(' evpn mh uplink', frrconfig)
+
+    def test_evpn_missing_nic(self):
+        # T9515: an interface whose NIC is missing fails its own node, so its
+        # EVPN configuration is not committed and must not reach FRR
+        interface = self.missing_ethernet
+        self.cli_set(self._base_path + [interface, 'evpn', 'uplink'])
+        with self.assertRaisesRegex(ConfigSessionError, f'Interface "{interface}" does not exist'):
+            self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
+        self.assertNotIn('evpn mh', frrconfig)
+
+        self.cli_delete(self._base_path + [interface])
 
     def test_ethtool_offload_rx(self):
         for interface in self._interfaces:
