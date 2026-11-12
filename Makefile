@@ -7,6 +7,7 @@ LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
+PYLINT_FILES := $(shell (git ls-files '*.py' src/migration-scripts; git grep -lE '^\#!.*python' -- ':!*.py') | sort -u)
 
 config_xml_src = $(wildcard interface-definitions/*.xml.in)
 config_xml_obj = $(config_xml_src:.xml.in=.xml)
@@ -117,9 +118,11 @@ check_scripts_not_executable:
 .PHONY: pylint
 pylint: interface_definitions
 	@echo Running "pylint ..."
-	@set -e; \
-	PYTHONPATH="python/:smoketest/scripts/cli/" pylint --jobs 0 --errors-only $(shell git ls-files python/**/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos* smoketest/scripts); \
-	PYTHONPATH=python/ pylint --jobs 0 --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
+	# relative-beyond-top-level: the GraphQL scripts import relative to their
+	# package only when loaded as one
+	PYTHONPATH="python/:smoketest/scripts/cli/" pylint --jobs 0 \
+		--disable=all --enable=E,F,W0611 --disable=relative-beyond-top-level \
+		$(PYLINT_FILES)
 
 .PHONY: j2lint
 j2lint:
