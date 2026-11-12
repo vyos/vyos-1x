@@ -147,6 +147,7 @@
                   <leafNode name="port">
                     <defaultValue>8086</defaultValue>
                   </leafNode>
+                  #include <include/monitoring/telegraf-output-tls.xml.i>
                 </children>
               </node>
               <node name="azure-data-explorer">
