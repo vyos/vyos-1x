@@ -358,9 +358,10 @@ def call_commit(s: SessionState):
 def call_commit_confirm(s: SessionState):
     env = s.session.get_session_env()
     env['IN_COMMIT_CONFIRM'] = 't'
+    env['COMMIT_CONFIRM_TIME'] = str(s.confirm_time)
     try:
-        s.session.commit()
         s.session.commit_confirm(minutes=s.confirm_time)
+        s.session.commit()
     except ConfigSessionError as e:
         s.session.discard()
         if s.debug:
@@ -369,6 +370,7 @@ def call_commit_confirm(s: SessionState):
             LOG.warning(f'ConfigSessionError: {e}')
     finally:
         del env['IN_COMMIT_CONFIRM']
+        del env['COMMIT_CONFIRM_TIME']
 
 
 def run_commit(s: SessionState):
@@ -382,15 +384,16 @@ def run_commit(s: SessionState):
 def run_commit_confirm(s: SessionState):
     env = s.session.get_session_env()
     env['IN_COMMIT_CONFIRM'] = 't'
+    env['COMMIT_CONFIRM_TIME'] = str(s.confirm_time)
     try:
-        out_c = s.session.commit()
-        out_cc = s.session.commit_confirm(minutes=s.confirm_time)
-        out = out_c + '\n' + out_cc
+        s.session.commit_confirm(minutes=s.confirm_time)
+        out = s.session.commit()
         return out, None
     except Exception as e:
         return None, e
     finally:
         del env['IN_COMMIT_CONFIRM']
+        del env['COMMIT_CONFIRM_TIME']
 
 
 def _execute_configure_op(
