@@ -175,10 +175,11 @@ class KeepalivedFifo:
                     # set new message flag to start processing
                     if queued:
                         self.message_event.set()
-            except Exception as err:
+            except BlockingIOError:
                 # ignore the "Resource temporarily unavailable" error
-                if err.errno != 11:
-                    logger.error(f'Error receiving message: {err}')
+                pass
+            except Exception as err:
+                logger.error(f'Error receiving message: {err}')
 
         logger.debug('Closing FIFO pipe')
         os.close(self.pipe_read)
