@@ -16,21 +16,30 @@ import os
 
 from sys import exit
 from shutil import rmtree
+from netifaces import interfaces  # pylint: disable = no-name-in-module
 
 from vyos.defaults import systemd_services
 from vyos.config import Config
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
+from vyos.configverify import verify_vrf
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import is_ipv6_link_local
+from vyos.utils.network import get_interfaces_by_ip
+from vyos.utils.network import is_ipv6_tentative
+from vyos.utils.misc import wait_for
 from vyos.pki import find_chain
 from vyos.pki import load_certificate
 from vyos.pki import load_private_key
 from vyos.pki import encode_certificate
 from vyos.pki import encode_private_key
+from vyos.template import is_ipv6
 from vyos.template import render
 from vyos.utils.file import write_file
 from vyos import ConfigError
@@ -57,7 +66,12 @@ def get_config(config=None):
                               with_recursive_defaults=True,
                               with_pki=True)
 
+    # A reload keeps the process in its old VRF - "ip vrf exec" only applies on start
+    if is_node_changed(conf, base + ['vrf']):
+        lb.update({'restart_required': {}})
+
     return lb
+
 
 def verify(lb):
     if not lb:
@@ -65,6 +79,10 @@ def verify(lb):
 
     if 'backend' not in lb or 'service' not in lb:
         raise ConfigError('Both "service" and "backend" must be configured!')
+
+    verify_vrf(lb)
+    # "default" is the default routing table, not a VRF device to bind to
+    vrf = lb.get('vrf') if lb.get('vrf') != 'default' else None
 
     for front, front_config in lb['service'].items():
         if 'port' not in front_config:
@@ -75,20 +93,57 @@ def verify(lb):
         listen_port = int(front_config['port'])
         if listen_addresses:
             for listen_address in listen_addresses:
-                # Remove the interface name if present in the listen address
-                if '%' in listen_address:
-                    listen_address, *_ = listen_address.split('%', maxsplit=1)
+                # Split "fe80::1%eth0" into address and interface
+                address, _, interface = listen_address.partition('%')
+                if interface:
+                    # Must be an existing interface name
+                    if interface not in interfaces():
+                        raise ConfigError(f'Interface "{interface}" does not exist!')
+                    # HAProxy binds this address to the given interface, so
+                    # check it on that interface instead of in the VRF
+                    assigned = is_intf_addr_assigned(interface, address)
+                    bind_vrf = None
+                elif is_ipv6_link_local(address):
+                    # A link-local address cannot be bound without an interface
+                    raise ConfigError(
+                        f'listen-address "{address}" is link-local and needs '
+                        'an interface, e.g. "fe80::1%eth0"!'
+                    )
+                else:
+                    # Any other address must exist in the HAProxy VRF, unless
+                    # binding to a non-local address is allowed
+                    assigned = is_addr_assigned(address, vrf=vrf, allow_nonlocal=True)
+                    bind_vrf = vrf
 
-                if not is_addr_assigned(listen_address, allow_nonlocal=True):
+                if not assigned:
                     raise ConfigError(
                         f'listen-address "{listen_address}" not assigned on any interface!'
                     )
 
+                # A new IPv6 address (e.g. added in the same commit, or on boot)
+                # is tentative and cannot be bound for about a second - wait
+                if is_ipv6(address):
+                    if interface:
+                        ifnames = [interface]
+                    else:
+                        ifnames = get_interfaces_by_ip(address, vrf=vrf)
+                    if not wait_for(
+                        lambda: not any(
+                            is_ipv6_tentative(intf, address) for intf in ifnames
+                        ),
+                        interval=0.2,
+                        timeout=5,
+                    ):
+                        raise ConfigError(
+                            f'listen-address "{listen_address}" is not usable, IPv6 '
+                            'duplicate address detection did not finish or failed!'
+                        )
+
                 port_availability = check_port_availability(
-                    listen_address, listen_port, 'tcp'
+                    listen_address, listen_port, 'tcp', vrf=bind_vrf
                 )
                 port_bind_service = is_listen_port_bind_service(
-                    listen_port, 'haproxy', address=listen_address
+                    listen_port, 'haproxy', address=address
                 )
                 if not port_availability and not port_bind_service:
                     raise ConfigError(
@@ -96,7 +151,9 @@ def verify(lb):
                     )
         else:
             # Verify listen port for all IP addresses
-            port_availability = check_port_availability(None, listen_port, 'tcp')
+            port_availability = check_port_availability(
+                None, listen_port, 'tcp', vrf=vrf
+            )
             port_bind_service = is_listen_port_bind_service(listen_port, 'haproxy')
             if not port_availability and not port_bind_service:
                 raise ConfigError(
@@ -232,10 +289,11 @@ def generate(lb):
 
     return None
 
+
 def apply(lb):
     action = 'stop'
     if lb:
-        action = 'reload-or-restart'
+        action = 'restart' if 'restart_required' in lb else 'reload-or-restart'
     call('systemctl daemon-reload')
     call(f'systemctl {action} {systemd_services["haproxy"]}')
     return None
