@@ -144,7 +144,7 @@ try:
     elif args.set_host_name:
         if not args.domain_name:
             raise ValueError('--domain-name is required for this operation')
-        client.set_host_name({'host_name': args.set_host_name, 'domain_name': args.domain_name})
+        client.set_host_name(args.set_host_name, args.domain_name)
 
     elif args.apply:
         pass

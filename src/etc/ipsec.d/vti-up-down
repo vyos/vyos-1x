@@ -28,7 +28,6 @@ from syslog import LOG_INFO
 from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import get_interface_dict
 from vyos.utils.commit import wait_for_commit_lock
-from vyos.utils.process import call
 from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
 
 def supply_interface_dict(interface):
