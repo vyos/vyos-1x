@@ -345,6 +345,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="rfc7474">
+      <properties>
+        <help>Enable strict RFC7474 sequence number validation for cryptographic authentication</help>
+        <valueless/>
+      </properties>
+    </leafNode>
   </children>
 </node>
 #include <include/ospf/default-information.xml.i>

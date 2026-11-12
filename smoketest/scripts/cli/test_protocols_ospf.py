@@ -75,6 +75,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
+        self.assertIn(f' no compatible rfc7474', frrconfig)
 
     def test_ospf_02_simple(self):
         router_id = '127.0.0.1'
@@ -813,6 +814,53 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
         self.assertIn(' ospf router-id 1.1.1.1', frrconfig)
         self.assertNotIn('capability opaque', frrconfig)
+
+        self.cli_delete(vrf_base)
+
+    def test_ospf_24_compatible(self):
+        # FRR enables "compatible rfc7474" by default and prints only the
+        # "no" form - rendered when the CLI node is not set
+        vrf = 'blue'
+        vrf_base = ['vrf', 'name', vrf]
+        instances = {
+            'router ospf': base_path,
+            f'router ospf vrf {vrf}': vrf_base + base_path,
+        }
+
+        def verify(rfc1583: bool, rfc7474: bool):
+            for header in instances:
+                frrconfig = self.getFRRconfig(header, stop_section='^exit')
+                self.assertIn(' ospf router-id 192.0.2.1', frrconfig)
+                if rfc1583:
+                    self.assertIn(' compatible rfc1583', frrconfig)
+                else:
+                    self.assertNotIn(' compatible rfc1583', frrconfig)
+                self.assertNotRegex(frrconfig, r'(?m)^ compatible rfc7474$')
+                if rfc7474:
+                    self.assertNotIn(' no compatible rfc7474', frrconfig)
+                else:
+                    self.assertIn(' no compatible rfc7474', frrconfig)
+
+        self.cli_set(vrf_base + ['table', '1000'])
+        for path in instances.values():
+            self.cli_set(path + ['parameters', 'router-id', '192.0.2.1'])
+        self.cli_commit()
+        verify(rfc1583=False, rfc7474=False)
+
+        for path in instances.values():
+            self.cli_set(path + ['compatible', 'rfc7474'])
+        self.cli_commit()
+        verify(rfc1583=False, rfc7474=True)
+
+        for path in instances.values():
+            self.cli_set(path + ['compatible', 'rfc1583'])
+        self.cli_commit()
+        verify(rfc1583=True, rfc7474=True)
+
+        for path in instances.values():
+            self.cli_delete(path + ['compatible'])
+        self.cli_commit()
+        verify(rfc1583=False, rfc7474=False)
 
         self.cli_delete(vrf_base)
 

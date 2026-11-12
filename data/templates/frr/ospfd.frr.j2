@@ -214,6 +214,10 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if compatible.rfc1583 is vyos_defined %}
  compatible rfc1583
 {% endif %}
+{# FRR enables RFC7474 by default and only prints the "no" form #}
+{% if compatible.rfc7474 is not vyos_defined %}
+ no compatible rfc7474
+{% endif %}
 {% if parameters.router_id is vyos_defined %}
  ospf router-id {{ parameters.router_id }}
 {% endif %}
