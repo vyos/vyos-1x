@@ -18,7 +18,6 @@ import vyos.defaults
 
 from ariadne import make_executable_schema
 from ariadne import load_schema_from_path
-from ariadne import snake_case_fallback_resolvers
 
 from .graphql.queries import query
 from .graphql.mutations import mutation
@@ -45,8 +44,8 @@ def generate_schema():
         op_mode_error,
         mutation,
         auth_token_mutation,
-        snake_case_fallback_resolvers,
         directives=directives_dict,
+        convert_names_case=True,
     )
 
     return schema
