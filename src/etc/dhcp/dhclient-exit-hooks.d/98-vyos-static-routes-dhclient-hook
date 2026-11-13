@@ -16,18 +16,20 @@
 
 # The FRR static route configuration embeds the DHCP gateway of an interface,
 # either for "protocols static route <prefix> dhcp-interface <ifname>" or for
-# the default route implied by "interfaces <type> <ifname> address dhcp". The
-# gateway is only known at lease time, so any lease event must reconcile the
-# rendered configuration with the current lease (T8465).
+# the default route implied by "interfaces <type> <ifname> address dhcp", as
+# well as the RFC 3442 classless static routes of any DHCP interface. These are
+# only known at lease time, so any lease event must reconcile the rendered
+# configuration with the current lease (T8465).
 
 # Re-generate the config on the following events:
 # - BOUND: always re-generate
-# - RENEW: re-generate if the IP address changed
-# - REBIND: re-generate if the IP address changed
+# - RENEW: re-generate if the router or classless static routes changed
+# - REBIND: re-generate if the router or classless static routes changed
 # - EXPIRE: always re-generate (route should be removed)
 # - RELEASE: always re-generate (route should be removed)
 if [ "$reason" == "RENEW" ] || [ "$reason" == "REBIND" ]; then
-    if [ "$old_routers" == "$new_routers" ]; then
+    if [ "$old_routers" == "$new_routers" ] &&
+       [ "$old_rfc3442_classless_static_routes" == "$new_rfc3442_classless_static_routes" ]; then
         return 0
     fi
 elif [ "$reason" != "BOUND" ] && [ "$reason" != "EXPIRE" ] && [ "$reason" != "RELEASE" ]; then

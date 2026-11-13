@@ -39,6 +39,7 @@ from vyos.utils.dict import dict_set_nested
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import rc_cmd
+from vyos.template import get_dhcp_classless_static_routes
 from vyos.template import get_dhcp_router
 from vyos.template import get_wwan_router
 from vyos.template import render_to_string
@@ -822,14 +823,17 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
 def get_dhcp_route_interfaces(config_dict) -> set:
     """Collect all interfaces whose static route configuration is derived from a
-    DHCP lease. Two CLI constructs end up reading the DHCP lease file via the
-    "get_dhcp_router" Jinja filter and thus depend on the current lease:
+    DHCP lease. Three kinds of routes end up reading the DHCP lease file via the
+    "get_dhcp_router" or "get_dhcp_classless_static_routes" Jinja filters and
+    thus depend on the current lease:
 
     - "protocols static route <prefix> dhcp-interface <ifname>", either directly
       or below "protocols static table <id>"
     - the default route implied by "interfaces <type> <ifname> address dhcp"
+    - the RFC 3442 classless static routes of "interfaces <type> <ifname>
+      address dhcp", also when "dhcp-options no-default-route" is set
 
-    Both variants exist in the default VRF as well as inside any named VRF.
+    All variants exist in the default VRF as well as inside any named VRF.
     """
     interfaces = set()
 
@@ -848,12 +852,7 @@ def get_dhcp_route_interfaces(config_dict) -> set:
         for table_config in static_conf.get('table', {}).values():
             if isinstance(table_config, dict):
                 _add_from_routes(table_config.get('route'))
-        for ifname, if_config in static_conf.get('dhcp', {}).items():
-            # An interface explicitly opting out of the default route does not
-            # contribute a route, thus a lease change is irrelevant for it
-            if dict_search('dhcp_options.no_default_route', if_config) != None:
-                continue
-            interfaces.add(ifname)
+        interfaces.update(static_conf.get('dhcp', {}))
 
     if not isinstance(config_dict, dict):
         return interfaces
@@ -889,7 +888,7 @@ def get_wwan_route_interfaces(config_dict) -> set:
 class FRRender:
     # Configuration of the last successful apply(), see generate()
     cached_config_dict = {}
-    cached_dhcp_gateways = {}
+    cached_dhcp_routes = {}
     cached_wwan_gateways = {}
     def __init__(self):
         self._frr_conf = frr_config_file
@@ -906,13 +905,17 @@ class FRRender:
             tmp = type(config_dict)
             raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
 
-        # T8465: the rendered configuration embeds the current DHCP gateway,
-        # which changes independently of the CLI configuration. The interface
+        # T8465: the rendered configuration embeds the current DHCP gateway and
+        # classless static routes, which change independently of the CLI
+        # configuration and of each other. The interface
         # list must be derived from the configuration itself - the DHCP hook
         # list on disk is only written by protocols_static.py, which does not
         # run on an interface-only commit.
-        dhcp_gateways = {
-            interface: get_dhcp_router(interface)
+        dhcp_routes = {
+            interface: (
+                get_dhcp_router(interface),
+                get_dhcp_classless_static_routes(interface),
+            )
             for interface in get_dhcp_route_interfaces(config_dict)
         }
 
@@ -932,7 +935,7 @@ class FRRender:
         # reload removed frr_applied_config_file (T9442)
         if (
             self.cached_config_dict == config_dict
-            and self.cached_dhcp_gateways == dhcp_gateways
+            and self.cached_dhcp_routes == dhcp_routes
             and self.cached_wwan_gateways == wwan_gateways
             and read_file(self._frr_conf, None)
             == read_file(frr_applied_config_file, None)
@@ -1083,7 +1086,7 @@ class FRRender:
         # Only apply() makes this the cached configuration. If FRR does not
         # take it, the next commit must render and apply it again instead of
         # reporting no changes (T9442).
-        self._pending = (config_dict, dhcp_gateways, wwan_gateways)
+        self._pending = (config_dict, dhcp_routes, wwan_gateways)
         return True
 
     def apply(self, count_max=5):
@@ -1138,6 +1141,6 @@ class FRRender:
         if pending is not None:
             (
                 self.cached_config_dict,
-                self.cached_dhcp_gateways,
+                self.cached_dhcp_routes,
                 self.cached_wwan_gateways,
             ) = pending
