@@ -1,0 +1,18 @@
+[Unit]
+Description=VyOS VTI interface state from strongSwan (VICI plugin)
+# Started and stopped by conf_mode/vpn_ipsec.py together with IPsec
+After=strongswan.service
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-vti-updown
+ExecReload=/bin/kill -HUP $MAINPID
+Type=simple
+
+SyslogIdentifier=vyos-vti-updown
+SyslogFacility=daemon
+
+Restart=always
+RestartSec=5
+
+User=root
+Group=vyattacfg
