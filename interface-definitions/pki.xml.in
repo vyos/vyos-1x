@@ -178,14 +178,30 @@
                 <properties>
                   <help>SSH public key type</help>
                   <completionHelp>
-                    <list>ssh-rsa</list>
+                    <list>ssh-rsa ssh-ed25519 ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521</list>
                   </completionHelp>
                   <valueHelp>
                     <format>ssh-rsa</format>
                     <description>Key pair based on RSA algorithm</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ssh-ed25519</format>
+                    <description>Key pair based on Ed25519 algorithm</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ecdsa-sha2-nistp256</format>
+                    <description>Key pair based on ECDSA algorithm with NIST P-256 curve</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ecdsa-sha2-nistp384</format>
+                    <description>Key pair based on ECDSA algorithm with NIST P-384 curve</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ecdsa-sha2-nistp521</format>
+                    <description>Key pair based on ECDSA algorithm with NIST P-521 curve</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(ssh-rsa)</regex>
+                    <regex>(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521)</regex>
                   </constraint>
                 </properties>
               </leafNode>

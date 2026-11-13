@@ -17,6 +17,7 @@
 import os
 import paramiko
 import re
+import tempfile
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -491,6 +492,75 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         authorize_principals_file_config = get_config_value('AuthorizedPrincipalsFile')
         self.assertNotIn('none', authorize_principals_file_config)
         self.assertFalse(os.path.exists(f'/home/{test_user}/.ssh/authorized_principals'))
+
+    def test_ssh_trusted_user_ca_key_types(self):
+        # T9398: user CA keys are not limited to RSA
+        ca_cert_name = 'test_ca'
+        test_user = 'vyos_testca'
+        principal = 'vyos'
+        user_auth_base = ['system', 'login', 'user', test_user]
+        ca_key_types = {
+            'ssh-ed25519': ['-t', 'ed25519'],
+            'ecdsa-sha2-nistp256': ['-t', 'ecdsa', '-b', '256'],
+            'ecdsa-sha2-nistp384': ['-t', 'ecdsa', '-b', '384'],
+            'ecdsa-sha2-nistp521': ['-t', 'ecdsa', '-b', '521'],
+        }
+
+        for public_key_type, keygen_args in ca_key_types.items():
+            with self.subTest(
+                key_type=public_key_type
+            ), tempfile.TemporaryDirectory() as tmp:
+                ca_key = f'{tmp}/ca'
+                user_key = f'{tmp}/user'
+                cmdl(['ssh-keygen', '-q', '-N', '', '-f', ca_key] + keygen_args)
+                cmdl(['ssh-keygen', '-q', '-N', '', '-t', 'ed25519', '-f', user_key])
+                cmdl(
+                    [
+                        'ssh-keygen',
+                        '-q',
+                        '-s',
+                        ca_key,
+                        '-I',
+                        test_user,
+                        '-n',
+                        principal,
+                        '-V',
+                        '+1h',
+                        f'{user_key}.pub',
+                    ]
+                )
+                ca_type, ca_data = read_file(f'{ca_key}.pub').split()[:2]
+                self.assertEqual(ca_type, public_key_type)
+
+                try:
+                    self.cli_set(
+                        user_auth_base + ['authentication', 'principal', principal]
+                    )
+                    self.cli_set(
+                        pki_path + ['openssh', ca_cert_name, 'public', 'key', ca_data]
+                    )
+                    self.cli_set(
+                        pki_path
+                        + ['openssh', ca_cert_name, 'public', 'type', public_key_type]
+                    )
+                    self.cli_set(trusted_user_ca_path, value=ca_cert_name)
+                    self.cli_commit()
+
+                    ca_key_contents = read_file(trusted_user_ca).strip()
+                    self.assertIn(f'{public_key_type} {ca_data}', ca_key_contents)
+
+                    output, error = self.ssh_send_cmd(
+                        test_command, test_user, password=None, key_filename=user_key
+                    )
+                    self.assertFalse(error)
+                    self.assertEqual(output, cmdl(test_command.split()))
+                finally:
+                    self.cli_delete(trusted_user_ca_path)
+                    self.cli_delete(user_auth_base)
+                    self.cli_delete(pki_path + ['openssh', ca_cert_name])
+                    self.cli_commit()
+
+        self.assertFalse(os.path.exists(trusted_user_ca))
 
     def test_ssh_fido(self):
         # Order does matter for this test because of how the template
