@@ -270,7 +270,7 @@ HOSTS_FILE = '/etc/hosts'
 PDNS_REC_USER_GROUP = 'pdns'
 PDNS_REC_RUN_DIR = '/run/pdns-recursor'
 PDNS_REC_LUA_CONF_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
-PDNS_REC_ZONES_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
+PDNS_REC_ZONES_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.yml'
 
 STATE = {
     "name_servers": {},
@@ -442,7 +442,7 @@ def make_pdns_rec_conf(state):
 
     logger.info(f"Writing {PDNS_REC_ZONES_FILE}")
     render(PDNS_REC_ZONES_FILE,
-            'dns-forwarding/recursor.forward-zones.conf.j2',
+            'dns-forwarding/recursor.forward-zones.yml.j2',
             state, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
 
 def set_host_name(state, data):
