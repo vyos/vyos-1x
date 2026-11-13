@@ -32,6 +32,7 @@ from vyos.configdep import call_dependents
 from vyos.configdict import node_changed, is_member, is_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_virtual_interface_exists
+from vyos.configverify import verify_vrrp_vmac_not_on_vpp
 from vyos.ifconfig import Section
 from vyos.logger import getLogger
 from vyos.template import render
@@ -70,6 +71,7 @@ from vyos.vpp.config_resource_checks.resource_defaults import default_resource_m
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
+from vyos.vpp.utils import get_active_vrrp_groups
 from vyos.vpp.configdb import JSONStorage
 
 airbag.enable()
@@ -616,6 +618,9 @@ def get_config(config=None):
         set_dependents('pppoe_server', conf)
     config['changed_pppoe_ifaces'] = changed_pppoe_ifaces
 
+    # active VRRP groups, see verify()
+    config['vrrp_groups'] = get_active_vrrp_groups(conf)
+
     return config
 
 
@@ -630,6 +635,10 @@ def verify(config):
         raise ConfigError(
             'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
         )
+
+    verify_vrrp_vmac_not_on_vpp(
+        config.get('vrrp_groups', {}), config.get('settings', {}).get('interface', {})
+    )
 
     # Find PPPoE ifaces where the base matches any VPP interface (base or VLAN)
     pppoe_vpp_ifaces = [

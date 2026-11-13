@@ -123,6 +123,30 @@ def cli_ifaces_list(
     return vpp_ifaces
 
 
+def get_active_vrrp_groups(config_instance) -> dict:
+    """VRRP groups of the candidate configuration that keepalived runs
+
+    A VRRP group with "rfc3768-compatibility" puts its virtual IP address on
+    a macvlan interface that VPP does not know, see
+    vyos.configverify.verify_vrrp_vmac_not_on_vpp().
+
+    Args:
+        config_instance (VyOS Config): VyOS Config instance
+
+    Returns: dict of the groups, empty if high-availability is disabled.
+        The group names are not mangled, they are used in messages.
+    """
+    if config_instance.exists(['high-availability', 'disable']):
+        return {}
+
+    return config_instance.get_config_dict(
+        ['high-availability', 'vrrp', 'group'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
+
 def cli_ethernet_with_vifs_ifaces(
     config_instance, mode: str = 'candidate', include_nested_vifs=False
 ) -> list[str]:

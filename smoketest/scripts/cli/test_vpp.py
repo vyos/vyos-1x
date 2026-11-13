@@ -2413,6 +2413,115 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'ip vrf exec {vpp_exporter_vrf}', file_content)
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
+    def test_31_vrrp_rfc3768_is_refused(self):
+        # keepalived puts the virtual MAC address on a macvlan interface, VPP
+        # does not know it and drops the ARP requests for the address
+        vlan_path = ['interfaces', 'ethernet', interface, 'vif', '10']
+        group = ['high-availability', 'vrrp', 'group', 'VRRP-VMAC']
+        self.cli_set(vlan_path + ['address', '192.0.2.129/25'])
+        self.cli_set(group + ['vrid', '10'])
+        self.cli_set(group + ['address', '192.0.2.130/25'])
+        self.cli_set(group + ['rfc3768-compatibility'])
+        try:
+            for vrrp_interface in [interface, f'{interface}.10']:
+                self.cli_set(group + ['interface', vrrp_interface])
+                with self.assertRaisesRegex(
+                    ConfigSessionError, '(?s)rfc3768-compatibility.*not supported'
+                ):
+                    self.cli_commit()
+
+            # a disabled group is not used by keepalived
+            self.cli_set(group + ['disable'])
+            self.cli_commit()
+            self.cli_delete(group + ['disable'])
+
+            # a group on an interface that is not handled by VPP is fine
+            self.cli_delete(base_path)
+            self.cli_commit()
+
+            # and the interface cannot be added to VPP afterwards
+            self.cli_set(base_path + ['settings', 'interface', interface])
+            self.cli_set(base_path + ['settings', 'poll-sleep-usec', '10'])
+            with self.assertRaisesRegex(
+                ConfigSessionError, '(?s)VRRP group "VRRP-VMAC".*not supported'
+            ):
+                self.cli_commit()
+
+            # without the virtual MAC address the group works
+            self.cli_delete(group + ['rfc3768-compatibility'])
+            self.cli_commit()
+        finally:
+            self.cli_delete(group)
+            self.cli_delete(vlan_path)
+
+    def test_32_vrrp_rfc3768_on_vpp_interface_is_refused(self):
+        # a VPP interface such as a bonding is handled by VPP like the
+        # interfaces of "vpp settings interface"
+        iface_bond = 'vppbond0'
+        group = ['high-availability', 'vrrp', 'group', 'VRRP-VMAC']
+        self.cli_set(
+            interfaces_path + ['bonding', iface_bond, 'member', 'interface', interface]
+        )
+        self.cli_set(
+            interfaces_path + ['bonding', iface_bond, 'address', '192.0.2.129/25']
+        )
+        # the interface has to exist before a VRRP group can use it
+        self.cli_commit()
+
+        self.cli_set(group + ['vrid', '10'])
+        self.cli_set(group + ['address', '192.0.2.130/25'])
+        self.cli_set(group + ['interface', iface_bond])
+        self.cli_set(group + ['rfc3768-compatibility'])
+        try:
+            with self.assertRaisesRegex(
+                ConfigSessionError, '(?s)rfc3768-compatibility.*not supported'
+            ):
+                self.cli_commit()
+
+            # without the virtual MAC address the group works
+            self.cli_delete(group + ['rfc3768-compatibility'])
+            self.cli_commit()
+        finally:
+            self.cli_delete(group)
+
+    def test_33_vrrp_rfc3768_on_vpp_interface_created_later_is_refused(self):
+        # removing a VPP interface leaves a VRRP group that names it, and the
+        # group can be enabled afterwards. The check has to run when the VPP
+        # interface is created again, not only when the group is committed.
+        iface_bond = 'vppbond0'
+        bond_path = interfaces_path + ['bonding', iface_bond]
+        group = ['high-availability', 'vrrp', 'group', 'VRRP-VMAC']
+        self.cli_set(bond_path + ['member', 'interface', interface])
+        self.cli_commit()
+
+        self.cli_set(group + ['vrid', '10'])
+        self.cli_set(group + ['address', '192.0.2.130/25'])
+        self.cli_set(group + ['interface', iface_bond])
+        self.cli_set(group + ['rfc3768-compatibility'])
+        self.cli_set(group + ['disable'])
+        try:
+            # a disabled group is not used by keepalived
+            self.cli_commit()
+
+            self.cli_delete(bond_path)
+            self.cli_commit()
+
+            # the interface is gone, so the option is not on a VPP interface
+            self.cli_delete(group + ['disable'])
+            self.cli_commit()
+
+            self.cli_set(bond_path + ['member', 'interface', interface])
+            with self.assertRaisesRegex(
+                ConfigSessionError, '(?s)rfc3768-compatibility.*not supported'
+            ):
+                self.cli_commit()
+
+            # without the virtual MAC address the interface can be created
+            self.cli_delete(group + ['rfc3768-compatibility'])
+            self.cli_commit()
+        finally:
+            self.cli_delete(group)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -18,6 +18,7 @@ from vyos import ConfigError
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_vrrp_vmac_not_on_vpp
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_mtu_ipv6
 from vyos.utils.process import is_systemd_service_active
@@ -30,6 +31,7 @@ from vyos.vpp.config_verify import (
     verify_vpp_remove_interface,
 )
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
+from vyos.vpp.utils import get_active_vrrp_groups
 
 
 def get_config(config=None) -> dict:
@@ -52,6 +54,9 @@ def get_config(config=None) -> dict:
     if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
+
+    # T9521: the virtual MAC address of a VRRP group is not known to VPP
+    config['vrrp_groups'] = get_active_vrrp_groups(conf)
 
     # list of all Ethernet interfaces with vifs
     config['vpp_ether_vif_ifaces'] = cli_ethernet_with_vifs_ifaces(conf)
@@ -96,6 +101,8 @@ def verify(config):
     if 'deleted' in config:
         verify_vpp_remove_interface(config['ifname'], config['vpp'])
         return None
+
+    verify_vrrp_vmac_not_on_vpp(config['vrrp_groups'], [config['ifname']])
 
     if not is_systemd_service_active('vpp.service'):
         raise ConfigError(
