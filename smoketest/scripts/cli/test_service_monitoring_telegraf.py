@@ -498,6 +498,62 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(ca_path)
         self.cli_delete(cert_path)
 
+    def test_12_prometheus_inputs(self):
+        self.basic_influxdb_setup()
+
+        # Set up local Prometheus input with authentication
+        local_input = 'local'
+        local_url = 'https://localhost:9100/actuator/prometheus'
+        local_username = 'prometheus-user'
+        local_password = 'prometheus-password'
+
+        self.cli_set(
+            base_path + ['prometheus', 'input', local_input, 'url', local_url]
+        )
+        self.cli_set(
+            base_path + ['prometheus', 'input', local_input, 'username', local_username]
+        )
+        self.cli_set(
+            base_path + ['prometheus', 'input', local_input, 'password', local_password]
+        )
+        self.cli_set(
+            base_path + ['prometheus', 'input', local_input, 'insecure']
+        )
+
+        # Set another endpoint without authentication or skipping TLS verification
+        remote_input = 'remote'
+        remote_url = 'https://10.10.10.10:9100/actuator/prometheus'
+
+        self.cli_set(
+            base_path + ['prometheus', 'input', remote_input, 'url', remote_url]
+        )
+
+        # Commit new values
+        self.cli_commit()
+
+        # Read generated Telegraf configuration
+        config = read_file(TELEGRAF_CONF)
+
+        # Test local input URL
+        local_marker = f'''[[inputs.prometheus]]
+  urls = ["{local_url}"]
+  username = "{local_username}"
+  password = "{local_password}"
+  insecure_skip_verify = true'''
+
+        self.assertIn(local_marker, config)
+
+        # Test remote input URL
+        remote_marker = f'''[[inputs.prometheus]]
+  urls = ["{remote_url}"]'''
+
+        self.assertIn(remote_marker, config)
+
+        remote_block = config.split(remote_marker, 1)[1].split('[[inputs.', 1)[0]
+
+        self.assertNotIn('username', remote_block)
+        self.assertNotIn('password', remote_block)
+        self.assertNotIn('insecure_skip_verify', remote_block)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

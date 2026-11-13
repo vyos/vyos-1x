@@ -18,6 +18,7 @@ import json
 
 from sys import exit
 from shutil import rmtree
+from urllib.parse import urlsplit
 
 from vyos.config import Config
 from vyos.configdict import is_node_changed
@@ -377,6 +378,32 @@ def verify(monitoring):
             ):
                 raise ConfigError(
                     f'Authentication "username" and "password" are mandatory!'
+                )
+
+    # Verify Prometheus inputs
+    if 'prometheus' in monitoring and 'input' in monitoring['prometheus']:
+        for input_id, input_config in monitoring['prometheus']['input'].items():
+            if 'url' not in input_config:
+                raise ConfigError(
+                    f'Monitoring prometheus input "{input_id}" "url" is mandatory!'
+                )
+            url = input_config['url']
+            try:
+                parsed_url = urlsplit(url)
+                has_credentials = (
+                        parsed_url.username is not None
+                        or parsed_url.password is not None
+                )
+            except ValueError:
+                raise ConfigError(
+                    f'Monitoring prometheus input "{input_id}" URL is invalid!'
+                )
+
+            if has_credentials:
+                raise ConfigError(
+                    f'Monitoring prometheus input "{input_id}" '
+                    'URL must not contain embedded credentials; '
+                    'configure username and password separately!'
                 )
 
     # Verify local FRR metrics relay
