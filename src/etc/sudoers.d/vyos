@@ -52,9 +52,6 @@ Cmnd_Alias KEA_IP6_ROUTES = /sbin/ip -6 route replace *,\
                         DMIDECODE, DISK, CONNTRACK, IP6TABLES,  \
                         FORCE_CLUSTER, DIAGNOSTICS
 
-# Allow any user to run files in sudo-users
-%users ALL=NOPASSWD: /opt/vyatta/bin/sudo-users/
-
 # Allow members of group sudo to execute any command
 %sudo ALL=NOPASSWD: ALL
 
