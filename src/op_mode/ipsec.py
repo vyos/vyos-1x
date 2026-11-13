@@ -568,18 +568,61 @@ def _get_tunnel_sw_format(peer: str, tunnel: str) -> str:
     Convert tunnel to Strongwan format of CHILD_SA
     :param peer: Peer name (IKE_SA)
     :type peer: str
-    :param tunnel: tunnel number (CHILD_SA)
+    :param tunnel: tunnel tag (CHILD_SA), 'vti' or 'vti6'
     :type tunnel: str
     :return: Converted tunnel name (CHILD_SA)
     :rtype: str
     """
     tunnel_sw = None
     if tunnel:
-        if tunnel.isnumeric():
+        # a peer with tunnels has no VTI child SAs, there 'vti' is a tunnel tag
+        if tunnel in ('vti', 'vti6') and 'tunnel' not in _get_sitetosite_peer_config(
+            peer
+        ):
+            tunnel_sw = f'{peer}-{tunnel}'
+        else:
+            # the tag of a tunnel is any text, numbers are only the usual case
             tunnel_sw = f'{peer}-tunnel-{tunnel}'
-        elif tunnel == 'vti':
-            tunnel_sw = f'{peer}-vti'
     return tunnel_sw
+
+
+def _get_tunnel_sw_names(peer: str, tunnel: typing.Optional[str]) -> list:
+    """
+    Get all CHILD_SA names of a tunnel. A VTI peer has a second CHILD_SA for
+    IPv6 if its traffic-selector is split by address family.
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param tunnel: tunnel tag (CHILD_SA), 'vti' or 'vti6'
+    :type tunnel: str
+    :return: list of CHILD_SA names, empty if tunnel is None
+    :rtype: list
+    """
+    tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
+    if not tunnel_sw:
+        return []
+    if tunnel_sw == f'{peer}-vti':
+        return [tunnel_sw, f'{peer}-vti6']
+    return [tunnel_sw]
+
+
+def _initiate_childsas(peer: str, childsa_names: list) -> None:
+    """
+    Initiate each CHILD_SA on its own, so that a failure on one of them does
+    not keep the others down. The first failure is raised after all of them
+    were tried (vyos.ipsec.ViciCommandError or vyos.ipsec.ViciInitiateError).
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param childsa_names: CHILD_SA names
+    :type childsa_names: list
+    """
+    first_error = None
+    for name in childsa_names:
+        try:
+            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, [name])
+        except (vyos.ipsec.ViciCommandError, vyos.ipsec.ViciInitiateError) as err:
+            first_error = first_error or err
+    if first_error:
+        raise first_error
 
 
 def _initiate_peer_with_childsas(
@@ -590,8 +633,9 @@ def _initiate_peer_with_childsas(
     If tunnel is None it initiates all peers tunnels
     :param peer: Peer name (IKE_SA)
     :type peer: str
-    :param tunnel: tunnel number (CHILD_SA)
+    :param tunnel: tunnel tag (CHILD_SA), 'vti' or 'vti6'
     :type tunnel: str
+    :raises vyos.opmode.Error: no CHILD_SA of that name, or a failed initiation
     """
     tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
     try:
@@ -603,12 +647,17 @@ def _initiate_peer_with_childsas(
         childsa_name_list: list = _get_con_childsa_name_list(con_list)
 
         if not tunnel_sw:
-            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, childsa_name_list)
+            _initiate_childsas(peer, childsa_name_list)
             print(f'Peer {peer} initiate result: success')
             return
 
-        if tunnel_sw in childsa_name_list:
-            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, [tunnel_sw])
+        tunnel_sw_names = [
+            name
+            for name in _get_tunnel_sw_names(peer, tunnel)
+            if name in childsa_name_list
+        ]
+        if tunnel_sw_names:
+            _initiate_childsas(peer, tunnel_sw_names)
             print(f'Peer {peer} tunnel {tunnel} initiate result: success')
             return
 
@@ -626,26 +675,37 @@ def _terminate_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
     If tunnel is None it terminates all peers tunnels
     :param peer: Peer name (IKE_SA)
     :type peer: str
-    :param tunnel: tunnel number (CHILD_SA)
+    :param tunnel: tunnel tag (CHILD_SA), 'vti' or 'vti6'
     :type tunnel: str
+    :raises vyos.opmode.Error: the first failure, after every CHILD_SA of the tunnel was tried
     """
-    # Convert tunnel to Strongwan format of CHILD_SA
-    tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
     try:
-        sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, tunnel_sw)
-        if sa_list:
-            if tunnel:
-                childsa_id_list: list = _get_childsa_id_list(sa_list)
-                if childsa_id_list:
-                    vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
-                    print(f'Peer {peer} tunnel {tunnel} terminate result: success')
-                else:
-                    Warning(
-                        f'Peer {peer} tunnel {tunnel} SA is not initiated. Nothing to terminate'
-                    )
-            else:
-                vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
-                print(f'Peer {peer} terminate result: success')
+        # without a tunnel the IKE SA ends, else each CHILD_SA of the tunnel is checked
+        names = _get_tunnel_sw_names(peer, tunnel) if tunnel else [None]
+        sas_found = False
+        terminated = False
+        terminate_error = None
+        for name in names:
+            try:
+                sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, name)
+                if not sa_list:
+                    continue
+                sas_found = True
+                if tunnel and not _get_childsa_id_list(sa_list):
+                    continue
+                vyos.ipsec.terminate_vici_by_name(peer, name)
+                terminated = True
+            except (vyos.ipsec.ViciCommandError, vyos.ipsec.ViciInitiateError) as err:
+                terminate_error = terminate_error or err  # try the other CHILD_SA too
+        if terminate_error:
+            raise terminate_error
+        if terminated:
+            label = f' tunnel {tunnel}' if tunnel else ''
+            print(f'Peer {peer}{label} terminate result: success')
+        elif sas_found:
+            Warning(
+                f'Peer {peer} tunnel {tunnel} SA is not initiated. Nothing to terminate'
+            )
         else:
             Warning(f"Peer's {peer} SAs are not initiated. Nothing to terminate")
 
@@ -661,10 +721,15 @@ def reset_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
     If tunnel is None it resets all peers tunnels
     :param peer: Peer name (IKE_SA)
     :type peer: str
-    :param tunnel: tunnel number (CHILD_SA)
+    :param tunnel: tunnel tag (CHILD_SA), 'vti' or 'vti6'
     :type tunnel: str
+    :raises vyos.opmode.Error: the first error of terminate or initiate, after both were tried
     """
-    _terminate_peer(peer, tunnel)
+    first_error = None
+    try:
+        _terminate_peer(peer, tunnel)
+    except vyos.opmode.Error as err:
+        first_error = err  # raised at the end, a terminated CHILD_SA must come back
     peer_config = _get_sitetosite_peer_config(peer)
     # initiate SAs only if 'connection-type=initiate', as at commit a disabled
     # peer, a peer named '@...' or without a remote address is not started
@@ -675,7 +740,12 @@ def reset_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
         and 'remote_address' in peer_config
         and 'any' not in peer_config['remote_address']
     ):
-        _initiate_peer_with_childsas(peer, tunnel)
+        try:
+            _initiate_peer_with_childsas(peer, tunnel)
+        except vyos.opmode.Error as err:
+            first_error = first_error or err
+    if first_error:
+        raise first_error
 
 
 def reset_all_peers() -> None:
