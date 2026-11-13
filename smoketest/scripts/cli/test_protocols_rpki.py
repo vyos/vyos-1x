@@ -200,8 +200,8 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'key', rpki_ssh_pub.replace('\n','')])
         self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'type', rpki_key_type])
 
-        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args},
-                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args} ]:
+        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args, 'key_base': '/run/frr/id_rpki'},
+                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args, 'key_base': f'/run/frr/id_rpki_vrf_{vrf}'} ]:
 
             if 'vrf' in test_set['path']:
                 self.cli_set(vrf_path + ['table', '1000'])
@@ -221,13 +221,20 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
                 port = cache_config['port']
                 preference = cache_config['preference']
                 username = cache_config['username']
-                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} /run/frr/id_rpki_{cache_name} /run/frr/id_rpki_{cache_name}.pub preference {preference}', frrconfig)
+                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} {test_set["key_base"]}_{cache_name} {test_set["key_base"]}_{cache_name}.pub preference {preference}', frrconfig)
 
                 # Verify content of SSH keys
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}')
+                tmp = read_file(f'{test_set["key_base"]}_{cache_name}')
                 self.assertIn(rpki_ssh_key.replace('\n',''), tmp)
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}.pub')
+                tmp = read_file(f'{test_set["key_base"]}_{cache_name}.pub')
                 self.assertIn(rpki_ssh_pub.replace('\n',''), tmp)
+
+        # Committing the VRF instance must not remove the default instance keys
+        for cache_name in cache:
+            tmp = read_file(f'/run/frr/id_rpki_{cache_name}')
+            self.assertIn(rpki_ssh_key.replace('\n',''), tmp)
+            tmp = read_file(f'/run/frr/id_rpki_{cache_name}.pub')
+            self.assertIn(rpki_ssh_pub.replace('\n',''), tmp)
 
         # Change OpenSSH key and verify it was properly written to filesystem
         self.cli_set(['pki', 'openssh', rpki_key_name, 'private', 'key', rpki_ssh_key_replacement.replace('\n','')])
@@ -235,20 +242,20 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args},
-                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args} ]:
+        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args, 'key_base': '/run/frr/id_rpki'},
+                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args, 'key_base': f'/run/frr/id_rpki_vrf_{vrf}'} ]:
 
             frrconfig = self.getFRRconfig(**test_set['frrargs'])
             for cache_name, cache_config in cache.items():
                 port = cache_config['port']
                 preference = cache_config['preference']
                 username = cache_config['username']
-                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} /run/frr/id_rpki_{cache_name} /run/frr/id_rpki_{cache_name}.pub preference {preference}', frrconfig)
+                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} {test_set["key_base"]}_{cache_name} {test_set["key_base"]}_{cache_name}.pub preference {preference}', frrconfig)
 
                 # Verify content of SSH keys
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}')
+                tmp = read_file(f'{test_set["key_base"]}_{cache_name}')
                 self.assertIn(rpki_ssh_key_replacement.replace('\n',''), tmp)
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}.pub')
+                tmp = read_file(f'{test_set["key_base"]}_{cache_name}.pub')
                 self.assertIn(rpki_ssh_pub_replacement.replace('\n',''), tmp)
 
         self.cli_delete(['pki', 'openssh'])
@@ -289,8 +296,8 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', f'{source_address}/24'])
 
 
-        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args},
-                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args} ]:
+        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args, 'key_base': '/run/frr/id_rpki'},
+                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args, 'key_base': f'/run/frr/id_rpki_vrf_{vrf}'} ]:
 
             if 'vrf' in test_set['path']:
                 self.cli_set(vrf_path + ['table', '1000'])
@@ -317,7 +324,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
             # Verify FRR configuration
             frrconfig = self.getFRRconfig(**test_set['frrargs'])
             self.assertIn(
-                f'rpki cache ssh {peer} {port} {username} /run/frr/id_rpki_{peer} /run/frr/id_rpki_{peer}.pub source {source_address} preference {preference}',
+                f'rpki cache ssh {peer} {port} {username} {test_set["key_base"]}_{peer} {test_set["key_base"]}_{peer}.pub source {source_address} preference {preference}',
                 frrconfig,
             )
 

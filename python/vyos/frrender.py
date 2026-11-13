@@ -729,7 +729,8 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
             if 'rpki' in vrf_config.get('protocols', []):
                 rpki = conf.get_config_dict(rpki_vrf_path, key_mangling=('-', '_'), get_first_key=True,
                                             with_pki=True, with_recursive_defaults=True)
-                rpki_ssh_key_base = '/run/frr/id_rpki'
+                # Include the VRF name, the same cache can be configured in several VRFs
+                rpki_ssh_key_base = f'/run/frr/id_rpki_vrf_{vrf_name}'
                 for cache, cache_config in rpki.get('cache',{}).items():
                     if 'ssh' in cache_config:
                         cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
