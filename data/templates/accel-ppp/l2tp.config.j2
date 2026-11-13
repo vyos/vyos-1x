@@ -40,7 +40,10 @@ level={{ log.level }}
 
 [l2tp]
 verbose=1
-ifname=l2tp%d
+{# Do not set ifname. accel-ppp creates the session as pppN and then renames
+   it (l2tp%d to l2tpN). zebra sometimes records that rename as a second
+   interface and keeps the connected /32 on the name that no longer exists
+   (T9299). Leaving the kernel name avoids the rename entirely. #}
 ppp-max-mtu={{ mtu }}
 mppe={{ ppp_options.mppe }}
 {% if outside_address is vyos_defined %}
