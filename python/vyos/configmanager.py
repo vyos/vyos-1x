@@ -26,7 +26,9 @@ from vyos.config import Config
 from vyos.config import ConfigDict
 from vyos.configtree import ConfigTree
 from vyos.configtree import DiffTree
+from vyos.configtree import deep_copy as ct_deep_copy
 from vyos.referencetree import ReferenceTree
+from vyos.configsource import ConfigSourceTree
 from vyos.dependentverify import removed_dependency_value_paths_of_kind
 from vyos.dependentverify import dependent_value_paths_of_kind
 from vyos.dependentverify import concatenate_vif
@@ -67,14 +69,17 @@ class ConfigManagerError(Exception):
 
 
 class ConfigManager:
-    # pylint: disable=attribute-defined-outside-init
+    # pylint: disable=attribute-defined-outside-init,too-many-instance-attributes
     def __init__(self, reference_tree: ReferenceTree = None, cache_config: bool = True):
         self.reference_tree = reference_tree or ReferenceTree()
+        self.reference_tree_dict = json.loads(self.reference_tree.to_json())
+        self.owner_dict = self.get_owner_dict()
         self.cache_config = cache_config
 
         self.config: Config = None
         self.running_config: ConfigTree = None
         self.session_config: ConfigTree = None
+        self.stable_config = None
         self.diff_tree: DiffTree = None
 
         self.components = self.init_components()
@@ -114,10 +119,12 @@ class ConfigManager:
         if config is None:
             self.running_config = None
             self.session_config = None
+            self.stable_config = None
             self.diff_tree = None
         else:
             self.running_config = config.get_config_tree(effective=True)
             self.session_config = config.get_config_tree()
+            self.stable_config = ct_deep_copy(self.session_config)
             self.diff_tree = DiffTree(self.running_config, self.session_config)
 
         if self.cache_config:
@@ -222,6 +229,96 @@ class ConfigManager:
     def clear_cache(self):
         for component in self.components.values():
             component.cache = None
+
+    def get_owner_dict(self):
+        """Get dict of (first occurrence) owner, path.
+
+        Here and below we are using knowledge of the internal structure of
+        the interface definitions: we only add the first instance of a path
+        under ownership by owner; those under ['vrf', 'name'] are
+        reconstructed under update_stable_config in the presence of argv.
+        """
+
+        def func(d, path, res):
+            for k, v in d.items():
+                if not 'node_data' in v:
+                    continue
+                subpath = path + [k]
+                data = v.get('node_data', {})
+                owner = data.get('owner')
+                if owner is not None:
+                    own = Path(owner.split()[0]).stem
+                    res.setdefault(own, subpath)
+                if isinstance(v, dict):
+                    func(v, subpath, res)
+            return res
+
+        return func(self.reference_tree_dict, [], {})
+
+    def modify_stable_config(self, path):
+        """Modify auxiliary config"""
+        if self.diff_tree.add.exists(path):
+            # delete offending
+            if self.stable_config.exists(path):
+                self.stable_config.delete(path)
+            # restore effective
+            if self.running_config and self.running_config.exists(path):
+                self.stable_config.clone_path(self.running_config, path)
+                return
+        if self.diff_tree.sub.exists(path):
+            # restore effective
+            if self.stable_config.exists(path):
+                self.stable_config.delete(path)
+            # condition always true in this case
+            if self.running_config and self.running_config.exists(path):
+                self.stable_config.clone_path(self.running_config, path)
+
+    def update_stable_config(self, owner, tag_value, argv):
+        """Called on error from vyos-configd: maintain an auxiliary
+        configtree of effective values plus successful session commits.
+
+        This mirrors the internal calculations on commit completion under
+        any backend.
+
+        The config of stable commits are thus available for, e.g.,
+        frr_render.
+        """
+        tag_component = [tag_value] if tag_value else []
+        path = self.owner_dict[owner] + tag_component
+
+        # adjust for vrf, with embedded owner
+        if len(argv) > 1:
+            path = ['vrf', 'name', argv[1]] + path
+            self.modify_stable_config(path)
+            return
+
+        # adjust for policy_route, with shared owner
+        if owner == 'policy_route':
+            route_path = ['policy', 'route', tag_value]
+            if self.diff_tree.add.exists(route_path) or self.diff_tree.sub.exists(
+                route_path
+            ):
+                self.modify_stable_config(route_path)
+
+            route6_path = ['policy', 'route6', tag_value]
+            if self.diff_tree.add.exists(route6_path) or self.diff_tree.sub.exists(
+                route6_path
+            ):
+                self.modify_stable_config(route6_path)
+
+            return
+
+        self.modify_stable_config(path)
+
+    def get_stable_config(self) -> Config:
+        stable_config_source = ConfigSourceTree(self.running_config, self.stable_config)
+        return Config(config_source=stable_config_source)
+
+    #
+    # Wrappers of config mode script canonical functions.
+    # Notably, this allows global script specific cache (get_config) and
+    # inter-script reverse verification (verify)
+    #
 
     def get_config(self, script_name: str, args: list) -> ConfigDict:
         component = self.components[script_name]

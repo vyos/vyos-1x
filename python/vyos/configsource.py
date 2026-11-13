@@ -447,3 +447,19 @@ class ConfigSourceCache(ConfigSource):
             self._session_config = ConfigTree(internal=session_config_cache) if session_config_cache else None
         except ValueError:
             raise ConfigSourceError(f"Init error in {type(self)}")
+
+
+class ConfigSourceTree(ConfigSource):
+    # pylint: disable=abstract-method
+    def __init__(self, running_ct, session_ct):
+        running_ct = ConfigTree('') if running_ct is None else running_ct
+        session_ct = ConfigTree('') if session_ct is None else session_ct
+        if not (
+            isinstance(running_ct, ConfigTree) and isinstance(session_ct, ConfigTree)
+        ):
+            raise TypeError('Arguments must be of type ConfigTree')
+
+        super().__init__()
+
+        self._running_config = running_ct
+        self._session_config = session_ct

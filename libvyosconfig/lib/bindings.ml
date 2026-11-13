@@ -254,6 +254,18 @@ let delete_node c_ptr path =
     | VT.Empty_path -> error_message := "Empty path"; 1
     | VT.Nonexistent_path -> error_message := "Path doesn't exist"; 1
 
+let clone_path c_ptr src_ptr path descent =
+    let ct = Root.get c_ptr in
+    let src = Root.get src_ptr in
+    let path = split_on_whitespace path in
+    try
+        error_message := "";
+        let new_ct = (CT.clone[@alert "-exn"]) ~descent:descent src ct path in
+        Root.set c_ptr new_ct;
+        0 (* return 0 *)
+    with
+    VT.Nonexistent_path -> error_message := "Path doesn't exist"; 1
+
 let rename_node c_ptr path newname =
     (* alert exn VT.rename:
         [Vytree.Empty_path] caught
@@ -643,6 +655,7 @@ struct
   let () = I.internal "set_valueless" ((ptr void) @-> string @-> returning int) set_valueless
   let () = I.internal "delete_value" ((ptr void) @-> string @-> string @-> returning int) delete_value
   let () = I.internal "delete_node" ((ptr void) @-> string @-> returning int) delete_node
+  let () = I.internal "clone_path" ((ptr void) @-> (ptr void) @-> string @-> bool @-> returning int) clone_path
   let () = I.internal "rename_node" ((ptr void) @-> string @-> string @-> returning int) rename_node
   let () = I.internal "copy_node" ((ptr void) @-> string @-> string @-> returning int) copy_node
   let () = I.internal "set_tag" ((ptr void) @-> string @-> bool @-> returning int) set_tag
