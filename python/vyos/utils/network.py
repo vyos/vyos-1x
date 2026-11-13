@@ -879,12 +879,18 @@ def get_interfaces_by_ip(ip_address: str, vrf=None, include_vrf: bool = False) -
         ValueError: ip_address is not a single address.
     """
     import netifaces
+    from vyos.template import is_ip
     from vyos.utils.dict import dict_search
 
-    # A zone index ("fe80::1%eth0") names the one interface to look at
+    # A zone index ("fe80::1%eth0") names the one interface to look at. The
+    # address is checked first: a zone that names no interface leaves nothing
+    # to loop over and must not hide an address that is not valid.
     candidates = netifaces.interfaces()
-    if '%' in ip_address:
-        ip_address, zone = ip_address.split('%', 1)
+    address, has_zone, zone = ip_address.partition('%')
+    if not is_ip(address) or '%' in zone:
+        raise ValueError(f'{ip_address} is not a valid IPv4 or IPv6 address')
+    if has_zone:
+        ip_address = address
         candidates = [zone] if zone in candidates else []
 
     ifaces = []
