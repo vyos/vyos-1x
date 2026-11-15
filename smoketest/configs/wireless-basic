@@ -17,6 +17,7 @@ interfaces {
                 cipher CCMP
                 mode wpa2
                 passphrase 12345678
+                username vyos
             }
         }
         ssid VyOS

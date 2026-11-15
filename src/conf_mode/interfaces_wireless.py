@@ -205,16 +205,17 @@ def verify(wifi):
 
         elif 'wpa' in wifi['security']:
             wpa = wifi['security']['wpa']
-            if not any(i in ['passphrase', 'radius'] for i in wpa):
-                raise ConfigError('Missing WPA key or RADIUS server')
+            if not any(i in ['password', 'radius'] for i in wpa):
+                raise ConfigError('Missing WPA password or RADIUS server')
 
             if 'username' in wpa:
-                if 'passphrase' not in wpa:
-                    raise ConfigError('WPA-Enterprise configured - missing passphrase!')
-            elif 'passphrase' in wpa:
-                # check if passphrase meets the regex .{8,63}
-                if len(wpa['passphrase']) < 8 or len(wpa['passphrase']) > 63:
-                    raise ConfigError('WPA passphrase must be between 8 and 63 characters long')
+                if wifi['type'] != 'station':
+                    raise ConfigError('WPA-Enterprise username is only supported in station mode!')
+                if 'password' not in wpa:
+                    raise ConfigError('WPA-Enterprise configured - missing password!')
+            elif 'password' in wpa:
+                if len(wpa['password']) < 8 or len(wpa['password']) > 63:
+                    raise ConfigError('WPA password must be between 8 and 63 characters long')
             if 'radius' in wpa:
                 if 'server' in wpa['radius']:
                     for server in wpa['radius']['server']:

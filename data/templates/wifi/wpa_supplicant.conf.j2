@@ -18,7 +18,7 @@ network={
     #       this will add latency to scanning, so enable this only when needed)
     scan_ssid=1
 
-{% if security.wpa.passphrase is vyos_defined %}
+{% if security.wpa.password is vyos_defined %}
     # ieee80211w: whether management frame protection is enabled
     # 0 = disabled (default unless changed with the global pmf parameter)
     # 1 = optional
@@ -80,11 +80,11 @@ network={
     # only when the passphrase or SSID has actually changed.
 {%     if security.wpa.username is vyos_defined %}
     identity="{{ security.wpa.username }}"
-    password="{{ security.wpa.passphrase }}"
+    password="{{ security.wpa.password }}"
     phase2="auth=MSCHAPV2"
     eap=PEAP
 {%     elif security.wpa.username is not vyos_defined %}
-    psk="{{ security.wpa.passphrase }}"
+    psk="{{ security.wpa.password }}"
 {%     else %}
     key_mgmt=NONE
 {%     endif %}
