@@ -7,9 +7,9 @@
       <description>Password</description>
     </valueHelp>
     <constraint>
-      <regex>[[:ascii:]]{1,512}</regex>
+      <regex>[ -~]{1,512}</regex>
     </constraint>
-    <constraintErrorMessage>Password is limited to ASCII characters only, with a total length of 512</constraintErrorMessage>
+    <constraintErrorMessage>Password is limited to printable ASCII characters only, with a total length of 512</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
