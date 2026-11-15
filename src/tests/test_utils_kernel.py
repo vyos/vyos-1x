@@ -13,9 +13,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+from unittest import mock
 
+import vyos.system.image
+import vyos.utils.kernel
+from vyos import ConfigError
 from vyos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
+from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import get_kernel_cmdline_options
+from vyos.utils.kernel import verify_kmod
 
 # What recursive defaults add to "system option" when nothing is configured
 KDUMP_DEFAULTS = {'kdump': {'memory': 'auto', 'dump_path': '/var/crash'}}
@@ -95,6 +101,46 @@ class TestVyOSUtilsKernel(unittest.TestCase):
                 f'crashkernel={KDUMP_DEFAULT_MEMORY_AUTO}',
             ],
         )
+
+    def _container(self, value):
+        return mock.patch.object(vyos.system.image, 'is_running_as_container',
+                                 return_value=value)
+
+    def _available(self, available):
+        return mock.patch.object(vyos.utils.kernel, 'is_module_available',
+                                 side_effect=lambda module: module in available)
+
+    def test_verify_kmod_no_container(self):
+        with self._container(False), self._available([]) as probe:
+            verify_kmod(['wireguard'])
+            probe.assert_not_called()
+
+    def test_verify_kmod_container_available(self):
+        with self._container(True), self._available(['l2tp_eth', 'l2tp_ip']):
+            verify_kmod('l2tp_eth l2tp_ip')
+
+    def test_verify_kmod_container_missing(self):
+        with self._container(True), self._available(['l2tp_eth']):
+            with self.assertRaisesRegex(ConfigError, 'modprobe l2tp_ip'):
+                verify_kmod(['l2tp_eth', 'l2tp_ip'])
+
+    def test_check_kmod_container_skips_modprobe(self):
+        with self._container(True), \
+             mock.patch.object(vyos.utils.kernel, 'load_module') as load:
+            check_kmod(['wireguard'])
+            load.assert_not_called()
+
+    def test_check_kmod_no_container_loads(self):
+        with self._container(False), \
+             mock.patch.object(vyos.utils.kernel, 'load_module',
+                               return_value=0) as load:
+            check_kmod('wireguard')
+            load.assert_called_once_with('wireguard')
+
+    def test_is_module_available_unknown_module(self):
+        with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
+                               return_value=False):
+            self.assertFalse(vyos.utils.kernel.is_module_available('vyos_none'))
 
 
 if __name__ == '__main__':

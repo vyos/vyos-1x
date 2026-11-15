@@ -34,6 +34,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.defaults import wireguard_fwmark_pref
 from vyos.ifconfig import WireGuardIf
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_wireguard_key_pair
@@ -104,6 +105,7 @@ def verify(wireguard):
             )
         return None
 
+    verify_kmod('wireguard')
     verify_mtu_ipv6(wireguard)
     verify_address(wireguard)
     verify_vrf(wireguard)
