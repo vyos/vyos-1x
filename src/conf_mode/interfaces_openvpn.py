@@ -61,6 +61,7 @@ from vyos.utils.file import makedir
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmdl
@@ -311,6 +312,8 @@ def unoffloadable_cipher(value):
 def verify_dco(openvpn):
     if dict_search('offload.dco', openvpn) is None:
         return
+
+    verify_kmod('ovpn')
 
     if openvpn['device_type'] != 'tun':
         raise ConfigError('DCO requires "device-type tun"')

@@ -35,6 +35,7 @@ from vyos.ifconfig import WiFiIf
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.kernel import is_module_loaded
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
@@ -154,6 +155,8 @@ def verify(wifi):
     if 'deleted' in wifi:
         verify_bridge_delete(wifi)
         return None
+
+    verify_kmod('mac80211')
 
     if 'physical_device' not in wifi:
         raise ConfigError('You must specify a physical-device "phy"')

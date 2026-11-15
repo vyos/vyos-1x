@@ -37,6 +37,7 @@ from vyos.utils.cpu import get_available_cpus
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.kernel import get_kernel_boot_arg
 from vyos.utils.kernel import get_kernel_cmdline_options
 from vyos.utils.kernel import get_crash_kernel_size
@@ -283,6 +284,8 @@ def verify(options):
                     )
 
     if 'kernel' in options:
+        verify_kmod(list(dict_search('kernel.debug', options) or {}))
+
         _cpu_info = get_cpus()[0]
         cpu_vendor = _cpu_info.get('vendor_id', 'unknown')
         if 'amd_pstate_driver' in options['kernel'] and cpu_vendor != 'AuthenticAMD':

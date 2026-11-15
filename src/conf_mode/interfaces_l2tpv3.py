@@ -28,6 +28,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import L2TPv3If
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import interface_exists
 from vyos import ConfigError
@@ -72,6 +73,7 @@ def verify(l2tpv3):
         verify_bridge_delete(l2tpv3)
         return None
 
+    verify_kmod(k_mod)
     interface = l2tpv3['ifname']
 
     for key in ['source_address', 'remote', 'tunnel_id', 'peer_tunnel_id',
