@@ -142,6 +142,17 @@ class TestVyOSUtilsKernel(unittest.TestCase):
                                return_value=False):
             self.assertFalse(vyos.utils.kernel.is_module_available('vyos_none'))
 
+    def test_is_module_available_nft_probe(self):
+        with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
+                               return_value=False):
+            for rc, expected in [(0, True), (1, False)]:
+                with mock.patch('vyos.utils.process.run', return_value=rc) as run:
+                    self.assertEqual(
+                        vyos.utils.kernel.is_module_available('nft_nat'), expected)
+                    run.assert_called_once_with(
+                        ['nft', '-c', '-f', '-'],
+                        input=vyos.utils.kernel.KMOD_NFT_PROBE['nft_nat'])
+
 
 if __name__ == '__main__':
     unittest.main()

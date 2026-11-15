@@ -37,6 +37,15 @@ KMOD_GENL_FAMILY = {
     'wireguard': 'wireguard',
 }
 
+# nftables ruleset depending on a Kernel module. "nft -c" passes it through the
+# Kernel without committing, which autoloads the module or fails with ENOENT
+_NFT_NAT_CHAIN = ('add table ip vyos_kmod_probe\n'
+                  'add chain ip vyos_kmod_probe p { type nat hook postrouting priority 100; }\n')
+KMOD_NFT_PROBE = {
+    'nft_chain_nat': _NFT_NAT_CHAIN,
+    'nft_nat': _NFT_NAT_CHAIN + 'add rule ip vyos_kmod_probe p snat to 192.0.2.1\n',
+}
+
 def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
     """Load a kernel module via modprobe.
 
@@ -73,10 +82,15 @@ def is_module_available(module: str) -> bool:
     """Check if the running Kernel provides a module without loading it.
 
     Built-in drivers are not guaranteed to show up in /sys/module, so modules
-    exposing a generic netlink family are additionally probed by family name.
+    exposing a generic netlink family are additionally probed by family name
+    and nftables modules by a checked ruleset.
     """
     if is_module_loaded(module):
         return True
+
+    if module in KMOD_NFT_PROBE:
+        from vyos.utils.process import run
+        return run(['nft', '-c', '-f', '-'], input=KMOD_NFT_PROBE[module]) == 0
 
     family = KMOD_GENL_FAMILY.get(module)
     if not family:
