@@ -187,9 +187,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         super(TestProtocolsBGP, cls).setUpClass()
 
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(bgp_daemon)
-
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -233,9 +230,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig('router bgp', stop_section='^exit')
         self.assertNotIn(f'router bgp', frrconfig)
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(bgp_daemon))
         # always forward to base class
         super().tearDown()
 
@@ -2060,21 +2054,33 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # restart bgpd to apply "-M bmp" and update PID
-        old_pid = self.daemon_pid
+        old_pid = self.frr_daemon_pids[bgp_daemon]
+        # only kill the bgpd this test started with, an earlier crash must not
+        # be hidden by the planned restart
+        self.assertEqual(old_pid, process_named_running(bgp_daemon))
         cmdl(['kill', '-9', str(old_pid)], sudo=True)
         # bgpd is only settled once watchfrr has finished restarting it - an
         # early PID may still be replaced
-        def bgpd_settled(out):
-            return (process_named_running(bgp_daemon, 'bmp') not in (None, old_pid) and
+        def bgpd_state():
+            pid = process_named_running(bgp_daemon, 'bmp')
+            out = rc_cmd('vtysh -c "show watchfrr"')[1]
+            # the status only belongs to this bgpd if it was not replaced meanwhile
+            if process_named_running(bgp_daemon, 'bmp') != pid:
+                pid = None
+            return out, pid
+        def bgpd_settled(state):
+            out, pid = state
+            return (pid not in (None, old_pid) and
                     'global phase: Idle' in out and
                     'Reading Configuration: no' in out and
                     re.search(rf'^\s+{bgp_daemon}\s+Up$', out, re.M))
         # timeout follows watchfrr "Restart Timeout"
-        settled, _ = self.wait_for_result(lambda: rc_cmd('vtysh -c "show watchfrr"')[1],
-                                          bgpd_settled, pause=0.5, timeout=90)
+        settled, (_, new_pid) = self.wait_for_result(bgpd_state, bgpd_settled,
+                                                     pause=0.5, timeout=90)
         self.assertTrue(settled)
-        # update daemon PID - this was a planned daemon restart
-        self.daemon_pid = process_named_running(bgp_daemon, 'bmp')
+        # planned bgpd restart - all other FRR daemons must have survived it
+        self.frr_daemon_pids[bgp_daemon] = new_pid
+        self.verify_frr_daemon_pids()
 
         # set bmp config but not set address
         self.cli_set(target_path + ['port', target_port])

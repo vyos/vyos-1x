@@ -19,9 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.frrender import bgp_daemon
 from vyos.utils.file import read_file
-from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'rpki']
 base_frr_config_args = {'start_section': 'rpki', 'stop_section': '^exit'}
@@ -111,8 +109,6 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         # call base-classes classmethod
         super(TestProtocolsRPKI, cls).setUpClass()
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(bgp_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -128,9 +124,6 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig(**vrf_frr_config_args)
         self.assertNotIn(f'rpki', frrconfig)
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(bgp_daemon))
         # always forward to base class
         super().tearDown()
 

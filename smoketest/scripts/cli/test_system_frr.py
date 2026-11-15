@@ -19,10 +19,8 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
-from vyos.frrender import mgmt_daemon
 from vyos.utils.file import read_file
 from vyos.utils.process import cmdl
-from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
 config_file = '/etc/frr/daemons'
@@ -240,8 +238,8 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
                 self.cli_commit()
         finally:
             cmdl(['systemctl', 'start', 'frr.service'], sudo=True)
-            # restarted on purpose, see base class tearDown()
-            self.__class__.mgmt_daemon_pid = process_named_running(mgmt_daemon)
+            # restarted on purpose, see base class setUp()
+            self.refresh_frr_daemon_pids()
 
         # FRR starts with the previously applied configuration
         frrconfig = self.getFRRconfig()

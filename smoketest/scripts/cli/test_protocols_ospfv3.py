@@ -20,9 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.frrender import ospf6_daemon
 from vyos.utils.file import read_file
-from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'ospfv3']
 
@@ -35,9 +33,6 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestProtocolsOSPFv3, cls).setUpClass()
-
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(ospf6_daemon)
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
@@ -57,9 +52,6 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig('router ospf6', stop_section='^exit')
         self.assertNotIn(f'router ospf6', frrconfig)
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(ospf6_daemon))
         # always forward to base class
         super().tearDown()
 
