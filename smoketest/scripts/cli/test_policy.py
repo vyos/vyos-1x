@@ -2111,25 +2111,28 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
     def test_route_map_in_use_vrf(self):
         # T9394: a route-map referenced only by a routing protocol inside a VRF
         # must not be deletable - the default VRF has no routing protocol here
+        # T9617: VRF names that collide with keys of the policy traversal
         route_map = 'VRF-IN-USE'
-        vrf = 'red'
-        vrf_base = ['vrf', 'name', vrf]
+        table = 1000
+        for vrf in ['red', 'route_map', 'dependent_vrfs']:
+            vrf_base = ['vrf', 'name', vrf]
 
-        self.cli_set(base_path + ['route-map', route_map, 'rule', '10', 'action', 'permit'])
-        self.cli_set(vrf_base + ['table', '1000'])
-        self.cli_set(vrf_base + ['protocols', 'ospf', 'redistribute', 'connected',
-                                 'route-map', route_map])
-        self.cli_commit()
-
-        self.cli_delete(base_path + ['route-map', route_map])
-        with self.assertRaises(ConfigSessionError):
+            self.cli_set(base_path + ['route-map', route_map, 'rule', '10', 'action', 'permit'])
+            self.cli_set(vrf_base + ['table', str(table)])
+            self.cli_set(vrf_base + ['protocols', 'ospf', 'redistribute', 'connected',
+                                     'route-map', route_map])
             self.cli_commit()
-        self.cli_discard()
 
-        # Removing the VRF together with the route-map is fine
-        self.cli_delete(vrf_base)
-        self.cli_delete(base_path + ['route-map', route_map])
-        self.cli_commit()
+            self.cli_delete(base_path + ['route-map', route_map])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+
+            # Removing the VRF together with the route-map is fine
+            self.cli_delete(vrf_base)
+            self.cli_delete(base_path + ['route-map', route_map])
+            self.cli_commit()
+            table += 1
 
 def sort_ip(output):
     o = '\n'.join([' '.join(line.strip().split()) for line in output.strip().splitlines()])
