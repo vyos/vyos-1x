@@ -15,6 +15,7 @@
 from sys import exit
 
 from vyos.config import Config
+from vyos.container import verify_native_bridge
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_vrf_changed
 from vyos.configdict import node_changed
@@ -49,6 +50,11 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'bridge']
     ifname, bridge = get_interface_dict(conf, base)
+    networks = conf.get_config_dict(['container', 'network'],
+                                    key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+    bridge['container_networks'] = [network for network in networks.values()
+                                    if dict_search('type.bridge.interface', network) == ifname]
 
     # determine which members have been removed
     tmp = node_changed(conf, base + [ifname, 'member', 'interface'])
@@ -138,6 +144,9 @@ def get_config(config=None):
     return bridge
 
 def verify(bridge):
+    for network in bridge['container_networks']:
+        verify_native_bridge(network, bridge)
+
     # to delete interface or remove a member interface VXLAN first need to check if
     # VXLAN does not require to be a member of a bridge interface
     if dict_search('member.interface_remove', bridge):
