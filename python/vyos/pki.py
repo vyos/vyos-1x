@@ -381,6 +381,14 @@ def is_ca_certificate(cert):
     except ExtensionNotFound:
         return False
 
+def get_rsa_key_size(obj):
+    # Modulus size of an RSA key or a certificate's RSA public key, else None
+    if isinstance(obj, x509.Certificate):
+        obj = obj.public_key()
+    if isinstance(obj, (rsa.RSAPrivateKey, rsa.RSAPublicKey)):
+        return obj.key_size
+    return None
+
 def verify_certificate(cert, ca_cert):
     # Verify certificate was signed by specified CA
     if ca_cert.subject != cert.issuer:
