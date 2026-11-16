@@ -121,7 +121,7 @@ class TestVyOSUtilsKernel(unittest.TestCase):
 
     def test_verify_kmod_container_missing(self):
         with self._container(True), self._available(['l2tp_eth']):
-            with self.assertRaisesRegex(ConfigError, 'modprobe l2tp_ip'):
+            with self.assertRaisesRegex(ConfigError, 'on every boot: modprobe l2tp_ip$'):
                 verify_kmod(['l2tp_eth', 'l2tp_ip'])
 
     def test_check_kmod_container_skips_modprobe(self):
@@ -143,12 +143,31 @@ class TestVyOSUtilsKernel(unittest.TestCase):
             self.assertFalse(vyos.utils.kernel.is_module_available('vyos_none'))
 
     def test_is_module_available_genl_family(self):
+        from pyroute2.netlink.exceptions import NetlinkError
+        def bind(family, msg_class):
+            if family != 'wireguard':
+                raise NetlinkError(2)
         with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
                                return_value=False), \
-             mock.patch.object(vyos.utils.kernel, 'get_genl_families',
-                               return_value={'nlctrl', 'wireguard'}):
+             mock.patch('pyroute2.netlink.generic.GenericNetlinkSocket') as sock:
+            sock.return_value.__enter__.return_value.bind.side_effect = bind
             self.assertTrue(vyos.utils.kernel.is_module_available('wireguard'))
             self.assertFalse(vyos.utils.kernel.is_module_available('l2tp_netlink'))
+
+    def test_is_module_available_socket_proto(self):
+        with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
+                               return_value=False), \
+             mock.patch('socket.socket') as sock:
+            self.assertTrue(vyos.utils.kernel.is_module_available('l2tp_ip6'))
+            sock.side_effect = OSError(93, 'Protocol not supported')
+            self.assertFalse(vyos.utils.kernel.is_module_available('l2tp_ip'))
+
+    def test_is_module_available_nft_probe(self):
+        with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
+                               return_value=False), \
+             mock.patch('vyos.utils.process.run', return_value=1) as run:
+            self.assertFalse(vyos.utils.kernel.is_module_available('nft_nat'))
+            self.assertIn('snat', run.call_args.kwargs['input'])
 
 
 if __name__ == '__main__':
