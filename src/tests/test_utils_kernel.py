@@ -21,6 +21,7 @@ from vyos import ConfigError
 from vyos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import get_kernel_cmdline_options
+from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import verify_kmod
 
 # What recursive defaults add to "system option" when nothing is configured
@@ -121,14 +122,30 @@ class TestVyOSUtilsKernel(unittest.TestCase):
 
     def test_verify_kmod_container_missing(self):
         with self._container(True), self._available(['l2tp_eth']):
-            with self.assertRaisesRegex(ConfigError, 'modprobe l2tp_ip'):
+            with self.assertRaisesRegex(ConfigError, 'on every boot: modprobe l2tp_ip$'):
                 verify_kmod(['l2tp_eth', 'l2tp_ip'])
 
-    def test_check_kmod_container_skips_modprobe(self):
-        with self._container(True), \
+    def test_check_kmod_container_verifies(self):
+        with self._container(True), self._available(['wireguard']), \
              mock.patch.object(vyos.utils.kernel, 'load_module') as load:
             check_kmod(['wireguard'])
             load.assert_not_called()
+        with self._container(True), self._available([]):
+            with self.assertRaisesRegex(ConfigError, 'modprobe wireguard'):
+                check_kmod(['wireguard'])
+
+    def test_check_kmod_container_no_verify(self):
+        with self._container(True), self._available([]) as probe, \
+             mock.patch.object(vyos.utils.kernel, 'load_module') as load:
+            check_kmod(['wireguard'], verify=False)
+            probe.assert_not_called()
+            load.assert_not_called()
+
+    def test_unload_kmod_container_skips_rmmod(self):
+        with self._container(True), \
+             mock.patch.object(vyos.utils.kernel, 'unload_module') as unload:
+            unload_kmod(['jool'])
+            unload.assert_not_called()
 
     def test_check_kmod_no_container_loads(self):
         with self._container(False), \
@@ -143,12 +160,31 @@ class TestVyOSUtilsKernel(unittest.TestCase):
             self.assertFalse(vyos.utils.kernel.is_module_available('vyos_none'))
 
     def test_is_module_available_genl_family(self):
+        from pyroute2.netlink.exceptions import NetlinkError
+        def bind(family, msg_class):
+            if family != 'wireguard':
+                raise NetlinkError(2)
         with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
                                return_value=False), \
-             mock.patch.object(vyos.utils.kernel, 'get_genl_families',
-                               return_value={'nlctrl', 'wireguard'}):
+             mock.patch('pyroute2.netlink.generic.GenericNetlinkSocket') as sock:
+            sock.return_value.__enter__.return_value.bind.side_effect = bind
             self.assertTrue(vyos.utils.kernel.is_module_available('wireguard'))
             self.assertFalse(vyos.utils.kernel.is_module_available('l2tp_netlink'))
+
+    def test_is_module_available_socket_proto(self):
+        with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
+                               return_value=False), \
+             mock.patch('socket.socket') as sock:
+            self.assertTrue(vyos.utils.kernel.is_module_available('l2tp_ip6'))
+            sock.side_effect = OSError(93, 'Protocol not supported')
+            self.assertFalse(vyos.utils.kernel.is_module_available('l2tp_ip'))
+
+    def test_is_module_available_nft_probe(self):
+        with mock.patch.object(vyos.utils.kernel, 'is_module_loaded',
+                               return_value=False), \
+             mock.patch('vyos.utils.process.run', return_value=1) as run:
+            self.assertFalse(vyos.utils.kernel.is_module_available('nft_nat'))
+            self.assertIn('snat', run.call_args.kwargs['input'])
 
 
 if __name__ == '__main__':

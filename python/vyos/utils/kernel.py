@@ -37,6 +37,21 @@ KMOD_GENL_FAMILY = {
     'wireguard': 'wireguard',
 }
 
+# Socket address family and protocol (IPPROTO_L2TP) served by a Kernel module
+KMOD_SOCKET_PROTO = {
+    'l2tp_ip': ('AF_INET', 115),
+    'l2tp_ip6': ('AF_INET6', 115),
+}
+
+# nftables ruleset depending on a Kernel module. "nft -c" passes it through the
+# Kernel without committing, which autoloads the module or fails with ENOENT
+_NFT_NAT_CHAIN = ('add table ip vyos_kmod_probe\n'
+                  'add chain ip vyos_kmod_probe p { type nat hook postrouting priority 100; }\n')
+KMOD_NFT_PROBE = {
+    'nft_chain_nat': _NFT_NAT_CHAIN,
+    'nft_nat': _NFT_NAT_CHAIN + 'add rule ip vyos_kmod_probe p snat to 192.0.2.1\n',
+}
+
 def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
     """Load a kernel module via modprobe.
 
@@ -70,44 +85,43 @@ def unload_module(name: str) -> int:
     return run(['rmmod', name])
 
 def is_module_available(module: str) -> bool:
-    """Check if the running Kernel provides a module without loading it.
+    """Check if the running Kernel provides a module.
 
-    Built-in drivers are not guaranteed to show up in /sys/module, so modules
-    exposing a generic netlink family are additionally checked for the family
-    being registered.
+    A module not loaded yet is requested the same way the feature using it
+    does, which makes the Kernel autoload it - inside a container from the
+    host. This also covers built-in drivers, which need not show up in
+    /sys/module. A module without such a probe is only available if loaded.
     """
     if is_module_loaded(module):
         return True
 
-    family = KMOD_GENL_FAMILY.get(module)
-    if not family:
-        return False
+    if module in KMOD_NFT_PROBE:
+        from vyos.utils.process import run
+        return run(['nft', '-c', '-f', '-'], input=KMOD_NFT_PROBE[module]) == 0
 
-    from pyroute2.netlink.exceptions import NetlinkError
-    try:
-        return family in get_genl_families()
-    except NetlinkError:
-        return False
+    if module in KMOD_SOCKET_PROTO:
+        import socket
+        family, proto = KMOD_SOCKET_PROTO[module]
+        try:
+            socket.socket(getattr(socket, family), socket.SOCK_DGRAM, proto).close()
+        except OSError:
+            return False
+        return True
 
-def get_genl_families() -> set:
-    """Return the names of all registered generic netlink families.
+    if module in KMOD_GENL_FAMILY:
+        from pyroute2.netlink import genlmsg
+        from pyroute2.netlink.exceptions import NetlinkError
+        from pyroute2.netlink.generic import GenericNetlinkSocket
+        try:
+            with GenericNetlinkSocket() as sock:
+                # pyroute2 logs a missing family as error by default
+                sock.module_err_level = 'debug'
+                sock.bind(KMOD_GENL_FAMILY[module], genlmsg)
+        except NetlinkError:
+            return False
+        return True
 
-    Unlike a lookup by name, a dump never makes the Kernel autoload a module.
-    """
-    from pyroute2.netlink import NLM_F_DUMP
-    from pyroute2.netlink import NLM_F_REQUEST
-    from pyroute2.netlink.generic import CTRL_CMD_GETFAMILY
-    from pyroute2.netlink.generic import GENL_ID_CTRL
-    from pyroute2.netlink.generic import GenericNetlinkSocket
-    from pyroute2.netlink.generic import ctrlmsg
-
-    msg = ctrlmsg()
-    msg['cmd'] = CTRL_CMD_GETFAMILY
-    msg['version'] = 1
-    with GenericNetlinkSocket() as sock:
-        sock.bind('nlctrl', ctrlmsg)
-        return {m.get_attr('CTRL_ATTR_FAMILY_NAME') for m in
-                sock.nlm_request(msg, GENL_ID_CTRL, NLM_F_REQUEST | NLM_F_DUMP)}
+    return False
 
 def verify_kmod(k_mod):
     """
@@ -125,15 +139,23 @@ def verify_kmod(k_mod):
     for module in k_mod:
         if not is_module_available(module):
             raise ConfigError(f'Kernel module "{module}" is not available, '
-                              f'load it on the container host: modprobe {module}')
+                              f'load it on the container host on every boot: '
+                              f'modprobe {module}')
 
-def check_kmod(k_mod):
-    """ Common utility function to load required kernel modules on demand """
+def check_kmod(k_mod, verify=True):
+    """
+    Common utility function to load required kernel modules on demand.
+
+    Inside a container modprobe can not succeed, the modules are verified to
+    be available instead. Pass verify=False only if verify() of the caller
+    already called verify_kmod() for the same modules.
+    """
     from vyos import ConfigError
     from vyos.system.image import is_running_as_container
 
-    # Availability is checked by verify_kmod(), modprobe can not succeed
     if is_running_as_container():
+        if verify:
+            verify_kmod(k_mod)
         return
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
@@ -149,6 +171,11 @@ def is_module_loaded(module):
 def unload_kmod(k_mod):
     """ Common utility function to unload required kernel modules on demand """
     from vyos import ConfigError
+    from vyos.system.image import is_running_as_container
+
+    # The modules belong to the host Kernel and may be in use by the host
+    if is_running_as_container():
+        return
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:

@@ -170,7 +170,8 @@ def generate(wireguard):
 
 
 def apply(wireguard):
-    check_kmod('wireguard')
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod('wireguard', verify=False)
 
     wg = WireGuardIf(**wireguard)
 

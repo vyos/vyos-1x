@@ -260,7 +260,8 @@ def verify(wifi):
     return None
 
 def generate(wifi):
-    check_kmod('mac80211')
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod('mac80211', verify=False)
 
     interface = wifi['ifname']
 

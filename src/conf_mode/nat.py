@@ -231,7 +231,8 @@ def generate(nat):
     return None
 
 def apply(nat):
-    check_kmod(k_mod)
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod(k_mod, verify=False)
 
     cmdl(['nft', '--file', nftables_nat_config])
     cmdl(['nft', '--file', nftables_static_nat_conf])

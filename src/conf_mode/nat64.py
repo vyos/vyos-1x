@@ -29,7 +29,6 @@ from vyos.configdiff import get_config_diff
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
-from vyos.utils.kernel import verify_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
@@ -56,7 +55,6 @@ def get_config(config: Config | None = None) -> ConfigDict:
 
 
 def verify(nat64) -> None:
-    verify_kmod(['jool'])
     check_kmod(['jool'])
     config_diff = getattr(nat64, 'config_diff')
 
