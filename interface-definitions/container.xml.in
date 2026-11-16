@@ -724,12 +724,28 @@
               <help>Network type (default: bridge)</help>
             </properties>
             <children>
-              <leafNode name="bridge">
+              <node name="bridge">
                 <properties>
                   <help>Bridge network</help>
-                  <valueless/>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Existing VyOS bridge without container-engine NAT or port forwarding</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>brN</format>
+                        <description>VyOS bridge interface</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>br[0-9]+</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="macvlan">
                 <properties>
                   <help>MACVLAN network</help>

@@ -16,6 +16,7 @@ import os
 
 from decimal import Decimal
 from ipaddress import ip_address
+from ipaddress import ip_interface
 from ipaddress import ip_network
 
 import psutil
@@ -29,6 +30,7 @@ from vyos.defaults import directories
 from vyos.defaults import podman_mount_program
 from vyos.container import get_container_host_ifname
 from vyos.container import restart_network
+from vyos.container import verify_native_bridge
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.cpu import get_core_count
@@ -114,11 +116,48 @@ def get_config(config=None):
     tmp = node_changed(conf, base + ['network'])
     if tmp: container.update({'network_remove': tmp})
 
+    effective = conf.get_config_dict(base, effective=True, key_mangling=('-', '_'),
+                                     no_tag_node_value_mangle=True,
+                                     get_first_key=True)
+    for network in list(container.get('network', {})) + container.get('network_remove', []):
+        if is_node_changed(conf, base + ['network', network]):
+            if network in container.get('network', {}):
+                container.setdefault('network_restart', []).append(network)
+            for source in [effective, container]:
+                for name, config in source.get('name', {}).items():
+                    if network in config.get('network', {}):
+                        stops = container.setdefault('container_stop', [])
+                        if name not in stops:
+                            stops.append(name)
+                        restarts = container.setdefault('container_restart', [])
+                        if name in container.get('name', {}) and name not in restarts:
+                            restarts.append(name)
+
     tmp = node_changed(conf, base + ['name'])
     if tmp: container.update({'container_remove': tmp})
 
     if container and storage_on_overlayfs():
         container['storage_mount_program'] = podman_mount_program
+
+    for network, network_config in container.get('network', {}).items():
+        if dict_search('type.macvlan', network_config) is None:
+            previous_bridges = {
+                dict_search('type.bridge.interface', config)
+                for config in effective.get('network', {}).values()
+                if dict_search('type.bridge.interface', config)
+                and dict_search('type.bridge.interface', config) != dict_search('type.bridge.interface', network_config)
+            }
+            network_config['previous_bridge_configs'] = {
+                bridge: conf.get_config_dict(
+                    ['interfaces', 'bridge', bridge], key_mangling=('-', '_'),
+                    get_first_key=True)
+                for bridge in sorted(previous_bridges)
+            }
+        if dict_search('type.bridge.interface', network_config) is not None:
+            bridge = dict_search('type.bridge.interface', network_config)
+            network_config['bridge_config'] = conf.get_config_dict(
+                ['interfaces', 'bridge', bridge], key_mangling=('-', '_'),
+                get_first_key=True, with_recursive_defaults=True)
 
     return container
 
@@ -307,6 +346,41 @@ def verify(container):
         for network, network_config in container['network'].items():
             net_dict = {'ipv4_pfx_len': 0, 'ipv6_pfx_len': 0, 'ipv4_gateway_len': 0, 'ipv6_gateway_len': 0}
 
+            bridge = dict_search('type.bridge.interface', network_config)
+
+            for previous_bridge_name, previous_bridge in network_config.get('previous_bridge_configs', {}).items():
+                for address in previous_bridge.get('address', []):
+                    if address in ['dhcp', 'dhcpv6']:
+                        continue
+                    previous_subnet = ip_interface(address).network
+                    for prefix in network_config.get('prefix', []):
+                        subnet = ip_network(prefix)
+                        if subnet.version == previous_subnet.version and subnet.overlaps(previous_subnet):
+                            raise ConfigError(f'Remove overlapping addresses from bridge "{previous_bridge_name}" '
+                                              f'before moving container network "{network}"!')
+
+            if bridge is not None:
+                if dict_search('type.macvlan', network_config) is not None:
+                    raise ConfigError('Bridge interface attachment cannot be used with MACVLAN!')
+                if 'no_name_server' not in network_config:
+                    raise ConfigError('An unmanaged bridge requires no-name-server!')
+                if 'vrf' in network_config:
+                    raise ConfigError('Unmanaged container bridges do not support VRFs yet!')
+                verify_native_bridge(network_config, network_config.get('bridge_config', {}))
+                for other, other_config in container['network'].items():
+                    if other == network:
+                        continue
+                    if dict_search('type.bridge.interface', other_config) == bridge:
+                        raise ConfigError(f'Bridge "{bridge}" is already used by network "{other}"!')
+                    for prefix in network_config.get('prefix', []):
+                        for other_prefix in other_config.get('prefix', []):
+                            subnet, other_subnet = ip_network(prefix), ip_network(other_prefix)
+                            if subnet.version == other_subnet.version and subnet.overlaps(other_subnet):
+                                raise ConfigError(f'Unmanaged network "{network}" overlaps network "{other}"!')
+                for name, config in container.get('name', {}).items():
+                    if network in config.get('network', {}) and 'port' in config:
+                        raise ConfigError(f'Container "{name}" cannot publish ports on an unmanaged bridge!')
+
             # If ipv4-prefix not defined for user-defined network
             if 'prefix' not in network_config:
                 raise ConfigError(f'prefix for network "{network}" must be defined!')
@@ -394,6 +468,10 @@ def generate_network_options(name, network_config):
 
     ifname = f'pod-{name}'
     driver = 'bridge'
+
+    if dict_search('type.bridge.interface', network_config) is not None:
+        ifname = dict_search('type.bridge.interface', network_config)
+        out.append('Options=mode=unmanaged')
 
     type_config = dict_search('type', network_config)
 
@@ -631,7 +709,9 @@ def generate(container):
         for network, network_config in container['network'].items():
             file_path = os.path.join(quadlet_unit_path, f'vyos-{network}.network')
             opts = generate_network_options(network, network_config)
-            render(file_path, 'container/quadlet-network.j2', {'name': network, 'opts': opts})
+            render(file_path, 'container/quadlet-network.j2', {
+                'name': network, 'opts': opts,
+                'bridge_interface': dict_search('type.bridge.interface', network_config)})
 
     if 'name' in container:
         host_ident = get_host_identity()
@@ -649,11 +729,17 @@ def generate(container):
 
 
 def apply(container):
-    # Delete old containers if needed. We can't delete running container
-    # Option "--force" allows to delete containers with any status
+    for name in container.get('container_stop', []):
+        run(['systemctl', 'stop', f'vyos-container-{name}'])
+
     if 'container_remove' in container:
         quadlet_paths = [f'vyos-container-{name}.container' for name in container['container_remove']]
         run(['podman', 'quadlet', 'rm', '-f'] + quadlet_paths)
+
+    for network in container.get('network_restart', []):
+        run(['systemctl', 'stop', f'vyos-{network}-network'])
+        if network_exists(network):
+            cmdl(['podman', 'network', 'rm', network])
 
     # Delete old networks if needed
     if 'network_remove' in container:
