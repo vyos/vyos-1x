@@ -26,6 +26,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.defaults import directories
 from vyos.defaults import podman_mount_program
 from vyos.utils.file import read_file
+from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
@@ -191,6 +192,147 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertTrue(self.is_running(cont_name))
+
+    def test_unmanaged_bridge(self):
+        bridge = 'br1149'
+        network = 'unmanaged'
+        name = 'unmanaged1'
+        interface_path = ['interfaces', 'bridge', bridge]
+        self.cli_set(interface_path + ['address', '10.250.49.1/24'])
+        self.cli_set(interface_path + ['address', 'fd00:1149::1/64'])
+        self.cli_set(base_path + ['network', network, 'prefix', '10.250.49.0/24'])
+        self.cli_set(base_path + ['network', network, 'prefix', 'fd00:1149::/64'])
+        self.cli_set(base_path + ['network', network, 'no-name-server'])
+        self.cli_set(base_path + ['network', network, 'type', 'bridge', 'interface', bridge])
+        self.cli_set(base_path + ['name', name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name, 'command', 'sleep 3600'])
+        self.cli_set(base_path + ['name', name, 'capability', 'net-raw'])
+        self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
+        self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.49.2'])
+        self.cli_set(base_path + ['name', name, 'network', network, 'address', 'fd00:1149::2'])
+        try:
+            self.cli_commit()
+            self.assertTrue(self.is_running(name))
+            info = cmd_to_json(['network', 'inspect', network])
+            self.assertEqual(info['network_interface'], bridge)
+            self.assertEqual(info['options']['mode'], 'unmanaged')
+            for path, value in [
+                (interface_path, None),
+                (interface_path + ['disable'], ''),
+                (interface_path + ['address', '10.250.49.1/24'], None),
+                (interface_path + ['mtu'], '1400'),
+                (base_path + ['network', network, 'mtu'], '1400'),
+                (base_path + ['network', network, 'type', 'bridge', 'interface'], None),
+            ]:
+                with self.subTest(path=path):
+                    if value is None:
+                        self.cli_delete(path)
+                    elif value:
+                        self.cli_set(path + [value])
+                    else:
+                        self.cli_set(path)
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_discard()
+
+            self.cli_set(base_path + ['network', 'shared', 'type', 'bridge', 'interface', bridge])
+            self.cli_set(base_path + ['network', 'shared', 'prefix', '10.250.49.0/24'])
+            self.cli_set(base_path + ['network', 'shared', 'no-name-server'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+
+            self.cli_set(base_path + ['network', 'overlap', 'prefix', '10.250.49.0/25'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+
+            self.cli_delete(interface_path + ['address', '10.250.49.1/24'])
+            self.cli_set(interface_path + ['address', '10.250.49.1/25'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+
+            self.cli_set(['vrf', 'name', 'unmanaged', 'table', '1149'])
+            self.cli_set(interface_path + ['vrf', 'unmanaged'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+
+            self.cli_set(interface_path + ['mtu', '1400'])
+            self.cli_set(base_path + ['network', network, 'mtu', '1400'])
+            self.cli_commit()
+            self.assertTrue(self.is_running(name))
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1400')
+
+            # Network recreation returns before IPv6 DAD completes.
+            container_pid = str(cmd_to_json(['inspect', name])['State']['Pid'])
+
+            def ipv6_ready():
+                info = json.loads(cmdl(['nsenter', '-t', container_pid, '-n',
+                                       'ip', '-6', '-j', 'addr', 'show', 'dev', 'eth0'], sudo=True))[0]
+                addresses = info.get('addr_info', [])
+                return (any(a['local'] == 'fd00:1149::2' for a in addresses)
+                        and not any(a.get('tentative', False) for a in addresses))
+
+            self.assertTrue(wait_for(ipv6_ready, timeout=10), 'Container IPv6 DAD did not complete')
+            cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.49.1'], sudo=True)
+            cmdl(['podman', 'exec', name, 'ping', '-6', '-c', '1', '-W', '2', 'fd00:1149::1'], sudo=True)
+            ruleset = json.loads(cmdl(['nft', '-j', 'list', 'ruleset'], sudo=True))
+            rules = [item['rule'] for item in ruleset['nftables']
+                     if 'rule' in item and item['rule']['table'] == 'netavark']
+            self.assertNotIn('10.250.49.0', json.dumps(rules))
+            self.assertNotIn('fd00:1149::', json.dumps(rules))
+            self.cli_delete(base_path + ['name', name])
+            self.cli_set(base_path + ['network', network, 'description', 'no consumers'])
+            self.cli_commit()
+            self.assertFalse(self.is_running(name))
+            self.assertNotIn(name, cmdl(['podman', 'ps', '-a', '--format', '{{.Names}}'], sudo=True).splitlines())
+            self.cli_delete(base_path + ['network', network])
+            self.cli_commit()
+            links = json.loads(cmdl(['ip', '-j', 'address', 'show', 'dev', bridge]))
+            self.assertEqual(links[0]['ifname'], bridge)
+            addresses = {a['local'] for a in links[0]['addr_info']}
+            self.assertIn('10.250.49.1', addresses)
+            self.assertIn('fd00:1149::1', addresses)
+        finally:
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
+    def test_unmanaged_network_replacement(self):
+        interface_path = ['interfaces', 'bridge', 'br1190']
+        old_path = base_path + ['network', 'old']
+        new_path = base_path + ['network', 'new']
+        prefixes = ['10.250.190.0/24', 'fd00:1190::/64']
+        try:
+            for address in ['10.250.190.1/24', 'fd00:1190::1/64']:
+                self.cli_set(interface_path + ['address', address])
+            for prefix in prefixes:
+                self.cli_set(old_path + ['prefix', prefix])
+            self.cli_set(old_path + ['no-name-server'])
+            self.cli_set(old_path + ['type', 'bridge', 'interface', 'br1190'])
+            self.cli_commit()
+            for prefix in prefixes:
+                with self.subTest(prefix=prefix):
+                    self.cli_delete(old_path)
+                    self.cli_set(new_path + ['prefix', prefix])
+                    self.cli_set(new_path + ['no-name-server'])
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_discard()
+            self.cli_delete(old_path)
+            for prefix in prefixes:
+                self.cli_set(new_path + ['prefix', prefix])
+            self.cli_set(new_path + ['no-name-server'])
+            self.cli_delete(interface_path + ['address'])
+            self.cli_commit()
+        finally:
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
 
     def test_network_types(self):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '100'])
@@ -523,7 +665,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(n['dns_enabled'], False)
 
     def test_network_mtu(self):
-        prefix = '192.0.2.0/24'
+        prefix = '10.250.191.0/24'
         base_name = 'ipv4'
         net_name = 'NET01'
 
@@ -532,6 +674,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         name = f'{base_name}-2'
         self.cli_set(base_path + ['name', name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name, 'capability', 'net-raw'])
         self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
         self.cli_set(
             base_path
@@ -548,6 +691,26 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         n = cmd_to_json(['network', 'inspect', net_name])
         self.assertEqual(n['options']['mtu'], '1280')
+        cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
+              str(ip_interface(prefix).ip + 1)], sudo=True)
+
+        for mtu, explicit_type in [('1400', True), ('1280', False)]:
+            type_path = base_path + ['network', net_name, 'type']
+            if explicit_type:
+                self.cli_set(type_path + ['bridge'])
+            else:
+                self.cli_delete(type_path)
+            self.cli_set(base_path + ['network', net_name, 'mtu', mtu])
+            self.cli_commit()
+            self.assertTrue(self.is_running(name))
+            network = cmd_to_json(['network', 'inspect', net_name])
+            self.assertEqual(network['options']['mtu'], mtu)
+            pid = str(cmd_to_json(['inspect', name])['State']['Pid'])
+            links = json.loads(cmdl(['nsenter', '-t', pid, '-n',
+                                    'ip', '-j', 'link', 'show', 'dev', 'eth0'], sudo=True))
+            self.assertEqual(links[0]['mtu'], int(mtu))
+            cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
+                  str(ip_interface(prefix).ip + 1)], sudo=True)
 
     def test_uid_gid(self):
         cont_name = 'uid-test'
