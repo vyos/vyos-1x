@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import pwd
+import tempfile
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -23,11 +25,13 @@ from vyos.configsession import ConfigSessionError
 from vyos.config_mgmt import ConfigMgmt
 from vyos.config_mgmt import commit_hooks
 from vyos.config_mgmt import commit_post_hook_dir
+from vyos.utils.process import cmdl
 
 base_path = ['system', 'config-management']
 archive_base = base_path + ['commit-archive', 'location']
 
 archive_hook = os.path.join(commit_post_hook_dir, commit_hooks['commit_archive'])
+archive_vrf = 'ARCHIVE'
 
 
 class TestSystemConfigManagement(VyOSUnitTestSHIM.TestCase):
@@ -40,6 +44,7 @@ class TestSystemConfigManagement(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         self.cli_delete(base_path)
+        self.cli_delete(['vrf', 'name', archive_vrf])
         self.cli_commit()
         super().tearDown()
 
@@ -181,6 +186,47 @@ class TestSystemConfigManagement(VyOSUnitTestSHIM.TestCase):
         # path only -> commits
         self.cli_commit()
         self.assertTrue(os.path.islink(archive_hook))
+
+    def test_04_git_archive_vrf(self):
+        # T9619: archiving to git in a VRF failed when not run as root.
+        # Use a local repository, so no network is needed.
+        tmp = tempfile.TemporaryDirectory(prefix='smoketest-archive-')
+        self.addCleanup(tmp.cleanup)
+        repo = os.path.join(tmp.name, 'repo.git')
+        work = os.path.join(tmp.name, 'work')
+        # git needs an author name and email to create the first commit
+        git_env = {
+            **os.environ,
+            'GIT_AUTHOR_NAME': 'smoketest',
+            'GIT_AUTHOR_EMAIL': 'smoketest@vyos',
+            'GIT_COMMITTER_NAME': 'smoketest',
+            'GIT_COMMITTER_EMAIL': 'smoketest@vyos',
+        }
+
+        # create the repository; it needs one commit before we can push to it
+        cmdl(['git', 'init', '--bare', '--initial-branch=main', repo])
+        cmdl(['git', 'clone', repo, work])
+        cmdl(['git', '-C', work, 'commit', '--allow-empty', '-m', 'init'], env=git_env)
+        cmdl(['git', '-C', work, 'push', 'origin', 'HEAD:main'])
+
+        self.cli_set(['vrf', 'name', archive_vrf, 'table', '1050'])
+        self.cli_set(base_path + ['commit-archive', 'vrf', archive_vrf])
+        self.cli_set(archive_base + ['local', 'git', 'transport', 'file'])
+        self.cli_set(archive_base + ['local', 'git', 'path', repo])
+        self.cli_commit()
+
+        # run the archive hook, the test fails if the hook fails
+        cmdl([archive_hook])
+
+        # the commit author must be our user, not root
+        author = cmdl(['git', '--git-dir', repo, 'log', '-1', '--format=%ae'])
+        user = pwd.getpwuid(os.getuid()).pw_name
+        self.assertTrue(author.startswith(f'{user}@'))
+        # the commit must contain the saved config
+        files = cmdl(
+            ['git', '--git-dir', repo, 'show', '--name-only', '--format=', 'HEAD']
+        )
+        self.assertIn('config.boot-', files)
 
 
 if __name__ == '__main__':
