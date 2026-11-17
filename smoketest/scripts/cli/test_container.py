@@ -334,6 +334,33 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(interface_path)
             self.cli_commit()
 
+    def test_network_types_mutually_exclusive(self):
+        network_path = base_path + ['network', 'exclusive']
+        for initial_type in ['bridge', 'macvlan']:
+            with self.subTest(initial_type=initial_type):
+                def set_type(network_type):
+                    if network_type == 'bridge':
+                        self.cli_set(network_path + ['type', 'bridge'])
+                    else:
+                        self.cli_set(network_path + ['type', 'macvlan', 'parent', 'eth0'])
+                        self.cli_set(network_path + ['type', 'macvlan', 'mode', 'bridge'])
+
+                other_type = 'macvlan' if initial_type == 'bridge' else 'bridge'
+                try:
+                    self.cli_set(network_path + ['prefix', '10.250.190.0/24'])
+                    set_type(initial_type)
+                    self.cli_commit()
+
+                    set_type(other_type)
+                    with self.assertRaisesRegex(ConfigSessionError, 'mutually exclusive'):
+                        self.cli_commit()
+
+                    self.cli_delete(network_path + ['type', initial_type])
+                    self.cli_commit()
+                finally:
+                    self.cli_delete(network_path)
+                    self.cli_commit()
+
     def test_network_types(self):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '100'])
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '101'])

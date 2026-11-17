@@ -344,6 +344,9 @@ def verify(container):
     # Add new network
     if 'network' in container:
         for network, network_config in container['network'].items():
+            if {'bridge', 'macvlan'} <= set(network_config.get('type', {})):
+                raise ConfigError(f'Bridge and MACVLAN types are mutually exclusive for network "{network}"!')
+
             net_dict = {'ipv4_pfx_len': 0, 'ipv6_pfx_len': 0, 'ipv4_gateway_len': 0, 'ipv6_gateway_len': 0}
 
             bridge = dict_search('type.bridge.interface', network_config)
@@ -360,8 +363,6 @@ def verify(container):
                                               f'before moving container network "{network}"!')
 
             if bridge is not None:
-                if dict_search('type.macvlan', network_config) is not None:
-                    raise ConfigError('Bridge interface attachment cannot be used with MACVLAN!')
                 if 'no_name_server' not in network_config:
                     raise ConfigError('An unmanaged bridge requires no-name-server!')
                 if 'vrf' in network_config:
