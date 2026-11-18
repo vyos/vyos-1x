@@ -76,6 +76,7 @@ from vyos.utils.process import rc_cmd
 from vyos.utils.system import get_secure_boot_state
 from vyos.utils.system import verify_secure_boot_signature
 from vyos.version import get_version_data
+from vyos.xml_ref import default_value
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -598,9 +599,11 @@ def get_cli_kernel_options(config_file: str) -> list:
             if count:
                 cmdline_options.append(f'hugepages={count}')
 
-    # Crash kernel memory reservation for the capture kernel
-    kdump_memory = options.get('kdump', {}).get('memory')
-    if kdump_memory:
+    # Crash kernel memory reservation for the capture kernel. The raw config
+    # carries no defaults, so fall back to the XML default like conf-mode does.
+    if 'kdump' in options:
+        kdump_memory = (options['kdump'] or {}).get('memory') or default_value(
+            ['system', 'option', 'kdump', 'memory'])
         if kdump_memory == 'auto':
             # Tiered auto-sizing based on total system RAM
             kdump_memory = KDUMP_DEFAULT_MEMORY_AUTO
