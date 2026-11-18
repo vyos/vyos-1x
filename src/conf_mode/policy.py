@@ -125,14 +125,16 @@ def verify(config_dict):
         policy['protocol'].update({protocol : config_dict[protocol]})
 
     if 'vrf' in config_dict and 'name' in config_dict['vrf']:
-        for vrf_name, vrf_config in config_dict['vrf']['name'].items():
+        for vrf_config in config_dict['vrf']['name'].values():
             if 'protocols' not in vrf_config:
                 continue
             if 'protocol' not in policy:
                 policy.update({'protocol': {}})
+            # A list, not keyed by VRF name - a VRF named e.g. "route_map" or
+            # "dependent_vrfs" would otherwise be mistaken for a policy key
             if 'vrf' not in policy['protocol']:
-                policy['protocol'].update({'vrf': {}})
-            policy['protocol']['vrf'].update({vrf_name : vrf_config['protocols']})
+                policy['protocol'].update({'vrf': []})
+            policy['protocol']['vrf'].append(vrf_config['protocols'])
 
     for policy_type in policy_types:
         # Bail out early and continue with next policy type
