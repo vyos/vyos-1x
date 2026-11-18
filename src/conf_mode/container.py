@@ -770,7 +770,6 @@ def generate(container):
     return None
 
 
-
 def restore_network_units(container):
     rollback = container.get('network_rollback', {})
     try:
@@ -828,10 +827,7 @@ def apply(container):
                 continue
 
             if 'disable' in container_config:
-                # check if there is a container by that name running
-                tmp = _cmdl(['podman', 'ps', '-a', '--format', '{{.Names}}'])
-                if name in tmp:
-                    run(['podman', 'quadlet', 'rm', '-f', f'vyos-container-{name}.container'])
+                run(['podman', 'quadlet', 'rm', '-f', f'vyos-container-{name}.container'])
                 continue
 
             if 'container_restart' in container and name in container['container_restart']:
