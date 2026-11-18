@@ -372,14 +372,18 @@ def search_previous_installation(disks: list[str]) -> None:
 
     disk.partition_umount(image_drive)
 
-def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
+def copy_regular_file(src: str, dst: str, *, follow_symlinks=True):
+    """copy_function for copytree(): regular files only, owners left alone
+
+    copytree()'s default copy2() raises on a socket or a FIFO, and /config
+    holds some (container control sockets), which would abort the whole
+    copy. Ownership is set afterwards by copy_ownership(), in one place.
+    """
     if not Path(src).is_file():
         return
     if Path(dst).is_dir():
         dst = Path(dst).joinpath(Path(src).name)
-    st = Path(src).stat()
     copy(src, dst, follow_symlinks=follow_symlinks)
-    chown(dst, user=st.st_uid)
 
 
 def read_ids(path: str) -> dict[str, int]:
@@ -414,11 +418,11 @@ def copy_ownership(
 ) -> None:
     """Give every entry of dst the owner, group and mode of the same path in src
 
-    copytree() preserves permissions but not ownership: directories and
-    symlinks are created by root, and copy_preserve_owner() only restores the
-    owner of regular files - their group is lost and chown() clears the
-    setuid/setgid bits. Services running as a non-root user can then no longer
-    write to their directories under /config after an image upgrade.
+    copytree() preserves permissions but not ownership: every entry it
+    creates is owned by root, and takes the group of the setgid /config.
+    Services running as a non-root user can then no longer write to their
+    directories under /config after an image upgrade. The mode is set again
+    after lchown(), which clears the setuid/setgid bits.
     Only paths present in both trees and of the same type are touched.
 
     Owners are translated by name with uid_map and gid_map, like tar and rsync
@@ -453,7 +457,7 @@ def copy_ownership(
                 uid_map.get(src_st.st_uid, src_st.st_uid),
                 gid_map.get(src_st.st_gid, src_st.st_gid),
             )
-            # after chown, which clears setuid/setgid on files
+            # after lchown(), which clears setuid/setgid on files
             if not S_ISLNK(src_st.st_mode):
                 chmod(dst_path, S_IMODE(src_st.st_mode))
         dirs[:] = [name for name in dirs if name in descend]
@@ -1447,7 +1451,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                     f'{DIR_CONFIG}/',
                     target_config_dir,
                     symlinks=True,
-                    copy_function=copy_preserve_owner,
+                    copy_function=copy_regular_file,
                     dirs_exist_ok=True,
                 )
                 copy_ownership(f'{DIR_CONFIG}/', target_config_dir, uid_map, gid_map)

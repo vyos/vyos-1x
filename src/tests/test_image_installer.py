@@ -122,6 +122,38 @@ class TestReadIds(TreeTestCase):
         self.assertEqual(self.read('odd:x:\u00b2:\nfrr:x:108:\n'), {'frr': 108})
 
 
+class TestCopyRegularFile(TreeTestCase):
+    """The copy_function handed to copytree() for a /config tree"""
+
+    def make_special_files(self, root):
+        import socket
+        sock = socket.socket(socket.AF_UNIX)
+        self.addCleanup(sock.close)
+        sock.bind(os.path.join(root, 'ctl.sock'))   # e.g. clamd.sock
+        os.mkfifo(os.path.join(root, 'ctl.fifo'))     # e.g. c-icap.ctl
+        with open(os.path.join(root, 'conf'), 'w') as f:
+            f.write('x')
+
+    def test_sockets_and_fifos_do_not_abort_the_copy(self):
+        # With copytree()'s default copy2(), a socket raises ENXIO and a FIFO
+        # SpecialFileError, both collected into shutil.Error at the end.
+        self.make_special_files(self.src)
+        dst = os.path.join(self.dst, 'config')
+        shutil.copytree(self.src, dst, symlinks=True,
+                        copy_function=image_installer.copy_regular_file)
+        self.assertEqual(sorted(os.listdir(dst)), ['conf'])
+
+    def test_ownership_is_left_to_copy_ownership(self):
+        with open(os.path.join(self.src, 'conf'), 'w') as f:
+            f.write('x')
+        with mock.patch.object(image_installer, 'chown') as chown, \
+                mock.patch.object(image_installer, 'lchown') as lchown:
+            image_installer.copy_regular_file(
+                os.path.join(self.src, 'conf'), os.path.join(self.dst, 'conf'))
+        chown.assert_not_called()
+        lchown.assert_not_called()
+
+
 class TestCopyOwnershipEntries(RecordingTestCase):
     """Which dst entries copy_ownership() gives an owner to"""
 
