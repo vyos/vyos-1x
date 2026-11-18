@@ -390,6 +390,24 @@ class TestReinstallPath(TreeTestCase):
         self.assertEqual(read(os.path.join(self.saved, 'passwd')), {'svc': 210})
         self.assertEqual(read(os.path.join(self.saved, 'group')), {'svc': 115})
 
+    def test_old_partition_is_released_when_saving_fails(self):
+        # The old disk stayed mounted on /mnt/tmp, and a retry in the same
+        # session failed on it.
+        mnt = os.path.join(self.tmp, 'mnt-tmp')
+        with mock.patch.multiple(
+            image_installer,
+            DIR_PREVIOUS_MOUNT=mnt,
+            DIR_PREVIOUS_CONFIG=os.path.join(self.tmp, 'mnt-config'),
+            DIR_PREVIOUS_SSH=os.path.join(self.tmp, 'mnt-ssh'),
+            DIR_PREVIOUS_ACCOUNTS=self.saved,
+            copytree=mock.Mock(side_effect=OSError(5, 'Input/output error')),
+        ), mock.patch.object(image_installer.disk, 'partition_mount'), \
+                mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+            with self.assertRaises(OSError):
+                image_installer.save_previous_installation(
+                    '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False)
+        umount.assert_called_once_with('/dev/sda3')
+
     def test_previous_config_is_copied_with_translated_owners(self):
         prev = os.path.join(self.tmp, 'mnt-config')
         os.mkdir(prev)

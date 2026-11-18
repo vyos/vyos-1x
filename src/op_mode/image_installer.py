@@ -157,6 +157,8 @@ DIR_KERNEL_SRC: str = '/boot/'
 DIR_PREVIOUS_CONFIG: str = '/mnt/config'
 DIR_PREVIOUS_SSH: str = '/mnt/ssh'
 DIR_PREVIOUS_ACCOUNTS: str = '/mnt/accounts'
+DIR_PREVIOUS_MOUNT: str = '/mnt/tmp'
+FILE_PREVIOUS_ENCRYPTED_CONFIG: str = '/mnt/encrypted_config'
 # accounts of the image being installed: the live system runs it
 DIR_NEW_ACCOUNTS: str = '/etc'
 FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
@@ -290,9 +292,9 @@ def search_previous_installation(disks: list[str]) -> None:
         disks (list[str]): a list of available disks
     """
     mnt_config = DIR_PREVIOUS_CONFIG
-    mnt_encrypted_config = '/mnt/encrypted_config'
+    mnt_encrypted_config = FILE_PREVIOUS_ENCRYPTED_CONFIG
     mnt_ssh = DIR_PREVIOUS_SSH
-    mnt_tmp = '/mnt/tmp'
+    mnt_tmp = DIR_PREVIOUS_MOUNT
     rmtree(Path(mnt_config), ignore_errors=True)
     rmtree(Path(mnt_ssh), ignore_errors=True)
     rmtree(Path(DIR_PREVIOUS_ACCOUNTS), ignore_errors=True)
@@ -363,29 +365,48 @@ def search_previous_installation(disks: list[str]) -> None:
     if not image_name:
         return
 
+    save_previous_installation(image_drive, image_name, encrypted, legacy_bind_mount)
+
+
+def save_previous_installation(
+    image_drive: str, image_name: str, encrypted: bool, legacy_bind_mount: bool
+) -> None:
+    """Save the configuration, accounts and SSH host keys of an installation
+
+    Saved under /mnt before its disk is reformatted. The partition is
+    released even if saving fails: left mounted, it makes a retry fail.
+    """
+    mnt_tmp = DIR_PREVIOUS_MOUNT
     disk.partition_mount(image_drive, mnt_tmp)
-
-    if not encrypted:
-        image_dir = f'{mnt_tmp}/boot/{image_name}'
-        if legacy_bind_mount:
-            old_config = f'{image_dir}/rw/config'
+    try:
+        if not encrypted:
+            image_dir = f'{mnt_tmp}/boot/{image_name}'
+            if legacy_bind_mount:
+                old_config = f'{image_dir}/rw/config'
+            else:
+                old_config = f'{image_dir}/rw/opt/vyatta/etc/config'
+            # Keep links and numeric owners as they are: they are translated
+            # for the new image when copied into it, against the accounts of
+            # the previous installation saved here.
+            copytree(
+                old_config,
+                DIR_PREVIOUS_CONFIG,
+                symlinks=True,
+                copy_function=copy_regular_file,
+            )
+            copy_ownership(old_config, DIR_PREVIOUS_CONFIG)
+            save_account_files(image_dir, DIR_PREVIOUS_ACCOUNTS)
         else:
-            old_config = f'{image_dir}/rw/opt/vyatta/etc/config'
-        # Keep links and numeric owners as they are: they are translated
-        # for the new image when copied into it, against the accounts of
-        # the previous installation saved here.
-        copytree(old_config, mnt_config, symlinks=True, copy_function=copy_regular_file)
-        copy_ownership(old_config, mnt_config)
-        save_account_files(image_dir, DIR_PREVIOUS_ACCOUNTS)
-    else:
-        copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
+            copy(f'{mnt_tmp}/luks/{image_name}', FILE_PREVIOUS_ENCRYPTED_CONFIG)
 
-    Path(mnt_ssh).mkdir()
-    host_keys: list[str] = glob(f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*')
-    for host_key in host_keys:
-        copy(host_key, mnt_ssh)
-
-    disk.partition_umount(image_drive)
+        Path(DIR_PREVIOUS_SSH).mkdir()
+        host_keys: list[str] = glob(
+            f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*'
+        )
+        for host_key in host_keys:
+            copy(host_key, DIR_PREVIOUS_SSH)
+    finally:
+        disk.partition_umount(image_drive)
 
 def copy_regular_file(src: str, dst: str, *, follow_symlinks=True):
     """copy_function for copytree(): regular files only, owners left alone
@@ -619,9 +640,9 @@ def copy_previous_installation_data(target_dir: str) -> None:
 
 
 def copy_previous_encrypted_config(target_dir: str, image_name: str) -> None:
-    if Path('/mnt/encrypted_config').exists():
+    if Path(FILE_PREVIOUS_ENCRYPTED_CONFIG).exists():
         Path(target_dir).mkdir(exist_ok=True)
-        copy('/mnt/encrypted_config', Path(target_dir).joinpath(image_name))
+        copy(FILE_PREVIOUS_ENCRYPTED_CONFIG, Path(target_dir).joinpath(image_name))
 
 
 def ask_single_disk(disks_available: dict[str, int]) -> str:
