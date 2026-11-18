@@ -296,17 +296,17 @@ group_cipher={{ security.wpa.group_cipher }}
 {%     if security.wpa.group_mgmt_cipher is vyos_defined %}
 group_mgmt_cipher={{ security.wpa.group_mgmt_cipher }}
 {%     endif %}
-{%     if security.wpa.passphrase is vyos_defined %}
+{%     if security.wpa.password is vyos_defined %}
 {%         if security.wpa.mode is vyos_defined('wpa3') %}
 wpa_key_mgmt=SAE
-sae_password={{ security.wpa.passphrase }}
+sae_password={{ security.wpa.password }}
 extended_key_id=1
 wpa_gmk_rekey=86400
 wpa_group_rekey=86400
 wpa_group_update_count=4
 {%         else %}
 wpa_key_mgmt=WPA-PSK WPA-PSK-SHA256
-wpa_passphrase={{ security.wpa.passphrase }}
+wpa_passphrase={{ security.wpa.password }}
 {%         endif %}
 {%     elif security.wpa.radius is vyos_defined %}
 ieee8021x=1

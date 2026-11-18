@@ -325,7 +325,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'channel', channel])
         self.cli_set(self._base_path + [interface, 'mode', 'ax'])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
-        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', sae_pw])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'password', sae_pw])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'CCMP'])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'GCMP'])
         self.cli_set(self._base_path + [interface, 'capabilities', 'ht', '40mhz-incapable'])
@@ -408,7 +408,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'channel', channel])
         self.cli_set(self._base_path + [interface, 'mode', 'ax'])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa3'])
-        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', sae_pw])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'password', sae_pw])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'CCMP'])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'GCMP'])
         self.cli_set(self._base_path + [interface, 'enable-bf-protection'])
@@ -509,7 +509,19 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'channel', channel])
 
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
-        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', wpa_key])
+
+        # WPA-PSK password must be 8 to 63 characters
+        for invalid_key in ['A' * 7, 'A' * 64]:
+            self.cli_set(self._base_path + [interface, 'security', 'wpa', 'password', invalid_key])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'password', wpa_key])
+
+        # WPA-Enterprise username is only valid in station mode
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'username', 'vyos'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + [interface, 'security', 'wpa', 'username'])
 
         self.cli_commit()
 

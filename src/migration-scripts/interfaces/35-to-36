@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) VyOS Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T6513: rename "security wpa passphrase" to "security wpa password". A WPA
+# username is only used in station mode - it was silently ignored otherwise and
+# is now rejected, so drop it.
+
+from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'wireless']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    for wlan in config.list_nodes(base):
+        wpa_path = base + [wlan, 'security', 'wpa']
+        if not config.exists(wpa_path):
+            continue
+
+        if config.exists(wpa_path + ['passphrase']):
+            config.rename(wpa_path + ['passphrase'], 'password')
+
+        type_path = base + [wlan, 'type']
+        is_station = config.exists(type_path) and config.return_value(type_path) == 'station'
+        if not is_station and config.exists(wpa_path + ['username']):
+            config.delete(wpa_path + ['username'])
