@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import functools
+import json
 import os
 
 from vyos.defaults import directories
@@ -1259,3 +1260,16 @@ def parse_url(url):
 
     parsed = urlparse(url)
     return parsed
+
+
+@register_filter('toml_string')
+def toml_string(value):
+    """Encode a string as a TOML-compatible basic string."""
+    if not isinstance(value, str):
+        raise TypeError('TOML string value must be a string')
+
+    return (
+        json.dumps(value, ensure_ascii=False)
+        .replace('$', r'\u0024')
+        .replace('\x7f', r'\u007f')
+    )
