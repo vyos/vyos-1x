@@ -373,8 +373,7 @@ def search_previous_installation(disks: list[str]) -> None:
         # Keep links and numeric owners as they are: they are translated
         # for the new image when copied into it, against the accounts of
         # the previous installation saved here.
-        copytree(old_config, mnt_config, symlinks=True,
-                 copy_function=copy_regular_file)
+        copytree(old_config, mnt_config, symlinks=True, copy_function=copy_regular_file)
         copy_ownership(old_config, mnt_config)
         save_account_files(image_dir, DIR_PREVIOUS_ACCOUNTS)
     else:
@@ -458,11 +457,13 @@ class IdMap:
                     self.ids[old_id] = 0
                     self.notes[old_id] = (
                         f'given to root: {"/".join(names)} is not in the new '
-                        f'image, where {kind} {old_id} is {new_names[old_id]}')
+                        f'image, where {kind} {old_id} is {new_names[old_id]}'
+                    )
             elif old_id in new_names:
                 self.notes[old_id] = (
                     f'kept: {kind} {old_id} has no name in the running image, '
-                    f'it is {new_names[old_id]} in the new one')
+                    f'it is {new_names[old_id]} in the new one'
+                )
 
     def __call__(self, old_id: int) -> int:
         if old_id in self.notes:
@@ -472,13 +473,13 @@ class IdMap:
     def report(self, root: str) -> None:
         """Warn about the ambiguous ids met since this map was made"""
         for old_id, count in sorted(self.seen.items()):
-            Warning(f'{count} entries of {root} owned by {self.kind} '
-                    f'{old_id} {self.notes[old_id]}')
+            Warning(
+                f'{count} entries of {root} owned by {self.kind} '
+                f'{old_id} {self.notes[old_id]}'
+            )
 
 
-def copy_ownership(
-    src: str, dst: str, uids: IdMap = None, gids: IdMap = None
-) -> None:
+def copy_ownership(src: str, dst: str, uids: IdMap = None, gids: IdMap = None) -> None:
     """Give every entry of dst the owner, group and mode of the same path in src
 
     copytree() preserves permissions but not ownership: every entry it
@@ -530,8 +531,9 @@ def vyattacfg_gid(group_file: str) -> int:
     return gid if gid is not None else getgrnam('vyattacfg').gr_gid
 
 
-def copy_config_tree(src: str, dst: str, uids: IdMap, gids: IdMap,
-                     cfg_gid: int) -> None:
+def copy_config_tree(
+    src: str, dst: str, uids: IdMap, gids: IdMap, cfg_gid: int
+) -> None:
     """Copy a /config tree into the persistence of a new image
 
     Entries keep their owner, group and mode, translated for the new image
@@ -539,8 +541,9 @@ def copy_config_tree(src: str, dst: str, uids: IdMap, gids: IdMap,
     root:vyattacfg 2775, whatever the source has drifted to: copytree()
     copies the source's mode onto it.
     """
-    copytree(src, dst, symlinks=True, copy_function=copy_regular_file,
-             dirs_exist_ok=True)
+    copytree(
+        src, dst, symlinks=True, copy_function=copy_regular_file, dirs_exist_ok=True
+    )
     copy_ownership(src, dst, uids, gids)
     lchown(dst, 0, cfg_gid)
     chmod(dst, 0o2775)
@@ -565,8 +568,10 @@ def save_account_files(image_dir: str, dest_dir: str) -> None:
     mount_dir = f'{dest_dir}/.rootfs'
     Path(mount_dir).mkdir(exist_ok=True)
     if not disk.partition_mount(squashfs, mount_dir, 'squashfs'):
-        Warning(f'Cannot read the accounts of {image_dir}: owners of its '
-                'configuration keep their numbers')
+        Warning(
+            f'Cannot read the accounts of {image_dir}: owners of its '
+            'configuration keep their numbers'
+        )
         return
     try:
         for name in names:
@@ -586,11 +591,15 @@ def copy_previous_installation_data(target_dir: str) -> None:
             old = ('', '')
         uids = IdMap(old[0], f'{DIR_NEW_ACCOUNTS}/passwd', 'uid')
         gids = IdMap(old[1], f'{DIR_NEW_ACCOUNTS}/group', 'gid')
-        copy_config_tree(DIR_PREVIOUS_CONFIG, f'{target_dir}{DIR_CONFIG}',
-                         uids, gids, vyattacfg_gid(f'{DIR_NEW_ACCOUNTS}/group'))
+        copy_config_tree(
+            DIR_PREVIOUS_CONFIG,
+            f'{target_dir}{DIR_CONFIG}',
+            uids,
+            gids,
+            vyattacfg_gid(f'{DIR_NEW_ACCOUNTS}/group'),
+        )
     if Path(DIR_PREVIOUS_SSH).exists():
-        copytree(DIR_PREVIOUS_SSH, f'{target_dir}/etc/ssh',
-                 dirs_exist_ok=True)
+        copytree(DIR_PREVIOUS_SSH, f'{target_dir}/etc/ssh', dirs_exist_ok=True)
 
 
 def copy_previous_encrypted_config(target_dir: str, image_name: str) -> None:
@@ -1548,8 +1557,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # never build into, nor clean up, a directory this run did not create.
         image_dir = Path(root_dir, 'boot', image_name)
         if image_dir.exists():
-            raise FileExistsError(EEXIST, 'Image directory already exists',
-                                  str(image_dir))
+            raise FileExistsError(
+                EEXIST, 'Image directory already exists', str(image_dir)
+            )
         new_image_dir = str(image_dir)
         # copy config
         if no_prompt or migrate_config():
@@ -1575,8 +1585,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             else:
                 print('Copying configuration directory')
                 Path(target_config_dir).mkdir(parents=True)
-                copy_config_tree(f'{DIR_CONFIG}/', target_config_dir, uids,
-                                 gids, cfg_gid)
+                copy_config_tree(
+                    f'{DIR_CONFIG}/', target_config_dir, uids, gids, cfg_gid
+                )
 
                 # Record information from which image we upgraded to the new one.
                 # This can be used for a future automatic rollback into the old image.
@@ -1639,8 +1650,10 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # left behind, it makes the next attempt fail on mkdir(). Any error
         # counts, not only ENOSPC: a failed chown() or a copytree() error
         # (shutil.Error is an OSError) left a half-built image too.
-        cleanup(mounts=[str(iso_path)],
-                remove_items=[new_image_dir] if new_image_dir else [])
+        cleanup(
+            mounts=[str(iso_path)],
+            remove_items=[new_image_dir] if new_image_dir else [],
+        )
         exit(f'Error: {err}')
 
 

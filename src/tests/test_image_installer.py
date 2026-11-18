@@ -45,8 +45,8 @@ def setUpModule():
         defaults.directories['data'] = data_dir + '/'
         try:
             image_installer = prepare_module(
-                os.path.join(_here, '../op_mode/image_installer.py'),
-                'image_installer')
+                os.path.join(_here, '../op_mode/image_installer.py'), 'image_installer'
+            )
         finally:
             defaults.directories['data'] = orig_data_dir
 
@@ -106,15 +106,16 @@ class TestReadIds(TreeTestCase):
     def test_names_and_ids(self):
         self.assertEqual(
             self.read('root:x:0:0::/root:/bin/bash\n_kea:x:100:104::/:/bin/false\n'),
-            {'root': 0, '_kea': 100})
+            {'root': 0, '_kea': 100},
+        )
 
     def test_first_entry_of_a_name_wins(self):
         self.assertEqual(self.read('frr:x:108:\nfrr:x:200:\n'), {'frr': 108})
 
     def test_malformed_lines_are_skipped(self):
         self.assertEqual(
-            self.read('\nshort:x\nnoid:x::\nneg:x:-1:\nfrr:x:108:\n'),
-            {'frr': 108})
+            self.read('\nshort:x\nnoid:x::\nneg:x:-1:\nfrr:x:108:\n'), {'frr': 108}
+        )
 
     def test_non_ascii_digits_are_skipped(self):
         # '²'.isdigit() is True but int('²') raises: one such line used to
@@ -142,8 +143,10 @@ class TestIdMap(TreeTestCase):
     def test_root_and_regular_range_keep_their_number(self):
         # radius_user and the tacacs group are 1000 in the image, and 1000:1000
         # is also the most common container user: no translation from 1000 up
-        ids = self.idmap([('root', 0), ('radius_user', 1000), ('vyos', 1002)],
-                         [('root', 0), ('radius_user', 1001)])
+        ids = self.idmap(
+            [('root', 0), ('radius_user', 1000), ('vyos', 1002)],
+            [('root', 0), ('radius_user', 1001)],
+        )
         self.assertEqual((ids(0), ids(1000), ids(1002)), (0, 1000, 1002))
 
     def test_gone_account_whose_number_is_taken_goes_to_root(self):
@@ -160,15 +163,19 @@ class TestIdMap(TreeTestCase):
         self.assertEqual((ids(998), ids(4000)), (998, 4000))
 
     def test_an_id_with_several_names_follows_one_that_survives(self):
-        ids = self.idmap([('gone', 120), ('kept', 120)], [('kept', 121), ('other', 120)])
+        ids = self.idmap(
+            [('gone', 120), ('kept', 120)], [('kept', 121), ('other', 120)]
+        )
         self.assertEqual(ids(120), 121)
 
     def test_identity_without_files(self):
         self.assertEqual(image_installer.IdMap()(107), 107)
 
     def test_warnings_name_only_the_ids_met_with_their_count(self):
-        ids = self.idmap([('strongswan', 107), ('salt', 111)],
-                         [('zabbix', 107), ('_chrony', 111), ('dnsmasq', 998)])
+        ids = self.idmap(
+            [('strongswan', 107), ('salt', 111)],
+            [('zabbix', 107), ('_chrony', 111), ('dnsmasq', 998)],
+        )
         for i in (107, 107, 998, 111, 4000):
             ids(i)
         warnings = []
@@ -195,10 +202,11 @@ class TestCopyRegularFile(TreeTestCase):
 
     def make_special_files(self, root):
         import socket
+
         sock = socket.socket(socket.AF_UNIX)
         self.addCleanup(sock.close)
-        sock.bind(os.path.join(root, 'ctl.sock'))   # e.g. clamd.sock
-        os.mkfifo(os.path.join(root, 'ctl.fifo'))     # e.g. c-icap.ctl
+        sock.bind(os.path.join(root, 'ctl.sock'))  # e.g. clamd.sock
+        os.mkfifo(os.path.join(root, 'ctl.fifo'))  # e.g. c-icap.ctl
         with open(os.path.join(root, 'conf'), 'w') as f:
             f.write('x')
 
@@ -207,17 +215,23 @@ class TestCopyRegularFile(TreeTestCase):
         # SpecialFileError, both collected into shutil.Error at the end.
         self.make_special_files(self.src)
         dst = os.path.join(self.dst, 'config')
-        shutil.copytree(self.src, dst, symlinks=True,
-                        copy_function=image_installer.copy_regular_file)
+        shutil.copytree(
+            self.src,
+            dst,
+            symlinks=True,
+            copy_function=image_installer.copy_regular_file,
+        )
         self.assertEqual(sorted(os.listdir(dst)), ['conf'])
 
     def test_ownership_is_left_to_copy_ownership(self):
         with open(os.path.join(self.src, 'conf'), 'w') as f:
             f.write('x')
-        with mock.patch.object(image_installer, 'chown') as chown, \
-                mock.patch.object(image_installer, 'lchown') as lchown:
+        with mock.patch.object(image_installer, 'chown') as chown, mock.patch.object(
+            image_installer, 'lchown'
+        ) as lchown:
             image_installer.copy_regular_file(
-                os.path.join(self.src, 'conf'), os.path.join(self.dst, 'conf'))
+                os.path.join(self.src, 'conf'), os.path.join(self.dst, 'conf')
+            )
         chown.assert_not_called()
         lchown.assert_not_called()
 
@@ -273,10 +287,13 @@ class TestConfigRoot(RecordingTestCase):
         # into the new image: vyattacfg members could no longer write it.
         os.chmod(self.src, 0o755)
         open(os.path.join(self.src, 'config.boot'), 'w').close()
-        image_installer.copy_config_tree(self.src, self.dst,
-                                         image_installer.IdMap(),
-                                         image_installer.IdMap(kind='gid'),
-                                         cfg_gid=102)
+        image_installer.copy_config_tree(
+            self.src,
+            self.dst,
+            image_installer.IdMap(),
+            image_installer.IdMap(kind='gid'),
+            cfg_gid=102,
+        )
         self.assertEqual(self.owners['.'], (0, 102))
         self.assertEqual(self.modes['.'], 0o2775)
         self.assertIn('config.boot', self.owners)
@@ -310,10 +327,12 @@ class TestReinstallPath(TreeTestCase):
         with mock.patch.object(image_installer.disk, 'partition_mount') as mount:
             image_installer.save_account_files(self.image, self.saved)
         mount.assert_not_called()
-        self.assertEqual(image_installer.read_ids(os.path.join(self.saved, 'passwd')),
-                         {'frr': 109})
-        self.assertEqual(image_installer.read_ids(os.path.join(self.saved, 'group')),
-                         {'frr': 115})
+        self.assertEqual(
+            image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
+        )
+        self.assertEqual(
+            image_installer.read_ids(os.path.join(self.saved, 'group')), {'frr': 115}
+        )
 
     def test_accounts_fall_back_to_the_image_squashfs(self):
         def mount(source, path, fstype=''):
@@ -323,12 +342,14 @@ class TestReinstallPath(TreeTestCase):
             self.write(os.path.join(path, 'etc/group'), 'frr:x:115:\n')
             return True
 
-        with mock.patch.object(image_installer.disk, 'partition_mount', mount), \
-                mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+        with mock.patch.object(
+            image_installer.disk, 'partition_mount', mount
+        ), mock.patch.object(image_installer.disk, 'partition_umount') as umount:
             image_installer.save_account_files(self.image, self.saved)
         umount.assert_called_once()
-        self.assertEqual(image_installer.read_ids(os.path.join(self.saved, 'passwd')),
-                         {'frr': 109})
+        self.assertEqual(
+            image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
+        )
 
     def test_previous_config_is_copied_with_translated_owners(self):
         prev = os.path.join(self.tmp, 'mnt-config')
@@ -339,11 +360,17 @@ class TestReinstallPath(TreeTestCase):
         self.write(os.path.join(new_etc, 'passwd'), 'frr:x:108:\n')
         self.write(os.path.join(new_etc, 'group'), 'frr:x:114:\nvyattacfg:x:103:\n')
         target = os.path.join(self.tmp, 'target')
-        with mock.patch.object(image_installer, 'DIR_PREVIOUS_CONFIG', prev), \
-                mock.patch.object(image_installer, 'DIR_PREVIOUS_ACCOUNTS', self.saved), \
-                mock.patch.object(image_installer, 'DIR_NEW_ACCOUNTS', new_etc), \
-                mock.patch.object(image_installer, 'DIR_PREVIOUS_SSH', '/nonexistent'), \
-                mock.patch.object(image_installer, 'copy_config_tree') as copy_tree:
+        with mock.patch.object(
+            image_installer, 'DIR_PREVIOUS_CONFIG', prev
+        ), mock.patch.object(
+            image_installer, 'DIR_PREVIOUS_ACCOUNTS', self.saved
+        ), mock.patch.object(
+            image_installer, 'DIR_NEW_ACCOUNTS', new_etc
+        ), mock.patch.object(
+            image_installer, 'DIR_PREVIOUS_SSH', '/nonexistent'
+        ), mock.patch.object(
+            image_installer, 'copy_config_tree'
+        ) as copy_tree:
             image_installer.copy_previous_installation_data(target)
         copy_tree.assert_called_once()
         src, dst, uids, gids, cfg_gid = copy_tree.call_args.args
@@ -359,6 +386,7 @@ class TestAddImageFailure(TreeTestCase):
         iso = os.path.join(self.tmp, 'iso')
         rootfs = os.path.join(self.tmp, 'rootfs')
         self.persistence = os.path.join(self.tmp, 'persistence')
+
         def mount(source, path, fstype='', **kwargs):
             # add_image() creates the mount points itself: fill them as a
             # mount would
@@ -374,30 +402,39 @@ class TestAddImageFailure(TreeTestCase):
         self.cleanup = mock.Mock()
         failure = PermissionError(1, 'Operation not permitted')
         with mock.patch.multiple(
-                ii,
-                DIR_ISO_MOUNT=iso, DIR_ROOTFS_SRC=rootfs,
-                DIR_CONFIG=self.src,
-                disk_usage=mock.Mock(return_value=mock.Mock(free=10 * 1024**3)),
-                unsaved_commits=mock.Mock(return_value=False),
-                image_fetch=mock.Mock(return_value=os.path.join(self.tmp, 'x.iso')),
-                validate_compatibility=mock.Mock(),
-                run=mock.Mock(return_value=0),
-                copy_config_tree=mock.Mock(side_effect=failure),
-                cleanup=self.cleanup), \
-                mock.patch.object(ii.image, 'is_live_boot', return_value=False), \
-                mock.patch.object(ii.image, 'get_image_tools_version',
-                                  return_value=ii.SYSTEM_CFG_VER), \
-                mock.patch.object(ii.image, 'get_image_version', return_value='new'), \
-                mock.patch.object(ii.disk, 'partition_mount', mount), \
-                mock.patch.object(ii.disk, 'partition_umount'), \
-                mock.patch.object(ii.disk, 'find_persistence',
-                                  return_value=self.persistence):
+            ii,
+            DIR_ISO_MOUNT=iso,
+            DIR_ROOTFS_SRC=rootfs,
+            DIR_CONFIG=self.src,
+            disk_usage=mock.Mock(return_value=mock.Mock(free=10 * 1024**3)),
+            unsaved_commits=mock.Mock(return_value=False),
+            image_fetch=mock.Mock(return_value=os.path.join(self.tmp, 'x.iso')),
+            validate_compatibility=mock.Mock(),
+            run=mock.Mock(return_value=0),
+            copy_config_tree=mock.Mock(side_effect=failure),
+            cleanup=self.cleanup,
+        ), mock.patch.object(
+            ii.image, 'is_live_boot', return_value=False
+        ), mock.patch.object(
+            ii.image, 'get_image_tools_version', return_value=ii.SYSTEM_CFG_VER
+        ), mock.patch.object(
+            ii.image, 'get_image_version', return_value='new'
+        ), mock.patch.object(
+            ii.disk, 'partition_mount', mount
+        ), mock.patch.object(
+            ii.disk, 'partition_umount'
+        ), mock.patch.object(
+            ii.disk, 'find_persistence', return_value=self.persistence
+        ):
             with self.assertRaises(SystemExit):
                 ii.add_image.__wrapped__('x.iso', no_prompt=True)
 
     def removed(self):
-        return [item for call in self.cleanup.call_args_list
-                for item in call.kwargs.get('remove_items', [])]
+        return [
+            item
+            for call in self.cleanup.call_args_list
+            for item in call.kwargs.get('remove_items', [])
+        ]
 
     def test_half_built_image_is_removed(self):
         # Only ENOSPC used to remove it: any other error left boot/<image>
@@ -442,9 +479,11 @@ class TestCopyOwnershipTraversal(TreeTestCase):
 
         mode = stat.S_IMODE(os.lstat(os.path.join(outside, 'leaf')).st_mode)
         self.assertEqual(
-            mode, 0o600,
+            mode,
+            0o600,
             "copy_ownership() followed dst's symlink and modified a file "
-            "outside the destination tree")
+            "outside the destination tree",
+        )
 
     def test_destination_regular_file_does_not_crash_traversal(self):
         # src/Y is a real directory; dst/Y is a plain file - descending into
@@ -461,7 +500,8 @@ class TestCopyOwnershipTraversal(TreeTestCase):
         except NotADirectoryError:
             self.fail(
                 "copy_ownership() tried to descend into dst/Y, a regular "
-                "file, instead of skipping that subtree")
+                "file, instead of skipping that subtree"
+            )
 
 
 if __name__ == '__main__':
