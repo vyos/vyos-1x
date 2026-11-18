@@ -458,7 +458,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
             self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.216.2'])
             self.cli_commit()
-            for cycle in range(2):
+            for cycle in range(6):
                 with self.subTest(cycle=cycle):
                     cmdl(['ip', 'link', 'delete', bridge], sudo=True)
                     self.assertTrue(wait_for(lambda: not self.is_running(name), timeout=10))
@@ -472,6 +472,20 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                     self.assertEqual(state, 'active')
                     cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
                           '10.250.216.1'], sudo=True)
+            cmdl(['systemctl', 'stop', f'vyos-container-{name}'], sudo=True)
+            self.assertFalse(wait_for(lambda: self.is_running(name), timeout=3),
+                             'Recovery restarted a manually stopped container without a bridge event')
+            self.cli_set(base_path + ['name', name, 'disable'])
+            self.cli_commit()
+            cmdl(['ip', 'link', 'delete', bridge], sudo=True)
+            cmdl(['ip', 'link', 'add', bridge, 'type', 'bridge'], sudo=True)
+            cmdl(['ip', 'address', 'add', '10.250.216.1/24', 'dev', bridge], sudo=True)
+            cmdl(['ip', 'link', 'set', bridge, 'up'], sudo=True)
+            self.assertFalse(wait_for(lambda: self.is_running(name), timeout=3),
+                             'Recovery restarted a disabled container')
+            self.cli_delete(base_path + ['name', name, 'disable'])
+            self.cli_commit()
+            self.assertTrue(self.is_running(name))
         finally:
             self.cli_delete(base_path)
             self.cli_commit()
