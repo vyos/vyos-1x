@@ -152,6 +152,12 @@ DIR_ROOTFS_DST: str = f'{DIR_INSTALLATION}/root_dst'
 DIR_ISO_MOUNT: str = f'{DIR_INSTALLATION}/iso_src'
 DIR_DST_ROOT: str = f'{DIR_INSTALLATION}/disk_dst'
 DIR_KERNEL_SRC: str = '/boot/'
+# data saved from a previous installation before its disk is reformatted
+DIR_PREVIOUS_CONFIG: str = '/mnt/config'
+DIR_PREVIOUS_SSH: str = '/mnt/ssh'
+DIR_PREVIOUS_ACCOUNTS: str = '/mnt/accounts'
+# accounts of the image being installed: the live system runs it
+DIR_NEW_ACCOUNTS: str = '/etc'
 FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
 ISO_DOWNLOAD_PATH: str = ''
 
@@ -282,12 +288,13 @@ def search_previous_installation(disks: list[str]) -> None:
     Args:
         disks (list[str]): a list of available disks
     """
-    mnt_config = '/mnt/config'
+    mnt_config = DIR_PREVIOUS_CONFIG
     mnt_encrypted_config = '/mnt/encrypted_config'
-    mnt_ssh = '/mnt/ssh'
+    mnt_ssh = DIR_PREVIOUS_SSH
     mnt_tmp = '/mnt/tmp'
     rmtree(Path(mnt_config), ignore_errors=True)
     rmtree(Path(mnt_ssh), ignore_errors=True)
+    rmtree(Path(DIR_PREVIOUS_ACCOUNTS), ignore_errors=True)
     Path(mnt_tmp).mkdir(exist_ok=True)
     Path(mnt_encrypted_config).unlink(missing_ok=True)
 
@@ -358,12 +365,18 @@ def search_previous_installation(disks: list[str]) -> None:
     disk.partition_mount(image_drive, mnt_tmp)
 
     if not encrypted:
+        image_dir = f'{mnt_tmp}/boot/{image_name}'
         if legacy_bind_mount:
-            copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+            old_config = f'{image_dir}/rw/config'
         else:
-            copytree(
-                f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config
-            )
+            old_config = f'{image_dir}/rw/opt/vyatta/etc/config'
+        # Keep links and numeric owners as they are: they are translated
+        # for the new image when copied into it, against the accounts of
+        # the previous installation saved here.
+        copytree(old_config, mnt_config, symlinks=True,
+                 copy_function=copy_regular_file)
+        copy_ownership(old_config, mnt_config)
+        save_account_files(image_dir, DIR_PREVIOUS_ACCOUNTS)
     else:
         copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
 
@@ -535,12 +548,48 @@ def copy_config_tree(src: str, dst: str, uids: IdMap, gids: IdMap,
     gids.report(src)
 
 
+def save_account_files(image_dir: str, dest_dir: str) -> None:
+    """Save the passwd and group files an installed image ran with
+
+    Creating a login user at boot copies them up, whole, into the image's
+    persistence (rw/etc): that copy is what the running system saw. Without
+    it, they are read from the image's squashfs.
+    """
+    Path(dest_dir).mkdir(parents=True, exist_ok=True)
+    names = ('passwd', 'group')
+    if all(Path(image_dir, 'rw/etc', name).is_file() for name in names):
+        for name in names:
+            copy(Path(image_dir, 'rw/etc', name), Path(dest_dir, name))
+        return
+    squashfs = f'{image_dir}/{Path(image_dir).name}.squashfs'
+    mount_dir = f'{dest_dir}/.rootfs'
+    Path(mount_dir).mkdir(exist_ok=True)
+    if not disk.partition_mount(squashfs, mount_dir, 'squashfs'):
+        Warning(f'Cannot read the accounts of {image_dir}: owners of its '
+                'configuration keep their numbers')
+        return
+    try:
+        for name in names:
+            copy(Path(mount_dir, 'etc', name), Path(dest_dir, name))
+    finally:
+        disk.partition_umount(squashfs)
+        try:
+            Path(mount_dir).rmdir()  # never recursive: it may still be mounted
+        except OSError:
+            pass
+
+
 def copy_previous_installation_data(target_dir: str) -> None:
-    if Path('/mnt/config').exists():
-        copytree('/mnt/config', f'{target_dir}{DIR_CONFIG}',
-                 dirs_exist_ok=True)
-    if Path('/mnt/ssh').exists():
-        copytree('/mnt/ssh', f'{target_dir}/etc/ssh',
+    if Path(DIR_PREVIOUS_CONFIG).exists():
+        old = (f'{DIR_PREVIOUS_ACCOUNTS}/passwd', f'{DIR_PREVIOUS_ACCOUNTS}/group')
+        if not all(Path(f).is_file() for f in old):
+            old = ('', '')
+        uids = IdMap(old[0], f'{DIR_NEW_ACCOUNTS}/passwd', 'uid')
+        gids = IdMap(old[1], f'{DIR_NEW_ACCOUNTS}/group', 'gid')
+        copy_config_tree(DIR_PREVIOUS_CONFIG, f'{target_dir}{DIR_CONFIG}',
+                         uids, gids, vyattacfg_gid(f'{DIR_NEW_ACCOUNTS}/group'))
+    if Path(DIR_PREVIOUS_SSH).exists():
+        copytree(DIR_PREVIOUS_SSH, f'{target_dir}/etc/ssh',
                  dirs_exist_ok=True)
 
 
@@ -1176,7 +1225,7 @@ def install_image() -> None:
 
         # if previous install was selected in search_previous_installation,
         # directory /mnt/config was prepared for copy below; if not, prompt:
-        if not Path('/mnt/config').exists():
+        if not Path(DIR_PREVIOUS_CONFIG).exists():
             default_config: str = select_entry(config_boot_list,
                                                MSG_INPUT_CONFIG_CHOICE,
                                                MSG_INPUT_CONFIG_CHOOSE,
@@ -1222,7 +1271,7 @@ def install_image() -> None:
              f'{DIR_DST_ROOT}/boot/{image_name}/{image_name}.squashfs')
 
         # copy saved config data and SSH keys
-        # owner restored on copy of config data by chmod_2775, above
+        # owners translated for this image, see copy_config_tree()
         copy_previous_installation_data(f'{DIR_DST_ROOT}/boot/{image_name}/rw')
 
         # copy saved encrypted config volume
