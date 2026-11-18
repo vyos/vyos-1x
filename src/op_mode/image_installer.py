@@ -412,7 +412,10 @@ def read_ids(path: str) -> dict[str, int]:
 
 
 class IdMap:
-    """Translate the uids or gids of the running image into those of another
+    """Translate the uids or gids of one image into those of another
+
+    The old image is the running one on upgrade, the previous installation
+    on a reinstall from the live ISO.
 
     System users and groups are not given fixed ids at build time, so a name
     can get another number in another image: an id of the system range
@@ -427,7 +430,7 @@ class IdMap:
     In the system range, an id whose names are all gone from the new image
     goes to root if its number belongs to another name there: keeping it
     would hand the files to an unrelated account. An id with no name in the
-    running image (e.g. a container user) keeps its number - nothing says
+    old image (e.g. a container user) keeps its number - nothing says
     which account it would be - and is reported if the new image names it.
     """
 
@@ -461,7 +464,7 @@ class IdMap:
                     )
             elif old_id in new_names:
                 self.notes[old_id] = (
-                    f'kept: {kind} {old_id} has no name in the running image, '
+                    f'kept: {kind} {old_id} has no name in the old image, '
                     f'it is {new_names[old_id]} in the new one'
                 )
 

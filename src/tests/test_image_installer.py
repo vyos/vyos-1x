@@ -187,6 +187,8 @@ class TestIdMap(TreeTestCase):
         self.assertIn('strongswan', text)
         self.assertIn('zabbix', text)
         self.assertIn('dnsmasq', text)
+        # also printed on a reinstall, where the running image is the new one
+        self.assertNotIn('running image', text)
         self.assertNotIn('4000', text)
 
     def test_no_warning_when_nothing_is_ambiguous(self):
