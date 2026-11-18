@@ -19,6 +19,7 @@
 # pylint: disable=broad-exception-caught
 
 import asyncio
+import hmac
 import json
 import copy
 import logging
@@ -98,9 +99,13 @@ lock = Lock()
 asynclock = asyncio.Lock()
 
 def check_auth(key_list, key):
+    if not key_list or not key:
+        return None
+    key_bytes = key.encode('utf-8', 'surrogatepass')
     key_id = None
+    # Constant-time comparison; iterate over all keys without early exit
     for k in key_list:
-        if k['key'] == key:
+        if hmac.compare_digest(k['key'].encode('utf-8'), key_bytes):
             key_id = k['id']
     return key_id
 

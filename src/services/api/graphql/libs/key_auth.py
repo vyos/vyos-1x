@@ -14,15 +14,19 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import hmac
+
 from ...session import SessionState
 
 
 def check_auth(key_list, key):
-    if not key_list:
+    if not key_list or not key:
         return None
+    key_bytes = key.encode('utf-8')
     key_id = None
+    # Constant-time comparison; iterate over all keys without early exit
     for k in key_list:
-        if k['key'] == key:
+        if hmac.compare_digest(k['key'].encode('utf-8'), key_bytes):
             key_id = k['id']
     return key_id
 
