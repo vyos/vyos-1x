@@ -117,6 +117,11 @@ class TestReadIds(TreeTestCase):
             self.read('\nshort:x\nnoid:x::\nneg:x:-1:\nfrr:x:108:\n'), {'frr': 108}
         )
 
+    def test_ids_too_long_for_int_are_skipped(self):
+        # int() refuses digit strings over 4300 digits (Python 3.11+)
+        self.assertEqual(self.read('huge:x:' + '9' * 5000 + ':\nfrr:x:108:\n'),
+                         {'frr': 108})
+
     def test_non_ascii_digits_are_skipped(self):
         # '²'.isdigit() is True but int('²') raises: one such line used to
         # abort `add system image`.
