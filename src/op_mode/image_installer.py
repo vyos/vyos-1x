@@ -21,6 +21,7 @@ from argparse import ArgumentParser
 from argparse import Namespace
 from pathlib import Path
 from shutil import copy
+from shutil import copy2
 from shutil import chown
 from shutil import rmtree
 from shutil import copytree
@@ -389,15 +390,17 @@ def search_previous_installation(disks: list[str]) -> None:
 def copy_regular_file(src: str, dst: str, *, follow_symlinks=True):
     """copy_function for copytree(): regular files only, owners left alone
 
-    copytree()'s default copy2() raises on a socket or a FIFO, and /config
-    holds some (container control sockets), which would abort the whole
-    copy. Ownership is set afterwards by copy_ownership(), in one place.
+    copytree() hands every non-directory to its copy_function, and copy2()
+    raises on a socket or a FIFO, which /config holds (container control
+    sockets): it would abort the whole copy. Regular files still go through
+    copy2(), which keeps their extended attributes and POSIX ACLs. Ownership
+    is set afterwards by copy_ownership(), in one place.
     """
     if not Path(src).is_file():
         return
     if Path(dst).is_dir():
         dst = Path(dst).joinpath(Path(src).name)
-    copy(src, dst, follow_symlinks=follow_symlinks)
+    copy2(src, dst, follow_symlinks=follow_symlinks)
 
 
 def read_ids(path: str) -> dict[str, int]:

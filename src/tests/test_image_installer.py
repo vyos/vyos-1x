@@ -225,6 +225,20 @@ class TestCopyRegularFile(TreeTestCase):
         )
         self.assertEqual(sorted(os.listdir(dst)), ['conf'])
 
+    def test_extended_attributes_are_kept(self):
+        # POSIX ACLs are xattrs: the reinstall path used copytree()'s copy2(),
+        # which keeps them, before copy_regular_file() replaced it.
+        src = os.path.join(self.src, 'conf')
+        with open(src, 'w') as f:
+            f.write('x')
+        try:
+            os.setxattr(src, 'user.t9403', b'kept')
+        except OSError:
+            self.skipTest('no user xattrs on this filesystem')
+        dst = os.path.join(self.dst, 'conf')
+        image_installer.copy_regular_file(src, dst)
+        self.assertEqual(os.getxattr(dst, 'user.t9403'), b'kept')
+
     def test_ownership_is_left_to_copy_ownership(self):
         with open(os.path.join(self.src, 'conf'), 'w') as f:
             f.write('x')
