@@ -12,43 +12,89 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Coverage for T9403 (preserve /config ownership across an image upgrade):
-# copy_ownership() walks the *source* tree and derives each destination
-# path from it. If a source directory's destination counterpart stops
-# being a plain directory between copytree() and this pass - swapped for
-# a symlink, or never more than a regular file to begin with - the walk
-# must stop descending there. Otherwise a symlink lets the chown/chmod
-# pass escape outside the target tree, and a plain file makes the next
-# lstat() raise NotADirectoryError and abort the upgrade.
+# Coverage for T9403: preserve /config ownership across an image upgrade.
 
 import os
+import shutil
 import stat
 import tempfile
 import unittest
+from unittest import mock
 
 from helper import prepare_module
 
 _here = os.path.dirname(__file__)
-
-# get_running_image() falls back to reading directories['data']/version.json
-# when it can't find a VyOS-style BOOT_IMAGE kernel argument, which is
-# always true on the host these tests run on - point it at a throwaway
-# file so importing the module under test doesn't need a real VyOS system.
-import vyos.defaults as defaults
-
-_fake_data_dir = tempfile.mkdtemp()
-with open(os.path.join(_fake_data_dir, 'version.json'), 'w') as f:
-    f.write('{"version": "test"}')
-_orig_data_dir = defaults.directories['data']
-defaults.directories['data'] = _fake_data_dir + '/'
-
-image_installer = prepare_module(
-    os.path.join(_here, '../op_mode/image_installer.py'), 'image_installer')
-
-defaults.directories['data'] = _orig_data_dir
+image_installer = None
 
 
-class TestCopyOwnership(unittest.TestCase):
+def setUpModule():
+    """Import image_installer without a real VyOS system
+
+    get_running_image() falls back to reading directories['data']/version.json
+    when it can't find a VyOS-style BOOT_IMAGE kernel argument, which is
+    always true on the host these tests run on: point it at a throwaway
+    file for the import, then put everything back.
+    """
+    global image_installer
+    import vyos.defaults as defaults
+
+    orig_data_dir = defaults.directories['data']
+    with tempfile.TemporaryDirectory() as data_dir:
+        with open(os.path.join(data_dir, 'version.json'), 'w') as f:
+            f.write('{"version": "test"}')
+        defaults.directories['data'] = data_dir + '/'
+        try:
+            image_installer = prepare_module(
+                os.path.join(_here, '../op_mode/image_installer.py'),
+                'image_installer')
+        finally:
+            defaults.directories['data'] = orig_data_dir
+
+
+class TreeTestCase(unittest.TestCase):
+    """A src and a dst tree in a temporary directory, removed afterwards"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.src = os.path.join(self.tmp, 'src')
+        self.dst = os.path.join(self.tmp, 'dst')
+        os.mkdir(self.src)
+        os.mkdir(self.dst)
+
+    def both(self, func, *args):
+        """Run func(tree_root, *args) on src and dst"""
+        for root in (self.src, self.dst):
+            func(root, *args)
+
+
+class RecordingTestCase(TreeTestCase):
+    """Record lchown()/chmod() calls instead of making them
+
+    Changing an owner needs root; recording the calls doesn't, and says
+    exactly which entry got which owner and mode.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.owners = {}
+        self.modes = {}
+        for name, func in (('lchown', self._lchown), ('chmod', self._chmod)):
+            patcher = mock.patch.object(image_installer, name, func)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def _rel(self, path):
+        return os.path.relpath(str(path), self.dst)
+
+    def _lchown(self, path, uid, gid):
+        self.owners[self._rel(path)] = (uid, gid)
+
+    def _chmod(self, path, mode):
+        self.modes[self._rel(path)] = mode
+
+
+class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
     matching src path, walking src. Only paths present in both trees and
     of the same type are touched - these tests cover what must happen to
@@ -56,20 +102,9 @@ class TestCopyOwnership(unittest.TestCase):
     failed that type check.
     """
 
-    def setUp(self):
-        self.tmp = tempfile.mkdtemp()
-        self.addCleanup(lambda: __import__('shutil').rmtree(
-            self.tmp, ignore_errors=True))
-        self.src = os.path.join(self.tmp, 'src')
-        self.dst = os.path.join(self.tmp, 'dst')
-        os.mkdir(self.src)
-        os.mkdir(self.dst)
-
     def test_destination_symlink_does_not_let_traversal_escape(self):
         # src/X is a real directory; dst/X is a symlink to an unrelated
-        # directory outside dst entirely (e.g. left behind if the live
-        # /config entry copytree() copied was a symlink at the time, and
-        # something replaced it with a real directory before this pass).
+        # directory outside dst entirely.
         outside = os.path.join(self.tmp, 'outside')
         os.mkdir(outside)
         with open(os.path.join(outside, 'leaf'), 'w') as fh:
@@ -92,9 +127,8 @@ class TestCopyOwnership(unittest.TestCase):
             "outside the destination tree")
 
     def test_destination_regular_file_does_not_crash_traversal(self):
-        # src/Y is a real directory; dst/Y is a plain file (the type the
-        # top-level check already rejects) - descending into src/Y must
-        # not then try to lstat() a child path through that file.
+        # src/Y is a real directory; dst/Y is a plain file - descending into
+        # src/Y must not then try to lstat() a child path through that file.
         os.mkdir(os.path.join(self.src, 'Y'))
         with open(os.path.join(self.src, 'Y', 'leaf'), 'w') as fh:
             fh.write('x')
