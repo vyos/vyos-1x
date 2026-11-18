@@ -40,6 +40,7 @@ from stat import S_IFMT
 from stat import S_IMODE
 from stat import S_ISDIR
 from stat import S_ISLNK
+from grp import getgrnam
 from json import loads
 from json import dumps
 from typing import Union
@@ -472,7 +473,8 @@ def copy_ownership(
     Services running as a non-root user can then no longer write to their
     directories under /config after an image upgrade. The mode is set again
     after lchown(), which clears the setuid/setgid bits.
-    Only paths present in both trees and of the same type are touched.
+    Only paths present in both trees and of the same type are touched, and
+    never dst itself: see copy_config_tree().
 
     Owners are translated with uids and gids (see IdMap); without them,
     they keep their numbers.
@@ -481,7 +483,7 @@ def copy_ownership(
     gids = gids or IdMap(kind='gid')
     for root, dirs, files in walk(src):
         descend = set()
-        for name in ['.'] + dirs + files if root == src else dirs + files:
+        for name in dirs + files:
             src_path = Path(root, name)
             dst_path = Path(dst, src_path.relative_to(src))
             try:
@@ -503,6 +505,34 @@ def copy_ownership(
             if not S_ISLNK(src_st.st_mode):
                 chmod(dst_path, S_IMODE(src_st.st_mode))
         dirs[:] = [name for name in dirs if name in descend]
+
+
+def vyattacfg_gid(group_file: str) -> int:
+    """The gid of vyattacfg in group_file, else in the running system
+
+    Read it from the new image's group file: shutil.chown(group='vyattacfg')
+    resolves the name in the running image, whose number may differ.
+    """
+    gid = read_ids(group_file).get('vyattacfg')
+    return gid if gid is not None else getgrnam('vyattacfg').gr_gid
+
+
+def copy_config_tree(src: str, dst: str, uids: IdMap, gids: IdMap,
+                     cfg_gid: int) -> None:
+    """Copy a /config tree into the persistence of a new image
+
+    Entries keep their owner, group and mode, translated for the new image
+    (see copy_ownership()). The root itself is the new image's
+    root:vyattacfg 2775, whatever the source has drifted to: copytree()
+    copies the source's mode onto it.
+    """
+    copytree(src, dst, symlinks=True, copy_function=copy_regular_file,
+             dirs_exist_ok=True)
+    copy_ownership(src, dst, uids, gids)
+    lchown(dst, 0, cfg_gid)
+    chmod(dst, 0o2775)
+    uids.report(src)
+    gids.report(src)
 
 
 def copy_previous_installation_data(target_dir: str) -> None:
@@ -1432,6 +1462,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         version_name: str = image.get_image_version(DIR_ROOTFS_SRC)
         uids = IdMap('/etc/passwd', f'{DIR_ROOTFS_SRC}/etc/passwd', 'uid')
         gids = IdMap('/etc/group', f'{DIR_ROOTFS_SRC}/etc/group', 'gid')
+        cfg_gid = vyattacfg_gid(f'{DIR_ROOTFS_SRC}/etc/group')
 
         disk.partition_umount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs')
 
@@ -1485,20 +1516,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 Path('/opt/vyatta/etc/config/first_boot').unlink()
             else:
                 print('Copying configuration directory')
-                # copytree preserves perms but not ownership:
                 Path(target_config_dir).mkdir(parents=True)
-                chown(target_config_dir, group='vyattacfg')
-                chmod_2775(target_config_dir)
-                copytree(
-                    f'{DIR_CONFIG}/',
-                    target_config_dir,
-                    symlinks=True,
-                    copy_function=copy_regular_file,
-                    dirs_exist_ok=True,
-                )
-                copy_ownership(f'{DIR_CONFIG}/', target_config_dir, uids, gids)
-                uids.report(DIR_CONFIG)
-                gids.report(DIR_CONFIG)
+                copy_config_tree(f'{DIR_CONFIG}/', target_config_dir, uids,
+                                 gids, cfg_gid)
 
                 # Record information from which image we upgraded to the new one.
                 # This can be used for a future automatic rollback into the old image.
@@ -1506,7 +1526,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 write_file(f'{target_config_dir}/first_boot', dumps(tmp))
         else:
             Path(target_config_dir).mkdir(parents=True)
-            chown(target_config_dir, group='vyattacfg')
+            lchown(target_config_dir, 0, cfg_gid)
             chmod_2775(target_config_dir)
             Path(f'{target_config_dir}/.vyatta_config').touch()
 

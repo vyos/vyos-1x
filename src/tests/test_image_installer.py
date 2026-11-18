@@ -259,6 +259,35 @@ class TestCopyOwnershipEntries(RecordingTestCase):
         self.assertEqual(sorted(seen), sorted(set(seen)), 'some entry stated twice')
 
 
+class TestConfigRoot(RecordingTestCase):
+    """The root of /config in the new image is the new image's own"""
+
+    def test_copy_ownership_leaves_the_root_alone(self):
+        os.chmod(self.src, 0o755)
+        image_installer.copy_ownership(self.src, self.dst)
+        self.assertNotIn('.', self.owners)
+        self.assertNotIn('.', self.modes)
+
+    def test_copy_config_tree_resets_a_drifted_root(self):
+        # A running /config drifted to root:root 0755 must not be carried
+        # into the new image: vyattacfg members could no longer write it.
+        os.chmod(self.src, 0o755)
+        open(os.path.join(self.src, 'config.boot'), 'w').close()
+        image_installer.copy_config_tree(self.src, self.dst,
+                                         image_installer.IdMap(),
+                                         image_installer.IdMap(kind='gid'),
+                                         cfg_gid=102)
+        self.assertEqual(self.owners['.'], (0, 102))
+        self.assertEqual(self.modes['.'], 0o2775)
+        self.assertIn('config.boot', self.owners)
+
+    def test_vyattacfg_gid_is_read_from_the_new_image(self):
+        group = os.path.join(self.tmp, 'group')
+        with open(group, 'w') as f:
+            f.write('users:x:100:\nvyattacfg:x:103:\n')
+        self.assertEqual(image_installer.vyattacfg_gid(group), 103)
+
+
 class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
     matching src path, walking src. Only paths present in both trees and
