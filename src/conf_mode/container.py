@@ -118,10 +118,14 @@ def get_config(config=None):
 
     effective = conf.get_config_dict(base, effective=True, key_mangling=('-', '_'),
                                      no_tag_node_value_mangle=True,
-                                     get_first_key=True)
+                                     get_first_key=True,
+                                     with_recursive_defaults=True)
     for network in list(container.get('network', {})) + container.get('network_remove', []):
-        if is_node_changed(conf, base + ['network', network]):
-            if network in container.get('network', {}):
+        candidate = container.get('network', {}).get(network)
+        previous = effective.get('network', {}).get(network)
+        if candidate is None or previous is None or (
+                generate_network_options(network, candidate) != generate_network_options(network, previous)):
+            if candidate is not None:
                 container.setdefault('network_restart', []).append(network)
             for source in [effective, container]:
                 for name, config in source.get('name', {}).items():
@@ -501,7 +505,7 @@ def generate_network_options(name, network_config):
 
     ipv6 = False
 
-    for prefix in network_config.get('prefix', []):
+    for prefix in sorted(network_config.get('prefix', [])):
         v6 = is_ipv6(prefix)
         gateway4, gateway6 = None, None
         if 'gateway' in network_config:
