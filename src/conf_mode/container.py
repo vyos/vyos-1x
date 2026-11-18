@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from decimal import Decimal
 from ipaddress import ip_address
@@ -476,7 +477,11 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
         exec_parts.append(container_config['arguments'].strip())
 
     if exec_parts:
-        out.append('Exec=' + ' '.join(exec_parts))
+        # systemd treats '%' as a specifier prefix in unit files, so a lone '%'
+        # must be doubled to reach the container unchanged. An already escaped
+        # '%%' is kept as is, so existing configurations keep working.
+        exec_line = re.sub(r'%%|%', '%%', ' '.join(exec_parts))
+        out.append(f'Exec={exec_line}')
 
     if 'device' in container_config:
         for dev, dev_config in container_config['device'].items():
