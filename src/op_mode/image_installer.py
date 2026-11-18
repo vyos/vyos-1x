@@ -565,15 +565,20 @@ def copy_config_tree(
 def save_account_files(image_dir: str, dest_dir: str) -> None:
     """Save the passwd and group files an installed image ran with
 
-    Creating a login user at boot copies them up, whole, into the image's
-    persistence (rw/etc): that copy is what the running system saw. Without
-    it, they are read from the image's squashfs.
+    Each file is the one the running system saw: its copy in the image's
+    persistence (rw/etc) if any - an overlay copies a file up, whole, on its
+    first change, e.g. when a login user is created at boot - else the one
+    in the image's squashfs.
     """
     Path(dest_dir).mkdir(parents=True, exist_ok=True)
-    names = ('passwd', 'group')
-    if all(Path(image_dir, 'rw/etc', name).is_file() for name in names):
-        for name in names:
-            copy(Path(image_dir, 'rw/etc', name), Path(dest_dir, name))
+    lower = []
+    for name in ('passwd', 'group'):
+        upper = Path(image_dir, 'rw/etc', name)
+        if upper.is_file():
+            copy(upper, Path(dest_dir, name))
+        else:
+            lower.append(name)
+    if not lower:
         return
     squashfs = f'{image_dir}/{Path(image_dir).name}.squashfs'
     mount_dir = f'{dest_dir}/.rootfs'
@@ -585,7 +590,7 @@ def save_account_files(image_dir: str, dest_dir: str) -> None:
         )
         return
     try:
-        for name in names:
+        for name in lower:
             copy(Path(mount_dir, 'etc', name), Path(dest_dir, name))
     finally:
         disk.partition_umount(squashfs)

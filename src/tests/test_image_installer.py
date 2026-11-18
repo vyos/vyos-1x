@@ -372,6 +372,24 @@ class TestReinstallPath(TreeTestCase):
             image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
         )
 
+    def test_each_account_file_comes_from_where_the_system_saw_it(self):
+        # Only passwd copied up: the old system saw the upper passwd and the
+        # lower group.
+        self.write(os.path.join(self.image, 'rw/etc/passwd'), 'svc:x:210:\n')
+
+        def mount(source, path, fstype=''):
+            self.write(os.path.join(path, 'etc/passwd'), 'svc:x:109:\n')
+            self.write(os.path.join(path, 'etc/group'), 'svc:x:115:\n')
+            return True
+
+        with mock.patch.object(image_installer.disk, 'partition_mount', mount), \
+                mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+            image_installer.save_account_files(self.image, self.saved)
+        umount.assert_called_once()
+        read = image_installer.read_ids
+        self.assertEqual(read(os.path.join(self.saved, 'passwd')), {'svc': 210})
+        self.assertEqual(read(os.path.join(self.saved, 'group')), {'svc': 115})
+
     def test_previous_config_is_copied_with_translated_owners(self):
         prev = os.path.join(self.tmp, 'mnt-config')
         os.mkdir(prev)
