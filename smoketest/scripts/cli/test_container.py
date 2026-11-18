@@ -430,6 +430,28 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 self.cli_delete(['interfaces', 'virtual-ethernet', peer])
             self.cli_commit()
 
+    def test_macvlan_requires_parent_and_mode(self):
+        network_path = base_path + ['network', 'incomplete']
+        for ipam in ['host-local', 'dhcp']:
+            with self.subTest(ipam=ipam):
+                try:
+                    self.cli_set(network_path + ['ipam', ipam])
+                    if ipam == 'host-local':
+                        self.cli_set(network_path + ['prefix', '10.250.189.0/24'])
+                    self.cli_set(network_path + ['type', 'macvlan'])
+                    with self.assertRaisesRegex(ConfigSessionError, 'MACVLAN networks must have a parent interface'):
+                        self.cli_commit()
+                    self.cli_set(network_path + ['type', 'macvlan', 'parent', 'eth0'])
+                    with self.assertRaisesRegex(ConfigSessionError, 'MACVLAN networks must have a mode configured'):
+                        self.cli_commit()
+                    self.cli_set(network_path + ['type', 'macvlan', 'mode', 'bridge'])
+                    self.cli_commit()
+                    cmdl(['systemctl', 'start', 'vyos-incomplete-network'], sudo=True)
+                    self.assertEqual(cmd_to_json(['network', 'inspect', 'incomplete'])['driver'], 'macvlan')
+                finally:
+                    self.cli_delete(network_path)
+                    self.cli_commit()
+
     def test_network_types_mutually_exclusive(self):
         network_path = base_path + ['network', 'exclusive']
         for initial_type in ['bridge', 'macvlan']:
