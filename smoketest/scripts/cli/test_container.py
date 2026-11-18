@@ -23,6 +23,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from ipaddress import ip_interface
 
 from vyos.configsession import ConfigSessionError
+from vyos.config import Config
 from vyos.defaults import directories
 from vyos.defaults import podman_mount_program
 from vyos.utils.file import read_file
@@ -332,6 +333,101 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(base_path)
             self.cli_commit()
             self.cli_delete(interface_path)
+            self.cli_commit()
+
+    def test_unmanaged_bridge_dhcp(self):
+        if Config().exists(['service', 'dhcp-server']):
+            self.skipTest('Requires an unconfigured DHCP server for the test fixture')
+
+        bridge = 'br1215'
+        peers = ['veth1214', 'veth1215']
+        network = 'dhcp1215'
+        name = 'dhcp1215'
+        network_path = base_path + ['network', network]
+        name_path = base_path + ['name', name]
+        server_path = ['service', 'dhcp-server']
+        pool = server_path + ['shared-network-name', 'CONTAINER1215',
+                              'subnet', '10.250.215.0/24']
+        for interface in [bridge] + peers:
+            if os.path.exists(f'/sys/class/net/{interface}'):
+                self.skipTest(f'Test fixture interface {interface} already exists')
+
+        try:
+            self.cli_set(['interfaces', 'virtual-ethernet', peers[0], 'peer-name', peers[1]])
+            self.cli_set(['interfaces', 'virtual-ethernet', peers[1], 'peer-name', peers[0]])
+            self.cli_set(['interfaces', 'virtual-ethernet', peers[1], 'address', '10.250.215.1/24'])
+            self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', peers[0]])
+            self.cli_set(server_path + ['listen-interface', peers[1]])
+            self.cli_set(pool + ['subnet-id', '1215'])
+            self.cli_set(pool + ['range', '1', 'start', '10.250.215.100'])
+            self.cli_set(pool + ['range', '1', 'stop', '10.250.215.110'])
+            self.cli_set(pool + ['option', 'default-router', '10.250.215.1'])
+            self.cli_set(pool + ['option', 'name-server', '192.0.2.53'])
+            self.cli_set(network_path + ['type', 'bridge', 'interface', bridge])
+            self.cli_set(network_path + ['ipam', 'dhcp'])
+            self.cli_set(network_path + ['no-name-server'])
+            self.cli_set(name_path + ['image', busybox_image])
+            self.cli_set(name_path + ['command', 'sleep 3600'])
+            self.cli_set(name_path + ['capability', 'net-raw'])
+            self.cli_set(name_path + ['stop-timeout', '1'])
+            self.cli_set(name_path + ['network', network, 'mac', '02:00:00:00:12:15'])
+            self.cli_commit()
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=90))
+
+            def check_lease(expect_gateway=True):
+                info = cmd_to_json(['network', 'inspect', network])
+                self.assertEqual(info['ipam_options']['driver'], 'dhcp')
+                pid = str(cmd_to_json(['inspect', name])['State']['Pid'])
+                addresses = json.loads(cmdl(['nsenter', '-t', pid, '-n', 'ip', '-j',
+                                             'address', 'show', 'dev', 'eth0'], sudo=True))
+                leased = [a['local'] for link in addresses for a in link['addr_info']
+                          if a['family'] == 'inet']
+                self.assertTrue(any(f'10.250.215.{i}' in leased for i in range(100, 111)))
+                routes = json.loads(cmdl(['nsenter', '-t', pid, '-n', 'ip', '-j', 'route'], sudo=True))
+                defaults = [r for r in routes if r.get('dst') == 'default']
+                if expect_gateway:
+                    self.assertTrue(any(r.get('gateway') == '10.250.215.1' for r in defaults))
+                else:
+                    self.assertEqual(defaults, [])
+                dns = cmdl(['podman', 'exec', name, 'cat', '/etc/resolv.conf'], sudo=True)
+                self.assertIn('nameserver 192.0.2.53', dns)
+                cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.215.1'], sudo=True)
+
+            check_lease()
+            for path in [network_path + ['prefix', '10.250.215.0/24'],
+                         network_path + ['gateway', '10.250.215.1'],
+                         name_path + ['network', network, 'address', '10.250.215.2']]:
+                with self.subTest(path=path):
+                    self.cli_set(path)
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_discard()
+
+            self.cli_delete(network_path + ['type', 'bridge'])
+            self.cli_set(network_path + ['type', 'macvlan', 'parent', bridge])
+            self.cli_set(network_path + ['type', 'macvlan', 'mode', 'bridge'])
+            self.cli_commit()
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=90))
+            check_lease()
+
+            self.cli_delete(name_path)
+            self.cli_delete(pool + ['option', 'default-router'])
+            self.cli_commit()
+            self.cli_set(name_path + ['image', busybox_image])
+            self.cli_set(name_path + ['command', 'sleep 3600'])
+            self.cli_set(name_path + ['capability', 'net-raw'])
+            self.cli_set(name_path + ['stop-timeout', '1'])
+            self.cli_set(name_path + ['network', network, 'mac', '02:00:00:00:12:15'])
+            self.cli_commit()
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=90))
+            check_lease(expect_gateway=False)
+        finally:
+            self.cli_delete(base_path)
+            self.cli_delete(server_path)
+            self.cli_commit()
+            self.cli_delete(['interfaces', 'bridge', bridge])
+            for peer in peers:
+                self.cli_delete(['interfaces', 'virtual-ethernet', peer])
             self.cli_commit()
 
     def test_network_types_mutually_exclusive(self):
