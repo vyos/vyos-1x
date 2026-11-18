@@ -29,6 +29,7 @@ from vyos.defaults import internal_ports
 from vyos.defaults import systemd_services
 from vyos.pki import encode_certificate
 from vyos.pki import find_chain
+from vyos.pki import get_rsa_key_size
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
 from vyos.pki import load_public_key
@@ -54,6 +55,7 @@ airbag.enable()
 
 vyos_certbot_dir = directories['certbot']
 vyos_ca_certificates_dir = directories['ca_certificates']
+rsa_key_size_max = 8192
 
 # keys to recursively search for under specified path
 sync_search = [
@@ -555,9 +557,9 @@ def is_valid_certificate(raw_data):
 def is_valid_ca_certificate(raw_data):
     # Check if this is a valid certificate with CA attributes
     cert = load_certificate(raw_data, wrap_tags=True)
-    if not cert:
+    if not is_ca_certificate(cert):
         return False
-    return is_ca_certificate(cert)
+    return cert
 
 def is_valid_public_key(raw_data):
     # If it loads correctly we're good, or return False
@@ -589,6 +591,12 @@ def is_valid_dh_parameters(raw_data):
     # If it loads correctly we're good, or return False
     return load_dh_parameters(raw_data, wrap_tags=True)
 
+def verify_rsa_key_size(obj, description):
+    size = get_rsa_key_size(obj)
+    if size and size > rsa_key_size_max:
+        raise ConfigError(f'{description} has an RSA key size of {size} bit, '\
+                          f'maximum supported is {rsa_key_size_max} bit!')
+
 def verify(pki):
     if not pki:
         return None
@@ -596,15 +604,19 @@ def verify(pki):
     if 'ca' in pki:
         for name, ca_conf in pki['ca'].items():
             if 'certificate' in ca_conf:
-                if not is_valid_ca_certificate(ca_conf['certificate']):
+                cert = is_valid_ca_certificate(ca_conf['certificate'])
+                if not cert:
                     raise ConfigError(f'Invalid certificate on CA certificate "{name}"')
+                verify_rsa_key_size(cert, f'CA certificate "{name}"')
 
             if 'private' in ca_conf and 'key' in ca_conf['private']:
                 private = ca_conf['private']
                 protected = 'password_protected' in private
 
-                if not is_valid_private_key(private['key'], protected):
+                key = is_valid_private_key(private['key'], protected)
+                if not key:
                     raise ConfigError(f'Invalid private key on CA certificate "{name}"')
+                verify_rsa_key_size(key, f'Private key on CA certificate "{name}"')
 
             if 'crl' in ca_conf:
                 ca_crls = ca_conf['crl']
@@ -618,15 +630,19 @@ def verify(pki):
     if 'certificate' in pki:
         for name, cert_conf in pki['certificate'].items():
             if 'certificate' in cert_conf:
-                if not is_valid_certificate(cert_conf['certificate']):
+                cert = is_valid_certificate(cert_conf['certificate'])
+                if not cert:
                     raise ConfigError(f'Invalid certificate on certificate "{name}"')
+                verify_rsa_key_size(cert, f'Certificate "{name}"')
 
             if 'private' in cert_conf and 'key' in cert_conf['private']:
                 private = cert_conf['private']
                 protected = 'password_protected' in private
 
-                if not is_valid_private_key(private['key'], protected):
+                key = is_valid_private_key(private['key'], protected)
+                if not key:
                     raise ConfigError(f'Invalid private key on certificate "{name}"')
+                verify_rsa_key_size(key, f'Private key on certificate "{name}"')
 
             if 'acme' in cert_conf:
                 if 'domain_name' not in cert_conf['acme']:
@@ -667,14 +683,18 @@ def verify(pki):
     if 'key_pair' in pki:
         for name, key_conf in pki['key_pair'].items():
             if 'public' in key_conf and 'key' in key_conf['public']:
-                if not is_valid_public_key(key_conf['public']['key']):
+                key = is_valid_public_key(key_conf['public']['key'])
+                if not key:
                     raise ConfigError(f'Invalid public key on key-pair "{name}"')
+                verify_rsa_key_size(key, f'Public key on key-pair "{name}"')
 
             if 'private' in key_conf and 'key' in key_conf['private']:
                 private = key_conf['private']
                 protected = 'password_protected' in private
-                if not is_valid_private_key(private['key'], protected):
+                key = is_valid_private_key(private['key'], protected)
+                if not key:
                     raise ConfigError(f'Invalid private key on key-pair "{name}"')
+                verify_rsa_key_size(key, f'Private key on key-pair "{name}"')
 
     if 'openssh' in pki:
         for name, key_conf in pki['openssh'].items():
