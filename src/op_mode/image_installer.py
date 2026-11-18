@@ -515,7 +515,8 @@ def copy_ownership(src: str, dst: str, uids: IdMap = None, gids: IdMap = None) -
             # dst, and a plain file would make the next level's lstat()
             # raise NotADirectoryError. A symlink to a directory is listed
             # in dirs by walk(): it still gets its owner, but no descent.
-            if name in dirs and S_ISDIR(dst_st.st_mode):
+            # Both sides having the same type, a directory here is one of dirs.
+            if S_ISDIR(dst_st.st_mode):
                 descend.add(name)
             lchown(dst_path, uids(src_st.st_uid), gids(src_st.st_gid))
             # after lchown(), which clears setuid/setgid on files
