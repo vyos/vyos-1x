@@ -46,7 +46,7 @@ from json import dumps
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
-from errno import ENOSPC
+from errno import EEXIST
 
 from psutil import disk_partitions
 
@@ -1485,6 +1485,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
     # fetch an image
     iso_path: Path = image_fetch(image_path, vrf, no_prompt)
+    # boot/<image>, once this run is about to create it: removed on failure
+    new_image_dir: str = ''
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -1542,6 +1544,13 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # a config dir. It is the deepest one, so the command will
         # create all the rest in a single step
         target_config_dir: str = f'{root_dir}/boot/{image_name}/rw{DIR_CONFIG}/'
+        # With --no-prompt the name is not checked against installed images:
+        # never build into, nor clean up, a directory this run did not create.
+        image_dir = Path(root_dir, 'boot', image_name)
+        if image_dir.exists():
+            raise FileExistsError(EEXIST, 'Image directory already exists',
+                                  str(image_dir))
+        new_image_dir = str(image_dir)
         # copy config
         if no_prompt or migrate_config():
             if Path('/dev/mapper/vyos_config').exists():
@@ -1625,19 +1634,13 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                                                     root_dir=root_dir,
                                                     version=image_name)
 
-    except OSError as e:
-        # if no space error, remove image dir and cleanup
-        if e.errno == ENOSPC:
-            cleanup(mounts=[str(iso_path)],
-                    remove_items=[f'{root_dir}/boot/{image_name}'])
-        else:
-            # unmount an ISO and cleanup
-            cleanup([str(iso_path)])
-        exit(f'Error: {e}')
-
     except Exception as err:
-        # unmount an ISO and cleanup
-        cleanup([str(iso_path)])
+        # Unmount the ISO, and remove the image directory this run started:
+        # left behind, it makes the next attempt fail on mkdir(). Any error
+        # counts, not only ENOSPC: a failed chown() or a copytree() error
+        # (shutil.Error is an OSError) left a half-built image too.
+        cleanup(mounts=[str(iso_path)],
+                remove_items=[new_image_dir] if new_image_dir else [])
         exit(f'Error: {err}')
 
 

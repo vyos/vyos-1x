@@ -351,6 +351,69 @@ class TestReinstallPath(TreeTestCase):
         self.assertEqual((uids(109), gids(115), cfg_gid), (108, 114, 103))
 
 
+class TestAddImageFailure(TreeTestCase):
+    """What add_image() leaves behind when copying /config fails"""
+
+    def run_add_image(self):
+        ii = image_installer
+        iso = os.path.join(self.tmp, 'iso')
+        rootfs = os.path.join(self.tmp, 'rootfs')
+        self.persistence = os.path.join(self.tmp, 'persistence')
+        def mount(source, path, fstype='', **kwargs):
+            # add_image() creates the mount points itself: fill them as a
+            # mount would
+            if path == iso:
+                open(os.path.join(iso, 'sha256sum.txt'), 'w').close()
+            elif path == rootfs:
+                os.makedirs(os.path.join(rootfs, 'etc'))
+                for name in ('passwd', 'group'):
+                    with open(os.path.join(rootfs, 'etc', name), 'w') as f:
+                        f.write('vyattacfg:x:102:\n')
+            return True
+
+        self.cleanup = mock.Mock()
+        failure = PermissionError(1, 'Operation not permitted')
+        with mock.patch.multiple(
+                ii,
+                DIR_ISO_MOUNT=iso, DIR_ROOTFS_SRC=rootfs,
+                DIR_CONFIG=self.src,
+                disk_usage=mock.Mock(return_value=mock.Mock(free=10 * 1024**3)),
+                unsaved_commits=mock.Mock(return_value=False),
+                image_fetch=mock.Mock(return_value=os.path.join(self.tmp, 'x.iso')),
+                validate_compatibility=mock.Mock(),
+                run=mock.Mock(return_value=0),
+                copy_config_tree=mock.Mock(side_effect=failure),
+                cleanup=self.cleanup), \
+                mock.patch.object(ii.image, 'is_live_boot', return_value=False), \
+                mock.patch.object(ii.image, 'get_image_tools_version',
+                                  return_value=ii.SYSTEM_CFG_VER), \
+                mock.patch.object(ii.image, 'get_image_version', return_value='new'), \
+                mock.patch.object(ii.disk, 'partition_mount', mount), \
+                mock.patch.object(ii.disk, 'partition_umount'), \
+                mock.patch.object(ii.disk, 'find_persistence',
+                                  return_value=self.persistence):
+            with self.assertRaises(SystemExit):
+                ii.add_image.__wrapped__('x.iso', no_prompt=True)
+
+    def removed(self):
+        return [item for call in self.cleanup.call_args_list
+                for item in call.kwargs.get('remove_items', [])]
+
+    def test_half_built_image_is_removed(self):
+        # Only ENOSPC used to remove it: any other error left boot/<image>
+        # behind, and the next 'add system image' failed on mkdir().
+        self.run_add_image()
+        self.assertIn(os.path.join(self.persistence, 'boot', 'new'), self.removed())
+
+    def test_an_existing_image_is_never_removed(self):
+        # With --no-prompt, the name is not checked against installed images.
+        existing = os.path.join(self.tmp, 'persistence', 'boot', 'new')
+        os.makedirs(os.path.join(existing, 'rw'))
+        self.run_add_image()
+        self.assertNotIn(existing, self.removed())
+        self.assertTrue(os.path.isdir(os.path.join(existing, 'rw')))
+
+
 class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
     matching src path, walking src. Only paths present in both trees and
