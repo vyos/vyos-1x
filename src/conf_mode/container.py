@@ -143,19 +143,22 @@ def get_config(config=None):
     if container and storage_on_overlayfs():
         container['storage_mount_program'] = podman_mount_program
 
+    previous_bridges = {
+        dict_search('type.bridge.interface', config)
+        for network, config in effective.get('network', {}).items()
+        if network in container.get('network_restart', []) + container.get('network_remove', [])
+        and dict_search('type.bridge.interface', config)
+        and dict_search('type.bridge.interface', config) != dict_search(
+            'type.bridge.interface', container.get('network', {}).get(network, {}))
+    }
     for network, network_config in container.get('network', {}).items():
-        if dict_search('type.macvlan', network_config) is None:
-            previous_bridges = {
-                dict_search('type.bridge.interface', config)
-                for config in effective.get('network', {}).values()
-                if dict_search('type.bridge.interface', config)
-                and dict_search('type.bridge.interface', config) != dict_search('type.bridge.interface', network_config)
-            }
+        if network in container.get('network_restart', []) and dict_search('type.macvlan', network_config) is None:
             network_config['previous_bridge_configs'] = {
                 bridge: conf.get_config_dict(
                     ['interfaces', 'bridge', bridge], key_mangling=('-', '_'),
                     get_first_key=True)
                 for bridge in sorted(previous_bridges)
+                if bridge != dict_search('type.bridge.interface', network_config)
             }
         if dict_search('type.bridge.interface', network_config) is not None:
             bridge = dict_search('type.bridge.interface', network_config)
@@ -264,6 +267,12 @@ def verify(container):
                         if ip_address(address) == ip_network(network)[1]:
                             raise ConfigError(f'IP address "{address}" cannot be used for a container, ' \
                                               'reserved for the container engine!')
+
+                        network_config = container['network'][network_name]
+                        if dict_search('type.bridge.interface', network_config) is not None:
+                            if any(ip_address(address) == ip_address(gateway)
+                                   for gateway in network_config.get('gateway', [])):
+                                raise ConfigError(f'IP address "{address}" is reserved for the network gateway!')
 
                         if address in net_dict['address'].keys():
                             raise ConfigError(f'IP address "{address}" is already used by container "{net_dict["address"][address]}"!')
@@ -718,6 +727,22 @@ def generate(container):
     render(config_registry, 'container/registries.conf.j2', container)
     render(config_storage, 'container/storage.conf.j2', container)
 
+    if container.get('network_restart'):
+        units = {f'vyos-{name}-network': f'vyos-{name}.network'
+                 for name in container['network_restart']}
+        units.update({f'vyos-container-{name}': f'vyos-container-{name}.container'
+                      for name in container.get('container_stop', [])})
+        rollback = container['network_rollback'] = {'files': {}, 'active_units': []}
+        for unit, filename in units.items():
+            path = os.path.join(quadlet_unit_path, filename)
+            if os.path.exists(path):
+                with open(path) as stream:
+                    rollback['files'][path] = stream.read()
+            else:
+                rollback['files'][path] = None
+            if run(['systemctl', 'is-active', '--quiet', unit]) == 0:
+                rollback['active_units'].append(unit)
+
     if 'network' in container:
         for network, network_config in container['network'].items():
             file_path = os.path.join(quadlet_unit_path, f'vyos-{network}.network')
@@ -736,9 +761,32 @@ def generate(container):
             file_path = os.path.join(quadlet_unit_path, f'vyos-container-{name}.container')
             quadlet_opts = generate_quadlet_options(name, container_config, host_ident, network_config)
             restart = container_config['restart']
-            render(file_path, 'container/quadlet-unit.j2', {'name': name, 'opts': quadlet_opts, 'restart': restart})
+            network = next(iter(container_config.get('network', {})), None)
+            bridge = dict_search('type.bridge.interface', network_config.get(network, {}))
+            render(file_path, 'container/quadlet-unit.j2', {
+                'name': name, 'opts': quadlet_opts, 'restart': restart,
+                'bridge_interface': bridge})
 
     return None
+
+
+
+def restore_network_units(container):
+    rollback = container.get('network_rollback', {})
+    try:
+        for path, contents in rollback.get('files', {}).items():
+            if contents is None:
+                if os.path.exists(path):
+                    os.unlink(path)
+            else:
+                with open(path, 'w') as stream:
+                    stream.write(contents)
+        run(['systemctl', 'daemon-reload'])
+        if rollback.get('active_units'):
+            if run(['systemctl', '--no-block', 'start'] + rollback['active_units']) != 0:
+                Warning('Could not restart all units after failed container network removal!')
+    except OSError as error:
+        Warning(f'Could not restore container network units: {error}')
 
 
 def apply(container):
@@ -749,10 +797,14 @@ def apply(container):
         quadlet_paths = [f'vyos-container-{name}.container' for name in container['container_remove']]
         run(['podman', 'quadlet', 'rm', '-f'] + quadlet_paths)
 
-    for network in container.get('network_restart', []):
-        run(['systemctl', 'stop', f'vyos-{network}-network'])
-        if network_exists(network):
-            cmdl(['podman', 'network', 'rm', network])
+    try:
+        for network in container.get('network_restart', []):
+            run(['systemctl', 'stop', f'vyos-{network}-network'])
+            if network_exists(network):
+                cmdl(['podman', 'network', 'rm', network])
+    except OSError:
+        restore_network_units(container)
+        raise
 
     # Delete old networks if needed
     if 'network_remove' in container:
