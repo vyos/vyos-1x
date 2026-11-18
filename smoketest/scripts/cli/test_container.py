@@ -217,6 +217,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             info = cmd_to_json(['network', 'inspect', network])
             self.assertEqual(info['network_interface'], bridge)
             self.assertEqual(info['options']['mode'], 'unmanaged')
+            container_id = cmd_to_json(['inspect', name])['Id']
+            network_id = info['id']
+            self.cli_set(base_path + ['network', network, 'description', 'native attachment'])
+            self.cli_commit()
+            self.assertEqual(cmd_to_json(['inspect', name])['Id'], container_id)
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['id'], network_id)
             for path, value in [
                 (interface_path, None),
                 (interface_path + ['disable'], ''),
@@ -451,6 +457,60 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 finally:
                     self.cli_delete(network_path)
                     self.cli_commit()
+
+    def test_network_runtime_changes(self):
+        network_path = base_path + ['network', 'runtime']
+        name = 'runtime1'
+        for network, consumer, prefix in [('runtime', name, '10.250.188.0/24'),
+                                          ('untouched', 'untouched1', '10.250.187.0/24')]:
+            self.cli_set(base_path + ['network', network, 'prefix', prefix])
+            self.cli_set(base_path + ['name', consumer, 'image', busybox_image])
+            self.cli_set(base_path + ['name', consumer, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', consumer, 'capability', 'net-raw'])
+            self.cli_set(base_path + ['name', consumer, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', consumer, 'network', network, 'address',
+                                      str(ip_interface(prefix).ip + 2)])
+        self.cli_commit()
+
+        def identity(network, consumer):
+            container = cmd_to_json(['inspect', consumer])
+            return (cmd_to_json(['network', 'inspect', network])['id'],
+                    container['Id'], container['State']['StartedAt'])
+
+        original = identity('runtime', name)
+        untouched = identity('untouched', 'untouched1')
+        for setting in [['description', 'first description'], ['description', 'edited description'],
+                        ['mtu', '1500'], ['type', 'bridge'], ['ipam', 'host-local'],
+                        ['gateway', '10.250.188.1']]:
+            with self.subTest(setting=setting):
+                self.cli_set(network_path + setting)
+                self.cli_commit()
+                self.assertEqual(identity('runtime', name), original)
+                self.assertEqual(identity('untouched', 'untouched1'), untouched)
+                self.cli_delete(network_path + setting[:1])
+                self.cli_commit()
+                self.assertEqual(identity('runtime', name), original)
+
+        for setting in [['mtu', '1400'], ['gateway', '10.250.188.254'], ['no-name-server']]:
+            with self.subTest(setting=setting):
+                before = identity('runtime', name)
+                self.cli_set(network_path + setting)
+                self.cli_commit()
+                after = identity('runtime', name)
+                self.assertNotEqual(after[0], before[0])
+                self.assertNotEqual(after[1:], before[1:])
+                self.assertEqual(identity('untouched', 'untouched1'), untouched)
+                self.assertTrue(self.is_running(name))
+                info = cmd_to_json(['network', 'inspect', 'runtime'])
+                gateway = '10.250.188.254' if setting[0] != 'mtu' else '10.250.188.1'
+                self.assertEqual(info['options']['mtu'], '1400')
+                self.assertEqual(info['subnets'][0]['gateway'], gateway)
+                self.assertEqual(info['dns_enabled'], setting[0] != 'no-name-server')
+                pid = str(cmd_to_json(['inspect', name])['State']['Pid'])
+                links = json.loads(cmdl(['nsenter', '-t', pid, '-n',
+                                        'ip', '-j', 'link', 'show', 'dev', 'eth0'], sudo=True))
+                self.assertEqual(links[0]['mtu'], 1400)
+                cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', gateway], sudo=True)
 
     def test_network_types_mutually_exclusive(self):
         network_path = base_path + ['network', 'exclusive']
