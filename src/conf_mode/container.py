@@ -476,7 +476,10 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
         exec_parts.append(container_config['arguments'].strip())
 
     if exec_parts:
-        out.append('Exec=' + ' '.join(exec_parts))
+        # systemd treats '%' as a specifier prefix in unit files, escape it so
+        # literal percent signs reach the container unchanged
+        exec_line = ' '.join(exec_parts).replace('%', '%%')
+        out.append(f'Exec={exec_line}')
 
     if 'device' in container_config:
         for dev, dev_config in container_config['device'].items():

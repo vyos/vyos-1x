@@ -158,6 +158,37 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         l = cmd_to_json(['container', 'inspect', cont_name])
         self.assertEqual(l['Config']['Cmd'], ['sleep', '3600'])
 
+    def test_command_with_arguments(self):
+        cont_name = 'cmd-args-test'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        self.cli_set(base_path + ['name', cont_name, 'command', 'sleep'])
+        self.cli_set(base_path + ['name', cont_name, 'arguments', '3600'])
+        self.cli_commit()
+
+        self.assertTrue(self.is_running(cont_name))
+
+        l = cmd_to_json(['container', 'inspect', cont_name])
+        self.assertEqual(l['Config']['Cmd'], ['sleep', '3600'])
+
+    def test_arguments_percent_literal(self):
+        cont_name = 'args-percent-test'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        # systemd must not interpret %2F as a specifier
+        self.cli_set(base_path + ['name', cont_name, 'command', 'env'])
+        self.cli_set(base_path + ['name', cont_name, 'arguments', 'A=a%2Fb sleep 3600'])
+        self.cli_commit()
+
+        self.assertTrue(self.is_running(cont_name))
+
+        l = cmd_to_json(['container', 'inspect', cont_name])
+        self.assertEqual(l['Config']['Cmd'], ['env', 'A=a%2Fb', 'sleep', '3600'])
+
     def test_name_server(self):
         cont_name = 'dns-test'
         net_name = 'net-test'
