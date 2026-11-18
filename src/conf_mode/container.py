@@ -233,6 +233,8 @@ def verify(container):
                         net_dict['mac'][mac] = name
 
                 if 'address' in container_config['network'][network_name]:
+                    if container['network'][network_name].get('ipam', 'host-local') == 'dhcp':
+                        raise ConfigError(f'Container "{name}" cannot use a static address with DHCP IPAM!')
                     cnt_ipv4 = 0
                     cnt_ipv6 = 0
                     for address in container_config['network'][network_name]['address']:
@@ -350,6 +352,12 @@ def verify(container):
             net_dict = {'ipv4_pfx_len': 0, 'ipv6_pfx_len': 0, 'ipv4_gateway_len': 0, 'ipv6_gateway_len': 0}
 
             bridge = dict_search('type.bridge.interface', network_config)
+            dhcp = network_config.get('ipam', 'host-local') == 'dhcp'
+            if dhcp:
+                if bridge is None and dict_search('type.macvlan', network_config) is None:
+                    raise ConfigError('DHCP IPAM requires an existing bridge interface or MACVLAN!')
+                if 'prefix' in network_config or 'gateway' in network_config:
+                    raise ConfigError('DHCP IPAM cannot be combined with configured prefixes or gateways!')
 
             for previous_bridge_name, previous_bridge in network_config.get('previous_bridge_configs', {}).items():
                 for address in previous_bridge.get('address', []):
@@ -383,10 +391,10 @@ def verify(container):
                         raise ConfigError(f'Container "{name}" cannot publish ports on an unmanaged bridge!')
 
             # If ipv4-prefix not defined for user-defined network
-            if 'prefix' not in network_config:
+            if not dhcp and 'prefix' not in network_config:
                 raise ConfigError(f'prefix for network "{network}" must be defined!')
 
-            for prefix in network_config['prefix']:
+            for prefix in network_config.get('prefix', []):
                 if is_ipv4(prefix):
                     net_dict['ipv4_pfx_len'] += 1
                     net_dict['ipv4_prefix'] = prefix
@@ -464,7 +472,7 @@ def generate_network_options(name, network_config):
     out = [
         f'NetworkName={name}',
         'Internal=false',
-        'IPAMDriver=host-local',
+        f'IPAMDriver={network_config.get("ipam", "host-local")}',
     ]
 
     ifname = f'pod-{name}'
@@ -493,7 +501,7 @@ def generate_network_options(name, network_config):
 
     ipv6 = False
 
-    for prefix in network_config['prefix']:
+    for prefix in network_config.get('prefix', []):
         v6 = is_ipv6(prefix)
         gateway4, gateway6 = None, None
         if 'gateway' in network_config:
@@ -750,6 +758,9 @@ def apply(container):
 
     run(['systemctl', 'daemon-reload'])
 
+    if any(n.get('ipam', 'host-local') == 'dhcp' for n in container.get('network', {}).values()):
+        cmdl(['systemctl', 'start', 'netavark-dhcp-proxy.socket'])
+
     # Add container
     if 'name' in container:
         for name, container_config in container['name'].items():
@@ -768,7 +779,11 @@ def apply(container):
                 continue
 
             if 'container_restart' in container and name in container['container_restart']:
-                cmdl(['systemctl', 'restart', f'vyos-container-{name}'])
+                network = next(iter(container_config.get('network', {})), None)
+                network_config = container.get('network', {}).get(network, {})
+                # The DHCP server may be configured later in this commit.
+                options = ['--no-block'] if network_config.get('ipam', 'host-local') == 'dhcp' else []
+                cmdl(['systemctl'] + options + ['restart', f'vyos-container-{name}'])
 
     # Re-Start network and assign it to given VRF if requested.
     restart_network(container)

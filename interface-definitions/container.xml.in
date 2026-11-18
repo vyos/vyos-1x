@@ -677,6 +677,26 @@
         <children>
           #include <include/generic-description.xml.i>
           #include <include/interface/mtu-68-16000.xml.i>
+          <leafNode name="ipam">
+            <properties>
+              <help>IP address allocation method</help>
+              <completionHelp>
+                <list>host-local dhcp</list>
+              </completionHelp>
+              <valueHelp>
+                <format>host-local</format>
+                <description>Allocate container addresses from configured prefixes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dhcp</format>
+                <description>Obtain IPv4 addresses, routes and DNS from DHCP</description>
+              </valueHelp>
+              <constraint>
+                <regex>host-local|dhcp</regex>
+              </constraint>
+            </properties>
+            <defaultValue>host-local</defaultValue>
+          </leafNode>
           <leafNode name="gateway">
             <properties>
               <help>Gateway address to use for this network</help>
