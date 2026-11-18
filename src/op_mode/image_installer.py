@@ -67,6 +67,7 @@ from vyos.system import SYSTEM_CFG_VER
 from vyos.system import grub_util
 from vyos.template import render
 from vyos.utils.auth import DEFAULT_PASSWORD
+from vyos.utils.auth import MIN_USER_UID
 from vyos.utils.auth import EPasswdStrength
 from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_local_users
@@ -397,24 +398,72 @@ def read_ids(path: str) -> dict[str, int]:
     return ids
 
 
-def id_map(old_file: str, new_file: str) -> dict[int, int]:
-    """Map the ids of old_file to those of new_file, by name
+class IdMap:
+    """Translate the uids or gids of the running image into those of another
 
     System users and groups are not given fixed ids at build time, so a name
-    can get another number in another image. The files are read directly,
+    can get another number in another image: an id of the system range
+    (1 to MIN_USER_UID - 1) whose name exists in both images gets the number
+    of the new image, like tar and rsync do. The files are read directly,
     not through NSS, which can answer for ids that are not in them.
+
+    Every other id keeps its number: root, and the regular range, where the
+    image's own accounts (radius_user, the tacacs group) share their number
+    with login users and with the most common container users.
+
+    In the system range, an id whose names are all gone from the new image
+    goes to root if its number belongs to another name there: keeping it
+    would hand the files to an unrelated account. An id with no name in the
+    running image (e.g. a container user) keeps its number - nothing says
+    which account it would be - and is reported if the new image names it.
     """
-    old_ids = read_ids(old_file)
-    new_ids = read_ids(new_file)
-    mapping = {}
-    for name, old_id in old_ids.items():
-        if name in new_ids:
-            mapping.setdefault(old_id, new_ids[name])
-    return mapping
+
+    def __init__(self, old_file: str = '', new_file: str = '', kind: str = 'uid'):
+        self.kind = kind
+        self.ids: dict[int, int] = {}
+        self.notes: dict[int, str] = {}
+        self.seen: dict[int, int] = {}
+        if not (old_file and new_file):
+            return
+        old_ids = read_ids(old_file)
+        new_ids = read_ids(new_file)
+        new_names: dict[int, str] = {}
+        for name, new_id in new_ids.items():
+            new_names.setdefault(new_id, name)
+        old_names: dict[int, list[str]] = {}
+        for name, old_id in old_ids.items():
+            old_names.setdefault(old_id, []).append(name)
+
+        for old_id in range(1, MIN_USER_UID):
+            names = old_names.get(old_id)
+            if names:
+                kept = [n for n in names if n in new_ids]
+                if kept:
+                    self.ids[old_id] = new_ids[kept[0]]
+                elif old_id in new_names:
+                    self.ids[old_id] = 0
+                    self.notes[old_id] = (
+                        f'given to root: {"/".join(names)} is not in the new '
+                        f'image, where {kind} {old_id} is {new_names[old_id]}')
+            elif old_id in new_names:
+                self.notes[old_id] = (
+                    f'kept: {kind} {old_id} has no name in the running image, '
+                    f'it is {new_names[old_id]} in the new one')
+
+    def __call__(self, old_id: int) -> int:
+        if old_id in self.notes:
+            self.seen[old_id] = self.seen.get(old_id, 0) + 1
+        return self.ids.get(old_id, old_id)
+
+    def report(self, root: str) -> None:
+        """Warn about the ambiguous ids met since this map was made"""
+        for old_id, count in sorted(self.seen.items()):
+            Warning(f'{count} entries of {root} owned by {self.kind} '
+                    f'{old_id} {self.notes[old_id]}')
 
 
 def copy_ownership(
-    src: str, dst: str, uid_map: dict[int, int] = None, gid_map: dict[int, int] = None
+    src: str, dst: str, uids: IdMap = None, gids: IdMap = None
 ) -> None:
     """Give every entry of dst the owner, group and mode of the same path in src
 
@@ -425,14 +474,11 @@ def copy_ownership(
     after lchown(), which clears the setuid/setgid bits.
     Only paths present in both trees and of the same type are touched.
 
-    Owners are translated by name with uid_map and gid_map, like tar and rsync
-    do: an id whose name exists in both images gets the number of the new
-    image. An id without a name in the old image (e.g. a container user), or
-    whose name is not in the new image (e.g. a login user, created at boot
-    from the configuration), keeps its number.
+    Owners are translated with uids and gids (see IdMap); without them,
+    they keep their numbers.
     """
-    uid_map = uid_map or {}
-    gid_map = gid_map or {}
+    uids = uids or IdMap()
+    gids = gids or IdMap(kind='gid')
     for root, dirs, files in walk(src):
         descend = set()
         for name in ['.'] + dirs + files if root == src else dirs + files:
@@ -452,11 +498,7 @@ def copy_ownership(
             # in dirs by walk(): it still gets its owner, but no descent.
             if name in dirs and S_ISDIR(dst_st.st_mode):
                 descend.add(name)
-            lchown(
-                dst_path,
-                uid_map.get(src_st.st_uid, src_st.st_uid),
-                gid_map.get(src_st.st_gid, src_st.st_gid),
-            )
+            lchown(dst_path, uids(src_st.st_uid), gids(src_st.st_gid))
             # after lchown(), which clears setuid/setgid on files
             if not S_ISLNK(src_st.st_mode):
                 chmod(dst_path, S_IMODE(src_st.st_mode))
@@ -1388,8 +1430,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
         cfg_ver: str = image.get_image_tools_version(DIR_ROOTFS_SRC)
         version_name: str = image.get_image_version(DIR_ROOTFS_SRC)
-        uid_map = id_map('/etc/passwd', f'{DIR_ROOTFS_SRC}/etc/passwd')
-        gid_map = id_map('/etc/group', f'{DIR_ROOTFS_SRC}/etc/group')
+        uids = IdMap('/etc/passwd', f'{DIR_ROOTFS_SRC}/etc/passwd', 'uid')
+        gids = IdMap('/etc/group', f'{DIR_ROOTFS_SRC}/etc/group', 'gid')
 
         disk.partition_umount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs')
 
@@ -1454,7 +1496,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                     copy_function=copy_regular_file,
                     dirs_exist_ok=True,
                 )
-                copy_ownership(f'{DIR_CONFIG}/', target_config_dir, uid_map, gid_map)
+                copy_ownership(f'{DIR_CONFIG}/', target_config_dir, uids, gids)
+                uids.report(DIR_CONFIG)
+                gids.report(DIR_CONFIG)
 
                 # Record information from which image we upgraded to the new one.
                 # This can be used for a future automatic rollback into the old image.

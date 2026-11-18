@@ -122,6 +122,74 @@ class TestReadIds(TreeTestCase):
         self.assertEqual(self.read('odd:x:\u00b2:\nfrr:x:108:\n'), {'frr': 108})
 
 
+class TestIdMap(TreeTestCase):
+    """IdMap translates the ids of the running image into the new one"""
+
+    def idmap(self, old, new):
+        files = []
+        for name, entries in (('old', old), ('new', new)):
+            path = os.path.join(self.tmp, name)
+            with open(path, 'w') as f:
+                f.writelines(f'{n}:x:{i}:\n' for n, i in entries)
+            files.append(path)
+        return image_installer.IdMap(*files, kind='uid')
+
+    def test_system_account_follows_its_name(self):
+        # 2026.05 -> 2026.10: strongswan removed, everyone after it moved by one
+        ids = self.idmap([('_kea', 101), ('frr', 109)], [('_kea', 100), ('frr', 108)])
+        self.assertEqual((ids(101), ids(109)), (100, 108))
+
+    def test_root_and_regular_range_keep_their_number(self):
+        # radius_user and the tacacs group are 1000 in the image, and 1000:1000
+        # is also the most common container user: no translation from 1000 up
+        ids = self.idmap([('root', 0), ('radius_user', 1000), ('vyos', 1002)],
+                         [('root', 0), ('radius_user', 1001)])
+        self.assertEqual((ids(0), ids(1000), ids(1002)), (0, 1000, 1002))
+
+    def test_gone_account_whose_number_is_taken_goes_to_root(self):
+        ids = self.idmap([('strongswan', 107)], [('zabbix', 107)])
+        self.assertEqual(ids(107), 0)
+
+    def test_gone_account_whose_number_is_free_keeps_it(self):
+        ids = self.idmap([('salt', 110)], [('frr', 108)])
+        self.assertEqual(ids(110), 110)
+
+    def test_unnamed_id_keeps_its_number(self):
+        # e.g. a container user: nothing says which host account it would be
+        ids = self.idmap([('frr', 108)], [('systemd-network', 998)])
+        self.assertEqual((ids(998), ids(4000)), (998, 4000))
+
+    def test_an_id_with_several_names_follows_one_that_survives(self):
+        ids = self.idmap([('gone', 120), ('kept', 120)], [('kept', 121), ('other', 120)])
+        self.assertEqual(ids(120), 121)
+
+    def test_identity_without_files(self):
+        self.assertEqual(image_installer.IdMap()(107), 107)
+
+    def test_warnings_name_only_the_ids_met_with_their_count(self):
+        ids = self.idmap([('strongswan', 107), ('salt', 111)],
+                         [('zabbix', 107), ('_chrony', 111), ('dnsmasq', 998)])
+        for i in (107, 107, 998, 111, 4000):
+            ids(i)
+        warnings = []
+        with mock.patch.object(image_installer, 'Warning', warnings.append):
+            ids.report('/config')
+        self.assertEqual(len(warnings), 3, warnings)
+        text = '\n'.join(warnings)
+        self.assertIn('2 entries', text)
+        self.assertIn('strongswan', text)
+        self.assertIn('zabbix', text)
+        self.assertIn('dnsmasq', text)
+        self.assertNotIn('4000', text)
+
+    def test_no_warning_when_nothing_is_ambiguous(self):
+        ids = self.idmap([('frr', 109)], [('frr', 108)])
+        ids(109)
+        with mock.patch.object(image_installer, 'Warning') as warning:
+            ids.report('/config')
+        warning.assert_not_called()
+
+
 class TestCopyRegularFile(TreeTestCase):
     """The copy_function handed to copytree() for a /config tree"""
 
