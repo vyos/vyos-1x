@@ -431,7 +431,7 @@ def verify(container):
                 raise ConfigError(f'IPv6 gateway configured but no IPv6 prefix defined for network "{network}"!')
 
             type_config = dict_search('type', network_config)
-            if dict_search('macvlan', type_config):
+            if dict_search('macvlan', type_config) is not None:
                 parent = dict_search('macvlan.parent', type_config)
                 if not parent:
                     raise ConfigError(f'MACVLAN networks must have a parent interface!')
@@ -484,7 +484,7 @@ def generate_network_options(name, network_config):
 
     type_config = dict_search('type', network_config)
 
-    if dict_search('macvlan', type_config):
+    if dict_search('macvlan', type_config) is not None:
         ifname = dict_search('macvlan.parent', type_config)
         driver = 'macvlan'
         macvlan_mode = dict_search('macvlan.mode', type_config)
