@@ -122,6 +122,43 @@ class TestReadIds(TreeTestCase):
         self.assertEqual(self.read('odd:x:\u00b2:\nfrr:x:108:\n'), {'frr': 108})
 
 
+class TestCopyOwnershipEntries(RecordingTestCase):
+    """Which dst entries copy_ownership() gives an owner to"""
+
+    def test_symlink_to_directory_gets_its_owner(self):
+        # os.walk() lists a symlink to a directory in `dirs`: pruning `dirs`
+        # before handling the entries skipped its lchown().
+        self.both(lambda r: os.mkdir(os.path.join(r, 'bar')))
+        self.both(lambda r: os.symlink('bar', os.path.join(r, 'foo')))
+        image_installer.copy_ownership(self.src, self.dst)
+        self.assertIn('foo', self.owners)
+        self.assertIn('bar', self.owners)
+        self.assertNotIn('foo', self.modes, 'chmod() would follow the link')
+
+    def test_symlink_to_directory_is_not_descended(self):
+        self.both(lambda r: os.mkdir(os.path.join(r, 'bar')))
+        self.both(lambda r: open(os.path.join(r, 'bar', 'leaf'), 'w').close())
+        self.both(lambda r: os.symlink('bar', os.path.join(r, 'foo')))
+        image_installer.copy_ownership(self.src, self.dst)
+        self.assertNotIn(os.path.join('foo', 'leaf'), self.owners)
+        self.assertIn(os.path.join('bar', 'leaf'), self.owners)
+
+    def test_each_destination_entry_is_stated_once(self):
+        self.both(lambda r: os.makedirs(os.path.join(r, 'a', 'b')))
+        self.both(lambda r: open(os.path.join(r, 'a', 'f'), 'w').close())
+        seen = []
+        real_lstat = os.lstat
+
+        def counting_lstat(path):
+            if os.path.commonpath([str(path), self.dst]) == self.dst:
+                seen.append(self._rel(path))
+            return real_lstat(path)
+
+        with mock.patch.object(image_installer, 'lstat', counting_lstat):
+            image_installer.copy_ownership(self.src, self.dst)
+        self.assertEqual(sorted(seen), sorted(set(seen)), 'some entry stated twice')
+
+
 class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
     matching src path, walking src. Only paths present in both trees and

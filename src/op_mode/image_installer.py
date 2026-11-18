@@ -409,14 +409,6 @@ def id_map(old_file: str, new_file: str) -> dict[int, int]:
     return mapping
 
 
-def _is_plain_dir(path: Path) -> bool:
-    """True if path exists and is a directory, not a symlink to one"""
-    try:
-        return S_ISDIR(lstat(path).st_mode)
-    except FileNotFoundError:
-        return False
-
-
 def copy_ownership(
     src: str, dst: str, uid_map: dict[int, int] = None, gid_map: dict[int, int] = None
 ) -> None:
@@ -438,12 +430,7 @@ def copy_ownership(
     uid_map = uid_map or {}
     gid_map = gid_map or {}
     for root, dirs, files in walk(src):
-        # Only descend where dst still has a plain directory to match:
-        # a symlink swapped in there would let the lchown()/chmod() below
-        # follow it outside dst, and a plain file would make the next
-        # level's lstat() raise NotADirectoryError.
-        dirs[:] = [name for name in dirs if _is_plain_dir(
-            Path(dst, Path(root, name).relative_to(src)))]
+        descend = set()
         for name in ['.'] + dirs + files if root == src else dirs + files:
             src_path = Path(root, name)
             dst_path = Path(dst, src_path.relative_to(src))
@@ -454,6 +441,13 @@ def copy_ownership(
                 continue
             if S_IFMT(src_st.st_mode) != S_IFMT(dst_st.st_mode):
                 continue
+            # Only descend where dst has a plain directory too: a symlink
+            # there would let the lchown()/chmod() below follow it outside
+            # dst, and a plain file would make the next level's lstat()
+            # raise NotADirectoryError. A symlink to a directory is listed
+            # in dirs by walk(): it still gets its owner, but no descent.
+            if name in dirs and S_ISDIR(dst_st.st_mode):
+                descend.add(name)
             lchown(
                 dst_path,
                 uid_map.get(src_st.st_uid, src_st.st_uid),
@@ -462,6 +456,7 @@ def copy_ownership(
             # after chown, which clears setuid/setgid on files
             if not S_ISLNK(src_st.st_mode):
                 chmod(dst_path, S_IMODE(src_st.st_mode))
+        dirs[:] = [name for name in dirs if name in descend]
 
 
 def copy_previous_installation_data(target_dir: str) -> None:
