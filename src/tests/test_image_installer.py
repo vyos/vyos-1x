@@ -94,6 +94,34 @@ class RecordingTestCase(TreeTestCase):
         self.modes[self._rel(path)] = mode
 
 
+class TestReadIds(TreeTestCase):
+    """read_ids() returns {name: id} from a passwd or group file"""
+
+    def read(self, text):
+        path = os.path.join(self.tmp, 'passwd')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(text)
+        return image_installer.read_ids(path)
+
+    def test_names_and_ids(self):
+        self.assertEqual(
+            self.read('root:x:0:0::/root:/bin/bash\n_kea:x:100:104::/:/bin/false\n'),
+            {'root': 0, '_kea': 100})
+
+    def test_first_entry_of_a_name_wins(self):
+        self.assertEqual(self.read('frr:x:108:\nfrr:x:200:\n'), {'frr': 108})
+
+    def test_malformed_lines_are_skipped(self):
+        self.assertEqual(
+            self.read('\nshort:x\nnoid:x::\nneg:x:-1:\nfrr:x:108:\n'),
+            {'frr': 108})
+
+    def test_non_ascii_digits_are_skipped(self):
+        # '²'.isdigit() is True but int('²') raises: one such line used to
+        # abort `add system image`.
+        self.assertEqual(self.read('odd:x:\u00b2:\nfrr:x:108:\n'), {'frr': 108})
+
+
 class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
     matching src path, walking src. Only paths present in both trees and

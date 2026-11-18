@@ -387,7 +387,8 @@ def read_ids(path: str) -> dict[str, int]:
     ids = {}
     for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
         fields = line.split(':')
-        if len(fields) > 2 and fields[2].isdigit():
+        # isdigit() alone accepts digits such as '²' that int() rejects
+        if len(fields) > 2 and fields[2].isascii() and fields[2].isdigit():
             ids.setdefault(fields[0], int(fields[2]))
     return ids
 
