@@ -17,6 +17,7 @@ import os
 from typing import Tuple
 from typing import Optional
 
+from vyos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from vyos.utils.file import read_file
 
 # A list of used Kernel constants
@@ -276,3 +277,92 @@ def get_crash_kernel_size() -> int:
 
     raw = read_file(KEXEC_CRASH_SIZE, defaultonfailure='0')
     return int(raw) if raw.isdigit() else 0
+
+
+def get_kernel_cmdline_options(options: dict, kdump_enabled: bool) -> list:
+    """Build the Kernel cmdline options managed by "system option".
+
+    Used both by the system option conf-mode script and by the image installer
+    when writing GRUB for an upgraded image, so both produce the same cmdline.
+
+    Args:
+        options: "system option" config dict, key-mangled and with defaults
+        kdump_enabled: True if "system option kdump" is configured. Needed as
+            recursive defaults populate the kdump node even if it is absent.
+
+    Returns:
+        list: Kernel cmdline options
+    """
+    cmdline_options = []
+    kernel_opts = options.get('kernel', {})
+    k_cpu_opts = kernel_opts.get('cpu', {})
+    k_memory_opts = kernel_opts.get('memory', {})
+
+    if 'disable_mitigations' in kernel_opts:
+        cmdline_options.append('mitigations=off')
+    if 'disable_power_saving' in kernel_opts:
+        cmdline_options.append('intel_idle.max_cstate=0 processor.max_cstate=1')
+    if 'amd_pstate_driver' in kernel_opts:
+        mode = kernel_opts['amd_pstate_driver']
+        cmdline_options.append(f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
+    if 'quiet' in kernel_opts:
+        cmdline_options.append('quiet')
+
+    # Early reboot on kernel panic via kernel cmdline
+    if 'reboot_on_panic' in options:
+        cmdline_options.append('panic=60')
+
+    if 'disable_hpet' in kernel_opts:
+        cmdline_options.append('hpet=disable')
+
+    if 'disable_mce' in kernel_opts:
+        cmdline_options.append('mce=off')
+
+    if 'disable_softlockup' in kernel_opts:
+        cmdline_options.append('nosoftlockup')
+
+    # CPU options
+    isol_cpus = k_cpu_opts.get('isolate_cpus')
+    if isol_cpus:
+        cmdline_options.append(f'isolcpus={isol_cpus}')
+
+    nohz_full = k_cpu_opts.get('nohz_full')
+    if nohz_full:
+        cmdline_options.append(f'nohz_full={nohz_full}')
+
+    rcu_nocbs = k_cpu_opts.get('rcu_no_cbs')
+    if rcu_nocbs:
+        cmdline_options.append(f'rcu_nocbs={rcu_nocbs}')
+
+    if 'disable_nmi_watchdog' in k_cpu_opts:
+        cmdline_options.append('nmi_watchdog=0')
+
+    # Memory options
+    if 'disable_numa_balancing' in k_memory_opts:
+        cmdline_options.append('numa_balancing=disable')
+
+    default_hp_size = k_memory_opts.get('default_hugepage_size')
+    if default_hp_size:
+        cmdline_options.append(f'default_hugepagesz={default_hp_size}')
+
+    hp_sizes = k_memory_opts.get('hugepage_size')
+    if hp_sizes:
+        for size, settings in hp_sizes.items():
+            cmdline_options.append(f'hugepagesz={size}')
+            count = settings.get('hugepage_count')
+            if count:
+                cmdline_options.append(f'hugepages={count}')
+
+    if kdump_enabled:
+        # Crash kernel memory reservation for the capture kernel
+        kdump_memory = options.get('kdump', {}).get('memory')
+        if kdump_memory:
+            if kdump_memory == 'auto':
+                # Tiered auto-sizing based on total system RAM
+                kdump_memory = KDUMP_DEFAULT_MEMORY_AUTO
+            else:
+                # Append suffix (megabytes) to right format
+                kdump_memory = f'{kdump_memory}M'
+            cmdline_options.append(f'crashkernel={kdump_memory}')
+
+    return cmdline_options

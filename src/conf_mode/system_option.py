@@ -24,7 +24,6 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
-from vyos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from vyos.system import image
 from vyos.system import grub_util
 from vyos.template import render
@@ -38,6 +37,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import get_kernel_boot_arg
+from vyos.utils.kernel import get_kernel_cmdline_options
 from vyos.utils.kernel import get_crash_kernel_size
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_running
@@ -386,89 +386,12 @@ def generate(options):
     render(ssh_config, 'system/ssh_config.j2', options)
     render(usb_autosuspend, 'system/40_usb_autosuspend.j2', options)
 
-    # XXX: This code path and if statements must be kept in sync with the Kernel
-    # option handling in image_installer.py:get_cli_kernel_options(). This
-    # occurrence is used for having the appropriate options passed to GRUB
-    # when re-configuring options on the CLI.
-    cmdline_options = []
-    kernel_opts = options.get('kernel', {})
-    k_cpu_opts = kernel_opts.get('cpu', {})
-    k_memory_opts = kernel_opts.get('memory', {})
-    if 'kernel' in options:
-        if 'disable_mitigations' in options['kernel']:
-            cmdline_options.append('mitigations=off')
-        if 'disable_power_saving' in options['kernel']:
-            cmdline_options.append('intel_idle.max_cstate=0 processor.max_cstate=1')
-        if 'amd_pstate_driver' in options['kernel']:
-            mode = options['kernel']['amd_pstate_driver']
-            cmdline_options.append(
-                f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}'
-            )
-        if 'quiet' in options['kernel']:
-            cmdline_options.append('quiet')
-
-    # Early reboot on kernel panic via kernel cmdline
-    # Keep this in sync with image_installer.py:get_cli_kernel_options()
-    if 'reboot_on_panic' in options:
-        cmdline_options.append('panic=60')
-
-    if 'disable_hpet' in kernel_opts:
-        cmdline_options.append('hpet=disable')
-
-    if 'disable_mce' in kernel_opts:
-        cmdline_options.append('mce=off')
-
-    if 'disable_softlockup' in kernel_opts:
-        cmdline_options.append('nosoftlockup')
-
-    # CPU options
-    isol_cpus = k_cpu_opts.get('isolate_cpus')
-    if isol_cpus:
-        cmdline_options.append(f'isolcpus={isol_cpus}')
-
-    nohz_full = k_cpu_opts.get('nohz_full')
-    if nohz_full:
-        cmdline_options.append(f'nohz_full={nohz_full}')
-
-    rcu_nocbs = k_cpu_opts.get('rcu_no_cbs')
-    if rcu_nocbs:
-        cmdline_options.append(f'rcu_nocbs={rcu_nocbs}')
-
-    if 'disable_nmi_watchdog' in k_cpu_opts:
-        cmdline_options.append('nmi_watchdog=0')
-
-    # Memory options
-    if 'disable_numa_balancing' in k_memory_opts:
-        cmdline_options.append('numa_balancing=disable')
-
-    default_hp_size = k_memory_opts.get('default_hugepage_size')
-    if default_hp_size:
-        cmdline_options.append(f'default_hugepagesz={default_hp_size}')
-
-    hp_sizes = k_memory_opts.get('hugepage_size')
-    if hp_sizes:
-        for size, settings in hp_sizes.items():
-            cmdline_options.append(f'hugepagesz={size}')
-            count = settings.get('hugepage_count')
-            if count:
-                cmdline_options.append(f'hugepages={count}')
-
     kdump = options['kdump']
+    cmdline_options = get_kernel_cmdline_options(
+        options, kdump_enabled=not kdump['disabled']
+    )
+
     if not kdump['disabled']:
-        # Crash kernel memory reservation
-        kdump_memory = kdump.get('memory')
-        if kdump_memory:
-            if kdump_memory == 'auto':
-                # Tiered auto-sizing based on total system RAM
-                kdump_memory = KDUMP_DEFAULT_MEMORY_AUTO
-            else:
-                # Append suffix (megabytes) to right format
-                kdump_memory = f'{kdump_memory}M'
-
-            # The `crashkernel=` parameter instructs the boot kernel to reserve a
-            # dedicated memory region for the capture kernel.
-            cmdline_options.append(f'crashkernel={kdump_memory}')
-
         # Render the kdump-tools configuration file from the Jinja2 template
         render(KDUMP_CONFIG_FILE, 'system/kdump_tools.conf.j2', kdump)
 
