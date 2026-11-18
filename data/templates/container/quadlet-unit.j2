@@ -9,3 +9,8 @@ Description=VyOS Container {{ name }}
 
 [Service]
 Restart={{ restart }}
+{% if bridge_interface %}
+
+[Install]
+WantedBy=sys-subsystem-net-devices-{{ bridge_interface }}.device
+{% endif %}

@@ -355,7 +355,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         pool = server_path + ['shared-network-name', 'CONTAINER1215',
                               'subnet', '10.250.215.0/24']
         for interface in [bridge] + peers:
-            if os.path.exists(f'/sys/class/net/{interface}'):
+            kind = 'bridge' if interface == bridge else 'virtual-ethernet'
+            if Config().exists(['interfaces', kind, interface]) or os.path.exists(f'/sys/class/net/{interface}'):
                 self.skipTest(f'Test fixture interface {interface} already exists')
 
         try:
@@ -380,8 +381,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
             self.assertTrue(wait_for(lambda: self.is_running(name), timeout=90))
 
-            def check_lease(expect_gateway=True):
+            def check_lease(driver, expect_gateway=True):
                 info = cmd_to_json(['network', 'inspect', network])
+                self.assertEqual(info['driver'], driver)
                 self.assertEqual(info['ipam_options']['driver'], 'dhcp')
                 pid = str(cmd_to_json(['inspect', name])['State']['Pid'])
                 addresses = json.loads(cmdl(['nsenter', '-t', pid, '-n', 'ip', '-j',
@@ -399,13 +401,15 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 self.assertIn('nameserver 192.0.2.53', dns)
                 cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.215.1'], sudo=True)
 
-            check_lease()
+            check_lease('bridge')
             for path in [network_path + ['prefix', '10.250.215.0/24'],
                          network_path + ['gateway', '10.250.215.1'],
                          name_path + ['network', network, 'address', '10.250.215.2']]:
                 with self.subTest(path=path):
                     self.cli_set(path)
-                    with self.assertRaises(ConfigSessionError):
+                    diagnostic = ('DHCP IPAM cannot be combined with configured prefixes or gateways'
+                                  if path[:3] == network_path else 'cannot use a static address with DHCP IPAM')
+                    with self.assertRaisesRegex(ConfigSessionError, diagnostic):
                         self.cli_commit()
                     self.cli_discard()
 
@@ -414,7 +418,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(network_path + ['type', 'macvlan', 'mode', 'bridge'])
             self.cli_commit()
             self.assertTrue(wait_for(lambda: self.is_running(name), timeout=90))
-            check_lease()
+            check_lease('macvlan')
 
             self.cli_delete(name_path)
             self.cli_delete(pool + ['option', 'default-router'])
@@ -426,7 +430,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(name_path + ['network', network, 'mac', '02:00:00:00:12:15'])
             self.cli_commit()
             self.assertTrue(wait_for(lambda: self.is_running(name), timeout=90))
-            check_lease(expect_gateway=False)
+            check_lease('macvlan', expect_gateway=False)
         finally:
             self.cli_delete(base_path)
             self.cli_delete(server_path)
@@ -434,6 +438,133 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(['interfaces', 'bridge', bridge])
             for peer in peers:
                 self.cli_delete(['interfaces', 'virtual-ethernet', peer])
+            self.cli_commit()
+
+    def test_unmanaged_bridge_recovery(self):
+        bridge = 'br1216'
+        interface_path = ['interfaces', 'bridge', bridge]
+        if Config().exists(interface_path) or os.path.exists(f'/sys/class/net/{bridge}'):
+            self.skipTest('Bridge recovery fixture already exists')
+        name = 'recover1216'
+        network = 'recover1216'
+        try:
+            self.cli_set(interface_path + ['address', '10.250.216.1/24'])
+            self.cli_set(base_path + ['network', network, 'prefix', '10.250.216.0/24'])
+            self.cli_set(base_path + ['network', network, 'no-name-server'])
+            self.cli_set(base_path + ['network', network, 'type', 'bridge', 'interface', bridge])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', name, 'capability', 'net-raw'])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.216.2'])
+            self.cli_commit()
+            for cycle in range(2):
+                with self.subTest(cycle=cycle):
+                    cmdl(['ip', 'link', 'delete', bridge], sudo=True)
+                    self.assertTrue(wait_for(lambda: not self.is_running(name), timeout=10))
+                    cmdl(['ip', 'link', 'add', bridge, 'type', 'bridge'], sudo=True)
+                    cmdl(['ip', 'address', 'add', '10.250.216.1/24', 'dev', bridge], sudo=True)
+                    cmdl(['ip', 'link', 'set', bridge, 'up'], sudo=True)
+                    self.assertTrue(wait_for(lambda: self.is_running(name), timeout=30),
+                                    'Container did not recover after bridge recreation')
+                    state = cmdl(['systemctl', 'show', f'vyos-{network}-network',
+                                  '--property=ActiveState', '--value']).strip()
+                    self.assertEqual(state, 'active')
+                    cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
+                          '10.250.216.1'], sudo=True)
+        finally:
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
+    def test_network_removal_failure_recovery(self):
+        network = 'removal1217'
+        name = 'removal1217'
+        blocker = 'removal-blocker1217'
+        network_path = base_path + ['network', network]
+        self.cli_set(network_path + ['prefix', '10.250.217.0/24'])
+        self.cli_set(base_path + ['name', name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', name, 'command', 'sleep 3600'])
+        self.cli_set(base_path + ['name', name, 'capability', 'net-raw'])
+        self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
+        self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.217.2'])
+        self.cli_commit()
+        try:
+            cmdl(['podman', 'run', '-d', '--name', blocker, '--network', network,
+                  busybox_image, 'sleep', '3600'], sudo=True)
+            self.cli_set(network_path + ['mtu', '1400'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=30),
+                            'Consumer not restored after failed network removal')
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1500')
+            pid = str(cmd_to_json(['inspect', name])['State']['Pid'])
+            links = json.loads(cmdl(['nsenter', '-t', pid, '-n', 'ip', '-j',
+                                    'link', 'show', 'dev', 'eth0'], sudo=True))
+            self.assertEqual(links[0]['mtu'], 1500)
+            cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.217.1'], sudo=True)
+            cmdl(['podman', 'rm', '-f', blocker], sudo=True)
+            self.cli_set(network_path + ['mtu', '1400'])
+            self.cli_commit()
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1400')
+            self.assertTrue(self.is_running(name))
+        finally:
+            cmdl(['podman', 'rm', '-f', '--ignore', blocker], sudo=True)
+
+    def test_unmanaged_gateway_address(self):
+        interface_path = ['interfaces', 'bridge', 'br1218']
+        if Config().exists(interface_path) or os.path.exists('/sys/class/net/br1218'):
+            self.skipTest('Gateway fixture already exists')
+        network_path = base_path + ['network', 'gateway1218']
+        name_path = base_path + ['name', 'gateway1218']
+        try:
+            for address in ['10.250.218.254/24', 'fd00:1218::fe/64']:
+                self.cli_set(interface_path + ['address', address])
+            for prefix in ['10.250.218.0/24', 'fd00:1218::/64']:
+                self.cli_set(network_path + ['prefix', prefix])
+            for gateway in ['10.250.218.254', 'fd00:1218::fe']:
+                self.cli_set(network_path + ['gateway', gateway])
+            self.cli_set(network_path + ['type', 'bridge', 'interface', 'br1218'])
+            self.cli_set(network_path + ['no-name-server'])
+            self.cli_set(name_path + ['image', busybox_image])
+            self.cli_set(name_path + ['command', 'sleep 3600'])
+            self.cli_set(name_path + ['stop-timeout', '1'])
+            for gateway in ['10.250.218.254', 'fd00:1218::fe']:
+                with self.subTest(gateway=gateway):
+                    self.cli_set(name_path + ['network', 'gateway1218', 'address', gateway])
+                    with self.assertRaisesRegex(ConfigSessionError, 'reserved for the network gateway'):
+                        self.cli_commit()
+                    self.cli_delete(name_path + ['network', 'gateway1218', 'address', gateway])
+            self.cli_set(name_path + ['network', 'gateway1218', 'address', '10.250.218.2'])
+            self.cli_commit()
+            self.assertTrue(self.is_running('gateway1218'))
+        finally:
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
+    def test_unchanged_network_transition_validation(self):
+        interface_path = ['interfaces', 'bridge', 'br1219']
+        if Config().exists(interface_path) or os.path.exists('/sys/class/net/br1219'):
+            self.skipTest('Transition fixture already exists')
+        try:
+            self.cli_set(interface_path + ['address', '10.250.219.1/24'])
+            self.cli_set(interface_path + ['address', '10.250.220.254/24'])
+            self.cli_set(base_path + ['network', 'native1219', 'type', 'bridge', 'interface', 'br1219'])
+            self.cli_set(base_path + ['network', 'native1219', 'prefix', '10.250.219.0/24'])
+            self.cli_set(base_path + ['network', 'native1219', 'no-name-server'])
+            self.cli_set(base_path + ['network', 'managed1219', 'prefix', '10.250.220.0/24'])
+            self.cli_commit()
+            self.cli_set(base_path + ['network', 'managed1219', 'description', 'unchanged attachment'])
+            self.cli_commit()
+            self.assertTrue(Config().exists(base_path + ['network', 'managed1219', 'description']))
+        finally:
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
             self.cli_commit()
 
     def test_macvlan_requires_parent_and_mode(self):
