@@ -485,8 +485,8 @@ class AddImageCase(TreeTestCase):
         super().setUp()
         self.grub = mock.Mock()
 
-    def run_add_image(self, copy=None, **extra):
-        """Run add_image(); copy_config_tree() fails unless `copy` is given"""
+    def run_add_image(self, copy_tree=None, **extra):
+        """Run add_image(); copy_config_tree() fails unless copy_tree is given"""
         ii = image_installer
         iso = os.path.join(self.tmp, 'iso')
         rootfs = os.path.join(self.tmp, 'rootfs')
@@ -509,9 +509,8 @@ class AddImageCase(TreeTestCase):
 
         self.cleanup = mock.Mock()
         failure = PermissionError(1, 'Operation not permitted (injected)')
-        self.copy_config_tree = mock.Mock(side_effect=copy or failure)
-        with mock.patch.multiple(
-            ii,
+        self.copy_config_tree = mock.Mock(side_effect=copy_tree or failure)
+        patches = dict(
             DIR_ISO_MOUNT=iso,
             DIR_ROOTFS_SRC=rootfs,
             DIR_CONFIG=self.src,
@@ -526,7 +525,11 @@ class AddImageCase(TreeTestCase):
             cleanup=self.cleanup,
             glob=mock.Mock(return_value=[]),
             migrate_known_hosts=mock.Mock(),
-            **extra,
+        )
+        patches.update(extra)
+        with mock.patch.multiple(
+            ii,
+            **patches,
         ), mock.patch.multiple(
             ii.grub,
             version_add=self.grub.version_add,
@@ -605,6 +608,51 @@ class TestAddImageFailure(AddImageCase):
         self.assertNotIn(other, self.removed())
 
 
+class TestAddImageEncrypted(AddImageCase):
+    """add_image() with an encrypted configuration volume, failing"""
+
+    def run_encrypted(self, existing_volume=False):
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        with open(os.path.join(luks, 'old'), 'w') as f:
+            f.write('current volume')
+        if existing_volume:
+            with open(os.path.join(luks, 'new'), 'w') as f:
+                f.write('left by someone else')
+        real_copy = image_installer.copy
+
+        def copy(src, dst, *args, **kwargs):
+            if str(dst).endswith('.squashfs'):
+                raise OSError(28, 'No space left on device (injected)')
+            return real_copy(src, dst, *args, **kwargs)
+
+        self.run_add_image(
+            DEV_ENCRYPTED_CONFIG=self.tmp,  # exists: the encrypted branch
+            copy=copy,
+        )
+        self.assertIn('(injected)', self.exit_message)
+        return os.path.join(luks, 'new')
+
+    def test_the_volume_copy_is_removed_with_the_image(self):
+        volume = self.run_encrypted()
+        self.assertIn(volume, self.removed())
+
+    def test_a_volume_this_run_did_not_create_is_kept(self):
+        volume = self.run_encrypted(existing_volume=True)
+        self.assertNotIn(volume, self.removed())
+
+    def test_first_boot_never_stays_in_the_running_configuration(self):
+        def failing_copy(src, dst, *args, **kwargs):
+            raise OSError(5, 'EIO (injected)')
+
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        open(os.path.join(luks, 'old'), 'w').close()
+        self.run_add_image(DEV_ENCRYPTED_CONFIG=self.tmp, copy=failing_copy)
+        self.assertIn('(injected)', self.exit_message)
+        self.assertFalse(os.path.exists(os.path.join(self.src, 'first_boot')))
+
+
 class TestAddImageGrub(AddImageCase):
     """A failure once the new image is in, or about to be in, GRUB"""
 
@@ -619,7 +667,7 @@ class TestAddImageGrub(AddImageCase):
         # get_cli_kernel_options() only reads config.boot: failing there
         # must not leave an entry, nor a default, pointing at removed files.
         self.run_add_image(
-            copy=self.copied,
+            copy_tree=self.copied,
             get_cli_kernel_options=mock.Mock(side_effect=ValueError('bad (injected)')),
         )
         self.assertIn('(injected)', self.exit_message)
@@ -629,7 +677,7 @@ class TestAddImageGrub(AddImageCase):
 
     def test_a_published_entry_is_withdrawn_before_its_files(self):
         self.grub.update_kernel_cmdline_options.side_effect = OSError(5, 'EIO (injected)')
-        self.run_add_image(copy=self.copied,
+        self.run_add_image(copy_tree=self.copied,
                            get_cli_kernel_options=mock.Mock(return_value=[]))
         self.assertIn('(injected)', self.exit_message)
         self.grub.version_del.assert_called_once_with('new', self.persistence)
@@ -640,7 +688,7 @@ class TestAddImageGrub(AddImageCase):
     def test_files_are_kept_if_the_entry_cannot_be_withdrawn(self):
         self.grub.update_kernel_cmdline_options.side_effect = OSError(5, 'EIO (injected)')
         self.grub.version_del.side_effect = OSError(30, 'EROFS')
-        self.run_add_image(copy=self.copied,
+        self.run_add_image(copy_tree=self.copied,
                            get_cli_kernel_options=mock.Mock(return_value=[]))
         self.assertNotIn(self.image_dir(), self.removed())
 

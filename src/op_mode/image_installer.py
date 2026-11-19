@@ -1565,6 +1565,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     iso_path: Path = image_fetch(image_path, vrf, no_prompt)
     # boot/<image>, once this run has created it: removed on failure
     new_image_dir: str = ''
+    # luks/<image>, if this run creates it: removed on failure
+    new_luks_volume: str = ''
     # set once the new image is in GRUB: withdrawn on failure
     grub_published: bool = False
     previous_default: str = ''
@@ -1646,18 +1648,24 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 # This can be used for a future automatic rollback into the old image.
                 #
                 # For encrypted config, we need to copy, sync filesystems and remove from current image
-                tmp = {'previous_image' : image.get_running_image()}
-                write_file('/opt/vyatta/etc/config/first_boot', dumps(tmp))
-                sync()
-
-                # Copy encrypted volumes
                 current_name = image.get_running_image()
                 current_config_path = f'{root_dir}/luks/{current_name}'
                 target_config_path = f'{root_dir}/luks/{image_name}'
-                copy(current_config_path, target_config_path)
+                if not Path(target_config_path).exists():
+                    # recorded before the copy: a partial one is removed too
+                    new_luks_volume = target_config_path
+                first_boot = Path(DIR_CONFIG, 'first_boot')
+                tmp = {'previous_image' : current_name}
+                write_file(str(first_boot), dumps(tmp))
+                sync()
 
-                # Now remove from current image
-                Path('/opt/vyatta/etc/config/first_boot').unlink()
+                # Copy encrypted volumes
+                try:
+                    copy(current_config_path, target_config_path)
+                finally:
+                    # Now remove from current image - also when the copy
+                    # failed: the marker belongs to the new image only
+                    first_boot.unlink(missing_ok=True)
             else:
                 print('Copying configuration directory')
                 Path(target_config_dir).mkdir(parents=True)
@@ -1732,7 +1740,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # left behind, it makes the next attempt fail on mkdir(). Any error
         # counts, not only ENOSPC: a failed chown() or a copytree() error
         # (shutil.Error is an OSError) left a half-built image too.
-        remove_items = [new_image_dir] if new_image_dir else []
+        remove_items = [i for i in (new_image_dir, new_luks_volume) if i]
         if grub_published:
             # Withdraw the entry, and give the default back, before removing
             # the files it boots: else GRUB can pick a kernel that is gone.
