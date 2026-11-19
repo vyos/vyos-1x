@@ -21,6 +21,7 @@ from argparse import ArgumentParser
 from argparse import Namespace
 from pathlib import Path
 from shutil import copy
+from shutil import copy2
 from shutil import chown
 from shutil import rmtree
 from shutil import copytree
@@ -32,6 +33,15 @@ from os import readlink
 from os import getpid
 from os import getppid
 from os import sync
+from os import chmod
+from os import lchown
+from os import lstat
+from os import walk
+from stat import S_IFMT
+from stat import S_IMODE
+from stat import S_ISDIR
+from stat import S_ISLNK
+from grp import getgrnam
 from json import dumps
 from typing import Union
 from urllib.parse import urlparse
@@ -59,6 +69,7 @@ from vyos.system import SYSTEM_CFG_VER
 from vyos.system import grub_util
 from vyos.template import render
 from vyos.utils.auth import DEFAULT_PASSWORD
+from vyos.utils.auth import MIN_USER_UID
 from vyos.utils.auth import EPasswdStrength
 from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_local_users
@@ -368,14 +379,179 @@ def search_previous_installation(disks: list[str]) -> None:
 
     disk.partition_umount(image_drive)
 
-def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
+def copy_regular_file(src: str, dst: str, *, follow_symlinks=True):
+    """copy_function for copytree(): regular files only, owners left alone
+
+    copytree() hands every non-directory to its copy_function, and copy2()
+    raises on a socket or a FIFO, which /config holds (container control
+    sockets): it would abort the whole copy. Regular files still go through
+    copy2(), which keeps their extended attributes and POSIX ACLs. Ownership
+    is set afterwards by copy_ownership(), in one place.
+    """
     if not Path(src).is_file():
         return
     if Path(dst).is_dir():
         dst = Path(dst).joinpath(Path(src).name)
-    st = Path(src).stat()
-    copy(src, dst, follow_symlinks=follow_symlinks)
-    chown(dst, user=st.st_uid)
+    copy2(src, dst, follow_symlinks=follow_symlinks)
+
+
+def read_ids(path: str) -> dict[str, int]:
+    """Return {name: id} from a passwd or group file"""
+    ids = {}
+    for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
+        fields = line.split(':')
+        # isdigit() alone accepts digits such as '²' that int() rejects, and
+        # int() rejects digit strings over 4300 digits: skip the record only
+        if len(fields) > 2 and fields[2].isascii() and fields[2].isdigit():
+            try:
+                ids.setdefault(fields[0], int(fields[2]))
+            except ValueError:
+                continue
+    return ids
+
+
+class IdMap:
+    """Translate the uids or gids of one image into those of another
+
+    The old image is the running one on upgrade, the previous installation
+    on a reinstall from the live ISO.
+
+    System users and groups are not given fixed ids at build time, so a name
+    can get another number in another image: an id of the system range
+    (1 to MIN_USER_UID - 1) whose name exists in both images gets the number
+    of the new image, like tar and rsync do. The files are read directly,
+    not through NSS, which can answer for ids that are not in them.
+
+    Every other id keeps its number: root, and the regular range, where the
+    image's own accounts (radius_user, the tacacs group) share their number
+    with login users and with the most common container users.
+
+    In the system range, an id whose names are all gone from the new image
+    goes to root if its number belongs to another name there: keeping it
+    would hand the files to an unrelated account. An id with no name in the
+    old image (e.g. a container user) keeps its number - nothing says
+    which account it would be - and is reported if the new image names it.
+    """
+
+    def __init__(self, old_file: str = '', new_file: str = '', kind: str = 'uid'):
+        self.kind = kind
+        self.ids: dict[int, int] = {}
+        self.notes: dict[int, str] = {}
+        self.seen: dict[int, int] = {}
+        if not (old_file and new_file):
+            return
+        old_ids = read_ids(old_file)
+        new_ids = read_ids(new_file)
+        new_names: dict[int, str] = {}
+        for name, new_id in new_ids.items():
+            new_names.setdefault(new_id, name)
+        old_names: dict[int, list[str]] = {}
+        for name, old_id in old_ids.items():
+            old_names.setdefault(old_id, []).append(name)
+
+        for old_id in range(1, MIN_USER_UID):
+            names = old_names.get(old_id)
+            if names:
+                kept = [n for n in names if n in new_ids]
+                if kept:
+                    self.ids[old_id] = new_ids[kept[0]]
+                elif old_id in new_names:
+                    self.ids[old_id] = 0
+                    self.notes[old_id] = (
+                        f'given to root: {"/".join(names)} is not in the new '
+                        f'image, where {kind} {old_id} is {new_names[old_id]}'
+                    )
+            elif old_id in new_names:
+                self.notes[old_id] = (
+                    f'kept: {kind} {old_id} has no name in the old image, '
+                    f'it is {new_names[old_id]} in the new one'
+                )
+
+    def __call__(self, old_id: int) -> int:
+        if old_id in self.notes:
+            self.seen[old_id] = self.seen.get(old_id, 0) + 1
+        return self.ids.get(old_id, old_id)
+
+    def report(self, root: str) -> None:
+        """Warn about the ambiguous ids met since this map was made"""
+        for old_id, count in sorted(self.seen.items()):
+            Warning(
+                f'{count} entries of {root} owned by {self.kind} '
+                f'{old_id} {self.notes[old_id]}'
+            )
+
+
+def copy_ownership(src: str, dst: str, uids: IdMap = None, gids: IdMap = None) -> None:
+    """Give every entry of dst the owner, group and mode of the same path in src
+
+    copytree() preserves permissions but not ownership: every entry it
+    creates is owned by root, and takes the group of the setgid /config.
+    Services running as a non-root user can then no longer write to their
+    directories under /config after an image upgrade. The mode is set again
+    after lchown(), which clears the setuid/setgid bits.
+    Only paths present in both trees and of the same type are touched, and
+    never dst itself: see copy_config_tree().
+
+    Owners are translated with uids and gids (see IdMap); without them,
+    they keep their numbers.
+    """
+    uids = uids or IdMap()
+    gids = gids or IdMap(kind='gid')
+    for root, dirs, files in walk(src):
+        descend = set()
+        for name in dirs + files:
+            src_path = Path(root, name)
+            dst_path = Path(dst, src_path.relative_to(src))
+            try:
+                src_st = lstat(src_path)
+                dst_st = lstat(dst_path)
+            except FileNotFoundError:
+                continue
+            if S_IFMT(src_st.st_mode) != S_IFMT(dst_st.st_mode):
+                continue
+            # Only descend where dst has a plain directory too: a symlink
+            # there would let the lchown()/chmod() below follow it outside
+            # dst, and a plain file would make the next level's lstat()
+            # raise NotADirectoryError. A symlink to a directory is listed
+            # in dirs by walk(): it still gets its owner, but no descent.
+            # Both sides having the same type, a directory here is one of dirs.
+            if S_ISDIR(dst_st.st_mode):
+                descend.add(name)
+            lchown(dst_path, uids(src_st.st_uid), gids(src_st.st_gid))
+            # after lchown(), which clears setuid/setgid on files
+            if not S_ISLNK(src_st.st_mode):
+                chmod(dst_path, S_IMODE(src_st.st_mode))
+        dirs[:] = [name for name in dirs if name in descend]
+
+
+def vyattacfg_gid(group_file: str) -> int:
+    """The gid of vyattacfg in group_file, else in the running system
+
+    Read it from the new image's group file: shutil.chown(group='vyattacfg')
+    resolves the name in the running image, whose number may differ.
+    """
+    gid = read_ids(group_file).get('vyattacfg')
+    return gid if gid is not None else getgrnam('vyattacfg').gr_gid
+
+
+def copy_config_tree(
+    src: str, dst: str, uids: IdMap, gids: IdMap, cfg_gid: int
+) -> None:
+    """Copy a /config tree into the persistence of a new image
+
+    Entries keep their owner, group and mode, translated for the new image
+    (see copy_ownership()). The root itself is the new image's
+    root:vyattacfg 2775, whatever the source has drifted to: copytree()
+    copies the source's mode onto it.
+    """
+    copytree(
+        src, dst, symlinks=True, copy_function=copy_regular_file, dirs_exist_ok=True
+    )
+    copy_ownership(src, dst, uids, gids)
+    lchown(dst, 0, cfg_gid)
+    chmod(dst, 0o2775)
+    uids.report(src)
+    gids.report(src)
 
 
 def copy_previous_installation_data(target_dir: str) -> None:
@@ -1258,6 +1434,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
         cfg_ver: str = image.get_image_tools_version(DIR_ROOTFS_SRC)
         version_name: str = image.get_image_version(DIR_ROOTFS_SRC)
+        uids = IdMap('/etc/passwd', f'{DIR_ROOTFS_SRC}/etc/passwd', 'uid')
+        gids = IdMap('/etc/group', f'{DIR_ROOTFS_SRC}/etc/group', 'gid')
+        cfg_gid = vyattacfg_gid(f'{DIR_ROOTFS_SRC}/etc/group')
 
         disk.partition_umount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs')
 
@@ -1311,12 +1490,10 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 Path('/opt/vyatta/etc/config/first_boot').unlink()
             else:
                 print('Copying configuration directory')
-                # copytree preserves perms but not ownership:
                 Path(target_config_dir).mkdir(parents=True)
-                chown(target_config_dir, group='vyattacfg')
-                chmod_2775(target_config_dir)
-                copytree(f'{DIR_CONFIG}/', target_config_dir, symlinks=True,
-                        copy_function=copy_preserve_owner, dirs_exist_ok=True)
+                copy_config_tree(
+                    f'{DIR_CONFIG}/', target_config_dir, uids, gids, cfg_gid
+                )
 
                 # Record information from which image we upgraded to the new one.
                 # This can be used for a future automatic rollback into the old image.
@@ -1324,7 +1501,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 write_file(f'{target_config_dir}/first_boot', dumps(tmp))
         else:
             Path(target_config_dir).mkdir(parents=True)
-            chown(target_config_dir, group='vyattacfg')
+            lchown(target_config_dir, 0, cfg_gid)
             chmod_2775(target_config_dir)
             Path(f'{target_config_dir}/.vyatta_config').touch()
 
