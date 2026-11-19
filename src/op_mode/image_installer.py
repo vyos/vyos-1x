@@ -1622,11 +1622,15 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         target_config_dir: str = f'{root_dir}/boot/{image_name}/rw{DIR_CONFIG}/'
         # With --no-prompt the name is not checked against installed images:
         # never build into, nor clean up, a directory this run did not create.
+        # mkdir() checks and creates in one step, so another run cannot slip
+        # in between; the directory is recorded for cleanup once it is ours.
         image_dir = Path(root_dir, 'boot', image_name)
-        if image_dir.exists():
+        try:
+            image_dir.mkdir(parents=True)
+        except FileExistsError:
             raise FileExistsError(
                 EEXIST, 'Image directory already exists', str(image_dir)
-            )
+            ) from None
         new_image_dir = str(image_dir)
         # copy config
         if no_prompt or migrate_config():

@@ -550,6 +550,25 @@ class TestAddImageFailure(TreeTestCase):
         self.assertNotIn(existing, self.removed())
         self.assertTrue(os.path.isdir(os.path.join(existing, 'rw')))
 
+    def test_a_directory_created_by_another_run_is_never_removed(self):
+        # Checking for the directory and creating it later leaves a window:
+        # another run creates it in between. Here exists() says it is absent
+        # while it is there, as at the end of that window.
+        import pathlib
+
+        other = os.path.join(self.tmp, 'persistence', 'boot', 'new')
+        os.makedirs(other)
+        real_exists = pathlib.Path.exists
+
+        def exists(path, *args, **kwargs):
+            if str(path) == other:
+                return False
+            return real_exists(path, *args, **kwargs)
+
+        with mock.patch.object(pathlib.Path, 'exists', exists):
+            self.run_add_image()
+        self.assertNotIn(other, self.removed())
+
 
 class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
