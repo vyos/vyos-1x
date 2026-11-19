@@ -563,6 +563,35 @@ def vyattacfg_gid(group_file: str) -> int:
     return gid if gid is not None else getgrnam('vyattacfg').gr_gid
 
 
+def clear_link_collisions(src: str, dst: str) -> None:
+    """Remove what dst has, other than a directory, where src has a symlink
+
+    copytree(symlinks=True) cannot replace an existing file by a link:
+    os.symlink() raises FileExistsError. On a reinstall, the installer has
+    already written config.boot (and .vyatta_config) into the target when
+    the saved configuration is copied over it.
+
+    Only descends where dst has a plain directory, like copy_ownership():
+    a symlink in dst must not lead the removal outside of it.
+    """
+    for root, dirs, files in walk(src):
+        descend = set()
+        for name in dirs + files:
+            src_path = Path(root, name)
+            dst_path = Path(dst, src_path.relative_to(src))
+            try:
+                src_st = lstat(src_path)
+                dst_st = lstat(dst_path)
+            except FileNotFoundError:
+                continue
+            if S_ISLNK(src_st.st_mode):
+                if not S_ISDIR(dst_st.st_mode):
+                    dst_path.unlink()
+            elif S_ISDIR(dst_st.st_mode):
+                descend.add(name)
+        dirs[:] = [name for name in dirs if name in descend]
+
+
 def copy_config_tree(
     src: str, dst: str, uids: IdMap, gids: IdMap, cfg_gid: int
 ) -> None:
@@ -573,6 +602,7 @@ def copy_config_tree(
     root:vyattacfg 2775, whatever the source has drifted to: copytree()
     copies the source's mode onto it.
     """
+    clear_link_collisions(src, dst)
     copytree(
         src, dst, symlinks=True, copy_function=copy_regular_file, dirs_exist_ok=True
     )

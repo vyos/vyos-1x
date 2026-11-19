@@ -319,6 +319,49 @@ class TestConfigRoot(RecordingTestCase):
         self.assertEqual(self.modes['.'], 0o2775)
         self.assertIn('config.boot', self.owners)
 
+    def test_saved_symlink_replaces_a_file_the_installer_created(self):
+        # install image writes a regular config.boot before restoring the
+        # previous one; a saved config.boot symlink then hit it, after the
+        # old disk was formatted.
+        with open(os.path.join(self.src, 'config.boot.real'), 'w') as f:
+            f.write('saved')
+        os.symlink('config.boot.real', os.path.join(self.src, 'config.boot'))
+        with open(os.path.join(self.dst, 'config.boot'), 'w') as f:
+            f.write('installer default')
+        image_installer.copy_config_tree(self.src, self.dst,
+                                         image_installer.IdMap(),
+                                         image_installer.IdMap(kind='gid'),
+                                         cfg_gid=102)
+        link = os.path.join(self.dst, 'config.boot')
+        self.assertTrue(os.path.islink(link))
+        with open(link) as f:
+            self.assertEqual(f.read(), 'saved')
+
+    def test_link_collisions_never_reach_outside_the_target(self):
+        # src/X/L is a link; dst/X is a symlink to a directory outside dst
+        # holding a file L: it must not be removed.
+        outside = os.path.join(self.tmp, 'outside')
+        os.mkdir(outside)
+        with open(os.path.join(outside, 'L'), 'w') as f:
+            f.write('keep')
+        os.mkdir(os.path.join(self.src, 'X'))
+        os.symlink('/nowhere', os.path.join(self.src, 'X', 'L'))
+        os.symlink(outside, os.path.join(self.dst, 'X'))
+        image_installer.clear_link_collisions(self.src, self.dst)
+        self.assertTrue(os.path.isfile(os.path.join(outside, 'L')))
+
+    def test_a_saved_file_still_overwrites_one_the_installer_created(self):
+        with open(os.path.join(self.src, 'config.boot'), 'w') as f:
+            f.write('saved')
+        with open(os.path.join(self.dst, 'config.boot'), 'w') as f:
+            f.write('installer default')
+        image_installer.copy_config_tree(self.src, self.dst,
+                                         image_installer.IdMap(),
+                                         image_installer.IdMap(kind='gid'),
+                                         cfg_gid=102)
+        with open(os.path.join(self.dst, 'config.boot')) as f:
+            self.assertEqual(f.read(), 'saved')
+
     def test_vyattacfg_gid_is_read_from_the_new_image(self):
         group = os.path.join(self.tmp, 'group')
         with open(group, 'w') as f:
