@@ -1563,8 +1563,11 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
     # fetch an image
     iso_path: Path = image_fetch(image_path, vrf, no_prompt)
-    # boot/<image>, once this run is about to create it: removed on failure
+    # boot/<image>, once this run has created it: removed on failure
     new_image_dir: str = ''
+    # set once the new image is in GRUB: withdrawn on failure
+    grub_published: bool = False
+    previous_default: str = ''
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -1706,14 +1709,20 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # unmount an ISO and cleanup
         cleanup([str(iso_path)])
 
+        # read the kernel options first: it only reads config.boot, and
+        # must not fail once the new image is published in GRUB
+        config_boot = Path(f'{target_config_dir}/config.boot')
+        if config_boot.exists():
+            cmdline_options = get_cli_kernel_options(str(config_boot))
+
         # add information about version
+        previous_default = image.get_default_image(root_dir)
+        grub_published = True
         grub.version_add(image_name, root_dir)
         if set_as_default:
             grub.set_default(image_name, root_dir)
 
-        if Path(f'{target_config_dir}/config.boot').exists():
-            cmdline_options = get_cli_kernel_options(
-                f'{target_config_dir}/config.boot')
+        if config_boot.exists():
             grub_util.update_kernel_cmdline_options(' '.join(cmdline_options),
                                                     root_dir=root_dir,
                                                     version=image_name)
@@ -1723,10 +1732,20 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # left behind, it makes the next attempt fail on mkdir(). Any error
         # counts, not only ENOSPC: a failed chown() or a copytree() error
         # (shutil.Error is an OSError) left a half-built image too.
-        cleanup(
-            mounts=[str(iso_path)],
-            remove_items=[new_image_dir] if new_image_dir else [],
-        )
+        remove_items = [new_image_dir] if new_image_dir else []
+        if grub_published:
+            # Withdraw the entry, and give the default back, before removing
+            # the files it boots: else GRUB can pick a kernel that is gone.
+            # If that fails, keep the files rather than break the boot.
+            try:
+                grub.version_del(image_name, root_dir)
+                if set_as_default and previous_default:
+                    grub.set_default(previous_default, root_dir)
+            except Exception as grub_err:
+                Warning(f'Could not remove {image_name} from GRUB '
+                        f'({grub_err}): its files are kept')
+                remove_items = []
+        cleanup(mounts=[str(iso_path)], remove_items=remove_items)
         exit(f'Error: {err}')
 
 
