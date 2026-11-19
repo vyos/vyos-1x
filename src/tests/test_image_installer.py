@@ -320,11 +320,174 @@ class TestConfigRoot(RecordingTestCase):
         self.assertEqual(self.modes['.'], 0o2775)
         self.assertIn('config.boot', self.owners)
 
+    def test_saved_symlink_replaces_a_file_the_installer_created(self):
+        # install image writes a regular config.boot before restoring the
+        # previous one; a saved config.boot symlink then hit it, after the
+        # old disk was formatted.
+        with open(os.path.join(self.src, 'config.boot.real'), 'w') as f:
+            f.write('saved')
+        os.symlink('config.boot.real', os.path.join(self.src, 'config.boot'))
+        with open(os.path.join(self.dst, 'config.boot'), 'w') as f:
+            f.write('installer default')
+        image_installer.copy_config_tree(
+            self.src,
+            self.dst,
+            image_installer.IdMap(),
+            image_installer.IdMap(kind='gid'),
+            cfg_gid=102,
+        )
+        link = os.path.join(self.dst, 'config.boot')
+        self.assertTrue(os.path.islink(link))
+        with open(link) as f:
+            self.assertEqual(f.read(), 'saved')
+
+    def test_link_collisions_never_reach_outside_the_target(self):
+        # src/X/L is a link; dst/X is a symlink to a directory outside dst
+        # holding a file L: it must not be removed.
+        outside = os.path.join(self.tmp, 'outside')
+        os.mkdir(outside)
+        with open(os.path.join(outside, 'L'), 'w') as f:
+            f.write('keep')
+        os.mkdir(os.path.join(self.src, 'X'))
+        os.symlink('/nowhere', os.path.join(self.src, 'X', 'L'))
+        os.symlink(outside, os.path.join(self.dst, 'X'))
+        image_installer.clear_link_collisions(self.src, self.dst)
+        self.assertTrue(os.path.isfile(os.path.join(outside, 'L')))
+
+    def test_a_saved_file_still_overwrites_one_the_installer_created(self):
+        with open(os.path.join(self.src, 'config.boot'), 'w') as f:
+            f.write('saved')
+        with open(os.path.join(self.dst, 'config.boot'), 'w') as f:
+            f.write('installer default')
+        image_installer.copy_config_tree(
+            self.src,
+            self.dst,
+            image_installer.IdMap(),
+            image_installer.IdMap(kind='gid'),
+            cfg_gid=102,
+        )
+        with open(os.path.join(self.dst, 'config.boot')) as f:
+            self.assertEqual(f.read(), 'saved')
+
     def test_vyattacfg_gid_is_read_from_the_new_image(self):
         group = os.path.join(self.tmp, 'group')
         with open(group, 'w') as f:
             f.write('users:x:100:\nvyattacfg:x:103:\n')
         self.assertEqual(image_installer.vyattacfg_gid(group), 103)
+
+
+class TestReinstallPath(TreeTestCase):
+    """install image from the live ISO over a previous installation"""
+
+    def setUp(self):
+        super().setUp()
+        self.image = os.path.join(self.tmp, 'boot', '2026.10.01')
+        self.saved = os.path.join(self.tmp, 'accounts')
+        os.makedirs(os.path.join(self.image, 'rw', 'etc'))
+
+    def write(self, path, text):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w') as f:
+            f.write(text)
+
+    def test_accounts_are_saved_from_the_overlay(self):
+        # Creating a login user at boot copies passwd/group up into rw/etc,
+        # whole: that copy is what the running system saw.
+        self.write(os.path.join(self.image, 'rw/etc/passwd'), 'frr:x:109:\n')
+        self.write(os.path.join(self.image, 'rw/etc/group'), 'frr:x:115:\n')
+        with mock.patch.object(image_installer.disk, 'partition_mount') as mount:
+            image_installer.save_account_files(self.image, self.saved)
+        mount.assert_not_called()
+        self.assertEqual(
+            image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
+        )
+        self.assertEqual(
+            image_installer.read_ids(os.path.join(self.saved, 'group')), {'frr': 115}
+        )
+
+    def test_accounts_fall_back_to_the_image_squashfs(self):
+        def mount(source, path, fstype=''):
+            self.assertTrue(source.endswith('2026.10.01.squashfs'))
+            self.assertEqual(fstype, 'squashfs')
+            self.write(os.path.join(path, 'etc/passwd'), 'frr:x:109:\n')
+            self.write(os.path.join(path, 'etc/group'), 'frr:x:115:\n')
+            return True
+
+        with mock.patch.object(
+            image_installer.disk, 'partition_mount', mount
+        ), mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+            image_installer.save_account_files(self.image, self.saved)
+        umount.assert_called_once()
+        self.assertEqual(
+            image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
+        )
+
+    def test_each_account_file_comes_from_where_the_system_saw_it(self):
+        # Only passwd copied up: the old system saw the upper passwd and the
+        # lower group.
+        self.write(os.path.join(self.image, 'rw/etc/passwd'), 'svc:x:210:\n')
+
+        def mount(source, path, fstype=''):
+            self.write(os.path.join(path, 'etc/passwd'), 'svc:x:109:\n')
+            self.write(os.path.join(path, 'etc/group'), 'svc:x:115:\n')
+            return True
+
+        with mock.patch.object(
+            image_installer.disk, 'partition_mount', mount
+        ), mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+            image_installer.save_account_files(self.image, self.saved)
+        umount.assert_called_once()
+        read = image_installer.read_ids
+        self.assertEqual(read(os.path.join(self.saved, 'passwd')), {'svc': 210})
+        self.assertEqual(read(os.path.join(self.saved, 'group')), {'svc': 115})
+
+    def test_old_partition_is_released_when_saving_fails(self):
+        # The old disk stayed mounted on /mnt/tmp, and a retry in the same
+        # session failed on it.
+        mnt = os.path.join(self.tmp, 'mnt-tmp')
+        with mock.patch.multiple(
+            image_installer,
+            DIR_PREVIOUS_MOUNT=mnt,
+            DIR_PREVIOUS_CONFIG=os.path.join(self.tmp, 'mnt-config'),
+            DIR_PREVIOUS_SSH=os.path.join(self.tmp, 'mnt-ssh'),
+            DIR_PREVIOUS_ACCOUNTS=self.saved,
+            copytree=mock.Mock(side_effect=OSError(5, 'Input/output error')),
+        ), mock.patch.object(
+            image_installer.disk, 'partition_mount'
+        ), mock.patch.object(
+            image_installer.disk, 'partition_umount'
+        ) as umount:
+            with self.assertRaises(OSError):
+                image_installer.save_previous_installation(
+                    '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False
+                )
+        umount.assert_called_once_with('/dev/sda3')
+
+    def test_previous_config_is_copied_with_translated_owners(self):
+        prev = os.path.join(self.tmp, 'mnt-config')
+        os.mkdir(prev)
+        self.write(os.path.join(self.saved, 'passwd'), 'frr:x:109:\n')
+        self.write(os.path.join(self.saved, 'group'), 'frr:x:115:\nvyattacfg:x:102:\n')
+        new_etc = os.path.join(self.tmp, 'new-etc')
+        self.write(os.path.join(new_etc, 'passwd'), 'frr:x:108:\n')
+        self.write(os.path.join(new_etc, 'group'), 'frr:x:114:\nvyattacfg:x:103:\n')
+        target = os.path.join(self.tmp, 'target')
+        with mock.patch.object(
+            image_installer, 'DIR_PREVIOUS_CONFIG', prev
+        ), mock.patch.object(
+            image_installer, 'DIR_PREVIOUS_ACCOUNTS', self.saved
+        ), mock.patch.object(
+            image_installer, 'DIR_NEW_ACCOUNTS', new_etc
+        ), mock.patch.object(
+            image_installer, 'DIR_PREVIOUS_SSH', '/nonexistent'
+        ), mock.patch.object(
+            image_installer, 'copy_config_tree'
+        ) as copy_tree:
+            image_installer.copy_previous_installation_data(target)
+        copy_tree.assert_called_once()
+        src, dst, uids, gids, cfg_gid = copy_tree.call_args.args
+        self.assertEqual((src, dst), (prev, target + image_installer.DIR_CONFIG))
+        self.assertEqual((uids(109), gids(115), cfg_gid), (108, 114, 103))
 
 
 class TestCopyOwnershipTraversal(TreeTestCase):
