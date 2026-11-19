@@ -119,8 +119,9 @@ class TestReadIds(TreeTestCase):
 
     def test_ids_too_long_for_int_are_skipped(self):
         # int() refuses digit strings over 4300 digits (Python 3.11+)
-        self.assertEqual(self.read('huge:x:' + '9' * 5000 + ':\nfrr:x:108:\n'),
-                         {'frr': 108})
+        self.assertEqual(
+            self.read('huge:x:' + '9' * 5000 + ':\nfrr:x:108:\n'), {'frr': 108}
+        )
 
     def test_non_ascii_digits_are_skipped(self):
         # '²'.isdigit() is True but int('²') raises: one such line used to
@@ -328,10 +329,13 @@ class TestConfigRoot(RecordingTestCase):
         os.symlink('config.boot.real', os.path.join(self.src, 'config.boot'))
         with open(os.path.join(self.dst, 'config.boot'), 'w') as f:
             f.write('installer default')
-        image_installer.copy_config_tree(self.src, self.dst,
-                                         image_installer.IdMap(),
-                                         image_installer.IdMap(kind='gid'),
-                                         cfg_gid=102)
+        image_installer.copy_config_tree(
+            self.src,
+            self.dst,
+            image_installer.IdMap(),
+            image_installer.IdMap(kind='gid'),
+            cfg_gid=102,
+        )
         link = os.path.join(self.dst, 'config.boot')
         self.assertTrue(os.path.islink(link))
         with open(link) as f:
@@ -355,10 +359,13 @@ class TestConfigRoot(RecordingTestCase):
             f.write('saved')
         with open(os.path.join(self.dst, 'config.boot'), 'w') as f:
             f.write('installer default')
-        image_installer.copy_config_tree(self.src, self.dst,
-                                         image_installer.IdMap(),
-                                         image_installer.IdMap(kind='gid'),
-                                         cfg_gid=102)
+        image_installer.copy_config_tree(
+            self.src,
+            self.dst,
+            image_installer.IdMap(),
+            image_installer.IdMap(kind='gid'),
+            cfg_gid=102,
+        )
         with open(os.path.join(self.dst, 'config.boot')) as f:
             self.assertEqual(f.read(), 'saved')
 
@@ -425,8 +432,9 @@ class TestReinstallPath(TreeTestCase):
             self.write(os.path.join(path, 'etc/group'), 'svc:x:115:\n')
             return True
 
-        with mock.patch.object(image_installer.disk, 'partition_mount', mount), \
-                mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+        with mock.patch.object(
+            image_installer.disk, 'partition_mount', mount
+        ), mock.patch.object(image_installer.disk, 'partition_umount') as umount:
             image_installer.save_account_files(self.image, self.saved)
         umount.assert_called_once()
         read = image_installer.read_ids
@@ -444,11 +452,15 @@ class TestReinstallPath(TreeTestCase):
             DIR_PREVIOUS_SSH=os.path.join(self.tmp, 'mnt-ssh'),
             DIR_PREVIOUS_ACCOUNTS=self.saved,
             copytree=mock.Mock(side_effect=OSError(5, 'Input/output error')),
-        ), mock.patch.object(image_installer.disk, 'partition_mount'), \
-                mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+        ), mock.patch.object(
+            image_installer.disk, 'partition_mount'
+        ), mock.patch.object(
+            image_installer.disk, 'partition_umount'
+        ) as umount:
             with self.assertRaises(OSError):
                 image_installer.save_previous_installation(
-                    '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False)
+                    '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False
+                )
         umount.assert_called_once_with('/dev/sda3')
 
     def test_previous_config_is_copied_with_translated_owners(self):
@@ -536,7 +548,8 @@ class AddImageCase(TreeTestCase):
             set_default=self.grub.set_default,
             version_del=self.grub.version_del,
         ), mock.patch.object(
-            ii.grub_util, 'update_kernel_cmdline_options',
+            ii.grub_util,
+            'update_kernel_cmdline_options',
             self.grub.update_kernel_cmdline_options,
         ), mock.patch.object(
             ii.image, 'get_default_image', return_value='old'
@@ -565,7 +578,6 @@ class AddImageCase(TreeTestCase):
             for call in self.cleanup.call_args_list
             for item in call.kwargs.get('remove_items', [])
         ]
-
 
 
 class TestAddImageFailure(AddImageCase):
@@ -676,20 +688,27 @@ class TestAddImageGrub(AddImageCase):
         self.assertIn(self.image_dir(), self.removed())
 
     def test_a_published_entry_is_withdrawn_before_its_files(self):
-        self.grub.update_kernel_cmdline_options.side_effect = OSError(5, 'EIO (injected)')
-        self.run_add_image(copy_tree=self.copied,
-                           get_cli_kernel_options=mock.Mock(return_value=[]))
+        self.grub.update_kernel_cmdline_options.side_effect = OSError(
+            5, 'EIO (injected)'
+        )
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
         self.assertIn('(injected)', self.exit_message)
         self.grub.version_del.assert_called_once_with('new', self.persistence)
-        self.assertEqual(self.grub.set_default.call_args_list[-1],
-                         mock.call('old', self.persistence))
+        self.assertEqual(
+            self.grub.set_default.call_args_list[-1], mock.call('old', self.persistence)
+        )
         self.assertIn(self.image_dir(), self.removed())
 
     def test_files_are_kept_if_the_entry_cannot_be_withdrawn(self):
-        self.grub.update_kernel_cmdline_options.side_effect = OSError(5, 'EIO (injected)')
+        self.grub.update_kernel_cmdline_options.side_effect = OSError(
+            5, 'EIO (injected)'
+        )
         self.grub.version_del.side_effect = OSError(30, 'EROFS')
-        self.run_add_image(copy_tree=self.copied,
-                           get_cli_kernel_options=mock.Mock(return_value=[]))
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
         self.assertNotIn(self.image_dir(), self.removed())
 
 

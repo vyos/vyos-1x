@@ -402,9 +402,7 @@ def save_previous_installation(
             copy(f'{mnt_tmp}/luks/{image_name}', FILE_PREVIOUS_ENCRYPTED_CONFIG)
 
         Path(DIR_PREVIOUS_SSH).mkdir()
-        host_keys: list[str] = glob(
-            f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*'
-        )
+        host_keys: list[str] = glob(f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*')
         for host_key in host_keys:
             copy(host_key, DIR_PREVIOUS_SSH)
     finally:
@@ -1655,7 +1653,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                     # recorded before the copy: a partial one is removed too
                     new_luks_volume = target_config_path
                 first_boot = Path(DIR_CONFIG, 'first_boot')
-                tmp = {'previous_image' : current_name}
+                tmp = {'previous_image': current_name}
                 write_file(str(first_boot), dumps(tmp))
                 sync()
 
@@ -1750,8 +1748,10 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 if set_as_default and previous_default:
                     grub.set_default(previous_default, root_dir)
             except Exception as grub_err:
-                Warning(f'Could not remove {image_name} from GRUB '
-                        f'({grub_err}): its files are kept')
+                Warning(
+                    f'Could not remove {image_name} from GRUB '
+                    f'({grub_err}): its files are kept'
+                )
                 remove_items = []
         cleanup(mounts=[str(iso_path)], remove_items=remove_items)
         exit(f'Error: {err}')
