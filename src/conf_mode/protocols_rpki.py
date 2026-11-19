@@ -39,7 +39,36 @@ def get_config(config=None):
         conf = Config()
     return get_frrender_dict(conf, argv)
 
+def rpki_instances(config_dict):
+    instances = {None: config_dict.get('rpki', {})}
+    for vrf, vrf_config in (dict_search('vrf.name', config_dict) or {}).items():
+        instances[vrf] = dict_search('protocols.rpki', vrf_config) or {}
+    return instances
+
 def verify(config_dict):
+    # SSH keys of all RPKI instances are written, not only of the one committed
+    for vrf, instance in rpki_instances(config_dict).items():
+        for peer, peer_config in instance.get('cache', {}).items():
+            if 'ssh' not in peer_config:
+                continue
+
+            cache = f'RPKI cache "{peer}"' + (f' in VRF "{vrf}"' if vrf else '')
+            if 'username' not in peer_config['ssh']:
+                raise ConfigError(f'{cache} SSH requires username to be defined!')
+
+            if 'key' not in peer_config['ssh']:
+                raise ConfigError(f'{cache} SSH requires key to be defined!')
+
+            key_name = peer_config['ssh']['key']
+            key = dict_search_args(instance, 'pki', 'openssh', key_name)
+            if not key:
+                raise ConfigError(f'{cache} SSH key "{key_name}" not found on PKI subsystem!')
+
+            if not dict_search('public.key', key) or not dict_search('private.key', key):
+                raise ConfigError(
+                    f'{cache} SSH key "{key_name}" requires public and private key!'
+                )
+
     if not has_frr_protocol_in_dict(config_dict, 'rpki'):
         return None
 
@@ -64,43 +93,21 @@ def verify(config_dict):
                     raise ConfigError(f'RPKI cache with preference {preference} already configured!')
                 preferences.append(preference)
 
-            if 'ssh' in peer_config:
-                if 'username' not in peer_config['ssh']:
-                    raise ConfigError('RPKI+SSH requires username to be defined!')
-
-                if 'key' not in peer_config['ssh'] or 'openssh' not in rpki['pki']:
-                    raise ConfigError('RPKI+SSH requires key to be defined!')
-
-                if peer_config['ssh']['key'] not in rpki['pki']['openssh']:
-                    raise ConfigError('RPKI+SSH key not found on PKI subsystem!')
-
     return None
 
 def generate(config_dict):
     for key in glob(f'{rpki_ssh_key_base}*'):
         os.unlink(key)
 
-    if not has_frr_protocol_in_dict(config_dict, 'rpki'):
-        return None
-
-    vrf = None
-    if 'vrf_context' in config_dict:
-        vrf = config_dict['vrf_context']
-
-    # equivalent of the C foo ? 'a' : 'b' statement
-    rpki = vrf and dict_search(f'vrf.name.{vrf}.protocols.rpki',
-                                config_dict) or config_dict['rpki']
-
-    if 'cache' in rpki:
-        for cache, cache_config in rpki['cache'].items():
+    # Write keys of all RPKI instances, PKI key changes call this script
+    # without a VRF context
+    for rpki in rpki_instances(config_dict).values():
+        for cache_config in rpki.get('cache', {}).values():
             if 'ssh' in cache_config:
                 key_name = cache_config['ssh']['key']
-                public_key_data = dict_search_args(rpki['pki'], 'openssh', key_name, 'public', 'key')
-                public_key_type = dict_search_args(rpki['pki'], 'openssh', key_name, 'public', 'type')
-                private_key_data = dict_search_args(rpki['pki'], 'openssh', key_name, 'private', 'key')
-
-                cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
-                cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
+                public_key_data = dict_search_args(rpki, 'pki', 'openssh', key_name, 'public', 'key')
+                public_key_type = dict_search_args(rpki, 'pki', 'openssh', key_name, 'public', 'type')
+                private_key_data = dict_search_args(rpki, 'pki', 'openssh', key_name, 'private', 'key')
 
                 write_file(cache_config['ssh']['public_key_file'], wrap_openssh_public_key(public_key_data, public_key_type))
                 write_file(cache_config['ssh']['private_key_file'], wrap_openssh_private_key(private_key_data))

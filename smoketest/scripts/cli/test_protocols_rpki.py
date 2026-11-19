@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import wrapped_error_regex
 
 from vyos.configsession import ConfigSessionError
 from vyos.frrender import bgp_daemon
@@ -200,8 +201,8 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'key', rpki_ssh_pub.replace('\n','')])
         self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'type', rpki_key_type])
 
-        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args},
-                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args} ]:
+        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args, 'key_prefix': '/run/frr/id_rpki_'},
+                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args, 'key_prefix': f'/run/frr/id_rpki.{vrf}.'} ]:
 
             if 'vrf' in test_set['path']:
                 self.cli_set(vrf_path + ['table', '1000'])
@@ -221,13 +222,20 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
                 port = cache_config['port']
                 preference = cache_config['preference']
                 username = cache_config['username']
-                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} /run/frr/id_rpki_{cache_name} /run/frr/id_rpki_{cache_name}.pub preference {preference}', frrconfig)
+                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} {test_set["key_prefix"]}{cache_name} {test_set["key_prefix"]}{cache_name}.pub preference {preference}', frrconfig)
 
                 # Verify content of SSH keys
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}')
+                tmp = read_file(f'{test_set["key_prefix"]}{cache_name}')
                 self.assertIn(rpki_ssh_key.replace('\n',''), tmp)
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}.pub')
+                tmp = read_file(f'{test_set["key_prefix"]}{cache_name}.pub')
                 self.assertIn(rpki_ssh_pub.replace('\n',''), tmp)
+
+        # Committing the VRF instance must not remove the default instance keys
+        for cache_name in cache:
+            tmp = read_file(f'/run/frr/id_rpki_{cache_name}')
+            self.assertIn(rpki_ssh_key.replace('\n',''), tmp)
+            tmp = read_file(f'/run/frr/id_rpki_{cache_name}.pub')
+            self.assertIn(rpki_ssh_pub.replace('\n',''), tmp)
 
         # Change OpenSSH key and verify it was properly written to filesystem
         self.cli_set(['pki', 'openssh', rpki_key_name, 'private', 'key', rpki_ssh_key_replacement.replace('\n','')])
@@ -235,22 +243,137 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args},
-                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args} ]:
+        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args, 'key_prefix': '/run/frr/id_rpki_'},
+                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args, 'key_prefix': f'/run/frr/id_rpki.{vrf}.'} ]:
 
             frrconfig = self.getFRRconfig(**test_set['frrargs'])
             for cache_name, cache_config in cache.items():
                 port = cache_config['port']
                 preference = cache_config['preference']
                 username = cache_config['username']
-                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} /run/frr/id_rpki_{cache_name} /run/frr/id_rpki_{cache_name}.pub preference {preference}', frrconfig)
+                self.assertIn(f'rpki cache ssh {cache_name} {port} {username} {test_set["key_prefix"]}{cache_name} {test_set["key_prefix"]}{cache_name}.pub preference {preference}', frrconfig)
 
                 # Verify content of SSH keys
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}')
+                tmp = read_file(f'{test_set["key_prefix"]}{cache_name}')
                 self.assertIn(rpki_ssh_key_replacement.replace('\n',''), tmp)
-                tmp = read_file(f'/run/frr/id_rpki_{cache_name}.pub')
+                tmp = read_file(f'{test_set["key_prefix"]}{cache_name}.pub')
                 self.assertIn(rpki_ssh_pub_replacement.replace('\n',''), tmp)
 
+        self.cli_delete(['pki', 'openssh'])
+
+    def test_rpki_ssh_vrf_only_key(self):
+        # An SSH key used only by an RPKI cache in a VRF, not in the default
+        # instance. Its key files are named after the VRF and the cache.
+        cache_name = '192.0.2.7'
+        key_file = f'/run/frr/id_rpki.{vrf}.{cache_name}'
+
+        # Add an SSH key pair to PKI
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'private', 'key', rpki_ssh_key.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'key', rpki_ssh_pub.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'type', rpki_key_type])
+
+        # Add an RPKI cache in the VRF that uses the key
+        self.cli_set(vrf_path + ['table', '1000'])
+        self.cli_set(vrf_path + base_path + ['cache', cache_name, 'port', '1234'])
+        self.cli_set(vrf_path + base_path + ['cache', cache_name, 'preference', '10'])
+        self.cli_set(vrf_path + base_path + ['cache', cache_name, 'ssh', 'username', 'foo'])
+        self.cli_set(vrf_path + base_path + ['cache', cache_name, 'ssh', 'key', rpki_key_name])
+        self.cli_commit()
+
+        # Check that both key files of the VRF cache hold the key
+        self.assertIn(rpki_ssh_key.replace('\n',''), read_file(key_file))
+        self.assertIn(rpki_ssh_pub.replace('\n',''), read_file(f'{key_file}.pub'))
+
+        # Replace the key in PKI - only the VRF cache uses it
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'private', 'key', rpki_ssh_key_replacement.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'key', rpki_ssh_pub_replacement.replace('\n','')])
+        self.cli_commit()
+
+        # Check that the key files of the VRF cache hold the new key
+        self.assertIn(rpki_ssh_key_replacement.replace('\n',''), read_file(key_file))
+        self.assertIn(rpki_ssh_pub_replacement.replace('\n',''), read_file(f'{key_file}.pub'))
+
+        # Delete the key while the VRF cache still uses it
+        # Commit should fail
+        self.cli_delete(['pki', 'openssh', rpki_key_name])
+        err_msg = wrapped_error_regex(
+            f'Embedded PKI openssh with name "{rpki_key_name}" is still in use by CLI path '
+            f'"vrf name {vrf} protocols rpki cache {cache_name} ssh key"')
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+    def test_rpki_ssh_verify(self):
+        cache_name = '192.0.2.8'
+        vrf_cache_name = '192.0.2.9'
+        rpki_key_name_public = f'{rpki_key_name}-public'
+        rpki_key_name_vrf = f'{rpki_key_name}-vrf'
+
+        # Add a full SSH key pair and a key with the public part only to PKI
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'private', 'key', rpki_ssh_key.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'key', rpki_ssh_pub.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'type', rpki_key_type])
+        self.cli_set(['pki', 'openssh', rpki_key_name_public, 'public', 'key', rpki_ssh_pub.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name_public, 'public', 'type', rpki_key_type])
+
+        # Add an RPKI cache in the default instance without SSH username
+        # Commit should fail, SSH username is missing
+        self.cli_set(base_path + ['cache', cache_name, 'port', '1234'])
+        self.cli_set(base_path + ['cache', cache_name, 'preference', '10'])
+        self.cli_set(base_path + ['cache', cache_name, 'ssh', 'key', rpki_key_name])
+        err_msg = wrapped_error_regex(
+            f'RPKI cache "{cache_name}" SSH requires username to be defined!'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # Add the username and use a key that does not exist in PKI
+        # Commit should fail, the key is not found
+        self.cli_set(base_path + ['cache', cache_name, 'ssh', 'username', 'foo'])
+        self.cli_set(base_path + ['cache', cache_name, 'ssh', 'key', 'rpki-smoketest-missing'])
+        err_msg = wrapped_error_regex(
+            f'RPKI cache "{cache_name}" SSH key "rpki-smoketest-missing" not found '
+            'on PKI subsystem!'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # Use the key with the public part only
+        # Commit should fail, the private part is missing
+        self.cli_set(base_path + ['cache', cache_name, 'ssh', 'key', rpki_key_name_public])
+        err_msg = wrapped_error_regex(
+            f'RPKI cache "{cache_name}" SSH key "{rpki_key_name_public}" requires '
+            'public and private key!'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # Use the full key pair
+        self.cli_set(base_path + ['cache', cache_name, 'ssh', 'key', rpki_key_name])
+        self.cli_commit()
+
+        # Add a second key and an RPKI cache in the VRF that uses it
+        self.cli_set(['pki', 'openssh', rpki_key_name_vrf, 'private', 'key', rpki_ssh_key_replacement.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name_vrf, 'public', 'key', rpki_ssh_pub_replacement.replace('\n','')])
+        self.cli_set(['pki', 'openssh', rpki_key_name_vrf, 'public', 'type', rpki_key_type])
+        self.cli_set(vrf_path + ['table', '1000'])
+        self.cli_set(vrf_path + base_path + ['cache', vrf_cache_name, 'port', '5678'])
+        self.cli_set(vrf_path + base_path + ['cache', vrf_cache_name, 'preference', '10'])
+        self.cli_set(vrf_path + base_path + ['cache', vrf_cache_name, 'ssh', 'username', 'bar'])
+        self.cli_set(vrf_path + base_path + ['cache', vrf_cache_name, 'ssh', 'key', rpki_key_name_vrf])
+        self.cli_commit()
+
+        # Delete the private part of the VRF key - only PKI is changed,
+        # the VRF cache is checked as a PKI dependent
+        # Commit should fail, the error names the cache in the VRF
+        self.cli_delete(['pki', 'openssh', rpki_key_name_vrf, 'private'])
+        err_msg = wrapped_error_regex(
+            f'RPKI cache "{vrf_cache_name}" in VRF "{vrf}" SSH key '
+            f'"{rpki_key_name_vrf}" requires public and private key!'
+        )
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # Clean up the PKI keys
         self.cli_delete(['pki', 'openssh'])
 
     def test_rpki_verify_preference(self):
@@ -289,8 +412,8 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', f'{source_address}/24'])
 
 
-        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args},
-                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args} ]:
+        for test_set in [ {'path': base_path, 'frrargs': base_frr_config_args, 'key_prefix': '/run/frr/id_rpki_'},
+                          {'path': vrf_path + base_path, 'frrargs': vrf_frr_config_args, 'key_prefix': f'/run/frr/id_rpki.{vrf}.'} ]:
 
             if 'vrf' in test_set['path']:
                 self.cli_set(vrf_path + ['table', '1000'])
@@ -317,7 +440,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
             # Verify FRR configuration
             frrconfig = self.getFRRconfig(**test_set['frrargs'])
             self.assertIn(
-                f'rpki cache ssh {peer} {port} {username} /run/frr/id_rpki_{peer} /run/frr/id_rpki_{peer}.pub source {source_address} preference {preference}',
+                f'rpki cache ssh {peer} {port} {username} {test_set["key_prefix"]}{peer} {test_set["key_prefix"]}{peer}.pub source {source_address} preference {preference}',
                 frrconfig,
             )
 

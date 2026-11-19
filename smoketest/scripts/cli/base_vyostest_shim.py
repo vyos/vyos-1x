@@ -492,3 +492,10 @@ def ignore_warning(warning: Type[Warning]):
                 return f(*args, **kwargs)
         return wrapped
     return inner
+
+
+def wrapped_error_regex(message):
+    # Commit errors are line-wrapped when printed, so build a regex that
+    # matches the message across arbitrary whitespace including newlines
+    return r'\s+'.join(re.escape(word) for word in message.split())
+

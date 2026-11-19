@@ -87,6 +87,8 @@ sync_search = [
     {
         'keys': ['key'],
         'path': ['protocols', 'rpki', 'cache'],
+        # also search 'vrf name <vrf> protocols rpki cache'
+        'vrf': True,
     },
     {
         'keys': ['certificate', 'ca_certificate', 'local_key', 'remote_key'],
@@ -122,6 +124,18 @@ sync_translate = {
     'crypt_key': 'openvpn',
     'key': 'openssh',
 }
+
+def search_configs(pki_system, search):
+    """Return (CLI path prefix, config) pairs to search for references:
+    the system config and, for VRF aware entries, every VRF config"""
+    # The system config needs no prefix in front of its CLI paths
+    configs = [([], pki_system)]
+    if search.get('vrf'):
+        # A VRF config is searched with the same path as the system config,
+        # its CLI paths start with "vrf name <vrf>"
+        for vrf, vrf_config in (dict_search_args(pki_system, 'vrf', 'name') or {}).items():
+            configs.append((['vrf', 'name', vrf], vrf_config))
+    return configs
 
 def dispatch_dependents_for_reference(pki_system, search, key, item_name, conf, D):
     """If item_name is referenced under key somewhere below search['path']
@@ -470,7 +484,10 @@ def get_config(config=None):
                     node_present = dict_search_args(pki, changed_key, item_name)
 
                 if node_present:
-                    dispatch_dependents_for_reference(pki['system'], search, key, item_name, conf, D)
+                    # Update every service that uses the changed item, also one in
+                    # a VRF config (e.g. an RPKI cache in "vrf name <vrf>")
+                    for _, system in search_configs(pki['system'], search):
+                        dispatch_dependents_for_reference(system, search, key, item_name, conf, D)
 
     # find_chain() based consumers (HAProxy, HTTPS, stunnel, sstpc,
     # openconnect, IPsec, eapol, ...) build their full certificate chain
@@ -738,22 +755,27 @@ def verify(pki):
                     if node_present:
                         continue
 
-                    search_dict = dict_search_args(pki['system'], *search['path'])
-                    if not search_dict:
-                        continue
+                    # The deleted item must not be used in the system config
+                    # or in any VRF config
+                    for prefix, system in search_configs(pki['system'], search):
+                        search_dict = dict_search_args(system, *search['path'])
+                        if not search_dict:
+                            continue
 
-                    for found_name, found_path in dict_search_recursive(search_dict, key):
-                        # Check if the name matches either by string compare, or being
-                        # part of a list
-                        if ((isinstance(found_name, str) and found_name == item_name) or
-                            (isinstance(found_name, list) and item_name in found_name)):
-                            # We do not support _ in CLI paths - this is only a convenience
-                            # as we mangle all - to _, now it's time to reverse this!
-                            path_str = ' '.join(search['path'] + found_path).replace('_','-')
-                            object = changed_key.replace('_','-')
-                            tmp = f'Embedded PKI {object} with name "{item_name}" is still '\
-                                  f'in use by CLI path "{path_str}"'
-                            raise ConfigError(tmp)
+                        for found_name, found_path in dict_search_recursive(search_dict, key):
+                            # Check if the name matches either by string compare, or being
+                            # part of a list
+                            if ((isinstance(found_name, str) and found_name == item_name) or
+                                (isinstance(found_name, list) and item_name in found_name)):
+                                # We do not support _ in CLI paths - this is only a convenience
+                                # as we mangle all - to _, now it's time to reverse this!
+                                cli_path = ' '.join(search['path'] + found_path).replace('_', '-')
+                                # Add "vrf name <vrf>" for a VRF config
+                                path_str = ' '.join(prefix + [cli_path])
+                                object = changed_key.replace('_','-')
+                                tmp = f'Embedded PKI {object} with name "{item_name}" is still '\
+                                      f'in use by CLI path "{path_str}"'
+                                raise ConfigError(tmp)
 
     return None
 
