@@ -159,6 +159,8 @@ DIR_PREVIOUS_SSH: str = '/mnt/ssh'
 DIR_PREVIOUS_ACCOUNTS: str = '/mnt/accounts'
 DIR_PREVIOUS_MOUNT: str = '/mnt/tmp'
 FILE_PREVIOUS_ENCRYPTED_CONFIG: str = '/mnt/encrypted_config'
+# the open encrypted configuration volume, if any
+DEV_ENCRYPTED_CONFIG: str = '/dev/mapper/vyos_config'
 # accounts of the image being installed: the live system runs it
 DIR_NEW_ACCOUNTS: str = '/etc'
 FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
@@ -1634,7 +1636,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         new_image_dir = str(image_dir)
         # copy config
         if no_prompt or migrate_config():
-            if Path('/dev/mapper/vyos_config').exists():
+            if Path(DEV_ENCRYPTED_CONFIG).exists():
                 print('Copying encrypted configuration volume')
 
                 # Record information from which image we upgraded to the new one.

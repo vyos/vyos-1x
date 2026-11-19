@@ -500,18 +500,21 @@ class TestAddImageFailure(TreeTestCase):
             return True
 
         self.cleanup = mock.Mock()
-        failure = PermissionError(1, 'Operation not permitted')
+        failure = PermissionError(1, 'Operation not permitted (injected)')
+        self.copy_config_tree = mock.Mock(side_effect=failure)
         with mock.patch.multiple(
             ii,
             DIR_ISO_MOUNT=iso,
             DIR_ROOTFS_SRC=rootfs,
             DIR_CONFIG=self.src,
+            # the plaintext branch, whatever the host running the tests has
+            DEV_ENCRYPTED_CONFIG=os.path.join(self.tmp, 'no-such-device'),
             disk_usage=mock.Mock(return_value=mock.Mock(free=10 * 1024**3)),
             unsaved_commits=mock.Mock(return_value=False),
             image_fetch=mock.Mock(return_value=os.path.join(self.tmp, 'x.iso')),
             validate_compatibility=mock.Mock(),
             run=mock.Mock(return_value=0),
-            copy_config_tree=mock.Mock(side_effect=failure),
+            copy_config_tree=self.copy_config_tree,
             cleanup=self.cleanup,
         ), mock.patch.object(
             ii.image, 'is_live_boot', return_value=False
@@ -526,8 +529,9 @@ class TestAddImageFailure(TreeTestCase):
         ), mock.patch.object(
             ii.disk, 'find_persistence', return_value=self.persistence
         ):
-            with self.assertRaises(SystemExit):
+            with self.assertRaises(SystemExit) as stop:
                 ii.add_image.__wrapped__('x.iso', no_prompt=True)
+        self.exit_message = str(stop.exception)
 
     def removed(self):
         return [
@@ -537,9 +541,12 @@ class TestAddImageFailure(TreeTestCase):
         ]
 
     def test_half_built_image_is_removed(self):
+        # (the exit must come from the injected failure, not from elsewhere)
         # Only ENOSPC used to remove it: any other error left boot/<image>
         # behind, and the next 'add system image' failed on mkdir().
         self.run_add_image()
+        self.copy_config_tree.assert_called_once()
+        self.assertIn('(injected)', self.exit_message)
         self.assertIn(os.path.join(self.persistence, 'boot', 'new'), self.removed())
 
     def test_an_existing_image_is_never_removed(self):
