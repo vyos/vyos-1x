@@ -28,6 +28,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.frrender import mgmt_daemon
 from vyos.utils.commit import commit_in_progress2
 from vyos.utils.network import get_vrf_pids
+from vyos.utils.network import interface_exists
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
@@ -67,6 +68,11 @@ class VyOSUnitTestSHIM:
             # Retrieve FRR mgmtd daemon PID - it is not allowed to crash, thus
             # PID must remain the same
             cls.mgmt_daemon_pid = process_named_running(mgmt_daemon)
+
+            # Name of an ethernet interface with no NIC behind it, for tests that
+            # commit configuration referencing a missing NIC
+            cls.missing_ethernet = next(f'eth{i}' for i in range(99, 1000)
+                                        if not interface_exists(f'eth{i}'))
 
         @classmethod
         def tearDownClass(cls):
