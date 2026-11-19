@@ -490,6 +490,229 @@ class TestReinstallPath(TreeTestCase):
         self.assertEqual((uids(109), gids(115), cfg_gid), (108, 114, 103))
 
 
+class AddImageCase(TreeTestCase):
+    """Runs add_image() --no-prompt against a fake ISO and persistence"""
+
+    def setUp(self):
+        super().setUp()
+        self.grub = mock.Mock()
+
+    def run_add_image(self, copy_tree=None, **extra):
+        """Run add_image(); copy_config_tree() fails unless copy_tree is given"""
+        ii = image_installer
+        iso = os.path.join(self.tmp, 'iso')
+        rootfs = os.path.join(self.tmp, 'rootfs')
+        self.persistence = os.path.join(self.tmp, 'persistence')
+
+        def mount(source, path, fstype='', **kwargs):
+            # add_image() creates the mount points itself: fill them as a
+            # mount would
+            if path == iso:
+                open(os.path.join(iso, 'sha256sum.txt'), 'w').close()
+                os.makedirs(os.path.join(iso, 'live'))
+                for name in ('vmlinuz', 'initrd.img', 'filesystem.squashfs'):
+                    open(os.path.join(iso, 'live', name), 'w').close()
+            elif path == rootfs:
+                os.makedirs(os.path.join(rootfs, 'etc'))
+                for name in ('passwd', 'group'):
+                    with open(os.path.join(rootfs, 'etc', name), 'w') as f:
+                        f.write('vyattacfg:x:102:\n')
+            return True
+
+        self.cleanup = mock.Mock()
+        failure = PermissionError(1, 'Operation not permitted (injected)')
+        self.copy_config_tree = mock.Mock(side_effect=copy_tree or failure)
+        patches = dict(
+            DIR_ISO_MOUNT=iso,
+            DIR_ROOTFS_SRC=rootfs,
+            DIR_CONFIG=self.src,
+            # the plaintext branch, whatever the host running the tests has
+            DEV_ENCRYPTED_CONFIG=os.path.join(self.tmp, 'no-such-device'),
+            disk_usage=mock.Mock(return_value=mock.Mock(free=10 * 1024**3)),
+            unsaved_commits=mock.Mock(return_value=False),
+            image_fetch=mock.Mock(return_value=os.path.join(self.tmp, 'x.iso')),
+            validate_compatibility=mock.Mock(),
+            validate_secure_boot=mock.Mock(),
+            run=mock.Mock(return_value=0),
+            copy_config_tree=self.copy_config_tree,
+            cleanup=self.cleanup,
+            glob=mock.Mock(return_value=[]),
+            migrate_known_hosts=mock.Mock(),
+        )
+        patches.update(extra)
+        with mock.patch.multiple(
+            ii,
+            **patches,
+        ), mock.patch.multiple(
+            ii.grub,
+            version_add=self.grub.version_add,
+            set_default=self.grub.set_default,
+            version_del=self.grub.version_del,
+        ), mock.patch.object(
+            ii.grub_util,
+            'update_kernel_cmdline_options',
+            self.grub.update_kernel_cmdline_options,
+        ), mock.patch.object(
+            ii.image, 'get_default_image', return_value='old'
+        ), mock.patch.object(
+            ii.image, 'get_running_image', return_value='old'
+        ), mock.patch.object(
+            ii.image, 'is_live_boot', return_value=False
+        ), mock.patch.object(
+            ii.image, 'get_image_tools_version', return_value=ii.SYSTEM_CFG_VER
+        ), mock.patch.object(
+            ii.image, 'get_image_version', return_value='new'
+        ), mock.patch.object(
+            ii.disk, 'partition_mount', mount
+        ), mock.patch.object(
+            ii.disk, 'partition_umount'
+        ), mock.patch.object(
+            ii.disk, 'find_persistence', return_value=self.persistence
+        ):
+            with self.assertRaises(SystemExit) as stop:
+                ii.add_image.__wrapped__('x.iso', no_prompt=True)
+        self.exit_message = str(stop.exception)
+
+    def removed(self):
+        return [
+            item
+            for call in self.cleanup.call_args_list
+            for item in call.kwargs.get('remove_items', [])
+        ]
+
+
+class TestAddImageFailure(AddImageCase):
+    """What add_image() leaves behind when copying /config fails"""
+
+    def test_half_built_image_is_removed(self):
+        # (the exit must come from the injected failure, not from elsewhere)
+        # Only ENOSPC used to remove it: any other error left boot/<image>
+        # behind, and the next 'add system image' failed on mkdir().
+        self.run_add_image()
+        self.copy_config_tree.assert_called_once()
+        self.assertIn('(injected)', self.exit_message)
+        self.assertIn(os.path.join(self.persistence, 'boot', 'new'), self.removed())
+
+    def test_an_existing_image_is_never_removed(self):
+        # With --no-prompt, the name is not checked against installed images.
+        existing = os.path.join(self.tmp, 'persistence', 'boot', 'new')
+        os.makedirs(os.path.join(existing, 'rw'))
+        self.run_add_image()
+        self.assertNotIn(existing, self.removed())
+        self.assertTrue(os.path.isdir(os.path.join(existing, 'rw')))
+
+    def test_a_directory_created_by_another_run_is_never_removed(self):
+        # Checking for the directory and creating it later leaves a window:
+        # another run creates it in between. Here exists() says it is absent
+        # while it is there, as at the end of that window.
+        import pathlib
+
+        other = os.path.join(self.tmp, 'persistence', 'boot', 'new')
+        os.makedirs(other)
+        real_exists = pathlib.Path.exists
+
+        def exists(path, *args, **kwargs):
+            if str(path) == other:
+                return False
+            return real_exists(path, *args, **kwargs)
+
+        with mock.patch.object(pathlib.Path, 'exists', exists):
+            self.run_add_image()
+        self.assertNotIn(other, self.removed())
+
+
+class TestAddImageEncrypted(AddImageCase):
+    """add_image() with an encrypted configuration volume, failing"""
+
+    def run_encrypted(self, existing_volume=False):
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        with open(os.path.join(luks, 'old'), 'w') as f:
+            f.write('current volume')
+        if existing_volume:
+            with open(os.path.join(luks, 'new'), 'w') as f:
+                f.write('left by someone else')
+        real_copy = image_installer.copy
+
+        def copy(src, dst, *args, **kwargs):
+            if str(dst).endswith('.squashfs'):
+                raise OSError(28, 'No space left on device (injected)')
+            return real_copy(src, dst, *args, **kwargs)
+
+        self.run_add_image(
+            DEV_ENCRYPTED_CONFIG=self.tmp,  # exists: the encrypted branch
+            copy=copy,
+        )
+        self.assertIn('(injected)', self.exit_message)
+        return os.path.join(luks, 'new')
+
+    def test_the_volume_copy_is_removed_with_the_image(self):
+        volume = self.run_encrypted()
+        self.assertIn(volume, self.removed())
+
+    def test_a_volume_this_run_did_not_create_is_kept(self):
+        volume = self.run_encrypted(existing_volume=True)
+        self.assertNotIn(volume, self.removed())
+
+    def test_first_boot_never_stays_in_the_running_configuration(self):
+        def failing_copy(src, dst, *args, **kwargs):
+            raise OSError(5, 'EIO (injected)')
+
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        open(os.path.join(luks, 'old'), 'w').close()
+        self.run_add_image(DEV_ENCRYPTED_CONFIG=self.tmp, copy=failing_copy)
+        self.assertIn('(injected)', self.exit_message)
+        self.assertFalse(os.path.exists(os.path.join(self.src, 'first_boot')))
+
+
+class TestAddImageGrub(AddImageCase):
+    """A failure once the new image is in, or about to be in, GRUB"""
+
+    def copied(self, src, dst, *args):
+        with open(os.path.join(dst, 'config.boot'), 'w') as f:
+            f.write('system {}\n')
+
+    def image_dir(self):
+        return os.path.join(self.persistence, 'boot', 'new')
+
+    def test_kernel_options_are_read_before_grub_is_touched(self):
+        # get_cli_kernel_options() only reads config.boot: failing there
+        # must not leave an entry, nor a default, pointing at removed files.
+        self.run_add_image(
+            copy_tree=self.copied,
+            get_cli_kernel_options=mock.Mock(side_effect=ValueError('bad (injected)')),
+        )
+        self.assertIn('(injected)', self.exit_message)
+        self.grub.version_add.assert_not_called()
+        self.grub.set_default.assert_not_called()
+        self.assertIn(self.image_dir(), self.removed())
+
+    def test_a_published_entry_is_withdrawn_before_its_files(self):
+        self.grub.update_kernel_cmdline_options.side_effect = OSError(
+            5, 'EIO (injected)'
+        )
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
+        self.assertIn('(injected)', self.exit_message)
+        self.grub.version_del.assert_called_once_with('new', self.persistence)
+        self.assertEqual(
+            self.grub.set_default.call_args_list[-1], mock.call('old', self.persistence)
+        )
+        self.assertIn(self.image_dir(), self.removed())
+
+    def test_files_are_kept_if_the_entry_cannot_be_withdrawn(self):
+        self.grub.update_kernel_cmdline_options.side_effect = OSError(
+            5, 'EIO (injected)'
+        )
+        self.grub.version_del.side_effect = OSError(30, 'EROFS')
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
+        self.assertNotIn(self.image_dir(), self.removed())
+
+
 class TestCopyOwnershipTraversal(TreeTestCase):
     """copy_ownership(src, dst) gives dst the owner/group/mode of the
     matching src path, walking src. Only paths present in both trees and
