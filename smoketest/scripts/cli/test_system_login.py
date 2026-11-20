@@ -567,6 +567,13 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         # Remove rendered tac_plus daemon configuration
         shutil.rmtree(tac_plus_config)
 
+    def test_system_login_tacacs_no_server(self):
+        # TACACS configured without any server must raise ConfigError and
+        # not crash verify() with an AttributeError
+        self.cli_set(base_path + ['tacacs', 'vrf', 'x'])
+        with self.assertRaisesRegex(ConfigSessionError, 'No TACACS server defined'):
+            self.cli_commit()
+
     def test_delete_current_user(self):
         current_user = get_current_user()
 
