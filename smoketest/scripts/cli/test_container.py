@@ -446,6 +446,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         if Config().exists(interface_path) or os.path.exists(f'/sys/class/net/{bridge}'):
             self.skipTest('Bridge recovery fixture already exists')
         name = 'recover1216'
+        other = name + '-bridge-recovery'
         network = 'recover1216'
         try:
             self.cli_set(interface_path + ['address', '10.250.216.1/24'])
@@ -457,7 +458,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['name', name, 'capability', 'net-raw'])
             self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
             self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.216.2'])
+            self.cli_set(base_path + ['name', other, 'image', busybox_image])
+            self.cli_set(base_path + ['name', other, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', other, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', other, 'network', network, 'address', '10.250.216.3'])
             self.cli_commit()
+            self.assertTrue(self.is_running(other))
             for cycle in range(6):
                 with self.subTest(cycle=cycle):
                     cmdl(['ip', 'link', 'delete', bridge], sudo=True)
@@ -470,6 +476,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                     state = cmdl(['systemctl', 'show', f'vyos-{network}-network',
                                   '--property=ActiveState', '--value']).strip()
                     self.assertEqual(state, 'active')
+                    self.assertTrue(wait_for(lambda: self.is_running(other), timeout=30),
+                                    'Second container did not recover after bridge recreation')
                     cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
                           '10.250.216.1'], sudo=True)
             cmdl(['systemctl', 'stop', f'vyos-container-{name}'], sudo=True)
@@ -495,7 +503,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     def test_network_removal_failure_recovery(self):
         network = 'removal1217'
         name = 'removal1217'
-        blocker = 'removal-blocker1217'
+        sentinel = 'removal-blocker1217'
+        if cmdl(['podman', 'ps', '-a', '--filter', f'name=^{sentinel}$',
+                 '--format', '{{.ID}}'], sudo=True).strip():
+            self.skipTest('Removal fixture name already exists')
+        sentinel_id = None
+        blocker_id = None
         network_path = base_path + ['network', network]
         self.cli_set(network_path + ['prefix', '10.250.217.0/24'])
         self.cli_set(base_path + ['name', name, 'image', busybox_image])
@@ -505,8 +518,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.217.2'])
         self.cli_commit()
         try:
-            cmdl(['podman', 'run', '-d', '--name', blocker, '--network', network,
-                  busybox_image, 'sleep', '3600'], sudo=True)
+            sentinel_id = cmdl(['podman', 'run', '-d', '--name', sentinel, '--network', 'none',
+                                busybox_image, 'sleep', '3600'], sudo=True).strip()
+            blocker_id = cmdl(['podman', 'run', '-d', '--network', network,
+                               busybox_image, 'sleep', '3600'], sudo=True).strip()
             self.cli_set(network_path + ['mtu', '1400'])
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
@@ -519,13 +534,66 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                                     'link', 'show', 'dev', 'eth0'], sudo=True))
             self.assertEqual(links[0]['mtu'], 1500)
             cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.217.1'], sudo=True)
-            cmdl(['podman', 'rm', '-f', blocker], sudo=True)
+            cmdl(['podman', 'rm', '-f', blocker_id], sudo=True)
+            blocker_id = None
+            self.assertTrue(cmd_to_json(['inspect', sentinel_id])['State']['Running'],
+                            'Network blocker cleanup removed an unrelated container')
             self.cli_set(network_path + ['mtu', '1400'])
             self.cli_commit()
             self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1400')
             self.assertTrue(self.is_running(name))
         finally:
-            cmdl(['podman', 'rm', '-f', '--ignore', blocker], sudo=True)
+            if blocker_id is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', blocker_id], sudo=True)
+            if sentinel_id is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', sentinel_id], sudo=True)
+
+    def test_network_removal_restores_starting_container(self):
+        network = 'start1220'
+        name = 'starting1220'
+        unit = f'vyos-container-{name}.service'
+        dropin = f'/run/systemd/system/{unit}.d/t9592-start.conf'
+        gate = '/run/t9592-starting1220'
+        if os.path.exists(dropin) or os.path.exists(gate):
+            self.skipTest('Starting-container fixture already exists')
+        network_path = base_path + ['network', network]
+        blocker_id = None
+        try:
+            self.cli_set(network_path + ['prefix', '10.250.220.0/24'])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.220.2'])
+            self.cli_commit()
+            blocker_id = cmdl(['podman', 'run', '-d', '--network', network,
+                               busybox_image, 'sleep', '3600'], sudo=True).strip()
+            cmdl(['mkdir', '-p', os.path.dirname(dropin)], sudo=True)
+            cmdl(['tee', dropin], input=(
+                '[Service]\n'
+                f'ExecStartPre=/bin/sh -c "while [ ! -e {gate} ]; do sleep 0.1; done"\n'
+            ), sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            cmdl(['systemctl', '--no-block', 'restart', unit], sudo=True)
+            def state():
+                return cmdl(['systemctl', 'show', unit, '--property=ActiveState', '--value']).strip()
+            self.assertTrue(wait_for(lambda: state() == 'activating', timeout=10))
+            self.cli_set(network_path + ['mtu', '1400'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+            cmdl(['touch', gate], sudo=True)
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=30),
+                            'Starting consumer not restored after failed network removal')
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1500')
+        finally:
+            cmdl(['rm', '-f', dropin], sudo=True)
+            cmdl(['touch', gate], sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            if blocker_id is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', blocker_id], sudo=True)
+            self.cli_delete(base_path)
+            self.cli_commit()
+            cmdl(['rm', '-f', gate], sudo=True)
 
     def test_unmanaged_gateway_address(self):
         interface_path = ['interfaces', 'bridge', 'br1218']
@@ -551,9 +619,13 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                     with self.assertRaisesRegex(ConfigSessionError, 'reserved for the network gateway'):
                         self.cli_commit()
                     self.cli_delete(name_path + ['network', 'gateway1218', 'address', gateway])
-            self.cli_set(name_path + ['network', 'gateway1218', 'address', '10.250.218.2'])
+            for address in ['10.250.218.1', 'fd00:1218::1']:
+                self.cli_set(name_path + ['network', 'gateway1218', 'address', address])
             self.cli_commit()
             self.assertTrue(self.is_running('gateway1218'))
+            config = cmd_to_json(['inspect', 'gateway1218'])['NetworkSettings']['Networks']['gateway1218']
+            self.assertEqual(config['IPAddress'], '10.250.218.1')
+            self.assertEqual(config['GlobalIPv6Address'], 'fd00:1218::1')
         finally:
             self.cli_delete(base_path)
             self.cli_commit()

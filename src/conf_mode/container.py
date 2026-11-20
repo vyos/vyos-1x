@@ -263,16 +263,17 @@ def verify(container):
                         if ip_address(address) not in ip_network(network):
                             raise ConfigError(f'Used container address "{address}" not in network "{network}"!')
 
-                        # We cannot use the first IP address of a network prefix as this is used by podman
-                        if ip_address(address) == ip_network(network)[1]:
-                            raise ConfigError(f'IP address "{address}" cannot be used for a container, ' \
-                                              'reserved for the container engine!')
-
                         network_config = container['network'][network_name]
                         if dict_search('type.bridge.interface', network_config) is not None:
-                            if any(ip_address(address) == ip_address(gateway)
-                                   for gateway in network_config.get('gateway', [])):
+                            gateway = next((ip_address(value)
+                                            for value in network_config.get('gateway', [])
+                                            if ip_address(value).version == ip_address(address).version),
+                                           ip_network(network)[1])
+                            if ip_address(address) == gateway:
                                 raise ConfigError(f'IP address "{address}" is reserved for the network gateway!')
+                        elif ip_address(address) == ip_network(network)[1]:
+                            raise ConfigError(f'IP address "{address}" cannot be used for a container, ' \
+                                              'reserved for the container engine!')
 
                         if address in net_dict['address'].keys():
                             raise ConfigError(f'IP address "{address}" is already used by container "{net_dict["address"][address]}"!')
@@ -740,7 +741,8 @@ def generate(container):
                     rollback['files'][path] = stream.read()
             else:
                 rollback['files'][path] = None
-            if run(['systemctl', 'is-active', '--quiet', unit]) == 0:
+            state = cmdl(['systemctl', 'show', unit, '--property=ActiveState', '--value']).strip()
+            if state in ['active', 'activating']:
                 rollback['active_units'].append(unit)
 
     if 'network' in container:
