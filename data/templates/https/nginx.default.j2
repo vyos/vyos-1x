@@ -55,7 +55,7 @@ server {
     ssl_verify_depth 2;
 {% endif %}
     # proxy settings for HTTP API, if enabled; 503, if not
-    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|ping|traceroute|info|docs|openapi.json|redoc|graphql|renew|token) {
+    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|reconnect|poweroff|ping|traceroute|info|docs|openapi.json|redoc|graphql|renew|token) {
 {% if api is vyos_defined %}
         proxy_pass http://unix:/run/api.sock;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
