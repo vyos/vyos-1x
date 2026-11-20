@@ -23,7 +23,9 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.utils.process import call
+from vyos.utils.process import cmdl
 from vyos.utils.file import get_name_from_path
+from vyos.utils.file import file_permissions
 
 base_path = ['generate tech-support archive']
 testdir = pathlib.Path('/tmp/_test_techsupport_archive')
@@ -60,7 +62,14 @@ def tar_gz_paths(archive_path: pathlib.Path, max_depth: int = 5) -> set:
                     sub_prefix = f'{prefix}::{member.name}' if prefix else member.name
                     walk_bytes(file.read(), sub_prefix, depth + 1)
 
-    walk_bytes(archive_path.read_bytes(), prefix='', depth=0)
+    # The generated archive has restriction of reading by non-root user.
+    # In this case necessary to change permission and rollback after reading the file.
+    old_permissions = file_permissions(archive_path)
+    cmdl(['chmod', '0644', str(archive_path)], sudo=True)
+    try:
+        walk_bytes(archive_path.read_bytes(), prefix='', depth=0)
+    finally:
+        cmdl(['chmod', old_permissions, str(archive_path)], sudo=True)
 
     return out
 
@@ -149,6 +158,11 @@ class TestTechSupportArchive(VyOSUnitTestSHIM.TestCase):
     def assertPathExists(self, path: str):
         err_message = f'Path `{path}` does not exist after generating a archive'
         self._check_path(path, True, err_message)
+
+        # Check permissions
+        permissions = file_permissions(path)
+        err_message = f'Path `{path}` does not have 0600 permissions'
+        self.assertEqual(permissions, '0600', err_message)
 
     def assertNotPathExists(self, path: str):
         err_message = f'Path `{path}` still exists after generating a archive'
