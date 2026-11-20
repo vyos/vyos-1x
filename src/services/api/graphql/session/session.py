@@ -112,6 +112,7 @@ class Session:
             session.load_config(data['file_name'])
             session.commit()
         except Exception as error:
+            session.discard()
             raise error
 
     def show(self):
