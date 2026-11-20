@@ -135,3 +135,5 @@ wireguard_fwmark_pref = '1998'
 #   8G  - 64G RAM  ->  reserve 768M
 #   64G+      RAM  ->  reserve 1G
 KDUMP_DEFAULT_MEMORY_AUTO = '1G-8G:512M,8G-64G:768M,64G-:1G'
+
+vpp_failure_handler_marker = '/run/vpp-failure-handler'
