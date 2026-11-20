@@ -189,8 +189,8 @@ def create_certificate(cert_req, ca_cert, ca_private_key, valid_days=365, cert_t
         .issuer_name(ca_cert.subject) \
         .public_key(cert_req.public_key()) \
         .serial_number(x509.random_serial_number()) \
-        .not_valid_before(datetime.datetime.utcnow()) \
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=int(valid_days)))
+        .not_valid_before(datetime.datetime.now(datetime.UTC)) \
+        .not_valid_after(datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=int(valid_days)))
 
     builder = builder.add_extension(x509.BasicConstraints(ca=is_ca, path_length=0 if is_sub_ca else None), critical=True)
     builder = builder.add_extension(x509.KeyUsage(
