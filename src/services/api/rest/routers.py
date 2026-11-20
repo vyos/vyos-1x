@@ -26,7 +26,6 @@ import logging
 import os
 import traceback
 from tempfile import NamedTemporaryFile
-from threading import Lock
 from typing import Union
 from typing import Callable
 from typing import TYPE_CHECKING
@@ -56,6 +55,7 @@ from vyos.configsession import ConfigSessionError
 from ..background import BackgroundOpManager
 from ..background import BackgroundOpError
 from ..session import SessionState
+from ..session import config_lock as lock
 from .models import success
 from .models import error
 from .models import responses
@@ -94,7 +94,6 @@ if TYPE_CHECKING:
 
 LOG = logging.getLogger('http_api.routers')
 
-lock = Lock()
 
 asynclock = asyncio.Lock()
 
