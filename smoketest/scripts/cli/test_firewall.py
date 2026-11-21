@@ -1479,6 +1479,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'group', 'ipv6-address-group', 'AGV6', 'address', '2001:db1::1'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
         self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'ipv4'])
         self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'accept-invalid', 'ethernet-type', 'dhcp'])
         self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'accept-invalid', 'ethernet-type', 'arp'])
@@ -1601,6 +1603,31 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
+
+        # T7150: bridge output looks up ct state once. Invalid IP goes to its
+        # own chain that lets the router's untracked DHCP and IGMP/MLD queries
+        # skip the invalid verdict. Non-IP never reaches the state policy.
+        # Forward and input keep the plain state policy. nft reorders map and
+        # set elements, so each one is matched on its own.
+        self.verify_nftables_chain([
+            ['meta protocol { ip, ip6 } ct state vmap',
+             'invalid : jump VYOS_STATE_POLICY_OUTPUT',
+             'established : jump VYOS_STATE_POLICY',
+             'related : jump VYOS_STATE_POLICY'],
+        ], 'bridge vyos_filter', 'VYOS_OUTPUT_filter')
+        self.verify_nftables_chain([['VYOS_STATE_POLICY_OUTPUT']],
+                                   'bridge vyos_filter', 'VYOS_FORWARD_filter', inverse=True)
+        self.verify_nftables_chain([['VYOS_STATE_POLICY_OUTPUT']],
+                                   'bridge vyos_filter', 'VYOS_INPUT_filter', inverse=True)
+        self.verify_nftables_chain([
+            ['udp sport . udp dport', '67 . 68', '68 . 67', 'return'],
+            ['ip protocol igmp', 'return'],
+            ['icmpv6 type mld-listener-query', 'return'],
+            ['ct state invalid', 'drop'],
+        ], 'bridge vyos_filter', 'VYOS_STATE_POLICY_OUTPUT')
+        self.verify_nftables_chain([['ct state invalid', 'drop']],
+                                   'bridge vyos_filter', 'VYOS_STATE_POLICY')
+
         ## Check bridge-nf-call-iptables is set to 1, and for ipv6 remains on default 0
         self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-iptables'), '1')
         self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-ip6tables'), '0')
