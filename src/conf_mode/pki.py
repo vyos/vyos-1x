@@ -314,17 +314,20 @@ def certbot_renewal_due(name: str) -> bool:
     """
     from datetime import datetime
     from datetime import timedelta
+    from datetime import UTC
 
     tmp = read_file(f'{vyos_certbot_dir}/live/{name}/cert.pem', defaultonfailure=None)
     if tmp is None:
         return True
     try:
-        expiry = load_certificate(tmp, wrap_tags=False).not_valid_after
+        expiry = load_certificate(tmp, wrap_tags=False).not_valid_after.replace(
+            tzinfo=UTC
+        )
     except Exception:
         return True
 
     renew_before_expiry_days = 30
-    return datetime.utcnow() >= expiry - timedelta(days=renew_before_expiry_days)
+    return datetime.now(UTC) >= expiry - timedelta(days=renew_before_expiry_days)
 
 def any_certbot_renewal_due(certificates: dict) -> bool:
     """True if any ACME-managed certificate in this pki['certificate']

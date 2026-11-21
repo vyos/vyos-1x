@@ -19,6 +19,7 @@ import re
 
 from argparse import ArgumentParser
 from datetime import datetime
+from datetime import UTC
 from sys import exit
 from time import time
 
@@ -31,7 +32,9 @@ systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
 def utc2local(datetime):
     now = time()
-    offs = datetime.fromtimestamp(now) - datetime.utcfromtimestamp(now)
+    offs = datetime.fromtimestamp(now) - datetime.fromtimestamp(now, UTC).replace(
+        tzinfo=None
+    )
     return datetime + offs
 
 def parse_time(s):
@@ -70,8 +73,9 @@ def get_shutdown_status():
                 tmp_split = line.split("=")
                 if tmp_split[0] == "USEC":
                     # Convert USEC to  human readable format
-                    r_data['DATETIME'] = datetime.utcfromtimestamp(
-                        int(tmp_split[1])/1000000).strftime('%Y-%m-%d %H:%M:%S')
+                    r_data['DATETIME'] = datetime.fromtimestamp(
+                        int(tmp_split[1]) / 1000000, UTC
+                    ).strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     r_data[tmp_split[0]] = tmp_split[1]
             return r_data
