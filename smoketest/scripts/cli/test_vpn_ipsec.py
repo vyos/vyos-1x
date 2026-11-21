@@ -17,6 +17,7 @@
 import os
 import unittest
 import re
+import time
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -116,6 +117,15 @@ def get_config_value(file, key):
     tmp = read_file(file)
     tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
     return tmp
+
+
+def wait_admin_state(ifname, state, timeout=10):
+    """VTI admin state is set by vyos-vti-updown, asynchronously to commit"""
+    for _ in range(timeout * 4):
+        if Interface(ifname).get_admin_state() == state:
+            return True
+        time.sleep(0.25)
+    return False
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     skip_process_check = False
@@ -585,7 +595,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'replay_window = 32',
             f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
             f'if_id_out = {if_id}',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
@@ -661,7 +670,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'replay_window = 32',
             f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
             f'if_id_out = {if_id}',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
@@ -675,7 +683,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             f'local_ts = ::/0',
             f'remote_ts = ::/0',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
@@ -687,7 +694,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             f'local_ts = 0.0.0.0/0,::/0',
             f'remote_ts = 0.0.0.0/0,::/0',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
@@ -1126,7 +1132,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'remote_addrs = {peer_ip}',
             f'local_ts = 0.0.0.0/0,::/0',
             f'remote_ts = 0.0.0.0/0,::/0',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti}"',
             f'if_id_in = {if_id}', # will be 11 for vti10
             f'if_id_out = {if_id}',
             f'ipcomp = no',
@@ -2117,13 +2122,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
-        # Remote access interfaces should be set to 'up' during configure
-        self.assertEqual(Interface(vti).get_admin_state(), 'up')
+        # Remote access interfaces are 'up' once charon has loaded the connection,
+        # vyos-vti-updown reconciles asynchronously after the commit
+        self.assertTrue(wait_admin_state(vti, 'up'))
 
         # Delete the connection to verify the VTI interfaces is taken down
         self.cli_delete(base_path + ['remote-access', 'connection', conn_name])
         self.cli_commit()
-        self.assertEqual(Interface(vti).get_admin_state(), 'down')
+        self.assertTrue(wait_admin_state(vti, 'down'))
 
         self.tearDownPKI()
 

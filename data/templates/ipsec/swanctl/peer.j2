@@ -105,7 +105,6 @@
 {%     endif %}
                 local_ts = {{ local_ts }}
                 remote_ts = {{ remote_ts }}
-                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
 {#              The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
 {#              Thus we simply shift the key by one to also support a vti0 interface #}
 {%     set if_id = peer_conf.vti.bind | replace('vti', '') | int + 1 %}
@@ -197,7 +196,6 @@
 {#             The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
 {#             Thus we simply shift the key by one to also support a vti0 interface #}
 {%             set if_id = peer_conf.vti.bind | replace('vti', '') | int + 1 %}
-                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
                 if_id_in = {{ if_id }}
                 if_id_out = {{ if_id }}
 {%         endif %}
