@@ -203,8 +203,14 @@ class MultipartRequest(Request):
                         raise HTTPException(status_code=400, detail=exc.message)
                     raise exc
             elif content_type == b'application/x-www-form-urlencoded':
-                form_parser = FormParser(self.orig_headers, self.stream())
-                self._form = await form_parser.parse()
+                try:
+                    form_parser = FormParser(self.orig_headers, self.stream())
+                    self._form = await form_parser.parse()
+                except MultiPartException as exc:
+                    # newer Starlette limits the number and size of fields
+                    if 'app' in self.scope:
+                        raise HTTPException(status_code=400, detail=exc.message)
+                    raise exc
             else:
                 self._form = FormData()
         return self._form
