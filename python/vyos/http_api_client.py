@@ -16,7 +16,6 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-import urllib3
 import requests
 from typing import Optional
 from dataclasses import dataclass
@@ -51,7 +50,24 @@ class ApiClientConfig:
     key: str
     port: int = 443
     timeout: Optional[int] = None
-    verify_tls: bool = False
+    # TLS peer verification, forwarded verbatim to requests' ``verify``:
+    #   True       - verify against the system CA store (secure default)
+    #   False      - disable verification (insecure; opt-in only)
+    #   "<path>"   - verify against a custom CA bundle file/dir
+    # Strings are always treated as paths: pass a real bool, not "false".
+    verify_tls: bool | str = True
+
+    def __post_init__(self):
+        # requests treats an empty string as falsy and silently disables
+        # verification, so only accept a bool or a non-empty path string.
+        value = self.verify_tls
+        if isinstance(value, bool):
+            return
+        if isinstance(value, str) and value:
+            return
+        raise ValueError(
+            f'verify_tls must be a bool or a non-empty CA bundle path, got {value!r}'
+        )
 
 
 class ApiClient:
@@ -60,7 +76,10 @@ class ApiClient:
     Design goals:
     - minimal surface area (thin wrapper around requests)
     - consistent error handling + typed exceptions
-    - safe defaults for VyOS typical self-signed HTTPS usage (verify_tls=False)
+    - secure defaults (verify_tls=True); deployments using self-signed
+      certificates opt into verify_tls=False or supply a CA bundle path
+    - no warning-filter changes: callers that disable verification are
+      responsible for handling urllib3's InsecureRequestWarning
     """
 
     _DEFAULT_HEADERS = {
@@ -76,9 +95,6 @@ class ApiClient:
 
         self._session = requests.Session()
         self._session.headers.update(self._DEFAULT_HEADERS)
-
-        if not config.verify_tls:
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     @property
     def base_url(self) -> str:
@@ -125,6 +141,10 @@ class ApiClient:
         except requests.exceptions.Timeout as e:
             raise ApiTransportError(f'Request timed out: {e}') from e
         except requests.exceptions.RequestException as e:
+            raise ApiTransportError(f'Request failed: {e}') from e
+        except OSError as e:
+            # e.g. requests' cert_verify on a missing CA bundle path. Must stay
+            # after the RequestException handlers: those subclass OSError.
             raise ApiTransportError(f'Request failed: {e}') from e
 
         if not resp.ok:
