@@ -117,6 +117,9 @@ def kea_parse_options(config):
         value = (
             ', '.join(config[node]) if isinstance(config[node], list) else config[node]
         )
+        if node == 'tftp_server_name':
+            # Kea splits the data at commas, a URL can contain them
+            value = value.replace(',', '\\,')
         options.append({'name': option_name, 'data': value})
 
     if 'client_prefix_length' in config:
