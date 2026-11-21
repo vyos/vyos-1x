@@ -28,6 +28,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import L2TPv3If
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import interface_exists
 from vyos import ConfigError
@@ -72,6 +73,9 @@ def verify(l2tpv3):
         verify_bridge_delete(l2tpv3)
         return None
 
+    # l2tp_eth can not be probed, the Kernel autoloads it once the session
+    # gets created
+    verify_kmod([module for module in k_mod if module != 'l2tp_eth'])
     interface = l2tpv3['ifname']
 
     for key in ['source_address', 'remote', 'tunnel_id', 'peer_tunnel_id',
@@ -106,7 +110,12 @@ def apply(l2tpv3):
 
     if 'deleted' not in l2tpv3:
         # Finally create the new interface
-        l = L2TPv3If(**l2tpv3)
+        try:
+            l = L2TPv3If(**l2tpv3)
+        except OSError:
+            # the session is the first to need l2tp_eth, see verify()
+            verify_kmod(['l2tp_eth'])
+            raise
         l.update(l2tpv3)
 
     # run the dependents

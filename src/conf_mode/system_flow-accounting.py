@@ -24,6 +24,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.file import read_file
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import interface_exists
 from vyos.utils.network import is_addr_assigned
@@ -71,6 +72,8 @@ def get_config(config=None):
 def verify(flow_config):
     if not flow_config:
         return None
+
+    verify_kmod(ipt_netflow.module_name)
 
     # Check if at least one interface is configured
     if 'netflow' not in flow_config or 'interface' not in flow_config['netflow']:

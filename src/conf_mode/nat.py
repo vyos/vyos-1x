@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import write_file
@@ -137,6 +138,8 @@ def verify(nat):
     if not nat or 'deleted' in nat:
         # no need to verify the CLI as NAT is going to be deactivated
         return None
+
+    verify_kmod(k_mod)
 
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():

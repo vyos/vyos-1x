@@ -41,7 +41,6 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
-k_mod = ['vrf']
 
 nftables_table = 'inet vrf_zones'
 # Only the original direction is zoned on purpose - do not "fix" this to a
