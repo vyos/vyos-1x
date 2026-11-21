@@ -72,6 +72,6 @@ def graphql_init(app: 'FastAPI'):
 
 
 def graphql_clear(app: 'FastAPI'):
-    for r in app.routes:
-        if r.path == '/graphql':
+    for r in list(app.routes):
+        if getattr(r, 'path', None) == '/graphql':
             app.routes.remove(r)
