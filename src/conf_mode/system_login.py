@@ -229,6 +229,8 @@ def verify(login):
                 raise ConfigError('Only one IPv6 source-address can be set!')
 
     if 'tacacs' in login:
+        if 'server' not in login['tacacs']:
+            raise ConfigError('No TACACS server defined!')
         tacacs_servers_count: int = 0
         fail = True
         for server, server_config in dict_search('tacacs.server', login).items():
