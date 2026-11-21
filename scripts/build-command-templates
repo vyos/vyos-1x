@@ -130,6 +130,9 @@ def get_properties(p, default=None):
         if default != None:
             # DNS forwarding for instance has multiple defaults - specified as whitespace separated list
             tmp = ', '.join(default.text.split())
+            # the CLI prints the help with printf, a literal % (the default
+            # of ipsec remote-id is "%any") has to be doubled
+            tmp = tmp.replace('%', '%%')
             help += f' (default: {tmp})'
         help = fill(help, width=64, subsequent_indent='\t\t\t')
         props["help"] = help
