@@ -149,6 +149,11 @@ def load_tree(config_obj: ConfigObj):
 
 def load_legacy(config_obj: ConfigObj):
     """Legacy load from file or configtree.
+
+    Returns the text printed by 'cli-shell-api loadFile', which reports a
+    path it cannot apply as 'Set [...] failed' / 'Delete [...] failed' and
+    still exits 0; to catch validation errors before legacy load, use
+    vyos.configtree.validate_tree.
     """
     if isinstance(config_obj, ConfigTree):
         config_file = NamedTemporaryFile(delete=False).name
@@ -159,7 +164,7 @@ def load_legacy(config_obj: ConfigObj):
     config = LoadConfig()
 
     try:
-        config.load_config(config_file)
+        return config.load_config(config_file)
     except VyOSError as e:
         raise LoadConfigError(e) from e
     finally:
@@ -178,4 +183,4 @@ def load(config_obj: ConfigObj, strict: bool = True,
     config_obj = migrate(config_obj)
 
     func = getattr(thismod, f'load_{switch}')
-    func(config_obj)
+    return func(config_obj)
