@@ -56,6 +56,7 @@ from vyos.utils.io import is_interactive
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
 from vyos.utils.process import cmdl
+from vyos.utils.process import get_wrapper
 from vyos.utils.process import rc_cmd
 from vyos.version import get_version
 from vyos.base import Warning
@@ -154,6 +155,35 @@ def umask(mask: int):
         yield
     finally:
         os.umask(oldmask)
+
+
+def vrf_wrapper(vrf: str | None) -> list[str]:
+    """
+    Command prefix to run a program in a VRF as the calling user.
+
+    'ip vrf exec' requires root, but commit-archive runs as the user who
+    commits. Use sudo only to enter the VRF, then run the command as that
+    user again, so it uses the user's own files, SSH keys and environment.
+    """
+    if not vrf:
+        return []
+    # already root: no sudo and no user switch needed
+    if os.getuid() == 0:
+        return get_wrapper(vrf, None)
+    # never ask for a password, fail instead
+    # sudo clears the environment by default, keep it as it is without a VRF
+    wrapper = ['sudo', '--non-interactive', '--preserve-env']
+    wrapper += get_wrapper(vrf, None)
+    # switch back to the calling user before running the command
+    wrapper += [
+        'setpriv',
+        f'--reuid={os.getuid()}',
+        f'--regid={os.getgid()}',
+        '--init-groups',
+        '--',
+    ]
+    return wrapper
+
 
 def check_storage(path, size):
     """
@@ -529,13 +559,19 @@ class TftpC:
 
     def download(self, location: str):
         with open(location, 'wb') as f:
-            f.write(cmdl(self.command + [self.urlstring],
-                         vrf=self.vrf).encode())
+            f.write(
+                cmdl(vrf_wrapper(self.vrf) + self.command + [self.urlstring]).encode()
+            )
 
     def upload(self, location: str):
         with open(location, 'rb') as f:
-            cmdl(self.command + ['--upload-file', '-', self.urlstring],
-                 input=f.read(), vrf=self.vrf)
+            cmdl(
+                vrf_wrapper(self.vrf)
+                + self.command
+                + ['--upload-file', '-', self.urlstring],
+                input=f.read(),
+            )
+
 
 class GitC:
     def __init__(self,
@@ -588,15 +624,15 @@ class GitC:
                 ssh_command += ["-o", "StrictHostKeyChecking=yes"]
 
             env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
+            wrapper = vrf_wrapper(self.vrf)
 
             # git clone
             path_repository = Path(directory) / "repository"
             scheme = f"{scheme}://" if scheme else ""
             rc, out = rc_cmd(
-                self.command + ["clone", f"{scheme}{netloc}{url}", str(path_repository), "--depth=1"],
+                wrapper + self.command + ["clone", f"{scheme}{netloc}{url}", str(path_repository), "--depth=1"],
                 env=env,
                 shell=False,
-                vrf=self.vrf,
             )
             if rc:
                 raise Exception(out)
@@ -621,10 +657,9 @@ class GitC:
 
             # git push
             rc, out = rc_cmd(
-                self.command + ["-C", str(path_repository), "push"],
+                wrapper + self.command + ["-C", str(path_repository), "push"],
                 env=env,
                 shell=False,
-                vrf=self.vrf,
             )
             if rc:
                 raise Exception(out)
