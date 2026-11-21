@@ -18,7 +18,6 @@
 # pylint: disable=wildcard-import,unused-wildcard-import
 # pylint: disable=broad-exception-caught
 
-import asyncio
 import hmac
 import json
 import copy
@@ -96,7 +95,6 @@ LOG = logging.getLogger('http_api.routers')
 
 lock = Lock()
 
-asynclock = asyncio.Lock()
 
 def check_auth(key_list, key):
     if not key_list or not key:
@@ -439,12 +437,11 @@ def _execute_configure_op(
     # so the lock is really global
     lock.acquire()
 
-    config = Config(session_env=env)
-
     status = 200
     msg = None
     error_msg = None
     try:
+        config = Config(session_env=env)
         for c in data:
             op = c.op
             op_error = ConfigSessionError(f"'{op}' is not a valid operation")
@@ -728,63 +725,66 @@ async def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTask
     # A non-zero confirm_time will start commit-confirm timer on commit
     confirm_time = data.confirm_time
 
-    # Serialize config operations without blocking the event loop
-    async with asynclock:
-        try:
-            if op == 'save':
-                path = data.file or '/config/config.boot'
-                msg = session.save_config(path)
+    # Same global lock as /configure, acquired without blocking the event loop
+    await run_in_threadpool(lock.acquire)
+    try:
+        if op == 'save':
+            path = data.file or '/config/config.boot'
+            msg = session.save_config(path)
 
-            elif op in ('load', 'merge'):
-                if data.file:
-                    _load_or_merge(session, data, data.file)
-                elif data.string:
-                    # The config may contain secrets, so write it to a private
-                    # temp file (0600, root-only dir) instead of a fixed /tmp path
-                    os.makedirs(config_file_tmp_dir, mode=0o700, exist_ok=True)
-                    with NamedTemporaryFile(
-                        'w', prefix='config-', dir=config_file_tmp_dir
-                    ) as f:
-                        f.write(data.string)
-                        f.flush()
-                        _load_or_merge(session, data, f.name)
-                else:
-                    return error(400, 'Missing required field "file | string"')
-
-                config = Config(session_env=env)
-                d = get_config_diff(config)
-
-                state.confirm_time = confirm_time if confirm_time else 0
-
-                if not d.is_node_changed(['service', 'https']):
-                    if confirm_time:
-                        out, err = await run_in_threadpool(run_commit_confirm, state)
-                    else:
-                        out, err = await run_in_threadpool(run_commit, state)
-
-                    if err:
-                        raise err
-                    msg = (msg or '') + (out or '')
-                else:
-                    if confirm_time:
-                        background_tasks.add_task(call_commit_confirm, state)
-                    else:
-                        background_tasks.add_task(call_commit, state)
-                    out = self_ref_msg
-                    msg = (msg or '') + (out or '')
-            elif op == 'confirm':
-                msg = session.confirm()
+        elif op in ('load', 'merge'):
+            if data.file:
+                _load_or_merge(session, data, data.file)
+            elif data.string:
+                # The config may contain secrets, so write it to a private
+                # temp file (0600, root-only dir) instead of a fixed /tmp path
+                os.makedirs(config_file_tmp_dir, mode=0o700, exist_ok=True)
+                with NamedTemporaryFile(
+                    'w', prefix='config-', dir=config_file_tmp_dir
+                ) as f:
+                    f.write(data.string)
+                    f.flush()
+                    _load_or_merge(session, data, f.name)
             else:
-                return error(400, f"'{op}' is not a valid operation")
+                return error(400, 'Missing required field "file | string"')
 
-        except ConfigSessionError as e:
-            return error(400, str(e))
-        except Exception:
-            LOG.critical(traceback.format_exc())
-            return error(500, 'An internal error occurred. Check the logs for details.')
-        finally:
-            if 'IN_COMMIT_CONFIRM' in env:
-                del env['IN_COMMIT_CONFIRM']
+            config = Config(session_env=env)
+            d = get_config_diff(config)
+
+            state.confirm_time = confirm_time if confirm_time else 0
+
+            if not d.is_node_changed(['service', 'https']):
+                if confirm_time:
+                    out, err = await run_in_threadpool(run_commit_confirm, state)
+                else:
+                    out, err = await run_in_threadpool(run_commit, state)
+
+                if err:
+                    raise err
+                msg = (msg or '') + (out or '')
+            else:
+                if confirm_time:
+                    background_tasks.add_task(call_commit_confirm, state)
+                else:
+                    background_tasks.add_task(call_commit, state)
+                out = self_ref_msg
+                msg = (msg or '') + (out or '')
+        elif op == 'confirm':
+            msg = session.confirm()
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+
+    except ConfigSessionError as e:
+        session.discard()
+        return error(400, str(e))
+    except Exception:
+        session.discard()
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occurred. Check the logs for details.')
+    finally:
+        if 'IN_COMMIT_CONFIRM' in env:
+            del env['IN_COMMIT_CONFIRM']
+        lock.release()
 
     return success(msg)
 
