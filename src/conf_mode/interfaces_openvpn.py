@@ -1111,16 +1111,31 @@ def apply(openvpn):
         if drop:
             VTunIf(interface).remove()
 
+    restart = not (openvpn.get('no_restart_crl') or openvpn.get('client_only_changed'))
+
+    # OpenVPN deletes a tun device it created itself on every restart, which
+    # makes update() below fail. Create a persistent one before the daemon
+    # starts, stopping the daemon first if it still owns a leftover device.
+    if restart:
+        try:
+            tmp = get_interface_config(interface)
+        except OSError:
+            # interface vanished in the meantime
+            tmp = None
+        if dict_search('linkinfo.info_data.persist', tmp) is not True:
+            call(f'systemctl stop openvpn@{interface}.service')
+
+    o = VTunIf(**openvpn)
+
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
 
-    if not openvpn.get('no_restart_crl') and not openvpn.get('client_only_changed'):
+    if restart:
         action = 'reload-or-restart'
         if 'restart_required' in openvpn:
             action = 'restart'
         call(f'systemctl {action} openvpn@{interface}.service')
 
-    o = VTunIf(**openvpn)
     o.update(openvpn)
 
     # run the dependents
