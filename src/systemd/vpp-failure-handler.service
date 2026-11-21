@@ -6,4 +6,6 @@ Type=oneshot
 User=root
 Group=vyattacfg
 UMask=0002
+ExecStartPre=/usr/bin/touch /run/vpp-failure-handler
 ExecStart=/usr/bin/python3 /usr/libexec/vyos/reset_section.py vpp --reload
+ExecStopPost=/usr/bin/rm -f /run/vpp-failure-handler

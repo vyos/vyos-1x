@@ -40,6 +40,10 @@ def get_config(config=None) -> dict:
         with_recursive_defaults=True,
     )
 
+    if not conf.exists(['vpp']):
+        config['remove_vpp'] = True
+        return config
+
     # Get effective config as we need full dictionary for deletion
     effective_config = conf.get_config_dict(
         base,
@@ -71,7 +75,7 @@ def get_config(config=None) -> dict:
 
 
 def verify(config):
-    if 'remove' in config:
+    if 'remove' in config or 'remove_vpp' in config:
         return None
 
     # Verify that at least one interface is configured
@@ -120,6 +124,11 @@ def generate(config):
 
 
 def apply(config):
+    # VPP is stopped (or already dead) with the whole 'vpp' section, taking
+    # its IPFIX state with it
+    if 'remove_vpp' in config:
+        return None
+
     i = IPFIX()
 
     # Remove collectors
