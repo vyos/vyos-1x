@@ -14,7 +14,11 @@
         "vpp_nat_cgnat": ["vpp_nat_cgnat"],
         "vpp_sflow": ["vpp_sflow"],
         "pppoe_server": ["service_pppoe-server"],
+        "mpls": ["protocols_mpls"],
         "vpp_per_node_counters": ["service_monitoring_prometheus"]
+    },
+    "interfaces_ethernet": {
+        "mpls": ["protocols_mpls"]
     },
     "vpp_interfaces_bonding": {
         "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],

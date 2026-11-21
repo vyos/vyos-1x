@@ -724,6 +724,82 @@ class VPPControl:
             )
 
     @_Decorators.api_call
+    def mpls_enabled_interfaces(self) -> list[int]:
+        """List the interfaces with MPLS enabled
+
+        Returns:
+            list[int]: interface indexes
+        """
+        return [
+            iface.sw_if_index
+            for iface in self.__vpp_api_client.api.mpls_interface_dump()
+        ]
+
+    @_Decorators.api_call
+    def vlan_sub_interfaces(self, ifname: str) -> list[str]:
+        """List the VLAN sub-interfaces of an interface
+
+        Args:
+            ifname (str): name of an interface in VPP
+
+        Returns:
+            list[str]: names of the sub-interfaces in VPP
+        """
+        index = self.get_sw_if_index(ifname)
+        return [
+            iface.interface_name
+            for iface in self.__vpp_api_client.api.sw_interface_dump()
+            if iface.sup_sw_if_index == index and iface.sw_if_index != index
+        ]
+
+    def disable_mpls_tree(self, ifname: str) -> None:
+        """Disable MPLS on an interface and on its VLAN sub-interfaces
+
+        VPP counts MPLS per interface index and keeps the count when the
+        interface is deleted. A new interface with the same index would then
+        never get the MPLS feature enabled, so MPLS has to be off before an
+        interface or a VLAN is deleted.
+
+        Args:
+            ifname (str): name of an interface in VPP
+        """
+        for child in self.vlan_sub_interfaces(ifname):
+            self.disable_mpls_tree(child)
+        if self.get_sw_if_index(ifname) in self.mpls_enabled_interfaces():
+            self.set_interface_mpls(ifname, False)
+
+    @_Decorators.api_call
+    def set_interface_mpls(self, ifname: str, enable: bool = True) -> None:
+        """Enable or disable MPLS on an interface
+
+        linux-cp mirrors the state to the kernel interface of the pair. VPP
+        refuses to enable MPLS while the default MPLS table does not exist,
+        it is created here.
+
+        Args:
+            ifname (str): name of an interface in VPP
+            enable (bool): enable or disable MPLS
+        """
+        sw_if_index = self.get_sw_if_index(ifname)
+        if sw_if_index is None:
+            raise VPPValueError(f'Interface {ifname} not found in VPP')
+        if enable:
+            reply = self.__vpp_api_client.api.mpls_table_add_del(
+                mt_is_add=True, mt_table={'mt_table_id': 0}
+            )
+            if reply.retval != 0:
+                raise VPPValueError(f'Cannot create the MPLS table: {reply.retval}')
+        reply = self.__vpp_api_client.api.sw_interface_set_mpls_enable(
+            sw_if_index=sw_if_index,
+            enable=enable,
+        )
+        if reply.retval != 0:
+            raise VPPValueError(
+                f'Cannot {"enable" if enable else "disable"} MPLS on {ifname}: '
+                f'{reply.retval}'
+            )
+
+    @_Decorators.api_call
     def set_promisc(self, ifname: str, enable: bool = True) -> None:
         """Set promiscuous mode for interface
 
