@@ -320,7 +320,9 @@ def certbot_renewal_due(name: str) -> bool:
     if tmp is None:
         return True
     try:
-        expiry = load_certificate(tmp, wrap_tags=False).not_valid_after.replace(tzinfo=UTC)
+        expiry = load_certificate(tmp, wrap_tags=False).not_valid_after.replace(
+            tzinfo=UTC
+        )
     except Exception:
         return True
 

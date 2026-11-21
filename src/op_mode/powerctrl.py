@@ -32,7 +32,9 @@ systemd_sched_file = "/run/systemd/shutdown/scheduled"
 
 def utc2local(datetime):
     now = time()
-    offs = datetime.fromtimestamp(now) - datetime.fromtimestamp(now, UTC).replace(tzinfo=None)
+    offs = datetime.fromtimestamp(now) - datetime.fromtimestamp(now, UTC).replace(
+        tzinfo=None
+    )
     return datetime + offs
 
 def parse_time(s):
@@ -72,7 +74,8 @@ def get_shutdown_status():
                 if tmp_split[0] == "USEC":
                     # Convert USEC to  human readable format
                     r_data['DATETIME'] = datetime.fromtimestamp(
-                        int(tmp_split[1])/1000000, UTC).strftime('%Y-%m-%d %H:%M:%S')
+                        int(tmp_split[1]) / 1000000, UTC
+                    ).strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     r_data[tmp_split[0]] = tmp_split[1]
             return r_data
