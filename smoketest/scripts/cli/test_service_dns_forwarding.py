@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import unittest
+import yaml
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -25,9 +25,9 @@ from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
 PDNS_REC_RUN_DIR = '/run/pdns-recursor'
-CONFIG_FILE = f'{PDNS_REC_RUN_DIR}/recursor.conf'
+CONFIG_FILE = f'{PDNS_REC_RUN_DIR}/recursor.yml'
 PDNS_REC_LUA_CONF_FILE = f'{PDNS_REC_RUN_DIR}/recursor.conf.lua'
-FORWARD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
+FORWARD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.yml'
 HOSTSD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
 PROCESS_NAME= 'pdns_recursor'
 
@@ -37,9 +37,16 @@ allow_from = ['192.0.2.0/24', '2001:db8::/32']
 listen_adress = ['127.0.0.1', '::1']
 
 def get_config_value(key, file=CONFIG_FILE):
-    tmp = read_file(file)
-    tmp = re.findall(r'\n{}=+(.*)'.format(key), tmp)
-    return tmp[0]
+    """Value of a dotted key (e.g. incoming.port) of the YAML configuration"""
+    tmp = yaml.safe_load(read_file(file))
+    for part in key.split('.'):
+        tmp = tmp[part]
+    return tmp
+
+def get_forward_zone(zone):
+    """Entry of a zone in the YAML list of forward zones"""
+    tmp = yaml.safe_load(read_file(FORWARD_FILE))
+    return next(entry for entry in tmp if entry['zone'] == zone)
 
 class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -104,32 +111,36 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check configured cache-size
-        tmp = get_config_value('max-cache-entries')
-        self.assertEqual(tmp, cache_size)
+        tmp = get_config_value('recordcache.max_entries')
+        self.assertEqual(tmp, int(cache_size))
 
         # Networks allowed to query this server
-        tmp = get_config_value('allow-from')
-        self.assertEqual(tmp, ','.join(allow_from))
+        tmp = get_config_value('incoming.allow_from')
+        self.assertEqual(tmp, allow_from)
 
         # Addresses to listen for DNS queries
-        tmp = get_config_value('local-address')
-        self.assertEqual(tmp, ','.join(listen_adress))
+        tmp = get_config_value('incoming.listen')
+        self.assertEqual(tmp, listen_adress)
 
         # Maximum amount of time negative entries are cached
-        tmp = get_config_value('max-negative-ttl')
-        self.assertEqual(tmp, negative_ttl)
+        tmp = get_config_value('recordcache.max_negative_ttl')
+        self.assertEqual(tmp, int(negative_ttl))
 
         # Do not use local /etc/hosts file in name resolution
-        tmp = get_config_value('export-etc-hosts')
-        self.assertEqual(tmp, 'no')
+        tmp = get_config_value('recursor.export_etc_hosts')
+        self.assertIs(tmp, False)
 
         # RFC1918 addresses are looked up by default
-        tmp = get_config_value('serve-rfc1918')
-        self.assertEqual(tmp, 'yes')
+        tmp = get_config_value('recursor.serve_rfc1918')
+        self.assertIs(tmp, True)
 
         # verify default port configuration
-        tmp = get_config_value('local-port')
-        self.assertEqual(tmp, '53')
+        tmp = get_config_value('incoming.port')
+        self.assertEqual(tmp, 53)
+
+        # the DNSSEC root keys are read from the dns-root-data package
+        self.assertIn('readTrustAnchorsFromFile("/usr/share/dns/root.key")',
+                      read_file(PDNS_REC_LUA_CONF_FILE))
 
     # PowerDNS cache-related recursor options
     def test_recursor_cache_options(self):
@@ -143,15 +154,15 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        self.assertEqual(get_config_value('refresh-on-ttl-perc'), ttl_percent)
-        self.assertEqual(get_config_value('nothing-below-nxdomain'), nothing_below_nxdomain)
-        self.assertEqual(get_config_value('minimum-ttl-override'), minimum_ttl_override)
+        self.assertEqual(get_config_value('recordcache.refresh_on_ttl_perc'), int(ttl_percent))
+        self.assertEqual(get_config_value('recursor.nothing_below_nxdomain'), nothing_below_nxdomain)
+        self.assertEqual(get_config_value('recursor.minimum_ttl_override'), int(minimum_ttl_override))
 
     def test_nothing_below_nxdomain(self):
         for option in ['no', 'dnssec', 'yes']:
             self.cli_set(base_path + ['nothing-below-nxdomain', option])
             self.cli_commit()
-            self.assertEqual(get_config_value('nothing-below-nxdomain'), option)
+            self.assertEqual(get_config_value('recursor.nothing_below_nxdomain'), option)
 
     def test_dnssec(self):
         # DNSSEC option testing
@@ -162,7 +173,7 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             # commit changes
             self.cli_commit()
 
-            tmp = get_config_value('dnssec')
+            tmp = get_config_value('dnssec.validation')
             self.assertEqual(tmp, option)
 
     def test_external_nameserver(self):
@@ -177,15 +188,17 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        tmp = get_config_value(r'\+.', file=FORWARD_FILE)
+        # the catch-all zone asks the name servers for recursion
+        zone = get_forward_zone('.')
         canonical_entries = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port'] if 'port' in p else 53}")(h, p)
                              for (h, p) in nameservers.items()]
-        self.assertEqual(tmp, ', '.join(canonical_entries))
+        self.assertEqual(zone['forwarders'], canonical_entries)
+        self.assertIs(zone['recurse'], True)
 
         # Do not use local /etc/hosts file in name resolution
         # default: yes
-        tmp = get_config_value('export-etc-hosts')
-        self.assertEqual(tmp, 'yes')
+        tmp = get_config_value('recursor.export_etc_hosts')
+        self.assertIs(tmp, True)
 
     def test_domain_forwarding(self):
         domains = ['vyos.io', 'vyos.net', 'vyos.com']
@@ -211,13 +224,16 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # Test configured name-servers
         hosts_conf = read_file(HOSTSD_FILE)
         for domain in domains:
-            # Test 'recursion-desired' flag for the first domain only
-            if domain == domains[0]: key =f'\+{domain}'
-            else: key =f'{domain}'
-            tmp = get_config_value(key, file=FORWARD_FILE)
+            zone = get_forward_zone(domain)
             canonical_entries = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port'] if 'port' in p else 53}")(h, p)
                         for (h, p) in nameservers.items()]
-            self.assertEqual(tmp, ', '.join(canonical_entries))
+            self.assertEqual(zone['forwarders'], canonical_entries)
+
+            # Test 'recursion-desired' flag for the first domain only
+            if domain == domains[0]:
+                self.assertIs(zone['recurse'], True)
+            else:
+                self.assertNotIn('recurse', zone)
 
             # Test 'negative trust anchor' flag for the second domain only
             if domain == domains[1]:
@@ -230,8 +246,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify configuration
-        tmp = get_config_value('serve-rfc1918')
-        self.assertEqual(tmp, 'no')
+        tmp = get_config_value('recursor.serve_rfc1918')
+        self.assertIs(tmp, False)
 
     def test_dns64(self):
         dns_prefix = '64:ff9b::/96'
@@ -245,7 +261,7 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify dns64-prefix configuration
-        tmp = get_config_value('dns64-prefix')
+        tmp = get_config_value('recursor.dns64_prefix')
         self.assertEqual(tmp, dns_prefix)
 
     def test_recursion_exclude_address(self):
@@ -260,23 +276,26 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        # A list in the YAML configuration replaces the default list of
+        # the recursor, so the configured entries must follow the defaults
+        dont_query = get_config_value('outgoing.dont_query')
         self.assertEqual(
-            get_config_value(r'dont-query\+'), ','.join(recursion_exclude_address)
+            dont_query[-len(recursion_exclude_address):], recursion_exclude_address
         )
+        for default in ['127.0.0.0/8', '10.0.0.0/8', '::1/128', 'fe80::/10']:
+            self.assertIn(default, dont_query)
 
-        # Removing all configured values must remove the incremental setting,
-        # allowing PowerDNS to use its native defaults again.
+        # Removing all configured values must remove the setting, allowing
+        # PowerDNS to use its native defaults again.
         self.cli_delete(base_path + ['recursion-exclude-address'])
         self.cli_commit()
-        config = read_file(CONFIG_FILE)
-        self.assertNotIn('\ndont-query=', config)
-        self.assertNotIn('\ndont-query+=', config)
+        self.assertNotIn('dont_query', get_config_value('outgoing'))
 
     def test_recursion_exclude_address_conflicting_entry_order(self):
         self.cli_set(base_path + ['recursion-exclude-address', '1.0.0.0/8'])
         self.cli_set(base_path + ['recursion-exclude-address', '!1.0.0.0/8'])
         self.cli_commit()
-        self.assertEqual(get_config_value(r'dont-query\+'), '1.0.0.0/8,!1.0.0.0/8')
+        self.assertEqual(get_config_value('outgoing.dont_query')[-2:], ['1.0.0.0/8', '!1.0.0.0/8'])
 
         self.cli_delete(base_path + ['recursion-exclude-address'])
         self.cli_commit()
@@ -284,7 +303,7 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['recursion-exclude-address', '!1.0.0.0/8'])
         self.cli_set(base_path + ['recursion-exclude-address', '1.0.0.0/8'])
         self.cli_commit()
-        self.assertEqual(get_config_value(r'dont-query\+'), '!1.0.0.0/8,1.0.0.0/8')
+        self.assertEqual(get_config_value('outgoing.dont_query')[-2:], ['!1.0.0.0/8', '1.0.0.0/8'])
 
     def test_exclude_throttle_adress(self):
         exclude_throttle_adress_examples = [
@@ -300,8 +319,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify dont-throttle-netmasks configuration
-        tmp = get_config_value('dont-throttle-netmasks')
-        self.assertEqual(tmp, ','.join(exclude_throttle_adress_examples))
+        tmp = get_config_value('outgoing.dont_throttle_netmasks')
+        self.assertEqual(tmp, exclude_throttle_adress_examples)
 
     def test_serve_stale_extension(self):
         server_stale = '20'
@@ -309,8 +328,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
         # verify configuration
-        tmp = get_config_value('serve-stale-extensions')
-        self.assertEqual(tmp, server_stale)
+        tmp = get_config_value('recordcache.serve_stale_extensions')
+        self.assertEqual(tmp, int(server_stale))
 
     def test_listening_port(self):
         # We can listen on a different port compared to '53' but only one at a time
@@ -319,8 +338,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             # commit changes
             self.cli_commit()
             # verify local-port configuration
-            tmp = get_config_value('local-port')
-            self.assertEqual(tmp, port)
+            tmp = get_config_value('incoming.port')
+            self.assertEqual(tmp, int(port))
 
     def test_ecs_add_for(self):
         options = ['0.0.0.0/0', '!10.0.0.0/8', 'fc00::/7', '!fe80::/10']
@@ -330,8 +349,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
         # verify ecs_add_for configuration
-        tmp = get_config_value('ecs-add-for')
-        self.assertEqual(tmp, ','.join(options))
+        tmp = get_config_value('ecs.add_for')
+        self.assertEqual(tmp, options)
 
     def test_ecs_ipv4_bits(self):
         option_value = '24'
@@ -339,8 +358,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
         # verify ecs_ipv4_bits configuration
-        tmp = get_config_value('ecs-ipv4-bits')
-        self.assertEqual(tmp, option_value)
+        tmp = get_config_value('ecs.ipv4_bits')
+        self.assertEqual(tmp, int(option_value))
 
     def test_edns_subnet_allow_list(self):
         options = ['192.0.2.1/32', 'example.com', 'fe80::/10']
@@ -351,21 +370,21 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify edns_subnet_allow_list configuration
-        tmp = get_config_value('edns-subnet-allow-list')
-        self.assertEqual(tmp, ','.join(options))
+        tmp = get_config_value('outgoing.edns_subnet_allow_list')
+        self.assertEqual(tmp, options)
 
     def test_security_status_poll_domain(self):
         # commit changes - the periodic security status poll must be
         # disabled (empty) by default, see T9175
         self.cli_commit()
-        tmp = get_config_value('security-poll-suffix')
+        tmp = get_config_value('recursor.security_poll_suffix')
         self.assertEqual(tmp, '')
 
         # explicitly configuring a domain must enable and use it
         domain = 'secpoll.powerdns.com'
         self.cli_set(base_path + ['options', 'security-status-poll-domain', domain])
         self.cli_commit()
-        tmp = get_config_value('security-poll-suffix')
+        tmp = get_config_value('recursor.security_poll_suffix')
         self.assertEqual(tmp, domain)
 
     def test_multiple_ns_records(self):
