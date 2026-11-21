@@ -21,6 +21,9 @@ from configparser import ConfigParser
 from base_accel_ppp_test import BasicAccelPPPTest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+dummy_if = ['interfaces', 'dummy', 'dum669']
+outside_address = ['203.0.113.1', '203.0.113.2']
+
 class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -34,6 +37,11 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
     @classmethod
     def tearDownClass(cls):
         super(TestVPNPPTPServer, cls).tearDownClass()
+
+    def tearDown(self):
+        self.cli_delete(dummy_if)
+        # always forward to base class
+        super().tearDown()
 
     def basic_protocol_specific_config(self):
         pass
@@ -54,6 +62,21 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
                 self.assertEqual(conf['pptp']['mppe'], mppe)
                 self.assertEqual(conf['ppp']['mppe'], mppe)
 
+    def reconfigure_prepare(self):
+        for address in outside_address:
+            self.cli_set(dummy_if + ['address', f'{address}/32'])
+
+    def steps_server_specific(self):
+        first, second = outside_address
+        return [
+            {'name': 'add outside-address', 'set': [['outside-address', first]],
+             'check': lambda: self.assert_listening('tcp', 1723, first)},
+            {'name': 'change outside-address', 'set': [['outside-address', second]],
+             'check': lambda: (self.assert_listening('tcp', 1723, second),
+                               self.assert_listening('tcp', 1723, first, present=False))},
+            {'name': 'delete outside-address', 'delete': [['outside-address']],
+             'check': lambda: self.assert_listening('tcp', 1723, second, present=False)},
+        ]
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

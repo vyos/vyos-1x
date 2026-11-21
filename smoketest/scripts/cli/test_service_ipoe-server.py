@@ -29,6 +29,7 @@ from configparser import RawConfigParser
 
 ac_name = "ACN"
 interface = "eth0"
+dummy_if = "dum668"
 
 
 class MultiOrderedDict(OrderedDict):
@@ -49,6 +50,8 @@ class TestServiceIPoEServer(BasicAccelPPPTest.TestCase):
         cls._config_file = "/run/accel-pppd/ipoe.conf"
         cls._chap_secrets = "/run/accel-pppd/ipoe.chap-secrets"
         cls._protocol_section = "ipoe"
+        cls._auth_mode = "noauth"
+        cls._ppp = False
 
         # call base-classes classmethod
         super(TestServiceIPoEServer, cls).setUpClass()
@@ -75,6 +78,64 @@ class TestServiceIPoEServer(BasicAccelPPPTest.TestCase):
 
     def basic_protocol_specific_config(self):
         self.set(["interface", interface, "client-subnet", "192.168.0.0/24"])
+
+    def tearDown(self):
+        self.cli_delete(["interfaces", "dummy", dummy_if])
+        # always forward to base class
+        super().tearDown()
+
+    def reconfigure_prepare(self):
+        self.cli_set(["interfaces", "dummy", dummy_if])
+
+    def alternate_gateway(self):
+        return "192.0.2.254/24"
+
+    def steps_local_users(self):
+        # IPoE clients are identified by MAC address instead of a username
+        mac = ["authentication", "interface", interface, "mac"]
+        mac1 = mac + ["08:00:27:2f:d8:01"]
+        mac2 = mac + ["08:00:27:2f:d8:02"]
+        return [
+            {"name": "add client", "set": [mac1, ["authentication", "mode", "local"]]},
+            {"name": "add second client", "set": [mac2]},
+            {"name": "add rate-limit", "set": [mac1 + ["rate-limit", "upload", "1000"],
+                                               mac1 + ["rate-limit", "download", "2000"]]},
+            {"name": "change rate-limit", "set": [mac1 + ["rate-limit", "upload", "3000"],
+                                                  mac1 + ["rate-limit", "download", "4000"]]},
+            {"name": "delete rate-limit", "delete": [mac1 + ["rate-limit"]]},
+            {"name": "add vlan", "set": [mac2 + ["vlan", "100"]]},
+            {"name": "delete vlan", "delete": [mac2 + ["vlan"]]},
+            {"name": "add static ip-address", "set": [mac2 + ["ip-address", "192.168.0.10"]]},
+            {"name": "change static ip-address", "set": [mac2 + ["ip-address", "192.168.0.11"]]},
+            {"name": "delete static ip-address", "delete": [mac2 + ["ip-address"]]},
+            {"name": "delete client", "delete": [mac1]},
+            {"name": "switch mode to noauth", "delete": [["authentication", "interface"]],
+                                              "set": [["authentication", "mode", "noauth"]]},
+        ]
+
+    def steps_server_specific(self):
+        iface = ["interface", interface]
+        dummy = ["interface", dummy_if]
+        return [
+            {"name": "start-session auto", "set": [iface + ["start-session", "auto"]]},
+            {"name": "start-session unclassified-packet",
+             "set": [iface + ["start-session", "unclassified-packet"]]},
+            {"name": "delete start-session", "delete": [iface + ["start-session"]]},
+            {"name": "mode l3", "set": [iface + ["mode", "l3"]]},
+            {"name": "delete mode", "delete": [iface + ["mode"]]},
+            {"name": "change client-subnet", "set": [iface + ["client-subnet", "192.168.1.0/24"]]},
+            {"name": "add interface", "set": [dummy]},
+            {"name": "add vlan", "set": [dummy + ["vlan", "100"]]},
+            {"name": "add vlan-mon", "set": [dummy + ["vlan-mon"]]},
+            {"name": "delete vlan", "delete": [dummy + ["vlan-mon"], dummy + ["vlan"]]},
+            {"name": "add dhcp-relay", "set": [dummy + ["external-dhcp", "dhcp-relay", "192.0.2.250"],
+                                               dummy + ["external-dhcp", "giaddr", "192.0.2.1"]]},
+            {"name": "delete dhcp-relay", "delete": [dummy + ["external-dhcp"]]},
+            {"name": "delete interface", "delete": [dummy]},
+            {"name": "add idle-timeout", "set": [["idle-timeout", "60"]]},
+            {"name": "change idle-timeout", "set": [["idle-timeout", "120"]]},
+            {"name": "delete idle-timeout", "delete": [["idle-timeout"]]},
+        ]
 
     def test_accel_local_authentication(self):
         mac_address = "08:00:27:2f:d8:06"

@@ -112,7 +112,7 @@ def apply(l2tp):
             if os.path.exists(file):
                 os.unlink(file)
     else:
-        call('systemctl restart accel-ppp@l2tp.service')
+        call('systemctl reload-or-restart accel-ppp@l2tp.service')
 
     call_dependents()
 

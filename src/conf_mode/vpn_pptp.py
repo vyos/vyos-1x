@@ -110,7 +110,7 @@ def apply(pptp):
 
         return None
 
-    call('systemctl restart accel-ppp@pptp.service')
+    call('systemctl reload-or-restart accel-ppp@pptp.service')
 
 
 if __name__ == '__main__':

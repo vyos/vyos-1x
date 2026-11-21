@@ -18,7 +18,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
-from vyos.configdict import is_node_changed, node_changed
+from vyos.configdict import node_changed
 from vyos.configdiff import Diff
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_virtual_interface_exists
@@ -124,9 +124,6 @@ def get_config(config=None):
         pado_delay = dict_search('pado_delay', pppoe)
         pppoe['pado_delay'] = convert_pado_delay(pado_delay)
 
-    # reload-or-restart is not implemented in accel-ppp
-    # use this workaround until it will be implemented
-    # https://phabricator.accel-ppp.org/T3
     changed_vpp_ifaces = node_changed(
         conf, vpp_interface_base, expand_nodes=Diff.DELETE | Diff.ADD
     )
@@ -137,23 +134,10 @@ def get_config(config=None):
         expand_nodes=Diff.DELETE | Diff.ADD,
     )
     all_changed_vpp_ifaces = set(changed_vpp_ifaces) | set(changed_vpp_bond_ifaces)
-    conditions = [
-        is_node_changed(conf, base + ['client-ip-pool']),
-        is_node_changed(conf, base + ['client-ipv6-pool']),
-        is_node_changed(conf, base + ['interface']),
-        is_node_changed(conf, base + ['authentication', 'radius']),
-        is_node_changed(conf, base + ['authentication', 'mode']),
-        is_node_changed(conf, base + ['authentication', 'protocols']),
-        # IPv6 peer IID mode/secret affect negotiated session state.
-        # Restart is required to force existing sessions to re-negotiate.
-        is_node_changed(conf, base + ['ppp-options', 'ipv6-peer-interface-id']),
-        is_node_changed(conf, base + ['ppp-options', 'ipv6-peer-interface-id-secret']),
-        any(
-            base_ifname(iface) in all_changed_vpp_ifaces
-            for iface in pppoe.get('interface', {})
-        ),
-    ]
-    if any(conditions):
+    if any(
+        base_ifname(iface) in all_changed_vpp_ifaces
+        for iface in pppoe.get('interface', {})
+    ):
         pppoe.update({'restart_required': {}})
     pppoe['server_type'] = 'pppoe'
     return pppoe

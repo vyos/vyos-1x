@@ -56,6 +56,8 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
         cls.cli_set(cls, pki_path + ['ca', 'sstp', 'certificate', cert_data.replace('\n','')])
         cls.cli_set(cls, pki_path + ['certificate', 'sstp', 'certificate', cert_data.replace('\n','')])
         cls.cli_set(cls, pki_path + ['certificate', 'sstp', 'private', 'key', key_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['certificate', 'sstp2', 'certificate', cert_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['certificate', 'sstp2', 'private', 'key', key_data.replace('\n','')])
 
     @classmethod
     def tearDownClass(cls):
@@ -86,6 +88,20 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
 
         config = read_file(self._config_file)
         self.assertIn(f'host-name={host_name}', config)
+
+    def steps_server_specific(self):
+        return [
+            {'name': 'change port', 'set': [['port', '8443']],
+             'check': lambda: self.assert_listening('tcp', 8443)},
+            {'name': 'change port again', 'set': [['port', '8444']],
+             'check': lambda: (self.assert_listening('tcp', 8444),
+                               self.assert_listening('tcp', 8443, present=False))},
+            {'name': 'add host-name', 'set': [['host-name', 'sstp.vyos.io']]},
+            {'name': 'change host-name', 'set': [['host-name', 'sstp2.vyos.io']]},
+            {'name': 'delete host-name', 'delete': [['host-name']]},
+            {'name': 'change certificate', 'set': [['ssl', 'certificate', 'sstp2']]},
+            {'name': 'revert certificate', 'set': [['ssl', 'certificate', 'sstp']]},
+        ]
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
