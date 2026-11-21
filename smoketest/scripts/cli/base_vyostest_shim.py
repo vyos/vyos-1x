@@ -25,13 +25,34 @@ from typing import Type
 from vyos import ConfigError
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.frrender import babel_daemon
+from vyos.frrender import bfd_daemon
+from vyos.frrender import bgp_daemon
+from vyos.frrender import isis_daemon
+from vyos.frrender import ldpd_daemon
 from vyos.frrender import mgmt_daemon
+from vyos.frrender import nhrp_daemon
+from vyos.frrender import openfabric_daemon
+from vyos.frrender import ospf_daemon
+from vyos.frrender import ospf6_daemon
+from vyos.frrender import pim6_daemon
+from vyos.frrender import rip_daemon
+from vyos.frrender import ripng_daemon
+from vyos.frrender import zebra_daemon
 from vyos.utils.commit import commit_in_progress2
 from vyos.utils.network import get_vrf_pids
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
 save_config = '/tmp/vyos-smoketest-save'
+
+# FRR daemons which must always run and are not allowed to crash during a test,
+# thus their PIDs must remain the same. staticd and pathd have no vyos.frrender
+# constant. pimd is left out as it is started and stopped by "protocols pim".
+frr_daemons = [babel_daemon, bfd_daemon, bgp_daemon, isis_daemon, ldpd_daemon,
+               mgmt_daemon, nhrp_daemon, openfabric_daemon, ospf_daemon,
+               ospf6_daemon, pim6_daemon, rip_daemon, ripng_daemon,
+               zebra_daemon, 'staticd', 'pathd']
 
 # This class acts as shim between individual Smoketests developed for VyOS and
 # the Python UnitTest framework. Before every test is loaded, we dump the current
@@ -47,7 +68,6 @@ class VyOSUnitTestSHIM:
         # This is useful to grab all the commands required to trigger the
         # certain failure condition.
         debug = False
-        mgmt_daemon_pid = 0
         smoketest_hint_file = '/tmp/vyos.smoketests.hint'
 
         @staticmethod
@@ -63,10 +83,6 @@ class VyOSUnitTestSHIM:
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
             cls.debug = cls.debug_on()
-
-            # Retrieve FRR mgmtd daemon PID - it is not allowed to crash, thus
-            # PID must remain the same
-            cls.mgmt_daemon_pid = process_named_running(mgmt_daemon)
 
         @classmethod
         def tearDownClass(cls):
@@ -91,11 +107,26 @@ class VyOSUnitTestSHIM:
                     os.remove(save_config)
 
         def setUp(self):
-            pass
+            self.refresh_frr_daemon_pids()
 
         def tearDown(self):
-            # check process health and continuity
-            self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
+            self.verify_frr_daemon_pids()
+
+        @staticmethod
+        def _get_frr_daemon_pids() -> dict:
+            return {daemon: process_named_running(daemon) for daemon in frr_daemons}
+
+        def refresh_frr_daemon_pids(self):
+            """ Take the FRR daemon PID baseline, all daemons must be running.
+            Call again after a test restarted FRR on purpose. """
+            self.frr_daemon_pids = self._get_frr_daemon_pids()
+            not_running = [d for d, pid in self.frr_daemon_pids.items() if pid is None]
+            if not_running:
+                self.fail(f'FRR daemons not running: {", ".join(not_running)}')
+
+        def verify_frr_daemon_pids(self):
+            """ Check FRR process health and continuity """
+            self.assertDictEqual(self.frr_daemon_pids, self._get_frr_daemon_pids())
 
         @staticmethod
         def _wait_for_commit_lock():

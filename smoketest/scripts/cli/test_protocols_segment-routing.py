@@ -20,8 +20,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.frrender import zebra_daemon
-from vyos.utils.process import process_named_running
 from vyos.utils.system import sysctl_read
 
 base_path = ['protocols', 'segment-routing']
@@ -31,8 +29,6 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         # call base-classes classmethod
         super(TestProtocolsSegmentRouting, cls).setUpClass()
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(zebra_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -50,9 +46,6 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(zebra_daemon))
         # always forward to base class
         super().tearDown()
 

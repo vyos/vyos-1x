@@ -30,7 +30,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ethtool import Ethtool
 from vyos.netlink import coalesce
-from vyos.frrender import mgmt_daemon
 from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.utils.file import read_file
@@ -39,7 +38,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import cmdl
-from vyos.utils.process import process_named_running
 from vyos.utils.process import popen
 
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
@@ -88,8 +86,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             ]
             self.assertListEqual(tmp, [])
 
-        # check process health and continuity
-        self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
+        self.verify_frr_daemon_pids()
 
     def test_offloading_rps(self):
         # enable RPS on all available CPUs, RPS works with a CPU bitmask,
