@@ -12,9 +12,10 @@ def get_services():
     names = []
     service_data = read_file(services_file, "")
     for line in service_data.split("\n"):
-        if not line or line[0] == '#':
+        # drop comments, including the ones at the end of a service line
+        tmp = line.split('#', 1)[0].split()
+        if not tmp:
             continue
-        tmp = line.split()
         names.append(tmp[0])
         if len(tmp) > 2:
             # Add port aliases to service list, too
