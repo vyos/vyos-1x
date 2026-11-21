@@ -194,8 +194,10 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_delete(['vrf'])
-        # left over when test_10 or test_11 fail halfway
+        # left over when test_10, test_11 or test_12 fail halfway
         self.cli_delete(['interfaces', 'pppoe', 'pppoe10'])
+        self.cli_delete(['interfaces', 'virtual-ethernet'])
+        self.cli_delete(['service', 'dhcp-server'])
         self.cli_commit()
 
         v4route = self.getFRRconfig('ip route')
@@ -997,6 +999,105 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
         while process_named_running('dhclient', cmdline=interface, timeout=10):
             sleep(0.250)
+
+    def test_12_dhcp_classless_static_routes(self):
+        # T9241: routes received via RFC 3442 (option 121) are rendered into
+        # staticd, so an FRR reload must not remove them. The QEMU DHCP server
+        # does not send option 121, use a local one on a veth pair instead.
+        server_if = 'veth120'
+        client_if = 'veth121'
+        server_addr = '100.64.12.1'
+        other_router = '100.64.12.2'
+        # Every destination descriptor width (1 to 4 significant octets), two
+        # routers and an on-link route (router 0.0.0.0, rendered without one)
+        routes_a = {
+            '198.18.0.0/16': server_addr,
+            '198.19.0.0/17': server_addr,
+            '198.19.147.0/24': '0.0.0.0',
+            '198.19.145.128/25': other_router,
+            '198.19.146.40/32': server_addr,
+            '198.19.128.0/20': other_router,
+            '198.19.144.0/24': server_addr,
+            '198.19.146.16/28': server_addr,
+            '198.19.146.32/30': other_router,
+            '198.19.148.0/22': server_addr,
+        }
+        # A RENEW keeps the first five routes and replaces the other five
+        routes_b = dict(list(routes_a.items())[:5])
+        routes_b.update({
+            '198.19.152.0/24': server_addr,
+            '198.19.153.0/25': other_router,
+            '198.19.154.0/26': server_addr,
+            '198.19.155.0/27': server_addr,
+            '198.19.156.1/32': other_router,
+        })
+
+        veth_path = ['interfaces', 'virtual-ethernet']
+        client_path = veth_path + [client_if]
+        subnet_path = ['service', 'dhcp-server', 'shared-network-name', 'T9241',
+                       'subnet', '100.64.12.0/24']
+        distance = default_value(client_path + ['dhcp-options', 'default-route-distance'])
+
+        def route_str(prefix, router):
+            next_hop = f' {router}' if router != '0.0.0.0' else ''
+            return f'ip route {prefix}{next_hop} {client_if} tag 210 {distance}'
+
+        def set_routes(routes):
+            self.cli_delete(subnet_path + ['option', 'static-route'])
+            for prefix, router in routes.items():
+                self.cli_set(subnet_path + ['option', 'static-route', prefix, 'next-hop', router])
+
+        self.cli_set(veth_path + [server_if, 'peer-name', client_if])
+        self.cli_set(veth_path + [server_if, 'address', f'{server_addr}/24'])
+        self.cli_set(veth_path + [client_if, 'peer-name', server_if])
+        self.cli_set(subnet_path + ['subnet-id', '9241'])
+        self.cli_set(subnet_path + ['range', '0', 'start', '100.64.12.100'])
+        self.cli_set(subnet_path + ['range', '0', 'stop', '100.64.12.200'])
+        # no default-router, the client must not get a second default route
+        set_routes(routes_a)
+        self.cli_set(client_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        for prefix, router in routes_a.items():
+            self.assert_in_frrconfig(route_str(prefix, router))
+
+        # Any FRR configuration change reloads FRR, which used to remove the
+        # routes installed by the dhclient hooks
+        self.cli_set(base_path + ['route', '198.51.100.0/24', 'blackhole'])
+        self.cli_commit()
+        frrconfig = self.getFRRconfig()
+        self.assertIn('ip route 198.51.100.0/24 blackhole', frrconfig)
+        for prefix, router in routes_a.items():
+            self.assertIn(route_str(prefix, router), frrconfig)
+
+        # A RENEW carrying other classless routes with an unchanged (empty)
+        # router option must replace the routes
+        set_routes(routes_b)
+        self.cli_commit()
+        self.op_mode(['renew', 'dhcp', 'interface', client_if])
+
+        for prefix, router in routes_b.items():
+            self.assert_in_frrconfig(route_str(prefix, router))
+        removed = [route_str(prefix, router) for prefix, router in routes_a.items()
+                   if prefix not in routes_b]
+        result, frrconfig = self.wait_for_result(
+            self.getFRRconfig,
+            lambda tmp: not any(route in tmp for route in removed),
+            pause=1,
+            timeout=30,
+        )
+        self.assertTrue(result, f'Unexpected {removed} in FRR config:\n{frrconfig}')
+
+        self.cli_delete(base_path)
+        self.cli_delete(client_path + ['address'])
+        self.cli_commit()
+
+        while process_named_running('dhclient', cmdline=client_if, timeout=10):
+            sleep(0.250)
+
+        self.cli_delete(veth_path)
+        self.cli_delete(['service', 'dhcp-server'])
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
