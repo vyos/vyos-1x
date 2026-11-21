@@ -37,6 +37,13 @@ airbag.enable()
 
 k_mod = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
 
+def normalize_ids(config: dict) -> dict:
+    # The CLI accepts leading zeros, use the decimal value passed to the Kernel
+    for key in ['tunnel_id', 'peer_tunnel_id', 'session_id', 'peer_session_id']:
+        if key in config:
+            config[key] = str(int(config[key]))
+    return config
+
 def get_config(config=None):
     """
     Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -57,6 +64,20 @@ def get_config(config=None):
 
         tmp = leaf_node_changed(conf, base + [ifname, 'session-id'])
         l2tpv3.update({'session_id': tmp[0]})
+
+    normalize_ids(l2tpv3)
+
+    # Other interfaces sharing the tunnel, each one with its own session
+    if 'deleted' not in l2tpv3 and 'tunnel_id' in l2tpv3:
+        proposed = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                        get_first_key=True,
+                                        no_tag_node_value_mangle=True,
+                                        with_recursive_defaults=True)
+        proposed = {name: normalize_ids(config) for name, config in proposed.items()}
+        tmp = {name: config for name, config in proposed.items()
+               if name != ifname and config.get('tunnel_id') == l2tpv3['tunnel_id']}
+        if tmp:
+            l2tpv3['shared_tunnel'] = tmp
 
     # Protocols static arp dependency
     if 'static_arp' in l2tpv3:
@@ -83,6 +104,19 @@ def verify(l2tpv3):
         if key not in l2tpv3:
             tmp = key.replace('_', '-')
             raise ConfigError(f'Missing mandatory L2TPv3 option: "{tmp}"!')
+
+    tunnel_keys = ['source_address', 'remote', 'peer_tunnel_id', 'encapsulation']
+    if l2tpv3['encapsulation'] == 'udp':
+        tunnel_keys += ['source_port', 'destination_port']
+    for name, config in l2tpv3.get('shared_tunnel', {}).items():
+        for key in tunnel_keys:
+            if config.get(key) != l2tpv3.get(key):
+                tmp = key.replace('_', '-')
+                raise ConfigError(f'Interface "{name}" uses the same tunnel-id '
+                                  f'{l2tpv3["tunnel_id"]} with a different "{tmp}"!')
+        if config.get('session_id') == l2tpv3['session_id']:
+            raise ConfigError(f'Interface "{name}" already uses session-id '
+                              f'{l2tpv3["session_id"]} in tunnel-id {l2tpv3["tunnel_id"]}!')
 
     if not is_addr_assigned(l2tpv3['source_address']):
         raise ConfigError('L2TPv3 source-address address "{source_address}" '
@@ -113,10 +147,10 @@ def apply(l2tpv3):
         # Finally create the new interface
         try:
             l = L2TPv3If(**l2tpv3)
-        except OSError:
+        except OSError as e:
             # the session is the first to need l2tp_eth, see verify()
             verify_kmod(['l2tp_eth'])
-            raise
+            raise ConfigError(e.strerror or str(e)) from e
         l.update(l2tpv3)
 
     # run the dependents
