@@ -29,6 +29,7 @@ from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.kernel import get_kernel_boot_arg
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
 from vyos.system import image
 
@@ -83,6 +84,42 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
 
         tmp = read_file(panic_file)
         self.assertEqual(tmp, '60')
+
+    def test_kernel_debug(self):
+        def wireguard_printing():
+            # "<file>:<line> [wireguard]<function> =<flags> <format>": +p/-p
+            # only touch the 'p' flag, others (e.g. 'f') may be set as well
+            flags = [line.split(' =', 1)[1].split(' ', 1)[0]
+                     for line in read_file(dyndbg_control).splitlines()
+                     if '[wireguard]' in line]
+            # the module must be loaded, or there is nothing to check
+            self.assertTrue(flags)
+            return ['p' in flag for flag in flags]
+
+        def dyndbg_query(query):
+            # smoketests do not run as root, the control file is root-owned
+            rc, out = rc_cmd(f'sudo tee {dyndbg_control}', input=query)
+            self.assertEqual(rc, 0, out)
+
+        dyndbg_control = '/proc/dynamic_debug/control'
+
+        self.cli_set(base_path + ['kernel', 'debug', 'wireguard'])
+        self.cli_commit()
+        self.assertTrue(all(wireguard_printing()))
+
+        # unrelated changes must leave dynamic debug alone: clear the flags behind
+        # the CLI's back, they must not come back
+        dyndbg_query('module wireguard -p')
+        self.cli_set(base_path + ['startup-beep'])
+        self.cli_commit()
+        self.assertFalse(any(wireguard_printing()))
+
+        # deleting the node must clear the flags again
+        dyndbg_query('module wireguard +p')
+        self.assertTrue(all(wireguard_printing()))
+        self.cli_delete(base_path + ['kernel', 'debug'])
+        self.cli_commit()
+        self.assertFalse(any(wireguard_printing()))
 
     def test_performance(self):
         tuned_service = 'tuned.service'

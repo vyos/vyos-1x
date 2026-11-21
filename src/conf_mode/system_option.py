@@ -22,6 +22,7 @@ from time import sleep
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
 from vyos.system import image
@@ -66,7 +67,9 @@ openssl_fipsmodule_config = '/run/ssl/fipsmodule.cnf'
 ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 usb_autosuspend = r'/etc/udev/rules.d/40-usb-autosuspend.rules'
-kernel_dynamic_debug = r'/sys/kernel/debug/dynamic_debug/control'
+# procfs twin of the debugfs control file: always present, works without debugfs
+# mounted and under kernel lockdown, which denies opening the debugfs one
+kernel_dynamic_debug = r'/proc/dynamic_debug/control'
 time_format_to_locale = {'12-hour': 'en_US.UTF-8', '24-hour': 'en_GB.UTF-8'}
 tuned_profiles = {
     'power-save': 'powersave',
@@ -226,6 +229,10 @@ def get_config(config=None):
         options['kdump'] = {}
     options['kdump']['is_live_boot'] = image.is_live_boot()
     options['kdump']['disabled'] = not conf.exists(base + ['kdump'])
+
+    # dynamic debug state lives in the kernel - only touch it when it changes
+    # (incl. at boot, where a configured node shows up as added)
+    options['kernel_debug_changed'] = is_node_changed(conf, base + ['kernel', 'debug'])
 
     if 'performance' in options:
         # Update IPv4/IPv6 and sysctl options after tuned applied it's settings
@@ -614,16 +621,6 @@ def apply(options):
     if not running_as_container:
         cmdl(['udevadm', 'control', '--reload-rules'])
 
-    # Enable/disable dynamic debugging for kernel modules
-    modules = ['wireguard']
-    modules_enabled = dict_search('kernel.debug', options) or []
-    for module in modules:
-        if module in modules_enabled:
-            check_kmod(module)
-            write_file(kernel_dynamic_debug, f'module {module} +p')
-        else:
-            write_file(kernel_dynamic_debug, f'module {module} -p')
-
     if 'resource_limits' in options:
         total_pages, total_bytes = _get_total_hugepages_and_memory(
             options.get('kernel', {}).get('memory', {})
@@ -651,6 +648,21 @@ def apply(options):
 
         for parameter, value in parameters.items():
             sysctl_write(parameter.split('.'), value)
+
+    # Enable/disable dynamic debugging for kernel modules. Done last: everything
+    # above is already applied and cannot be rolled back, so a failing write here
+    # must not fail the commit.
+    if options['kernel_debug_changed']:
+        modules = ['wireguard']
+        modules_enabled = dict_search('kernel.debug', options) or []
+        for module in modules:
+            flag = '+p' if module in modules_enabled else '-p'
+            try:
+                if flag == '+p':
+                    check_kmod(module)
+                write_file(kernel_dynamic_debug, f'module {module} {flag}')
+            except (ConfigError, OSError) as e:
+                Warning(f'Unable to set dynamic debug for "{module}": {e}')
 
 
 if __name__ == '__main__':
