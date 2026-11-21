@@ -20,6 +20,12 @@
 # gateway is only known at lease time, so any lease event must reconcile the
 # rendered configuration with the current lease (T8465).
 
+# In-commit RELEASE already re-renders static in conf_mode. Do not wait
+# on vyos-request-configd-update.py (commit lock).
+if [ -n "${CONTROLLED_STOP:-}" ]; then
+    return 0
+fi
+
 # Re-generate the config on the following events:
 # - BOUND: always re-generate
 # - RENEW: re-generate if the IP address changed
