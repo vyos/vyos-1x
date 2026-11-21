@@ -4,7 +4,7 @@
     <children>
       <node name="ip">
         <properties>
-          <help>Show IPv4 networking information</help>
+          <help>Show IPv4 routing information</help>
         </properties>
         <children>
           <node name="neighbors">
