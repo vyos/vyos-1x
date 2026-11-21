@@ -13,6 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from threading import Lock
+
+# Serializes changes to the shared config session across REST and GraphQL
+config_lock = Lock()
+
 
 class SessionState:
     # pylint: disable=attribute-defined-outside-init
