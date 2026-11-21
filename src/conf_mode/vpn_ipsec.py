@@ -557,9 +557,13 @@ def verify(ipsec):
                     if not (range_both_ipv4 or range_both_ipv6):
                         raise ConfigError(f'Range start and stop must be of the same address family for pool "{pool}"!')
 
-                    if ip_address(range_config['stop']) < ip_address(range_config['start']):
-                        raise ConfigError(f'Range stop address must be greater or equal\n' \
-                                          'to the range\'s start address for pool "{pool}"!')
+                    if ip_address(range_config['stop']) < ip_address(
+                        range_config['start']
+                    ):
+                        raise ConfigError(
+                            f'Range stop address must be greater or equal\n'
+                            f'to the range\'s start address for pool "{pool}"!'
+                        )
 
                     range_is_ipv4 = is_ipv4(range_config['start'])
                     range_is_ipv6 = is_ipv6(range_config['start'])

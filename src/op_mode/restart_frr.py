@@ -169,7 +169,7 @@ if cmd_args.action == 'restart':
     # run command to restart daemon
     for daemon in cmd_args.daemon:
         if not _daemon_restart(daemon):
-            print('Failed to restart daemon: {daemon}')
+            print(f'Failed to restart daemon: {daemon}')
             _cleanup()
             exit(1)
         # reinstall old configuration

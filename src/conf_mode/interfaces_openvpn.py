@@ -443,8 +443,10 @@ def verify_pki(openvpn):
               it is required in server and client modes')
         else:
             if ('ca_certificate' not in tls) and ('peer_fingerprint' not in tls):
-                raise ConfigError('Either "tls ca-certificate" or "tls peer-fingerprint" is required\
-                  on openvpn interface {interface} in site-to-site mode')
+                raise ConfigError(
+                    'Either "tls ca-certificate" or "tls peer-fingerprint" is required '
+                    f'on openvpn interface {interface} in site-to-site mode'
+                )
 
         if 'ca_certificate' in tls:
             for ca_name in tls['ca_certificate']:

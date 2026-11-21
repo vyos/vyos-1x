@@ -54,7 +54,9 @@ def verify(relay):
 
         # Relaying data without two interface is kinda senseless ...
         if len(config.get('interface', [])) < 2:
-            raise ConfigError('At least two interfaces are required for UDP broadcast relay "{instance}"')
+            raise ConfigError(
+                f'At least two interfaces are required for UDP broadcast relay "{instance}"'
+            )
 
         for interface in config.get('interface', []):
             verify_interface_exists(relay, interface)
