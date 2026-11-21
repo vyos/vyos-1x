@@ -48,7 +48,7 @@ def reset_conn(protocol: str, username: typing.Optional[str] = None,
                                             'all',
                                             ''))
     else:
-        vyos.opmode.IncorrectValue('Unknown VPN Protocol, aborting')
+        raise vyos.opmode.IncorrectValue('Unknown VPN Protocol, aborting')
 
 
 if __name__ == '__main__':
