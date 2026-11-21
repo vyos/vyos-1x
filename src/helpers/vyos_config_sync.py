@@ -231,6 +231,16 @@ if __name__ == '__main__':
     secondary_port = int(config.get('secondary', {}).get('port', 443))
     sections = config.get('section')
     timeout = int(config.get('secondary', {}).get('timeout'))
+    exclude_path = config.get('exclude-path', [])
+    exclude_paths = list(map(lambda x: x.split(), exclude_path))
+    seen = set()
+    unique = []
+    for lst in exclude_list + exclude_paths:
+        t = tuple(lst)
+        if t not in seen:
+            seen.add(t)
+            unique.append(lst)
+    exclude_list = unique
 
     if not all([mode, secondary_address, secondary_key, sections]):
         logger.error("Missing required configuration data for config synchronization.")
