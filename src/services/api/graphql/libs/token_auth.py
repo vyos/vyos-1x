@@ -57,7 +57,7 @@ def generate_token(user: str, passwd: str, secret: str, exp: int) -> dict:
         return {'errors': ['failed pam authentication']}
 
 
-def get_user_context(request):
+def get_user_context(request, data=None):
     context = {}
     context['request'] = request
     context['user'] = None
