@@ -79,8 +79,12 @@ def verify(lldp):
             if 'location' not in interface_config:
                 continue
             if 'coordinate_based' in interface_config['location']:
-                if not {'latitude', 'latitude'} <= set(interface_config['location']['coordinate_based']):
-                    raise ConfigError(f'Must define both longitude and latitude for "{interface}" location!')
+                if not {'latitude', 'longitude'} <= set(
+                    interface_config['location']['coordinate_based']
+                ):
+                    raise ConfigError(
+                        f'Must define both longitude and latitude for "{interface}" location!'
+                    )
 
     # check options
     if 'snmp' in lldp:
