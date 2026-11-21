@@ -57,11 +57,15 @@
         <help>Comma separated weekdays to match rule on</help>
         <valueHelp>
           <format>txt</format>
-          <description>Name of day (Monday, Tuesday, Wednesday, Thursdays, Friday, Saturday, Sunday)</description>
+          <description>Name of day (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) or 3-letter abbreviation</description>
         </valueHelp>
         <valueHelp>
           <format>u32:0-6</format>
           <description>Day number (0 = Sunday ... 6 = Saturday)</description>
+        </valueHelp>
+        <valueHelp>
+          <format>!txt</format>
+          <description>Match on all days except these (single leading "!", e.g. !Sun,Mon)</description>
         </valueHelp>
       </properties>
     </leafNode>

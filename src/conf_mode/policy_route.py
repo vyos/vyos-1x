@@ -31,6 +31,7 @@ from vyos.utils.process import run
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import interface_exists
 from vyos.defaults import nft_time_refresh
+from vyos.firewall import parse_weekdays
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
 from vyos.defaults import user_mark_mask
@@ -106,6 +107,12 @@ def get_config(config=None):
     return policy
 
 def verify_rule(policy, name, rule_conf, ipv6, rule_id):
+    if 'weekdays' in rule_conf.get('time', {}):
+        try:
+            parse_weekdays(rule_conf['time']['weekdays'])
+        except ValueError as e:
+            raise ConfigError(f'{name} rule {rule_id}: {e}')
+
     icmp = 'icmp' if not ipv6 else 'icmpv6'
     if icmp in rule_conf:
         icmp_defined = False

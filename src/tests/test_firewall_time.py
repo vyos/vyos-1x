@@ -15,6 +15,7 @@
 from unittest import TestCase
 
 from vyos.firewall import parse_time
+from vyos.firewall import parse_weekdays
 
 class TestFirewallParseTime(TestCase):
     def test_hour_window(self):
@@ -41,3 +42,35 @@ class TestFirewallParseTime(TestCase):
     def test_startdate_with_daily_stoptime(self):
         self.assertEqual(parse_time({'startdate': '2026-01-01', 'stoptime': '18:00'}),
                          'time >= "2026-01-01" hour "00:00"-"18:00"')
+
+    def test_weekdays(self):
+        self.assertEqual(parse_time({'weekdays': 'mon,friday'}),
+                         'day {"Monday","Friday"}')
+        self.assertEqual(parse_time({'weekdays': 'Monday, Sat'}),
+                         'day {"Monday","Saturday"}')
+
+    def test_weekdays_numeric(self):
+        self.assertEqual(parse_time({'weekdays': '0,6'}),
+                         'day {"Sunday","Saturday"}')
+
+    def test_weekdays_negated_single(self):
+        self.assertEqual(parse_time({'weekdays': '!Mon'}),
+                         'day != {"Monday"}')
+
+    def test_weekdays_negated_list(self):
+        self.assertEqual(parse_time({'weekdays': '!sun,mon'}),
+                         'day != {"Sunday","Monday"}')
+        self.assertEqual(parse_time({'weekdays': ' ! Sat, sunday'}),
+                         'day != {"Saturday","Sunday"}')
+
+    def test_weekdays_with_hours(self):
+        self.assertEqual(parse_time({'starttime': '08:00', 'stoptime': '17:00',
+                                     'weekdays': '!Sat,Sun'}),
+                         'hour "08:00"-"17:00" day != {"Saturday","Sunday"}')
+
+    def test_weekdays_invalid(self):
+        for value in ['!Sat,!Sun', 'Mon,!Tue', '!!Mon', 'Funday', '7',
+                      'Mon,,Tue', ' , ', '!', 'Mon,', '']:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    parse_weekdays(value)
