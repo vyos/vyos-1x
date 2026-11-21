@@ -65,14 +65,23 @@ class L2TPv3If(Interface):
         cmd += ' remote {remote}'
         c = cmd.format(**self.config)
         # wait until the local/remote address is available, but no more 10 sec.
-        wait_for_add_l2tpv3(cmd=c)
+        # The session would otherwise attach to a stale tunnel of the same ID.
+        if not wait_for_add_l2tpv3(cmd=c):
+            raise OSError(f'Could not create L2TPv3 tunnel {self.config["tunnel_id"]}')
 
         # setup session
         cmd = ['ip', 'l2tp', 'add', 'session', 'name', self.ifname,
                'tunnel_id', str(self.config['tunnel_id']),
                'session_id', str(self.config['session_id']),
                'peer_session_id', str(self.config['peer_session_id'])]
-        self._cmdl(cmd)
+        try:
+            self._cmdl(cmd)
+        except OSError:
+            # without session there is no interface, remove() could not find
+            # the tunnel anymore
+            self._cmdl(['ip', 'l2tp', 'del', 'tunnel',
+                        'tunnel_id', str(self.config['tunnel_id'])])
+            raise
 
         # No need for interface shut down. There exist no function to permanently enable tunnel.
         # But you can disable interface permanently with shutdown/disable command.
