@@ -677,6 +677,26 @@
         <children>
           #include <include/generic-description.xml.i>
           #include <include/interface/mtu-68-16000.xml.i>
+          <leafNode name="ipam">
+            <properties>
+              <help>IP address allocation method</help>
+              <completionHelp>
+                <list>host-local dhcp</list>
+              </completionHelp>
+              <valueHelp>
+                <format>host-local</format>
+                <description>Allocate container addresses from configured prefixes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dhcp</format>
+                <description>Obtain IPv4 addresses, routes and DNS from DHCP</description>
+              </valueHelp>
+              <constraint>
+                <regex>host-local|dhcp</regex>
+              </constraint>
+            </properties>
+            <defaultValue>host-local</defaultValue>
+          </leafNode>
           <leafNode name="gateway">
             <properties>
               <help>Gateway address to use for this network</help>
@@ -724,12 +744,28 @@
               <help>Network type (default: bridge)</help>
             </properties>
             <children>
-              <leafNode name="bridge">
+              <node name="bridge">
                 <properties>
                   <help>Bridge network</help>
-                  <valueless/>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Existing VyOS bridge without container-engine NAT or port forwarding</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>brN</format>
+                        <description>VyOS bridge interface</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>br[0-9]+</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="macvlan">
                 <properties>
                   <help>MACVLAN network</help>
