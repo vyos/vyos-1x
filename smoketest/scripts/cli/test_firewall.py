@@ -890,6 +890,22 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+        self.cli_set(rule_base + ['time', 'weekdays', '!Sat,Sun'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'chain NAME_{name}'],
+            ['meta day != { "Sunday", "Saturday" }'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+        # '!' is only valid once, at the start of the list
+        self.cli_set(rule_base + ['time', 'weekdays', 'Mon,!Tue'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
     def test_ipv4_advanced(self):
         name = 'smoketest-adv'
 
@@ -1270,6 +1286,22 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        self.cli_set(rule_base + ['time', 'weekdays', '!Sat,Sun'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'chain NAME6_{name}'],
+            ['meta day != { "Sunday", "Saturday" }'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        # '!' is only valid once, at the start of the list
+        self.cli_set(rule_base + ['time', 'weekdays', 'Mon,!Tue'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
     def test_ipv6_advanced(self):
         name = 'v6-smoke-adv'

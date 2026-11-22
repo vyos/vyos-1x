@@ -694,18 +694,47 @@ def parse_tcp_flags(flags):
     exclude = list(flags['not']) if 'not' in flags else []
     return f'tcp flags & ({"|".join(include + exclude)}) == {"|".join(include) if include else "0x0"}'
 
-def expand_weekday(abbrev: str) -> str:
-    mapping = {
-        'mon': 'monday',
-        'tue': 'tuesday',
-        'wed': 'wednesday',
-        'thu': 'thursday',
-        'fri': 'friday',
-        'sat': 'saturday',
-        'sun': 'sunday',
-    }
-    return mapping.get(abbrev.lower(), abbrev).lower()
+WEEKDAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
+def expand_weekday(abbrev: str) -> str:
+    """Normalise a weekday given as a full name, 3-letter abbreviation or
+    number (0 = Sunday ... 6 = Saturday) to its lowercase full name.
+    Unknown input is returned lowercased and unchanged."""
+    day = abbrev.strip().lower()
+    if day.isdigit() and int(day) < len(WEEKDAY_NAMES):
+        return WEEKDAY_NAMES[int(day)]
+    for name in WEEKDAY_NAMES:
+        if day in (name, name[:3]):
+            return name
+    return day
+
+def parse_weekdays(weekdays: str) -> tuple:
+    """Parse the 'time weekdays' value into (negate, [Day, ...]).
+
+    A single leading '!' negates the whole list: '!sun,mon' matches every day
+    except Sunday and Monday. '!' anywhere else is invalid.
+    Raises ValueError on invalid input.
+    """
+    value = weekdays.strip()
+    negate = value.startswith('!')
+    if negate:
+        value = value[1:]
+
+    items = [item.strip() for item in value.split(',')]
+    if any(not item for item in items):
+        raise ValueError(f'Invalid weekdays "{weekdays}": empty day in list')
+    if any('!' in item for item in items):
+        raise ValueError(f'Invalid weekdays "{weekdays}": "!" is only allowed once, '
+                         'at the start, to negate the whole list')
+
+    days = []
+    for item in items:
+        name = expand_weekday(item)
+        if name not in WEEKDAY_NAMES:
+            raise ValueError(f'Invalid weekday "{item}"')
+        if name.title() not in days:
+            days.append(name.title())
+    return negate, days
 
 def parse_time(time):
     out = []
@@ -727,7 +756,7 @@ def parse_time(time):
     if hour_start or hour_stop:
         out.append(f'hour "{hour_start or "00:00"}"-"{hour_stop or "23:59:59"}"')
     if 'weekdays' in time:
-        days = [day.strip() for day in time['weekdays'].split(",") if day]
-        out_days = [f'"{expand_weekday(day).title()}"' for day in days if day[0] != '!']
-        out.append(f'day {{{",".join(out_days)}}}')
+        negate, days = parse_weekdays(time['weekdays'])
+        out_days = ','.join(f'"{day}"' for day in days)
+        out.append(f'day {"!= " if negate else ""}{{{out_days}}}')
     return " ".join(out)
