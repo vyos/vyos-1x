@@ -19,19 +19,20 @@
 # session gets a private upper layer holding its uncommitted edits, a private
 # kernel work directory, and a merged mount point the CLI reads and writes.
 #
-# Committing swaps that shared lower layer for a newly built one, then
-# re-points every other live session at it. This is the only place one
-# session reaches into another, and the kernel offers no protection here:
-# altering a layer beneath a mounted overlay is undefined. When it goes wrong
-# nothing raises an error - a session reads a stale or half-written
-# configuration, and its next commit writes that back to disk, silently
-# reverting somebody else's work.
+# Committing swaps that shared lower layer for a newly built one. Other
+# sessions are deliberately left where they are: unmounting a session from
+# outside can lose a change that is being written into it at that moment. A
+# session moves onto the new active configuration by itself, with its next
+# operation, once nothing else is working on it; a commit and a load insist
+# on it. When this goes wrong nothing
+# raises an error - a session commits a stale view, silently reverting
+# somebody else's work, or a change it reported as made is gone.
 #
 # Four sessions are held open at once, each tied to a real login shell, which
 # is what the backend keys a session to; invented identifiers get reaped as
 # debris. The tests assert the mount layout is what it claims to be,
-# uncommitted edits stay private, a commit reaches everyone else without
-# destroying their pending work or reverting an earlier one, discarding
+# uncommitted edits stay private, other sessions follow a commit without
+# losing their pending work or reverting it, discarding
 # restores the active configuration rather than emptying it, and no mounts or
 # scratch directories survive teardown.
 #
@@ -43,7 +44,9 @@
 
 import os
 import re
+import resource
 import shutil
+import stat
 import unittest
 
 from subprocess import Popen
@@ -206,6 +209,22 @@ def overlay_mounts() -> dict:
     return found
 
 
+def mount_id(path):
+    """Mount ID of the topmost mount at path, or None."""
+    found = None
+    with open('/proc/self/mountinfo') as f:
+        for line in f:
+            fields = line.split()
+            if fields[4] == path:
+                found = fields[0]
+    return found
+
+
+def old_active_trees():
+    """Superseded active configurations still kept around."""
+    return [n for n in os.listdir(config_dir) if n.startswith('active.new.')]
+
+
 def mount_fstype(path):
     """Filesystem type of the topmost mount at path, or None."""
     fstype = None
@@ -287,7 +306,7 @@ class TestConfigSessionConcurrent(unittest.TestCase):
         # Commit them one at a time. After each commit the sessions that have
         # not committed yet must see two things at once: the node somebody
         # else just committed, and their own edit still pending. The first
-        # proves the session was moved onto the new active configuration, the
+        # proves the session moved onto the new active configuration, the
         # second proves its own upper layer survived that move.
         for i, session in enumerate(self.sessions):
             session.commit()
@@ -383,11 +402,10 @@ class TestConfigSessionConcurrent(unittest.TestCase):
             self.assertIn(f'{host_prefix}-{i} ', active)
             self.assertIn(f'10.92.2.{i + 1}', active)
 
-    def test_restack_ignores_planted_session(self):
-        # Committing makes the helper re-mount every session it finds. A
-        # planted session whose mount point is a symlink to some other mount
-        # must not get that mount detached and an overlay of the planter's
-        # choosing stacked on top of it.
+    def test_planted_session_is_left_alone(self):
+        # A planted session whose mount point is a symlink to some other mount
+        # must never get that mount touched, and must not keep superseded
+        # active configurations from being removed.
         decoy = mkdtemp()
         # the suite runs unprivileged, so the decoy mount needs sudo, and a
         # mode that still lets this test write the marker it checks below
@@ -400,17 +418,21 @@ class TestConfigSessionConcurrent(unittest.TestCase):
             os.symlink(decoy, planted_mnt)
             os.mkdir(planted_upper)
 
-            a, b = self.sessions[0], self.sessions[1]
-            a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.3.1')
-            a.commit()
+            a = self.sessions[0]
+            for i in range(4):
+                a.set(base_path + [f'{host_prefix}-0', 'inet'], f'10.91.3.{i + 1}')
+                a.commit()
 
-            self.assertEqual(
-                mount_fstype(decoy), 'tmpfs', msg='re-stack followed a planted symlink'
-            )
+            self.assertEqual(mount_fstype(decoy), 'tmpfs', msg='a planted symlink was followed')
             with open(f'{decoy}/marker') as f:
                 self.assertEqual(f.read(), 'untouched')
-            # the planted entry must not keep genuine sessions from moving on
+            # the idle sessions all still use the tree they started on; every
+            # tree replaced after that is unused and gone
+            self.assertEqual(len(old_active_trees()), 1, msg=old_active_trees())
+            # and the tree they use is intact
+            b = self.sessions[1]
             self.assertIn(f'{host_prefix}-0 ', b.show())
+            self.assertIn('10.91.3.4', b.show())
         finally:
             remove_planted()
             call(['sudo', 'umount', decoy])
@@ -481,6 +503,206 @@ class TestConfigSessionConcurrent(unittest.TestCase):
             remove_planted()
             shutil.rmtree(decoy)
 
+    def test_root_written_nodes_do_not_lose_session(self):
+        # Op-mode scripts run via sudo and may write into the caller's session.
+        # Nodes created that way are root-owned in the upper layer, and clearing
+        # it as the session user after commit or discard used to fail and drop
+        # the session.
+        session = self.sessions[0]
+        root_set = ['sudo', '--preserve-env', f'{SBIN}/my_set']
+
+        session.run(root_set + base_path + [f'{host_prefix}-0', 'inet', '10.91.3.1'])
+        session.commit()
+        self.assertIn(f'{host_prefix}-0 ', session.show_active())
+
+        session.run(root_set + base_path + [f'{host_prefix}-1', 'inet', '10.91.3.2'])
+        session.discard()
+        self.assertNotIn(f'{host_prefix}-1 ', session.show())
+
+        # still a usable session
+        session.set(base_path + [f'{host_prefix}-2', 'inet'], '10.91.3.3')
+        session.commit()
+
+    def test_work_root_is_private(self):
+        # The helper removes things below the work root as root, so nobody
+        # else may be able to place anything there; and the session
+        # directories must not be renamable by other users.
+        st = os.stat(ovl_work_dir)
+        self.assertEqual(st.st_uid, 0)
+        self.assertEqual(st.st_mode & 0o022, 0, msg=f'mode {oct(st.st_mode)}')
+        self.assertTrue(os.stat(session_dir).st_mode & stat.S_ISVTX)
+
+    def test_helper_ignores_hostile_caller_state(self):
+        # The helper runs as root on behalf of the caller, who controls its
+        # umask, limits and signals. None of that may change what it creates
+        # or let it stop halfway.
+        a = self.sessions[0]
+
+        def hostile():
+            os.umask(0o077)
+            resource.setrlimit(resource.RLIMIT_FSIZE, (0, 0))
+
+        for op in ('umount', 'mount'):
+            rc = call([OVL_HELPER, op, a.sid], preexec_fn=hostile,
+                      stdout=DEVNULL, stderr=DEVNULL)
+            self.assertEqual(rc, 0, msg=op)
+        self.assertIn(f'{session_dir}/new_config_{a.sid}', overlay_mounts())
+        base = os.stat(f'{ovl_work_dir}/{a.sid}')
+        self.assertEqual(base.st_mode & 0o777, 0o755)
+        self.assertTrue(os.path.exists(f'{ovl_work_dir}/{a.sid}/lower'))
+        a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.6.1')
+        a.commit()
+
+    def test_commit_leaves_other_sessions_alone(self):
+        # A commit never unmounts another session: doing so while that session
+        # writes a change loses the change, although it was reported as made.
+        a, b = self.sessions[0], self.sessions[1]
+        b_mnt = f'{session_dir}/new_config_{b.sid}'
+        before = mount_id(b_mnt)
+        a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.4.1')
+        a.commit()
+        self.assertEqual(mount_id(b_mnt), before)
+        self.assertEqual(call([OVL_HELPER, 'restack', a.sid],
+                              stdout=DEVNULL, stderr=DEVNULL), 2)
+        self.assertEqual(mount_id(b_mnt), before)
+
+        errors = []
+
+        def committer():
+            try:
+                for i in range(10):
+                    a.set(base_path + [f'{host_prefix}-0', 'inet'], f'10.91.5.{i + 1}')
+                    a.commit()
+            except Exception as e:  # noqa: BLE001 - reported below
+                errors.append(str(e))
+
+        t = Thread(target=committer)
+        t.start()
+        for i in range(40):
+            b.set(base_path + [f'{host_prefix}-1-{i}', 'inet'], f'10.91.7.{i + 1}')
+        t.join()
+        self.assertEqual(errors, [])
+        config = b.show()
+        missing = [i for i in range(40) if f'{host_prefix}-1-{i} ' not in config]
+        self.assertEqual(missing, [], msg='changes reported as made were lost')
+        b.commit()
+        active = a.show_active()
+        self.assertIn('10.91.5.10', active)
+        self.assertIn(f'{host_prefix}-1-39 ', active)
+
+    def test_load_into_a_stale_session(self):
+        # Loading compares the file with the active configuration and applies
+        # the difference to the working one. Applied to a view of a superseded
+        # active configuration, the result would differ from the file, so a
+        # session that cannot be moved onto the current one must refuse.
+        a, b, c = self.sessions[0], self.sessions[1], self.sessions[2]
+        b_mnt = f'{session_dir}/new_config_{b.sid}'
+        a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.9.1')
+        a.commit()
+        b.show()  # b is now on the configuration that has the node
+
+        saved = mkdtemp()
+        busy = None
+        try:
+            config_file = f'{saved}/config.boot'
+            with open(config_file, 'w') as f:
+                f.write(c.show_active())
+
+            busy = Popen(['sleep', '60'], cwd=b_mnt, stdout=DEVNULL, stderr=DEVNULL)
+            a.delete(base_path + [f'{host_prefix}-0'])
+            a.commit()
+            with self.assertRaises(SessionError) as ctx:
+                b.run([CLI_SHELL_API, 'loadFile', config_file])
+            self.assertIn('Cannot load config', str(ctx.exception))
+            busy.kill()
+            busy.wait()
+            busy = None
+
+            b.run([CLI_SHELL_API, 'loadFile', config_file])
+            b.commit()
+            self.assertIn(f'{host_prefix}-0 ', a.show_active())
+        finally:
+            if busy:
+                busy.kill()
+                busy.wait()
+            shutil.rmtree(saved)
+
+    def test_commit_while_session_in_use(self):
+        # Something else of the same session works on it while it commits.
+        # The commit waits for it before remounting the session, and never
+        # leaves what it committed in the session's upper layer, where it
+        # would be applied again over later commits.
+        a, b = self.sessions[0], self.sessions[1]
+        lock = f'{session_dir}/tmp_{b.sid}/.session.lock'
+        b.show()  # the session's first command creates its lock
+        with Popen(['python3', '-c',
+                    'import fcntl, sys, time\n'
+                    'f = open(sys.argv[1])\n'
+                    'fcntl.flock(f, fcntl.LOCK_SH)\n'
+                    'print("held", flush=True)\n'
+                    'time.sleep(4)\n', lock],
+                   stdout=PIPE, stderr=DEVNULL) as holder:
+            self.assertEqual(holder.stdout.readline().strip(), b'held')
+            b.set(base_path + [f'{host_prefix}-1', 'inet'], '10.91.10.1')
+            b.commit()
+
+        # another session removes it again; b's next commit must not bring
+        # it back
+        a.delete(base_path + [f'{host_prefix}-1'])
+        a.commit()
+        b.set(base_path + [f'{host_prefix}-2', 'inet'], '10.91.10.3')
+        b.commit()
+        active = a.show_active()
+        self.assertNotIn(f'{host_prefix}-1 ', active)
+        self.assertIn(f'{host_prefix}-2 ', active)
+
+    def test_unmounted_session_is_not_a_session(self):
+        # Without its overlay a session directory reads as an empty
+        # configuration, and committing from it deleted everything else.
+        a, b = self.sessions[0], self.sessions[1]
+        a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.4.1')
+        a.commit()
+        before = b.show_active()
+
+        self.assertEqual(call(['sudo', 'umount', f'{session_dir}/new_config_{a.sid}']), 0)
+        with self.assertRaises(SessionError):
+            a.set(base_path + [f'{host_prefix}-1', 'inet'], '10.91.4.2')
+        with self.assertRaises(SessionError):
+            a.commit()
+        self.assertEqual(b.show_active(), before)
+
+        # entering configuration mode again brings the session back
+        a.run([CLI_SHELL_API, 'setupSession'])
+        self.assertIn(f'{session_dir}/new_config_{a.sid}', overlay_mounts())
+        a.set(base_path + [f'{host_prefix}-1', 'inet'], '10.91.4.2')
+        a.commit()
+        self.assertIn(f'{host_prefix}-0 ', b.show_active())
+
+    def test_busy_stale_session_cannot_commit(self):
+        # A session that was in use when somebody else committed cannot be
+        # moved onto the new configuration until it is no longer in use. Its
+        # commit must refuse until then rather than revert the other commit.
+        a, b = self.sessions[0], self.sessions[1]
+        b_mnt = f'{session_dir}/new_config_{b.sid}'
+        b.set(base_path + [f'{host_prefix}-1', 'inet'], '10.91.8.2')
+
+        busy = Popen(['sleep', '60'], cwd=b_mnt, stdout=DEVNULL, stderr=DEVNULL)
+        try:
+            a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.8.1')
+            a.commit()
+            with self.assertRaises(SessionError) as ctx:
+                b.commit()
+            self.assertIn('in use', str(ctx.exception))
+            self.assertIn(f'{host_prefix}-0 ', b.show_active())
+        finally:
+            busy.kill()
+            busy.wait()
+
+        b.commit()
+        active = a.show_active()
+        self.assertIn(f'{host_prefix}-0 ', active)
+        self.assertIn(f'{host_prefix}-1 ', active)
+
     def test_no_mount_or_workdir_leak(self):
         before = set(overlay_mounts())
         for sid in self._ids:
@@ -506,6 +728,49 @@ class TestConfigSessionConcurrent(unittest.TestCase):
                 os.path.exists(f'{session_dir}/new_config_{sid}'),
                 msg=f'session {sid} left its working directory behind',
             )
+
+    def test_helper_output_never_holds_a_lock(self):
+        # The helper writes to whatever its caller made stdout and stderr,
+        # pipes nobody reads included. Blocked on that, it must hold neither
+        # the session's lock nor the one commits take to replace the active
+        # configuration.
+        a, b = self.sessions[0], self.sessions[1]
+        host = base_path + [f'{host_prefix}-0']
+        a.set(host + ['inet'], '10.91.15.1')
+        a.set(host + ['alias'], 'al-1')
+        a.commit()
+        b.show()  # b moves onto that commit
+        b.set(host + ['alias'], 'al-b')
+        a.set(host + ['alias'], 'al-a')
+        a.commit()  # moving b now drops its edit and lists it on stderr
+
+        r, w = os.pipe()
+        os.set_blocking(w, False)
+        try:
+            while True:
+                os.write(w, b'x' * 65536)
+        except BlockingIOError:
+            pass
+        os.set_blocking(w, True)
+        helper = Popen([OVL_HELPER, 'refresh', b.sid], stdout=w, stderr=w)
+        try:
+            sleep(1)
+            self.assertIsNone(helper.poll(), msg='the helper did not block on its output')
+            self.assertEqual(
+                call(['flock', '-n', '-x', f'{config_dir}/.tree.lock', 'true']), 0,
+                msg='a commit would wait for the blocked helper',
+            )
+            self.assertEqual(
+                call([OVL_HELPER, 'refresh', b.sid], stdout=DEVNULL, stderr=DEVNULL,
+                     timeout=10), 0,
+                msg='the session waits for the blocked helper',
+            )
+        finally:
+            # running as root it cannot be signalled; reading lets it finish
+            os.close(w)
+            with os.fdopen(r, 'rb') as f:
+                f.read()
+            helper.wait(timeout=10)
 
 
 if __name__ == '__main__':
