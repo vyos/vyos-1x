@@ -58,6 +58,15 @@ def install_into_config(conf, config_paths, override_prompt=True):
     env['vyos_libexec_dir'] = base_dir
     env['vyos_validators_dir'] = f'{base_dir}/validators'
 
+    # op-mode scripts run via sudo, but the session belongs to the invoking
+    # user. Nodes written as root end up root-owned in the session's overlay
+    # upper layer, which the user's commit then cannot clear.
+    run_as = []
+    sudo_user = os.environ.get('SUDO_USER')
+    if os.geteuid() == 0 and sudo_user and sudo_user != 'root':
+        run_as = ['setpriv', f'--reuid={sudo_user}', '--regid=vyattacfg',
+                  '--init-groups', '--']
+
     for path in config_paths:
         # exists()/is_multi() are called with a string: the live-session
         # config source backend requires it (it does " ".join(level) + " " + path)
@@ -66,11 +75,15 @@ def install_into_config(conf, config_paths, override_prompt=True):
             if not ask_yes_no(f'Config node "{path_str}" already exists. Do you want to overwrite it?'):
                 continue
 
+        old_umask = os.umask(0o002)
         try:
-            cmdl(['/opt/vyatta/sbin/my_set'] + [str(p) for p in path], env=env)
+            cmdl(run_as + ['/opt/vyatta/sbin/my_set'] + [str(p) for p in path],
+                 env=env)
             count += 1
         except:
             failed.append(path_str)
+        finally:
+            os.umask(old_umask)
 
     if failed:
         print(f'Failed to install {len(failed)} value(s). Commands to manually install:')
