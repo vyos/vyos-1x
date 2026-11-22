@@ -620,13 +620,16 @@ start ()
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
 
-    # Config sessions are kernel overlayfs mounts. The overlayfs workdir must
-    # live on the same filesystem as the session upperdir, so it goes on this
-    # tmpfs - but outside of ${vyatta_configdir}/tmp, which the CLI backend
-    # enumerates and wipes when reaping stale sessions.
+    # Config sessions are kernel overlayfs mounts. Their work directories go
+    # on this tmpfs, under ovl_work, which only the privileged mount helper
+    # may write to - so it is root's alone.
     modprobe -q overlay || true
-    mkdir -m 2775 -p ${vyatta_configdir}/ovl_work
-    chgrp ${GROUP} ${vyatta_configdir}/ovl_work
+    mkdir -m 0755 -p ${vyatta_configdir}/ovl_work
+    # Session directories: every config user creates theirs here, and with
+    # the sticky bit nobody can rename or remove somebody else's.
+    mkdir -p ${vyatta_configdir}/tmp
+    chgrp ${GROUP} ${vyatta_configdir}/tmp
+    chmod 1775 ${vyatta_configdir}/tmp
 
     mount_encrypted_config || overall_status=1
 
