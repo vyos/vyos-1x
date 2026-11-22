@@ -642,6 +642,48 @@ printf 'WLB_INTERFACE_NAME=%s WLB_SCRIPT_IFACE=%s\\n' \\
 
         self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
 
+    def test_firewall_group_without_members_warning(self):
+        isp1_iface = 'eth0'
+        isp2_iface = 'eth1'
+        empty_group = 'EMPTY'
+
+        self.cli_set(
+            ['interfaces', 'ethernet', isp1_iface, 'address', '203.0.113.2/30']
+        )
+        self.cli_set(['interfaces', 'ethernet', isp2_iface, 'address', '192.0.2.2/30'])
+
+        # a group without any member is valid, but the user must be warned
+        self.cli_set(['firewall', 'group', 'address-group', empty_group])
+
+        self.cli_set(
+            base_path + ['wan', 'interface-health', isp1_iface, 'failure-count', '1']
+        )
+        self.cli_set(
+            base_path
+            + ['wan', 'interface-health', isp1_iface, 'nexthop', '203.0.113.2']
+        )
+        self.cli_set(
+            base_path + ['wan', 'interface-health', isp1_iface, 'success-count', '1']
+        )
+        self.cli_set(
+            base_path + ['wan', 'interface-health', isp2_iface, 'failure-count', '1']
+        )
+        self.cli_set(
+            base_path + ['wan', 'interface-health', isp2_iface, 'nexthop', '192.0.2.2']
+        )
+        self.cli_set(
+            base_path + ['wan', 'interface-health', isp2_iface, 'success-count', '1']
+        )
+        self.cli_set(base_path + ['wan', 'rule', '5', 'exclude'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'inbound-interface', 'eth*'])
+        self.cli_set(
+            base_path
+            + ['wan', 'rule', '5', 'destination', 'group', 'address-group', empty_group]
+        )
+
+        out = self.cli_commit()
+        self.assertIn(f'WARNING: address-group "{empty_group}" has no members!', out)
+
     def test_3_or_more_interfaces_in_rule(self):
         lan_iface = 'eth1'
 
