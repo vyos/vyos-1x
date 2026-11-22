@@ -827,6 +827,80 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.verify_service_running()
 
+    def test_dhcp_string_options_comma(self):
+        # Kea splits the data of a string option at commas, a comma in the value
+        # has to be escaped or the value is cut off. Escape sequences that are
+        # part of the value stay as they are. Own test: every commit restarts
+        # Kea and too many restarts in a row hit the systemd start limit.
+        shared_net_name = 'SMOKE-STRING-COMMA'
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        option_data = ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data']
+        # option name in Kea (as it is on the CLI if not listed), value, option data
+        kea_names = {
+            'bootfile-name': 'boot-file-name',
+            'captive-portal': 'v4-captive-portal',
+        }
+        steps = [
+            [
+                (
+                    'tftp-server-name',
+                    'http://prov.vyos.io/p?m=a,b',
+                    'http://prov.vyos.io/p?m=a\\,b',
+                ),
+                ('bootfile-name', 'boot,file.bin', 'boot\\,file.bin'),
+                (
+                    'wpad-url',
+                    'http://wpad.vyos.io/w?a,b',
+                    'http://wpad.vyos.io/w?a\\,b',
+                ),
+                (
+                    'captive-portal',
+                    'https://portal.vyos.io/a?x=a,b',
+                    'https://portal.vyos.io/a?x=a\\,b',
+                ),
+            ],
+            # a comma that is escaped already stays, so does a backslash,
+            # only the bare comma is escaped
+            [
+                ('bootfile-name', 'boot\\x64\\file,a\\,b', 'boot\\x64\\file\\,a\\,b'),
+                (
+                    'wpad-url',
+                    'http://wpad.vyos.io/w?a\\,b',
+                    'http://wpad.vyos.io/w?a\\,b',
+                ),
+            ],
+        ]
+        for step in steps:
+            for option, value, _ in step:
+                self.cli_set(pool + ['option', option, value])
+            self.cli_commit()
+
+            obj = loads(read_file(KEA4_CONF))
+            for option, _, data in step:
+                self.verify_config_object(
+                    obj,
+                    option_data,
+                    {'name': kea_names.get(option, option), 'data': data},
+                )
+
+        # the file field of the packet is no option data, it is not escaped
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0],
+            'boot-file-name',
+            'boot\\x64\\file,a\\,b',
+        )
+
+        self.verify_service_running()
+
     def test_dhcp_single_pool_options_scoped(self):
         shared_net_name = 'SMOKE-2'
 
