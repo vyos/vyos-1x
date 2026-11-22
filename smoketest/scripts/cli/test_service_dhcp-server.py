@@ -2015,6 +2015,28 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         obj = loads(config)
         self.verify_config_value(obj, ['Dhcp4', 'loggers', 0], 'severity', 'INFO')
 
+    def test_dhcp_data_dir_foreign_owner(self):
+        # T9674: system uids can shift between releases while /config keeps
+        # the old numeric owner of the lease directory
+        data_dir = '/config/dhcp'
+        cmdl(['mkdir', '-p', data_dir], sudo=True)
+        cmdl(['chown', '-R', '65534:65534', data_dir], sudo=True)
+
+        pool = base_path + ['shared-network-name', 'SMOKE-UID', 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['range', '0', 'start', inc_ip(subnet, 10)])
+        self.cli_set(pool + ['range', '0', 'stop', inc_ip(subnet, 20)])
+        self.cli_commit()
+
+        owners = cmdl(
+            ['find', data_dir, '-printf', '%u:%g %p\\n'], sudo=True
+        ).splitlines()
+        self.assertTrue(owners)
+        for line in owners:
+            self.assertTrue(line.startswith('_kea:vyattacfg '), msg=line)
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
