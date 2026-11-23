@@ -162,9 +162,12 @@ def get_config(config=None):
             }
         if dict_search('type.bridge.interface', network_config) is not None:
             bridge = dict_search('type.bridge.interface', network_config)
-            network_config['bridge_config'] = conf.get_config_dict(
-                ['interfaces', 'bridge', bridge], key_mangling=('-', '_'),
-                get_first_key=True, with_recursive_defaults=True)
+            bridge_path = ['interfaces', 'bridge', bridge]
+            network_config['bridge_config'] = {}
+            if conf.exists(bridge_path):
+                network_config['bridge_config'] = conf.get_config_dict(
+                    bridge_path, key_mangling=('-', '_'),
+                    get_first_key=True, with_recursive_defaults=True)
 
     return container
 

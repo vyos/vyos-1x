@@ -408,6 +408,49 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(interface_path)
             self.cli_commit()
 
+    def test_unmanaged_bridge_dhcp_requires_configured_bridge(self):
+        bridge = 'br1223'
+        interface_path = ['interfaces', 'bridge', bridge]
+        network_path = base_path + ['network', 'dhcp1223']
+        if Config().exists(interface_path) or interface_exists(bridge):
+            self.skipTest('DHCP bridge existence fixture already exists')
+        try:
+            self.cli_set(network_path + ['type', 'bridge', 'interface', bridge])
+            self.cli_set(network_path + ['ipam', 'dhcp'])
+            self.cli_set(network_path + ['no-name-server'])
+            with self.assertRaisesRegex(ConfigSessionError,
+                                        f'VyOS bridge "{bridge}" must be configured and enabled'):
+                self.cli_commit()
+            self.assertFalse(interface_exists(bridge))
+            self.assertNotIn('dhcp1223', cmdl(['podman', 'network', 'ls',
+                             '--format', '{{.Name}}'], sudo=True).splitlines())
+            self.cli_discard()
+
+            self.cli_set(interface_path)
+            self.cli_set(network_path + ['type', 'bridge', 'interface', bridge])
+            self.cli_set(network_path + ['ipam', 'dhcp'])
+            self.cli_set(network_path + ['no-name-server'])
+            self.cli_commit()
+            self.assertTrue(interface_exists(bridge))
+            self.assertTrue(Config().exists_effective(network_path))
+            self.assertFalse(Config().exists_effective(interface_path + ['address']))
+
+            self.cli_delete(network_path)
+            self.cli_commit()
+            self.cli_set(network_path + ['type', 'bridge', 'interface', bridge])
+            self.cli_set(network_path + ['ipam', 'dhcp'])
+            self.cli_set(network_path + ['no-name-server'])
+            self.cli_commit()
+            self.assertTrue(interface_exists(bridge))
+            self.assertTrue(Config().exists_effective(network_path))
+            self.assertFalse(Config().exists_effective(interface_path + ['address']))
+        finally:
+            self.cli_discard()
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
     def test_unmanaged_bridge_dhcp(self):
         if Config().exists(['service', 'dhcp-server']):
             self.skipTest('Requires an unconfigured DHCP server for the test fixture')
