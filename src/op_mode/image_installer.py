@@ -1768,10 +1768,13 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             try:
                 if grub_default_changed:
                     grub_vars = grub.vars_read(grub_vars_file)
-                    grub_vars.pop('default', None)
-                    if saved_default is not None:
-                        grub_vars['default'] = saved_default
-                    grub.vars_write(grub_vars_file, grub_vars)
+                    # only while the default is still ours: another run may
+                    # have chosen its own image since
+                    if grub_vars.get('default') == grub.gen_version_uuid(image_name):
+                        grub_vars.pop('default', None)
+                        if saved_default is not None:
+                            grub_vars['default'] = saved_default
+                        grub.vars_write(grub_vars_file, grub_vars)
                 grub.version_del(image_name, root_dir)
             except Exception as grub_err:
                 Warning(

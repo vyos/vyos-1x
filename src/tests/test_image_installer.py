@@ -700,6 +700,7 @@ class AddImageCase(TreeTestCase):
             version_del=self.grub.version_del,
             vars_read=self.grub.vars_read,
             vars_write=self.grub.vars_write,
+            gen_version_uuid=lambda name: f'uuid-{name}',
         ), mock.patch.object(
             ii.grub_util,
             'update_kernel_cmdline_options',
@@ -921,6 +922,22 @@ class TestAddImageGrub(AddImageCase):
         )
         self.assertIn('(injected)', self.exit_message)
         self.grub.vars_write.assert_not_called()
+        self.assertIn(self.image_dir(), self.removed())
+
+    def test_a_default_chosen_since_by_another_run_is_left_alone(self):
+        # another add_image() makes its image the default between our
+        # set_default() and our failure: restoring ours would drop its choice
+        def fail(*args, **kwargs):
+            self.grub_vars['default'] = 'uuid-other'
+            raise OSError(5, 'EIO (injected)')
+
+        self.grub.update_kernel_cmdline_options.side_effect = fail
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
+        self.assertIn('(injected)', self.exit_message)
+        self.assertEqual(self.grub_vars['default'], 'uuid-other')
+        self.grub.version_del.assert_called_once_with('new', self.persistence)
         self.assertIn(self.image_dir(), self.removed())
 
     def test_entry_kept_as_default_if_the_default_cannot_be_restored(self):
