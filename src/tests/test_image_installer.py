@@ -117,10 +117,16 @@ class TestReadIds(TreeTestCase):
             self.read('\nshort:x\nnoid:x::\nneg:x:-1:\nfrr:x:108:\n'), {'frr': 108}
         )
 
-    def test_ids_too_long_for_int_are_skipped(self):
-        # int() refuses digit strings over 4300 digits (Python 3.11+)
+    def test_ids_outside_the_linux_range_are_skipped(self):
+        # uid_t/gid_t are 32 bits and (uid_t)-1 means "unchanged" to chown():
+        # such ids must not reach lchown(). A huge digit string is skipped
+        # before int(), whatever the interpreter's digit limit.
         self.assertEqual(
-            self.read('huge:x:' + '9' * 5000 + ':\nfrr:x:108:\n'), {'frr': 108}
+            self.read(
+                'max:x:4294967294:\nallones:x:4294967295:\n'
+                'over:x:4294967296:\nhuge:x:' + '9' * 5000 + ':\n'
+            ),
+            {'max': 4294967294},
         )
 
     def test_non_ascii_digits_are_skipped(self):
@@ -231,19 +237,20 @@ class TestCopyRegularFile(TreeTestCase):
         )
         self.assertEqual(sorted(os.listdir(dst)), ['conf'])
 
-    def test_extended_attributes_are_kept(self):
-        # POSIX ACLs are xattrs: the reinstall path used copytree()'s copy2(),
-        # which keeps them, before copy_regular_file() replaced it.
+    def test_extended_attributes_are_not_carried(self):
+        # POSIX ACLs are xattrs whose named entries hold numeric ids, which
+        # copy_ownership() does not translate: copied as is, they could grant
+        # access to another account in the new image.
         src = os.path.join(self.src, 'conf')
         with open(src, 'w') as f:
             f.write('x')
         try:
-            os.setxattr(src, 'user.t9403', b'kept')
+            os.setxattr(src, 'user.t9403', b'x')
         except OSError:
             self.skipTest('no user xattrs on this filesystem')
         dst = os.path.join(self.dst, 'conf')
         image_installer.copy_regular_file(src, dst)
-        self.assertEqual(os.getxattr(dst, 'user.t9403'), b'kept')
+        self.assertEqual(os.listxattr(dst), [])
 
     def test_ownership_is_left_to_copy_ownership(self):
         with open(os.path.join(self.src, 'conf'), 'w') as f:

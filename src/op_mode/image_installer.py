@@ -21,7 +21,6 @@ from argparse import ArgumentParser
 from argparse import Namespace
 from pathlib import Path
 from shutil import copy
-from shutil import copy2
 from shutil import chown
 from shutil import rmtree
 from shutil import copytree
@@ -415,17 +414,18 @@ def save_previous_installation(
 def copy_regular_file(src: str, dst: str, *, follow_symlinks=True):
     """copy_function for copytree(): regular files only, owners left alone
 
-    copytree() hands every non-directory to its copy_function, and copy2()
-    raises on a socket or a FIFO, which /config holds (container control
-    sockets): it would abort the whole copy. Regular files still go through
-    copy2(), which keeps their extended attributes and POSIX ACLs. Ownership
-    is set afterwards by copy_ownership(), in one place.
+    copytree() hands every non-directory to its copy_function, and its
+    default copy2() raises on a socket or a FIFO, which /config holds
+    (container control sockets): it would abort the whole copy. copy() takes
+    data and mode only: extended attributes are not carried, as POSIX ACLs
+    among them name accounts by number, which copy_ownership() does not
+    translate. Ownership is set afterwards by copy_ownership(), in one place.
     """
     if not Path(src).is_file():
         return
     if Path(dst).is_dir():
         dst = Path(dst).joinpath(Path(src).name)
-    copy2(src, dst, follow_symlinks=follow_symlinks)
+    copy(src, dst, follow_symlinks=follow_symlinks)
 
 
 def read_ids(path: str) -> dict[str, int]:
@@ -433,13 +433,16 @@ def read_ids(path: str) -> dict[str, int]:
     ids = {}
     for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
         fields = line.split(':')
-        # isdigit() alone accepts digits such as '²' that int() rejects, and
-        # int() rejects digit strings over 4300 digits: skip the record only
-        if len(fields) > 2 and fields[2].isascii() and fields[2].isdigit():
-            try:
-                ids.setdefault(fields[0], int(fields[2]))
-            except ValueError:
-                continue
+        # isdigit() alone accepts digits such as '²' that int() rejects;
+        # ids must fit uid_t/gid_t, (uid_t)-1 meaning "unchanged" to chown()
+        if (
+            len(fields) > 2
+            and fields[2].isascii()
+            and fields[2].isdigit()
+            and len(fields[2]) <= 10
+            and int(fields[2]) < 0xFFFFFFFF
+        ):
+            ids.setdefault(fields[0], int(fields[2]))
     return ids
 
 
