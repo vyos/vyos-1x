@@ -383,6 +383,25 @@ def get_crash_kernel_size() -> int:
     return int(raw) if raw.isdigit() else 0
 
 
+def kexec_reload(cmdline: str) -> None:
+    """Reboot into /boot/vmlinuz with the given cmdline via kexec"""
+
+    from vyos.utils.process import cmdl
+
+    cmdl(
+        [
+            'kexec',
+            '-l',
+            '/boot/vmlinuz',
+            '--initrd=/boot/initrd.img',
+            f'--command-line={cmdline}',
+            '--kexec-file-syscall',
+        ]
+    )
+    os.sync()
+    cmdl(['systemctl', 'kexec'])
+
+
 def get_kernel_cmdline_options(options: dict, kdump_enabled: bool) -> list:
     """Build the Kernel cmdline options managed by "system option".
 

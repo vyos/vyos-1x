@@ -14,6 +14,8 @@
 
 import unittest
 from unittest import mock
+from unittest.mock import call
+from unittest.mock import patch
 
 import vyos.system.image
 import vyos.utils.kernel
@@ -23,6 +25,7 @@ from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import get_kernel_cmdline_options
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import verify_kmod
+from vyos.utils.kernel import kexec_reload
 
 # What recursive defaults add to "system option" when nothing is configured
 KDUMP_DEFAULTS = {'kdump': {'memory': 'auto', 'dump_path': '/var/crash'}}
@@ -185,6 +188,26 @@ class TestVyOSUtilsKernel(unittest.TestCase):
              mock.patch('vyos.utils.process.run', return_value=1) as run:
             self.assertFalse(vyos.utils.kernel.is_module_available('nft_nat'))
             self.assertIn('snat', run.call_args.kwargs['input'])
+
+    @patch('vyos.utils.process.cmdl')
+    def test_kexec_reload(self, cmdl):
+        kexec_reload('panic=60')
+        self.assertEqual(
+            cmdl.call_args_list,
+            [
+                call(
+                    [
+                        'kexec',
+                        '-l',
+                        '/boot/vmlinuz',
+                        '--initrd=/boot/initrd.img',
+                        '--command-line=panic=60',
+                        '--kexec-file-syscall',
+                    ]
+                ),
+                call(['systemctl', 'kexec']),
+            ],
+        )
 
 
 if __name__ == '__main__':
