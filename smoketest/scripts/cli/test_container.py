@@ -18,17 +18,21 @@ import os
 import unittest
 import glob
 import json
+from tempfile import TemporaryDirectory
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from ipaddress import ip_interface
 
 from vyos.configsession import ConfigSessionError
 from vyos.config import Config
+from vyos.configtree import ConfigTree
+from vyos.component_version import version_info_from_file
 from vyos.defaults import directories
 from vyos.defaults import podman_mount_program
 from vyos.utils.file import read_file
 from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_vrf
+from vyos.utils.network import interface_exists
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
@@ -81,6 +85,69 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     def is_running(self, name):
         command = ['systemctl', 'show', f'vyos-container-{name}', '--property=ActiveState', '--value']
         return cmdl(command).strip() == 'active'
+
+    def _test_legacy_network_migration(self, legacy_options, expected_driver):
+        net_name = 'mig-net'
+        cont_name = 'mig-app'
+        host_name = 'mig-host'
+        network_path = base_path + ['network', net_name]
+        self.cli_commit()
+
+        with TemporaryDirectory() as directory:
+            config_file = os.path.join(directory, 'config.boot')
+            self.cli_save(config_file)
+            version = version_info_from_file(config_file)
+            config = ConfigTree(version.config_body)
+            config.set(network_path + ['prefix'], value='198.51.100.0/24')
+            config.set(network_path + ['gateway'], value='198.51.100.254')
+            config.set(network_path + ['type', 'macvlan'])
+            for option, value in legacy_options:
+                config.set(network_path + ['type'] + option.split(), value=value)
+            for name in [cont_name, host_name]:
+                config.set(base_path + ['name', name, 'image'], value=busybox_image)
+                config.set(base_path + ['name', name, 'command'], value='sleep 86400')
+                config.set(base_path + ['name', name, 'stop-timeout'], value='1')
+            config.set(base_path + ['name', cont_name, 'network', net_name, 'address'],
+                       value='198.51.100.10')
+            config.set(base_path + ['name', host_name, 'allow-host-networks'])
+            config.set_tag(base_path + ['network'])
+            config.set_tag(base_path + ['name'])
+            config.set_tag(base_path + ['name', cont_name, 'network'])
+            version.update_config_body(config.to_string(no_version=True))
+            version.update_component('container', 3)
+            version.write(config_file)
+
+            self._session.migrate_and_load_config(config_file)
+            self.cli_commit()
+
+        self.assertTrue(self.is_running(cont_name))
+        self.assertTrue(self.is_running(host_name))
+        network = cmd_to_json(['network', 'inspect', net_name])
+        self.assertEqual(network['driver'], expected_driver)
+        self.assertEqual(network['subnets'][0]['subnet'], '198.51.100.0/24')
+        self.assertEqual(network['subnets'][0]['gateway'], '198.51.100.254')
+        if expected_driver == 'macvlan':
+            self.assertEqual(network['network_interface'], 'eth0')
+            self.assertEqual(network['options']['mode'], 'bridge')
+        else:
+            self.assertEqual(network['network_interface'], f'pod-{net_name}')
+        container = cmd_to_json(['container', 'inspect', cont_name])
+        self.assertTrue(container['State']['Running'])
+        self.assertEqual(container['NetworkSettings']['Networks'][net_name]['IPAddress'],
+                         '198.51.100.10')
+        host = cmd_to_json(['container', 'inspect', host_name])
+        self.assertTrue(host['State']['Running'])
+        self.assertEqual(host['HostConfig']['NetworkMode'], 'host')
+
+    def test_migrate_legacy_bridge_and_macvlan(self):
+        if not interface_exists('eth0'):
+            self.skipTest('MACVLAN migration requires an Ethernet parent')
+        self._test_legacy_network_migration([
+            ('bridge', None), ('macvlan parent', 'eth0'), ('macvlan mode', 'bridge'),
+        ], 'macvlan')
+
+    def test_migrate_legacy_bare_macvlan(self):
+        self._test_legacy_network_migration([], 'bridge')
 
     def test_basic(self):
         cont_name = 'c1'
