@@ -572,6 +572,7 @@ class AddImageCase(TreeTestCase):
     def setUp(self):
         super().setUp()
         self.grub = mock.Mock()
+        self.grub.vars_read.return_value = {'default': 'uuid-old', 'timeout': '5'}
 
     def run_add_image(self, copy_tree=None, **extra):
         """Run add_image(); copy_config_tree() fails unless copy_tree is given"""
@@ -624,6 +625,8 @@ class AddImageCase(TreeTestCase):
             version_add=self.grub.version_add,
             set_default=self.grub.set_default,
             version_del=self.grub.version_del,
+            vars_read=self.grub.vars_read,
+            vars_write=self.grub.vars_write,
         ), mock.patch.object(
             ii.grub_util,
             'update_kernel_cmdline_options',
@@ -676,6 +679,9 @@ class TestAddImageFailure(AddImageCase):
         self.run_add_image()
         self.assertNotIn(existing, self.removed())
         self.assertTrue(os.path.isdir(os.path.join(existing, 'rw')))
+        self.assertIn('Image directory already exists', self.exit_message)
+        self.copy_config_tree.assert_not_called()
+        self.grub.version_add.assert_not_called()
 
     def test_a_directory_created_by_another_run_is_never_removed(self):
         # Checking for the directory and creating it later leaves a window:
@@ -695,6 +701,10 @@ class TestAddImageFailure(AddImageCase):
         with mock.patch.object(pathlib.Path, 'exists', exists):
             self.run_add_image()
         self.assertNotIn(other, self.removed())
+        self.assertIn('Image directory already exists', self.exit_message)
+        self.copy_config_tree.assert_not_called()
+        self.grub.version_add.assert_not_called()
+
 
 
 class TestAddImageEncrypted(AddImageCase):
@@ -726,9 +736,45 @@ class TestAddImageEncrypted(AddImageCase):
         volume = self.run_encrypted()
         self.assertIn(volume, self.removed())
 
-    def test_a_volume_this_run_did_not_create_is_kept(self):
-        volume = self.run_encrypted(existing_volume=True)
-        self.assertNotIn(volume, self.removed())
+    def test_an_existing_volume_is_refused_untouched(self):
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        open(os.path.join(luks, 'old'), 'w').close()
+        with open(os.path.join(luks, 'new'), 'w') as f:
+            f.write('left by someone else')
+        self.run_add_image(DEV_ENCRYPTED_CONFIG=self.tmp)
+        self.assertIn('already exists', self.exit_message)
+        with open(os.path.join(luks, 'new')) as f:
+            self.assertEqual(f.read(), 'left by someone else')
+        self.assertNotIn(os.path.join(luks, 'new'), self.removed())
+        self.assertFalse(os.path.exists(os.path.join(self.src, 'first_boot')))
+
+    def test_a_marker_whose_writing_fails_is_removed(self):
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        open(os.path.join(luks, 'old'), 'w').close()
+
+        def write_file(path, data, *args, **kwargs):
+            open(path, 'w').close()  # created, then the write fails
+            raise OSError(28, 'No space left on device (injected)')
+
+        self.run_add_image(DEV_ENCRYPTED_CONFIG=self.tmp, write_file=write_file)
+        self.assertIn('(injected)', self.exit_message)
+        self.assertFalse(os.path.exists(os.path.join(self.src, 'first_boot')))
+
+    def test_a_marker_that_was_there_before_is_kept(self):
+        with open(os.path.join(self.src, 'first_boot'), 'w') as f:
+            f.write('earlier marker')
+
+        def failing_copy(src, dst, *args, **kwargs):
+            raise OSError(5, 'EIO (injected)')
+
+        luks = os.path.join(self.tmp, 'persistence', 'luks')
+        os.makedirs(luks)
+        open(os.path.join(luks, 'old'), 'w').close()
+        self.run_add_image(DEV_ENCRYPTED_CONFIG=self.tmp, copy=failing_copy)
+        with open(os.path.join(self.src, 'first_boot')) as f:
+            self.assertEqual(f.read(), 'earlier marker')
 
     def test_first_boot_never_stays_in_the_running_configuration(self):
         def failing_copy(src, dst, *args, **kwargs):
@@ -773,10 +819,34 @@ class TestAddImageGrub(AddImageCase):
         )
         self.assertIn('(injected)', self.exit_message)
         self.grub.version_del.assert_called_once_with('new', self.persistence)
-        self.assertEqual(
-            self.grub.set_default.call_args_list[-1], mock.call('old', self.persistence)
-        )
+        # the saved default is written back BEFORE the entry is removed: the
+        # default must never name an entry that is gone
+        names = [c[0] for c in self.grub.mock_calls]
+        self.assertLess(names.index('vars_write'), names.index('version_del'))
+        written = self.grub.vars_write.call_args.args[1]
+        self.assertEqual(written, {'default': 'uuid-old', 'timeout': '5'})
         self.assertIn(self.image_dir(), self.removed())
+
+    def test_an_unset_default_is_unset_again(self):
+        self.grub.vars_read.return_value = {'timeout': '5'}
+        self.grub.update_kernel_cmdline_options.side_effect = OSError(
+            5, 'EIO (injected)'
+        )
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
+        self.assertEqual(self.grub.vars_write.call_args.args[1], {'timeout': '5'})
+
+    def test_entry_kept_as_default_if_the_default_cannot_be_restored(self):
+        self.grub.update_kernel_cmdline_options.side_effect = OSError(
+            5, 'EIO (injected)'
+        )
+        self.grub.vars_write.side_effect = OSError(30, 'EROFS')
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
+        self.grub.version_del.assert_not_called()
+        self.assertNotIn(self.image_dir(), self.removed())
 
     def test_files_are_kept_if_the_entry_cannot_be_withdrawn(self):
         self.grub.update_kernel_cmdline_options.side_effect = OSError(

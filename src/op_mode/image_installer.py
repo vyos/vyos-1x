@@ -1541,9 +1541,11 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     new_image_dir: str = ''
     # luks/<image>, if this run creates it: removed on failure
     new_luks_volume: str = ''
-    # set once the new image is in GRUB: withdrawn on failure
+    # set once the new image is in GRUB: withdrawn on failure, after the
+    # raw `default` GRUB variable (None if unset) is written back
     grub_published: bool = False
-    previous_default: str = ''
+    grub_vars_file: str = ''
+    saved_default: str | None = None
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -1628,21 +1630,32 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 current_name = image.get_running_image()
                 current_config_path = f'{root_dir}/luks/{current_name}'
                 target_config_path = f'{root_dir}/luks/{image_name}'
-                if not Path(target_config_path).exists():
-                    # recorded before the copy: a partial one is removed too
-                    new_luks_volume = target_config_path
-                first_boot = Path(DIR_CONFIG, 'first_boot')
-                tmp = {'previous_image': current_name}
-                write_file(str(first_boot), dumps(tmp))
-                sync()
-
-                # Copy encrypted volumes
+                # created exclusively, an existing volume is never touched;
+                # recorded before the copy, so a partial one is removed too
                 try:
+                    Path(target_config_path).touch(exist_ok=False)
+                except FileExistsError:
+                    raise FileExistsError(
+                        EEXIST,
+                        'Encrypted configuration volume already exists',
+                        target_config_path,
+                    ) from None
+                new_luks_volume = target_config_path
+                first_boot = Path(DIR_CONFIG, 'first_boot')
+                earlier_marker = first_boot.read_bytes() if first_boot.exists() else None
+                tmp = {'previous_image': current_name}
+                try:
+                    write_file(str(first_boot), dumps(tmp))
+                    sync()
+                    # Copy encrypted volumes
                     copy(current_config_path, target_config_path)
                 finally:
-                    # Now remove from current image - also when the copy
-                    # failed: the marker belongs to the new image only
-                    first_boot.unlink(missing_ok=True)
+                    # Now remove from current image - also when writing or
+                    # copying failed: the marker belongs to the new image only
+                    if earlier_marker is None:
+                        first_boot.unlink(missing_ok=True)
+                    else:
+                        first_boot.write_bytes(earlier_marker)
             else:
                 print('Copying configuration directory')
                 Path(target_config_dir).mkdir(parents=True)
@@ -1701,7 +1714,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             cmdline_options = get_cli_kernel_options(str(config_boot))
 
         # add information about version
-        previous_default = image.get_default_image(root_dir)
+        grub_vars_file = f'{root_dir}/{grub.CFG_VYOS_VARS}'
+        saved_default = grub.vars_read(grub_vars_file).get('default')
         grub_published = True
         grub.version_add(image_name, root_dir)
         if set_as_default:
@@ -1719,13 +1733,18 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # (shutil.Error is an OSError) left a half-built image too.
         remove_items = [i for i in (new_image_dir, new_luks_volume) if i]
         if grub_published:
-            # Withdraw the entry, and give the default back, before removing
-            # the files it boots: else GRUB can pick a kernel that is gone.
-            # If that fails, keep the files rather than break the boot.
+            # Give the default back, as it was, then withdraw the entry, then
+            # remove the files it boots: the default never names an entry
+            # that is gone. If that fails, keep the files rather than break
+            # the boot.
             try:
+                if set_as_default:
+                    grub_vars = grub.vars_read(grub_vars_file)
+                    grub_vars.pop('default', None)
+                    if saved_default is not None:
+                        grub_vars['default'] = saved_default
+                    grub.vars_write(grub_vars_file, grub_vars)
                 grub.version_del(image_name, root_dir)
-                if set_as_default and previous_default:
-                    grub.set_default(previous_default, root_dir)
             except Exception as grub_err:
                 Warning(
                     f'Could not remove {image_name} from GRUB '
