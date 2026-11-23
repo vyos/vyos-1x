@@ -209,6 +209,13 @@ class TestVyOSUtilsKernel(unittest.TestCase):
             ],
         )
 
+    @patch('vyos.utils.process.cmdl', side_effect=OSError(255, 'kexec -l'))
+    def test_kexec_reload_load_fails(self, cmdl):
+        # the error reaches the caller and no reboot is attempted
+        with self.assertRaises(OSError):
+            kexec_reload('panic=60')
+        cmdl.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -543,7 +543,13 @@ def apply(options):
         kexec_required = False
     if kexec_required:
         if not boot_configuration_complete() and os.getenv('VYOS_CONFIGD'):
-            kexec_reload(cmdline_new)
+            try:
+                kexec_reload(cmdline_new)
+            except OSError as e:
+                Warning(
+                    'Unable to reload the Kernel via kexec - Kernel configuration '
+                    f'options apply on the next reboot.\n{e}'
+                )
         elif boot_configuration_complete():
             Warning(
                 'Kernel configuration options have changed. '
