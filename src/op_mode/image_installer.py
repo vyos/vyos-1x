@@ -50,6 +50,7 @@ from urllib.parse import urlparse
 from passlib.hosts import linux_context
 from errno import EBUSY
 from errno import EEXIST
+from errno import ENOTSUP
 
 from psutil import disk_partitions
 
@@ -532,7 +533,13 @@ def drop_xattrs(path: str) -> None:
     them name accounts by number, which are not translated (see
     copy_regular_file(), which carries none for files).
     """
-    for attr in listxattr(path):
+    try:
+        attrs = listxattr(path)
+    except OSError as err:
+        if err.errno == ENOTSUP:  # nothing copied either, as for copystat()
+            return
+        raise
+    for attr in attrs:
         removexattr(path, attr)
 
 

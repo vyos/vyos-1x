@@ -283,6 +283,23 @@ class TestCopyRegularFile(TreeTestCase):
         self.assertEqual(os.listxattr(os.path.join(self.dst, 'sub')), [])
         self.assertEqual(os.listxattr(self.dst), [])
 
+    def test_a_filesystem_without_xattrs_is_no_failure(self):
+        import errno
+
+        os.mkdir(os.path.join(self.src, 'sub'))
+        unsupported = OSError(errno.ENOTSUP, 'Operation not supported')
+        with mock.patch.object(image_installer, 'lchown'), mock.patch.object(
+            image_installer, 'listxattr', side_effect=unsupported
+        ):
+            image_installer.copy_config_tree(
+                self.src,
+                self.dst,
+                image_installer.IdMap(),
+                image_installer.IdMap(kind='gid'),
+                cfg_gid=os.getgid(),
+            )
+        self.assertTrue(os.path.isdir(os.path.join(self.dst, 'sub')))
+
     def test_ownership_is_left_to_copy_ownership(self):
         with open(os.path.join(self.src, 'conf'), 'w') as f:
             f.write('x')
