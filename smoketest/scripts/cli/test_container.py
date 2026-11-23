@@ -872,6 +872,101 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                     self.cli_delete(network_path)
                     self.cli_commit()
 
+    def _test_consumer_restart_failures(self, native):
+        network = 'restart1224'
+        network_path = base_path + ['network', network]
+        interface_path = ['interfaces', 'bridge', 'br1224']
+        vrf_path = ['vrf', 'name', 'restart1224']
+        consumers = ['a1224', 'b1224', 'c1224', 'd1224', 'e1224']
+        broken = ['b1224', 'd1224']
+        healthy = ['a1224', 'c1224', 'e1224']
+        host_name = 'unaffected1224'
+        disabled = 'f1224'
+        if native and (Config().exists(interface_path) or interface_exists('br1224')):
+            self.skipTest('Consumer restart bridge fixture already exists')
+        if not native and (Config().exists(vrf_path) or interface_exists('restart1224')):
+            self.skipTest('Consumer restart VRF fixture already exists')
+        try:
+            self.cli_set(network_path + ['prefix', '10.250.224.0/24'])
+            self.cli_set(network_path + ['no-name-server'])
+            if native:
+                self.cli_set(interface_path + ['address', '10.250.224.1/24'])
+                self.cli_set(network_path + ['type', 'bridge', 'interface', 'br1224'])
+            else:
+                self.cli_set(vrf_path + ['table', '1224'])
+            for index, name in enumerate(consumers + [disabled]):
+                path = base_path + ['name', name]
+                self.cli_set(path + ['image', busybox_image])
+                self.cli_set(path + ['command', 'sleep 3600'])
+                self.cli_set(path + ['stop-timeout', '1'])
+                self.cli_set(path + ['capability', 'net-raw'])
+                self.cli_set(path + ['network', network, 'address', f'10.250.224.{index + 2}'])
+            self.cli_set(base_path + ['name', disabled, 'disable'])
+            self.cli_set(base_path + ['name', host_name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', host_name, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', host_name, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', host_name, 'allow-host-networks'])
+            self.cli_commit()
+            for name in consumers:
+                self.assertTrue(cmd_to_json(['inspect', name])['State']['Running'])
+            original_network = cmd_to_json(['network', 'inspect', network])['id']
+            host = cmd_to_json(['inspect', host_name])
+
+            self.cli_set(network_path + ['mtu', '1400'])
+            if native:
+                self.cli_set(interface_path + ['mtu', '1400'])
+            else:
+                self.cli_set(network_path + ['vrf', 'restart1224'])
+            for name in broken:
+                self.cli_set(base_path + ['name', name, 'entrypoint', '/missing-entrypoint'])
+            with self.assertRaises(ConfigSessionError) as failure:
+                self.cli_commit()
+
+            for name in healthy:
+                self.assertTrue(wait_for(lambda: self.is_running(name), timeout=10),
+                                f'Healthy consumer {name} was left stopped after another restart failed')
+                info = cmd_to_json(['inspect', name])
+                self.assertTrue(info['State']['Running'])
+                pid = str(info['State']['Pid'])
+                links = json.loads(cmdl(['nsenter', '-t', pid, '-n', 'ip', '-j',
+                                        'link', 'show', 'dev', 'eth0'], sudo=True))
+                self.assertEqual(links[0]['mtu'], 1400)
+                cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
+                      '10.250.224.1'], sudo=True)
+            for name in broken:
+                self.assertFalse(self.is_running(name))
+                self.assertIn(name, str(failure.exception))
+            self.assertNotIn(disabled, str(failure.exception))
+            self.assertFalse(self.is_running(disabled))
+            after = cmd_to_json(['inspect', host_name])
+            self.assertTrue(after['State']['Running'])
+            self.assertEqual(after['Id'], host['Id'])
+            self.assertEqual(after['State']['StartedAt'], host['State']['StartedAt'])
+            info = cmd_to_json(['network', 'inspect', network])
+            self.assertNotEqual(info['id'], original_network)
+            self.assertEqual(info['options']['mtu'], '1400')
+            if not native:
+                self.assertEqual(get_interface_vrf(f'pod-{network}'), 'restart1224')
+
+            for name in broken:
+                self.cli_delete(base_path + ['name', name, 'entrypoint'])
+            self.cli_commit()
+            for name in consumers:
+                self.assertTrue(cmd_to_json(['inspect', name])['State']['Running'])
+            self.assertFalse(self.is_running(disabled))
+        finally:
+            self.cli_discard()
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path if native else vrf_path)
+            self.cli_commit()
+
+    def test_managed_network_consumer_restart_failures(self):
+        self._test_consumer_restart_failures(native=False)
+
+    def test_unmanaged_network_consumer_restart_failures(self):
+        self._test_consumer_restart_failures(native=True)
+
     def test_network_runtime_changes(self):
         network_path = base_path + ['network', 'runtime']
         name = 'runtime1'

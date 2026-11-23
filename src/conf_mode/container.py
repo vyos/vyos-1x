@@ -821,6 +821,7 @@ def apply(container):
     if any(n.get('ipam', 'host-local') == 'dhcp' for n in container.get('network', {}).values()):
         cmdl(['systemctl', 'start', 'netavark-dhcp-proxy.socket'])
 
+    restart_errors = []
     # Add container
     if 'name' in container:
         for name, container_config in container['name'].items():
@@ -840,10 +841,15 @@ def apply(container):
                 network_config = container.get('network', {}).get(network, {})
                 # The DHCP server may be configured later in this commit.
                 options = ['--no-block'] if network_config.get('ipam', 'host-local') == 'dhcp' else []
-                cmdl(['systemctl'] + options + ['restart', f'vyos-container-{name}'])
+                try:
+                    cmdl(['systemctl'] + options + ['restart', f'vyos-container-{name}'])
+                except OSError as error:
+                    restart_errors.append(f'{name}: {error}')
 
     # Re-Start network and assign it to given VRF if requested.
     restart_network(container)
+    if restart_errors:
+        raise ConfigError('Could not restart containers:\n' + '\n'.join(restart_errors))
     return None
 
 
