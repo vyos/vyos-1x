@@ -567,6 +567,93 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(interface_path)
             self.cli_commit()
 
+    def _configure_bridge_removal_fixture(self):
+        interface_path = ['interfaces', 'bridge', 'br1221']
+        network_path = base_path + ['network', 'removal1221']
+        if Config().exists(interface_path) or interface_exists('br1221'):
+            self.skipTest('Bridge removal fixture already exists')
+        self.cli_set(interface_path + ['address', '10.250.221.1/24'])
+        self.cli_set(network_path + ['prefix', '10.250.221.0/24'])
+        self.cli_set(network_path + ['no-name-server'])
+        self.cli_set(network_path + ['type', 'bridge', 'interface', 'br1221'])
+        for name in ['removal1221', 'removalhost1221']:
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
+        self.cli_set(base_path + ['name', 'removal1221', 'capability', 'net-raw'])
+        self.cli_set(base_path + ['name', 'removal1221', 'network',
+                                  'removal1221', 'address', '10.250.221.2'])
+        self.cli_set(base_path + ['name', 'removalhost1221', 'allow-host-networks'])
+        self.cli_commit()
+        return interface_path, network_path
+
+    def test_rejected_bridge_network_removal_preserves_runtime(self):
+        interface_path, network_path = self._configure_bridge_removal_fixture()
+        try:
+            containers = {name: cmd_to_json(['inspect', name])
+                          for name in ['removal1221', 'removalhost1221']}
+            network_id = cmd_to_json(['network', 'inspect', 'removal1221'])['id']
+            for remove_network in [False, True]:
+                with self.subTest(remove_network=remove_network):
+                    self.cli_delete(interface_path)
+                    if remove_network:
+                        self.cli_delete(network_path)
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.assertTrue(interface_exists('br1221'),
+                                    'Rejected commit removed the bridge')
+                    addresses = json.loads(cmdl(['ip', '-j', 'address', 'show', 'dev', 'br1221']))
+                    self.assertIn('10.250.221.1',
+                                  [a['local'] for a in addresses[0]['addr_info']])
+                    for name, before in containers.items():
+                        after = cmd_to_json(['inspect', name])
+                        self.assertTrue(after['State']['Running'])
+                        self.assertEqual(after['Id'], before['Id'])
+                        self.assertEqual(after['State']['StartedAt'], before['State']['StartedAt'])
+                    self.assertEqual(cmd_to_json(['network', 'inspect', 'removal1221'])['id'],
+                                     network_id)
+                    cmdl(['podman', 'exec', 'removal1221', 'ping', '-c', '1', '-W', '2',
+                          '10.250.221.1'], sudo=True)
+                    self.cli_discard()
+
+            with TemporaryDirectory() as directory:
+                config_file = os.path.join(directory, 'config.boot')
+                self.cli_save(config_file)
+                self._session.migrate_and_load_config(config_file)
+                self.cli_commit()
+            self.assertTrue(self.is_running('removal1221'))
+            self.assertTrue(self.is_running('removalhost1221'))
+        finally:
+            self.cli_discard()
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
+    def test_remove_bridge_network_and_consumer(self):
+        interface_path, network_path = self._configure_bridge_removal_fixture()
+        try:
+            host = cmd_to_json(['inspect', 'removalhost1221'])
+            self.cli_delete(base_path + ['name', 'removal1221'])
+            self.cli_delete(network_path)
+            self.cli_delete(interface_path)
+            self.cli_commit()
+            self.assertFalse(interface_exists('br1221'))
+            self.assertNotIn('removal1221', cmdl(['podman', 'network', 'ls',
+                             '--format', '{{.Name}}'], sudo=True).splitlines())
+            self.assertNotIn('removal1221', cmdl(['podman', 'ps', '-a',
+                             '--format', '{{.Names}}'], sudo=True).splitlines())
+            after = cmd_to_json(['inspect', 'removalhost1221'])
+            self.assertTrue(after['State']['Running'])
+            self.assertEqual(after['Id'], host['Id'])
+            self.assertEqual(after['State']['StartedAt'], host['State']['StartedAt'])
+        finally:
+            self.cli_discard()
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
     def test_network_removal_failure_recovery(self):
         network = 'removal1217'
         name = 'removal1217'

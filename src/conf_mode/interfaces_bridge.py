@@ -55,6 +55,18 @@ def get_config(config=None):
                                     no_tag_node_value_mangle=True)
     bridge['container_networks'] = [network for network in networks.values()
                                     if dict_search('type.bridge.interface', network) == ifname]
+    if 'deleted' in bridge:
+        containers = conf.get_config_dict(['container', 'name'], get_first_key=True,
+                                          no_tag_node_value_mangle=True)
+        previous_networks = conf.get_config_dict(['container', 'network'], effective=True,
+                                                key_mangling=('-', '_'), get_first_key=True,
+                                                no_tag_node_value_mangle=True)
+        # Removed networks must still protect bridges needed by candidate consumers.
+        bridge['container_networks'].extend(
+            network for name, network in previous_networks.items()
+            if name not in networks
+            and dict_search('type.bridge.interface', network) == ifname
+            and any(name in container.get('network', {}) for container in containers.values()))
 
     # determine which members have been removed
     tmp = node_changed(conf, base + [ifname, 'member', 'interface'])
