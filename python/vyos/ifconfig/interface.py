@@ -78,6 +78,45 @@ def _jmes_search(expression, data):
     return jmespath.search(expression, data)
 
 
+def _number(value: str) -> int:
+    """A number the way iproute2 reads it, a leading zero means octal"""
+    return int(value, 8) if len(value) > 1 and value[0] == '0' else int(value)
+
+
+def _qos_pairs(mapping: str, ingress: bool) -> set[tuple[int, int]] | None:
+    """from:to pairs of a QoS mapping as the kernel lists them: numbers like
+    iproute2 reads them ('010' is 8, '01' is 1), the VLAN priority (3 bits) is
+    the source of an ingress and the target of an egress mapping, the last pair
+    of a source wins, a pair that maps to 0 is left out. None for a mapping
+    that is not valid"""
+    pairs = {}
+    for item in mapping.split():
+        src, _, dst = item.partition(':')
+        if not (src.isdigit() and dst.isdigit()):
+            return None
+        src, dst = _number(src), _number(dst)
+        if ingress:
+            src &= 7
+        else:
+            dst &= 7
+        pairs[src] = dst
+    return {(src, dst) for src, dst in pairs.items() if dst}
+
+
+def vlan_qos_changed(vif_ifname: str, vif_config: dict) -> bool:
+    """The QoS mappings of the VLAN interface in the kernel differ from the
+    configuration, the update creates the VLAN interface again then. The
+    mappings are only set when the VLAN interface is created, a mapping that
+    is added or removed in the configuration needs a new VLAN interface"""
+    cur_cfg = get_interface_config(vif_ifname)
+    for qos in ['ingress_qos', 'egress_qos']:
+        listed = dict_search(f'linkinfo.info_data.{qos}', cur_cfg) or []
+        kernel = {(item['from'], item['to']) for item in listed}
+        if kernel != _qos_pairs(vif_config.get(qos, ''), qos == 'ingress_qos'):
+            return True
+    return False
+
+
 class Interface(Control):
     # This is the class which will be used to create
     # self.operational, it allows subclasses, such as
@@ -2249,28 +2288,8 @@ class Interface(Control):
             # not completely delete the old settings,
             # we still need to delete the VLAN encapsulation interface in order to
             # ensure that the changed settings are effective.
-            cur_cfg = get_interface_config(vif_ifname)
-            qos_str = ''
-            tmp2 = dict_search('linkinfo.info_data.ingress_qos', cur_cfg)
-            if 'ingress_qos' in tmp and tmp2:
-                for item in tmp2:
-                    from_key = item['from']
-                    to_key = item['to']
-                    qos_str += f'{from_key}:{to_key} '
-                if qos_str != tmp['ingress_qos']:
-                    if self.exists(vif_ifname):
-                        VLANIf(vif_ifname).remove()
-
-            qos_str = ''
-            tmp2 = dict_search('linkinfo.info_data.egress_qos', cur_cfg)
-            if 'egress_qos' in tmp and tmp2:
-                for item in tmp2:
-                    from_key = item['from']
-                    to_key = item['to']
-                    qos_str += f'{from_key}:{to_key} '
-                if qos_str != tmp['egress_qos']:
-                    if self.exists(vif_ifname):
-                        VLANIf(vif_ifname).remove()
+            if self.exists(vif_ifname) and vlan_qos_changed(vif_ifname, tmp):
+                VLANIf(vif_ifname).remove()
 
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
