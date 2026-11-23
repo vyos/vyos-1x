@@ -36,6 +36,8 @@ from os import chmod
 from os import lchown
 from os import lstat
 from os import walk
+from os import listxattr
+from os import removexattr
 from os.path import ismount
 from stat import S_IFMT
 from stat import S_IMODE
@@ -442,15 +444,13 @@ def read_ids(path: str) -> dict[str, int]:
     for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
         fields = line.split(':')
         # isdigit() alone accepts digits such as '²' that int() rejects;
-        # ids must fit uid_t/gid_t, (uid_t)-1 meaning "unchanged" to chown()
-        if (
-            len(fields) > 2
-            and fields[2].isascii()
-            and fields[2].isdigit()
-            and len(fields[2]) <= 10
-            and int(fields[2]) < 0xFFFFFFFF
-        ):
-            ids.setdefault(fields[0], int(fields[2]))
+        # leading zeroes are read as glibc does; ids must fit uid_t/gid_t,
+        # (uid_t)-1 meaning "unchanged" to chown()
+        if len(fields) < 3 or not (fields[2].isascii() and fields[2].isdigit()):
+            continue
+        digits = fields[2].lstrip('0') or '0'
+        if len(digits) <= 10 and int(digits) < 0xFFFFFFFF:
+            ids.setdefault(fields[0], int(digits))
     return ids
 
 
@@ -525,6 +525,17 @@ class IdMap:
             )
 
 
+def drop_xattrs(path: str) -> None:
+    """Remove every extended attribute of a directory
+
+    copytree() copies directory xattrs through copystat(): POSIX ACLs among
+    them name accounts by number, which are not translated (see
+    copy_regular_file(), which carries none for files).
+    """
+    for attr in listxattr(path):
+        removexattr(path, attr)
+
+
 def copy_ownership(src: str, dst: str, uids: IdMap = None, gids: IdMap = None) -> None:
     """Give every entry of dst the owner, group and mode of the same path in src
 
@@ -561,6 +572,7 @@ def copy_ownership(src: str, dst: str, uids: IdMap = None, gids: IdMap = None) -
             # Both sides having the same type, a directory here is one of dirs.
             if S_ISDIR(dst_st.st_mode):
                 descend.add(name)
+                drop_xattrs(dst_path)
             lchown(dst_path, uids(src_st.st_uid), gids(src_st.st_gid))
             # after lchown(), which clears setuid/setgid on files
             if not S_ISLNK(src_st.st_mode):
@@ -622,6 +634,7 @@ def copy_config_tree(
         src, dst, symlinks=True, copy_function=copy_regular_file, dirs_exist_ok=True
     )
     copy_ownership(src, dst, uids, gids)
+    drop_xattrs(dst)
     lchown(dst, 0, cfg_gid)
     chmod(dst, 0o2775)
     uids.report(src)

@@ -129,6 +129,15 @@ class TestReadIds(TreeTestCase):
             {'max': 4294967294},
         )
 
+    def test_leading_zeroes_are_read_as_glibc_does(self):
+        self.assertEqual(
+            self.read(
+                'frr:x:00000000109:\nkea:x:' + '0' * 30 + '100:\n'
+                'over:x:04294967296:\n'
+            ),
+            {'frr': 109, 'kea': 100},
+        )
+
     def test_non_ascii_digits_are_skipped(self):
         # '²'.isdigit() is True but int('²') raises: one such line used to
         # abort `add system image`.
@@ -251,6 +260,27 @@ class TestCopyRegularFile(TreeTestCase):
         dst = os.path.join(self.dst, 'conf')
         image_installer.copy_regular_file(src, dst)
         self.assertEqual(os.listxattr(dst), [])
+
+    def test_copied_directories_carry_no_extended_attributes(self):
+        # copytree() copies directory xattrs through copystat(): a default
+        # ACL naming an old uid would then apply to new files in the new
+        # image. Directories follow the same policy as files.
+        os.mkdir(os.path.join(self.src, 'sub'))
+        try:
+            os.setxattr(os.path.join(self.src, 'sub'), 'user.t9403', b'x')
+            os.setxattr(self.src, 'user.t9403', b'x')  # the root too
+        except OSError:
+            self.skipTest('no user xattrs on this filesystem')
+        with mock.patch.object(image_installer, 'lchown'):
+            image_installer.copy_config_tree(
+                self.src,
+                self.dst,
+                image_installer.IdMap(),
+                image_installer.IdMap(kind='gid'),
+                cfg_gid=os.getgid(),
+            )
+        self.assertEqual(os.listxattr(os.path.join(self.dst, 'sub')), [])
+        self.assertEqual(os.listxattr(self.dst), [])
 
     def test_ownership_is_left_to_copy_ownership(self):
         with open(os.path.join(self.src, 'conf'), 'w') as f:
