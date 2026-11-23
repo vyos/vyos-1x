@@ -26,6 +26,7 @@ from vyos.template import is_ipv6
 from vyos.template import netmask_from_cidr
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import file_permissions
+from vyos.utils.file import makedir
 from vyos.utils.process import run, rc_cmd
 
 kea4_options = {
@@ -95,6 +96,31 @@ def _read_posix_timezone(tz_name):
             return f.read().split(b'\n')[-2].decode('utf-8').replace(',', '\\,')
     except (FileNotFoundError, IOError, IndexError) as e:
         raise ConfigError(f'Failed to read timezone data for: {tz_name}') from e
+
+
+def kea_fix_data_dir(path: str, user: str = '_kea', group: str = 'vyattacfg'):
+    """
+    Hand the persistent Kea data directory and everything below it to Kea.
+    Ownership is by numeric id, which can shift between releases when system
+    users are added or removed, so it has to be enforced on every commit.
+    """
+    from grp import getgrnam
+    from pwd import getpwnam
+
+    uid = getpwnam(user).pw_uid
+    gid = getgrnam(group).gr_gid
+
+    makedir(path, user=user, group=group)
+    # setgid: files created by Kea inherit the group
+    os.chmod(path, 0o2750)
+    for dirpath, _, filenames in os.walk(path):
+        for entry in [dirpath] + [os.path.join(dirpath, f) for f in filenames]:
+            try:
+                # never follow links: Kea can write here, this runs as root
+                os.chown(entry, uid, gid, follow_symlinks=False)
+            except FileNotFoundError:
+                # Kea's lease file cleanup may remove files at any time
+                pass
 
 
 def kea_test_config(process: str, config_path: str) -> tuple[bool, str]:

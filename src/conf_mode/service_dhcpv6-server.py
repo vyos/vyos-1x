@@ -17,20 +17,17 @@ import os
 from sys import exit
 from sys import argv
 
-from glob import glob
 from ipaddress import ip_address
 from ipaddress import ip_network
 
 from vyos.config import Config
+from vyos.kea import kea_fix_data_dir
 from vyos.kea import kea_test_config
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.utils.file import chmod_775
-from vyos.utils.file import makedir
 from vyos.utils.file import write_file
 from vyos.utils.dict import dict_search
 from vyos.utils.network import is_subnet_connected
-from vyos.utils.permission import chown
 from vyos import ConfigError
 from vyos import airbag
 
@@ -40,7 +37,6 @@ airbag.enable()
 config_file = ''
 ctrl_socket = ''
 lease_file = ''
-lease_file_glob = ''
 
 user_group = '_kea'
 
@@ -49,24 +45,22 @@ def _override_for_vrf(vrf_name):
     """
     This function is intended to override some of the global vars
     """
-    global ctrl_socket, config_file, lease_file, lease_file_glob
+    global ctrl_socket, config_file, lease_file
 
     config_file = f'/run/kea/kea-{vrf_name}-dhcp6.conf'
     ctrl_socket = f'/run/kea/dhcp6-{vrf_name}-ctrl-socket'
     lease_file = f'/config/dhcp/dhcp6-{vrf_name}-leases.csv'
-    lease_file_glob = f'/config/dhcp/dhcp6-{vrf_name}-leases*'
 
 
 def _reset_vars():
     """
     This function is intended to reset global vars when vrf is not enabled
     """
-    global ctrl_socket, config_file, lease_file, lease_file_glob
+    global ctrl_socket, config_file, lease_file
 
     config_file = '/run/kea/kea-dhcp6.conf'
     ctrl_socket = '/run/kea/dhcp6-ctrl-socket'
     lease_file = '/config/dhcp/dhcp6-leases.csv'
-    lease_file_glob = '/config/dhcp/dhcp6-leases*'
 
 
 def get_config(config=None):
@@ -294,19 +288,11 @@ def generate(dhcpv6):
     dhcpv6['lease_file'] = lease_file
     dhcpv6['machine'] = os.uname().machine
 
-    # Create directory for lease file if necessary
-    lease_dir = os.path.dirname(lease_file)
-    if not os.path.isdir(lease_dir):
-        makedir(lease_dir, group='vyattacfg')
-        chmod_775(lease_dir)
-
-    # Ensure correct permissions on lease files + backups
-    for file in glob(lease_file_glob):
-        chown(file, user=user_group, group='vyattacfg')
+    kea_fix_data_dir(os.path.dirname(lease_file), user=user_group)
 
     # Create lease file if necessary and let kea own it - 'kea-lfc' expects it that way
     if not os.path.exists(lease_file):
-        write_file(lease_file, '', user=user_group, group=user_group, mode=0o644)
+        write_file(lease_file, '', user=user_group, group='vyattacfg', mode=0o644)
 
     render(config_file, 'dhcp-server/kea-dhcp6.conf.j2', dhcpv6, user=user_group, group=user_group)
     return None

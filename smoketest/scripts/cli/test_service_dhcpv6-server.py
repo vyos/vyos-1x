@@ -14,19 +14,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
+from base64 import b64decode
 from json import loads
+from subprocess import DEVNULL
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import inc_ip
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
 PROCESS_NAME = 'kea-dhcp6'
 KEA6_CONF = '/var/run/kea/kea-dhcp6.conf'
+KEA_DATA_DIR = '/config/dhcp'
 base_path = ['service', 'dhcpv6-server']
 
 subnet = '2001:db8:f00::/64'
@@ -405,6 +411,57 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(mapping + ['client1'])
         self.cli_commit()
+
+    def test_data_dir_foreign_owner(self):
+        # T9674: system uids can shift between releases while /config keeps
+        # the old numeric owner, leaving Kea unable to write its DUID file
+        duid_file = f'{KEA_DATA_DIR}/kea-dhcp6-serverid'
+        server_duid = '00:01:00:01:2e:4b:1a:2c:00:50:56:00:00:01'
+
+        cmdl(['mkdir', '-p', KEA_DATA_DIR], sudo=True)
+
+        # keep the server identity of a live system; cleanups run after
+        # tearDown() stopped Kea and before the saved config is reloaded
+        if cmdl(['find', KEA_DATA_DIR, '-maxdepth', '1', '-name',
+                 os.path.basename(duid_file)], sudo=True):
+            orig_duid = b64decode(cmdl(['base64', '-w0', duid_file], sudo=True))
+            orig_owner, orig_mode = cmdl(
+                ['stat', '-c', '%u:%g %a', duid_file], sudo=True
+            ).split()
+
+            def restore_duid():
+                cmdl(['tee', duid_file], input=orig_duid, stdout=DEVNULL, sudo=True)
+                cmdl(['chown', orig_owner, duid_file], sudo=True)
+                cmdl(['chmod', orig_mode, duid_file], sudo=True)
+
+            self.addCleanup(restore_duid)
+        else:
+            self.addCleanup(cmdl, ['rm', '-f', duid_file], sudo=True)
+
+        # no trailing newline: Kea reads the last token twice and then
+        # discards the DUID as invalid
+        cmdl(['tee', duid_file], input=server_duid, sudo=True)
+        cmdl(['chown', '-R', '65534:65534', KEA_DATA_DIR], sudo=True)
+
+        pool = base_path + ['shared-network-name', 'SMOKE-UID', 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['range', '1', 'start', inc_ip(subnet, 256)])
+        self.cli_set(pool + ['range', '1', 'stop', inc_ip(subnet, 65535)])
+        self.cli_commit()
+
+        owners = cmdl(
+            ['find', KEA_DATA_DIR, '-printf', '%u:%g %p\\n'], sudo=True
+        ).splitlines()
+        self.assertTrue(any(duid_file in line for line in owners))
+        for line in owners:
+            self.assertTrue(line.startswith('_kea:vyattacfg '), msg=line)
+
+        # Kea rewrites the DUID file when loading its config and exits if
+        # that fails - give it the chance to do so before checking
+        sleep(2)
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        # the server identity clients already know must survive the repair
+        self.assertIn(server_duid, cmdl(['cat', duid_file], sudo=True))
 
 
 if __name__ == '__main__':
