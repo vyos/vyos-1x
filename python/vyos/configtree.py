@@ -51,6 +51,7 @@ _PROTOTYPES = {
     'set_add_value': ([c_void_p, c_char_p, c_char_p], c_int),
     'delete_value': ([c_void_p, c_char_p, c_char_p], c_int),
     'delete_node': ([c_void_p, c_char_p], c_int),
+    'clone_path': ([c_void_p, c_void_p, c_char_p, c_bool], c_int),
     'rename_node': ([c_void_p, c_char_p, c_char_p], c_int),
     'copy_node': ([c_void_p, c_char_p, c_char_p], c_int),
     'set_replace_value': ([c_void_p, c_char_p, c_char_p], c_int),
@@ -125,6 +126,7 @@ _LIB_ERROR = threading.local()
 
 _ERROR_REPORTING = frozenset(
     {
+        'clone_path',
         'copy_node',
         'create_node',
         'delete_node',
@@ -476,6 +478,15 @@ class ConfigTree:
 
         if self.__migration:
             self.migration_log.info(f'- op: delete_value path: {path} value: {value}')
+
+    def clone_path(self, src, path, descent=True):
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        res = self.__lib.clone_path(self.__config, src.get_tree(), path_str, descent)
+        if res != 0:
+            msg = self.__lib.get_error().decode()
+            raise ConfigTreeError(f'{msg}: path "{path}"')
 
     def rename(self, path, new_name):
         check_path(path)
@@ -974,6 +985,5 @@ class DiffTree:
 
 
 def deep_copy(config_tree: ConfigTree) -> ConfigTree:
-    """An inelegant, but reasonably fast, copy; replace with backend copy"""
-    D = DiffTree(None, config_tree)
-    return D.add
+    """A simple ploy; properly should be replaced with backend copy"""
+    return config_tree.get_subtree([])

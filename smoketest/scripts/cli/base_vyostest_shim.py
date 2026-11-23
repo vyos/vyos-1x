@@ -41,6 +41,7 @@ from vyos.frrender import ripng_daemon
 from vyos.frrender import zebra_daemon
 from vyos.utils.commit import commit_in_progress2
 from vyos.utils.network import get_vrf_pids
+from vyos.utils.network import interface_exists
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
@@ -83,6 +84,11 @@ class VyOSUnitTestSHIM:
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
             cls.debug = cls.debug_on()
+
+            # Name of an ethernet interface with no NIC behind it, for tests that
+            # commit configuration referencing a missing NIC
+            cls.missing_ethernet = next(f'eth{i}' for i in range(99, 1000)
+                                        if not interface_exists(f'eth{i}'))
 
         @classmethod
         def tearDownClass(cls):
