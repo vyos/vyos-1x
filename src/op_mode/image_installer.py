@@ -1560,6 +1560,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     # set once the new image is in GRUB: withdrawn on failure, after the
     # raw `default` GRUB variable (None if unset) is written back
     grub_published: bool = False
+    # set right before set_default(): only then is there a default to put back
+    grub_default_changed: bool = False
     grub_vars_file: str = ''
     saved_default: str | None = None
     try:
@@ -1737,6 +1739,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         grub_published = True
         grub.version_add(image_name, root_dir)
         if set_as_default:
+            grub_default_changed = True
             grub.set_default(image_name, root_dir)
 
         if config_boot.exists():
@@ -1756,7 +1759,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             # that is gone. If that fails, keep the files rather than break
             # the boot.
             try:
-                if set_as_default:
+                if grub_default_changed:
                     grub_vars = grub.vars_read(grub_vars_file)
                     grub_vars.pop('default', None)
                     if saved_default is not None:

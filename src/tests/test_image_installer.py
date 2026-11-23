@@ -14,6 +14,7 @@
 #
 # Coverage for T9403: preserve /config ownership across an image upgrade.
 
+import json
 import os
 import shutil
 import stat
@@ -616,7 +617,18 @@ class AddImageCase(TreeTestCase):
     def setUp(self):
         super().setUp()
         self.grub = mock.Mock()
-        self.grub.vars_read.return_value = {'default': 'uuid-old', 'timeout': '5'}
+        # a stateful stand-in for the GRUB variables file
+        self.grub_vars = {'default': 'uuid-old', 'timeout': '5'}
+        self.grub.vars_read.side_effect = lambda path: dict(self.grub_vars)
+        self.grub.set_default.side_effect = lambda name, root: self.grub_vars.update(
+            default=f'uuid-{name}'
+        )
+
+        def vars_write(path, grub_vars):
+            self.grub_vars.clear()
+            self.grub_vars.update(grub_vars)
+
+        self.grub.vars_write.side_effect = vars_write
 
     def run_add_image(self, copy_tree=None, **extra):
         """Run add_image(); copy_config_tree() fails unless copy_tree is given"""
@@ -810,12 +822,16 @@ class TestAddImageEncrypted(AddImageCase):
             f.write('earlier marker')
 
         def failing_copy(src, dst, *args, **kwargs):
+            # reached with this run's marker in place
+            with open(os.path.join(self.src, 'first_boot')) as f:
+                self.assertEqual(json.load(f), {'previous_image': 'old'})
             raise OSError(5, 'EIO (injected)')
 
         luks = os.path.join(self.tmp, 'persistence', 'luks')
         os.makedirs(luks)
         open(os.path.join(luks, 'old'), 'w').close()
         self.run_add_image(DEV_ENCRYPTED_CONFIG=self.tmp, copy=failing_copy)
+        self.assertIn('(injected)', self.exit_message)
         with open(os.path.join(self.src, 'first_boot')) as f:
             self.assertEqual(f.read(), 'earlier marker')
 
@@ -866,19 +882,29 @@ class TestAddImageGrub(AddImageCase):
         # default must never name an entry that is gone
         names = [c[0] for c in self.grub.mock_calls]
         self.assertLess(names.index('vars_write'), names.index('version_del'))
-        written = self.grub.vars_write.call_args.args[1]
-        self.assertEqual(written, {'default': 'uuid-old', 'timeout': '5'})
+        self.assertEqual(self.grub_vars, {'default': 'uuid-old', 'timeout': '5'})
         self.assertIn(self.image_dir(), self.removed())
 
     def test_an_unset_default_is_unset_again(self):
-        self.grub.vars_read.return_value = {'timeout': '5'}
+        del self.grub_vars['default']
         self.grub.update_kernel_cmdline_options.side_effect = OSError(
             5, 'EIO (injected)'
         )
         self.run_add_image(
             copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
         )
-        self.assertEqual(self.grub.vars_write.call_args.args[1], {'timeout': '5'})
+        self.assertEqual(self.grub_vars, {'timeout': '5'})
+
+    def test_the_variables_file_is_untouched_if_the_default_was_not_changed(self):
+        # version_add() failing: set_default() never ran, so there is no
+        # default to put back - rewriting the file could only lose settings
+        self.grub.version_add.side_effect = OSError(5, 'EIO (injected)')
+        self.run_add_image(
+            copy_tree=self.copied, get_cli_kernel_options=mock.Mock(return_value=[])
+        )
+        self.assertIn('(injected)', self.exit_message)
+        self.grub.vars_write.assert_not_called()
+        self.assertIn(self.image_dir(), self.removed())
 
     def test_entry_kept_as_default_if_the_default_cannot_be_restored(self):
         self.grub.update_kernel_cmdline_options.side_effect = OSError(
