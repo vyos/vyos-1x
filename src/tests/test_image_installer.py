@@ -300,6 +300,54 @@ class TestCopyRegularFile(TreeTestCase):
             )
         self.assertTrue(os.path.isdir(os.path.join(self.dst, 'sub')))
 
+    @staticmethod
+    def posix_acl(named_uid):
+        """A POSIX ACL in the kernel's xattr format, naming a user"""
+        import struct
+
+        undefined = 0xFFFFFFFF
+        entries = [
+            (0x01, 7, undefined),  # ACL_USER_OBJ
+            (0x02, 7, named_uid),  # ACL_USER
+            (0x04, 5, undefined),  # ACL_GROUP_OBJ
+            (0x10, 7, undefined),  # ACL_MASK
+            (0x20, 5, undefined),  # ACL_OTHER
+        ]
+        return struct.pack('<I', 2) + b''.join(
+            struct.pack('<HHI', *entry) for entry in entries
+        )
+
+    def test_posix_acls_are_not_carried(self):
+        # access and default ACLs name accounts by number: none of them may
+        # reach the new image, on a file, a directory or the root
+        acl = self.posix_acl(109)
+        sub = os.path.join(self.src, 'sub')
+        conf = os.path.join(self.src, 'conf')
+        os.mkdir(sub)
+        with open(conf, 'w') as f:
+            f.write('x')
+        try:
+            for path, kinds in (
+                (conf, ('access',)),
+                (sub, ('access', 'default')),
+                (self.src, ('default',)),
+            ):
+                for kind in kinds:
+                    os.setxattr(path, f'system.posix_acl_{kind}', acl)
+        except OSError:
+            self.skipTest('no POSIX ACLs on this filesystem')
+        with mock.patch.object(image_installer, 'lchown'):
+            image_installer.copy_config_tree(
+                self.src,
+                self.dst,
+                image_installer.IdMap(),
+                image_installer.IdMap(kind='gid'),
+                cfg_gid=os.getgid(),
+            )
+        for path in ('conf', 'sub', '.'):
+            attrs = os.listxattr(os.path.join(self.dst, path))
+            self.assertEqual([a for a in attrs if 'posix_acl' in a], [], path)
+
     def test_ownership_is_left_to_copy_ownership(self):
         with open(os.path.join(self.src, 'conf'), 'w') as f:
             f.write('x')
