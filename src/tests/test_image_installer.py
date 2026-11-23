@@ -412,38 +412,58 @@ class TestReinstallPath(TreeTestCase):
             image_installer.read_ids(os.path.join(self.saved, 'group')), {'frr': 115}
         )
 
-    def test_accounts_fall_back_to_the_image_squashfs(self):
-        def mount(source, path, fstype=''):
-            self.assertTrue(source.endswith('2026.10.01.squashfs'))
-            self.assertEqual(fstype, 'squashfs')
-            self.write(os.path.join(path, 'etc/passwd'), 'frr:x:109:\n')
-            self.write(os.path.join(path, 'etc/group'), 'frr:x:115:\n')
-            return True
+    def fake_cmdl(self, passwd, group):
+        """cmdl() stand-in: a mount fills the mount point as the squashfs would"""
+        self.argv = []
 
-        with mock.patch.object(
-            image_installer.disk, 'partition_mount', mount
-        ), mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+        def cmdl(argv, **kwargs):
+            self.argv.append(argv)
+            if argv[0] == 'mount':
+                self.write(os.path.join(argv[-1], 'etc/passwd'), passwd)
+                self.write(os.path.join(argv[-1], 'etc/group'), group)
+            return ''
+
+        return cmdl
+
+    def test_accounts_fall_back_to_the_image_squashfs(self):
+        cmdl = self.fake_cmdl('frr:x:109:\n', 'frr:x:115:\n')
+        with mock.patch.object(image_installer, 'cmdl', cmdl):
             image_installer.save_account_files(self.image, self.saved)
-        umount.assert_called_once()
+        squashfs = os.path.join(self.image, '2026.10.01.squashfs')
+        rootfs = os.path.join(self.saved, '.rootfs')
+        self.assertEqual(
+            self.argv,
+            [
+                ['mount', '-t', 'squashfs', '-o', 'loop,ro', squashfs, rootfs],
+                ['umount', rootfs],
+            ],
+        )
         self.assertEqual(
             image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
         )
+
+    def test_a_crafted_image_name_reaches_mount_as_one_argument(self):
+        # The image name is a directory name read from the old disk: it must
+        # never be parsed by a shell.
+        image = os.path.join(self.tmp, 'boot', 'x$(touch pwned)')
+        os.makedirs(os.path.join(image, 'rw', 'etc'))
+        cmdl = self.fake_cmdl('frr:x:109:\n', 'frr:x:115:\n')
+        with mock.patch.object(image_installer, 'cmdl', cmdl), mock.patch.object(
+            image_installer, 'run', side_effect=AssertionError('shell command run')
+        ), mock.patch.object(
+            image_installer.disk, 'partition_mount', side_effect=AssertionError
+        ):
+            image_installer.save_account_files(image, self.saved)
+        self.assertIn(os.path.join(image, 'x$(touch pwned).squashfs'), self.argv[0])
 
     def test_each_account_file_comes_from_where_the_system_saw_it(self):
         # Only passwd copied up: the old system saw the upper passwd and the
         # lower group.
         self.write(os.path.join(self.image, 'rw/etc/passwd'), 'svc:x:210:\n')
-
-        def mount(source, path, fstype=''):
-            self.write(os.path.join(path, 'etc/passwd'), 'svc:x:109:\n')
-            self.write(os.path.join(path, 'etc/group'), 'svc:x:115:\n')
-            return True
-
-        with mock.patch.object(
-            image_installer.disk, 'partition_mount', mount
-        ), mock.patch.object(image_installer.disk, 'partition_umount') as umount:
+        cmdl = self.fake_cmdl('svc:x:109:\n', 'svc:x:115:\n')
+        with mock.patch.object(image_installer, 'cmdl', cmdl):
             image_installer.save_account_files(self.image, self.saved)
-        umount.assert_called_once()
+        self.assertEqual([argv[0] for argv in self.argv], ['mount', 'umount'])
         read = image_installer.read_ids
         self.assertEqual(read(os.path.join(self.saved, 'passwd')), {'svc': 210})
         self.assertEqual(read(os.path.join(self.saved, 'group')), {'svc': 115})
@@ -469,6 +489,55 @@ class TestReinstallPath(TreeTestCase):
                     '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False
                 )
         umount.assert_called_once_with('/dev/sda3')
+
+    def save_with(self, still_mounted, error=None):
+        mnt = os.path.join(self.tmp, 'mnt-tmp')
+        self.mnt = mnt
+        with mock.patch.multiple(
+            image_installer,
+            DIR_PREVIOUS_MOUNT=mnt,
+            DIR_PREVIOUS_CONFIG=os.path.join(self.tmp, 'mnt-config'),
+            DIR_PREVIOUS_SSH=os.path.join(self.tmp, 'mnt-ssh'),
+            DIR_PREVIOUS_ACCOUNTS=self.saved,
+            copytree=mock.Mock(side_effect=error),
+            copy_ownership=mock.Mock(),
+            save_account_files=mock.Mock(),
+            ismount=mock.Mock(return_value=still_mounted),
+        ), mock.patch.object(image_installer.disk, 'partition_mount'), \
+                mock.patch.object(image_installer.disk, 'partition_umount'):
+            image_installer.save_previous_installation(
+                '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False
+            )
+
+    def test_a_partition_left_mounted_stops_before_the_disk_is_reformatted(self):
+        # partition_umount() ignores umount's exit code.
+        with self.assertRaises(OSError) as raised:
+            self.save_with(still_mounted=True)
+        self.assertIn(self.mnt, str(raised.exception))
+
+    def test_the_first_error_is_not_replaced_by_the_mount_check(self):
+        with self.assertRaises(OSError) as raised:
+            self.save_with(still_mounted=True, error=OSError(5, 'EIO (first)'))
+        self.assertIn('(first)', str(raised.exception))
+
+    def test_a_missing_group_file_does_not_drop_the_passwd_translation(self):
+        prev = os.path.join(self.tmp, 'mnt-config')
+        os.mkdir(prev)
+        self.write(os.path.join(self.saved, 'passwd'), 'frr:x:109:\n')
+        new_etc = os.path.join(self.tmp, 'new-etc')
+        self.write(os.path.join(new_etc, 'passwd'), 'frr:x:108:\n')
+        self.write(os.path.join(new_etc, 'group'), 'frr:x:114:\nvyattacfg:x:102:\n')
+        with mock.patch.multiple(
+            image_installer,
+            DIR_PREVIOUS_CONFIG=prev,
+            DIR_PREVIOUS_ACCOUNTS=self.saved,
+            DIR_NEW_ACCOUNTS=new_etc,
+            DIR_PREVIOUS_SSH='/nonexistent',
+            copy_config_tree=mock.DEFAULT,
+        ) as patched:
+            image_installer.copy_previous_installation_data(os.path.join(self.tmp, 't'))
+        _, _, uids, gids, _ = patched['copy_config_tree'].call_args.args
+        self.assertEqual((uids(109), gids(115)), (108, 115))
 
     def test_previous_config_is_copied_with_translated_owners(self):
         prev = os.path.join(self.tmp, 'mnt-config')

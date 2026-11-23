@@ -36,6 +36,7 @@ from os import chmod
 from os import lchown
 from os import lstat
 from os import walk
+from os.path import ismount
 from stat import S_IFMT
 from stat import S_IMODE
 from stat import S_ISDIR
@@ -45,6 +46,7 @@ from json import dumps
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
+from errno import EBUSY
 from errno import EEXIST
 
 from psutil import disk_partitions
@@ -410,6 +412,12 @@ def save_previous_installation(
             copy(host_key, DIR_PREVIOUS_SSH)
     finally:
         disk.partition_umount(image_drive)
+    # partition_umount() ignores umount's exit code: never let the install
+    # go on to reformat a disk that is still mounted (checked here, after
+    # the finally, so an error from the try is never replaced)
+    if ismount(mnt_tmp):
+        raise OSError(EBUSY, 'Previous installation still mounted', mnt_tmp)
+
 
 def copy_regular_file(src: str, dst: str, *, follow_symlinks=True):
     """copy_function for copytree(): regular files only, owners left alone
@@ -641,7 +649,11 @@ def save_account_files(image_dir: str, dest_dir: str) -> None:
     squashfs = f'{image_dir}/{Path(image_dir).name}.squashfs'
     mount_dir = f'{dest_dir}/.rootfs'
     Path(mount_dir).mkdir(exist_ok=True)
-    if not disk.partition_mount(squashfs, mount_dir, 'squashfs'):
+    # an argument list, never a shell command: the image name is a directory
+    # name read from the old disk
+    try:
+        cmdl(['mount', '-t', 'squashfs', '-o', 'loop,ro', squashfs, mount_dir])
+    except OSError:
         Warning(
             f'Cannot read the accounts of {image_dir}: owners of its '
             'configuration keep their numbers'
@@ -651,8 +663,10 @@ def save_account_files(image_dir: str, dest_dir: str) -> None:
         for name in lower:
             copy(Path(mount_dir, 'etc', name), Path(dest_dir, name))
     finally:
-        disk.partition_umount(squashfs)
+        # a failure to unmount is caught by save_previous_installation(),
+        # which then cannot release the partition holding the squashfs
         try:
+            cmdl(['umount', mount_dir])
             Path(mount_dir).rmdir()  # never recursive: it may still be mounted
         except OSError:
             pass
@@ -660,11 +674,14 @@ def save_account_files(image_dir: str, dest_dir: str) -> None:
 
 def copy_previous_installation_data(target_dir: str) -> None:
     if Path(DIR_PREVIOUS_CONFIG).exists():
-        old = (f'{DIR_PREVIOUS_ACCOUNTS}/passwd', f'{DIR_PREVIOUS_ACCOUNTS}/group')
-        if not all(Path(f).is_file() for f in old):
-            old = ('', '')
-        uids = IdMap(old[0], f'{DIR_NEW_ACCOUNTS}/passwd', 'uid')
-        gids = IdMap(old[1], f'{DIR_NEW_ACCOUNTS}/group', 'gid')
+        # each file on its own: one that could not be saved leaves its ids
+        # untranslated, not the other one's
+        old = {}
+        for name in ('passwd', 'group'):
+            saved = f'{DIR_PREVIOUS_ACCOUNTS}/{name}'
+            old[name] = saved if Path(saved).is_file() else ''
+        uids = IdMap(old['passwd'], f'{DIR_NEW_ACCOUNTS}/passwd', 'uid')
+        gids = IdMap(old['group'], f'{DIR_NEW_ACCOUNTS}/group', 'gid')
         copy_config_tree(
             DIR_PREVIOUS_CONFIG,
             f'{target_dir}{DIR_CONFIG}',
