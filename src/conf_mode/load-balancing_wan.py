@@ -16,6 +16,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.dict import dict_search_args
