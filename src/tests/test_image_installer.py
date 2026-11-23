@@ -450,7 +450,8 @@ class TestReinstallPath(TreeTestCase):
             self.argv.append(argv)
             if argv[0] == 'mount':
                 self.write(os.path.join(argv[-1], 'etc/passwd'), passwd)
-                self.write(os.path.join(argv[-1], 'etc/group'), group)
+                if group is not None:
+                    self.write(os.path.join(argv[-1], 'etc/group'), group)
             return ''
 
         return cmdl
@@ -471,6 +472,16 @@ class TestReinstallPath(TreeTestCase):
         self.assertEqual(
             image_installer.read_ids(os.path.join(self.saved, 'passwd')), {'frr': 109}
         )
+
+    def test_an_account_file_missing_from_the_squashfs_is_skipped(self):
+        # Its ids stay untranslated; the other file is still saved, and the
+        # reinstall goes on.
+        cmdl = self.fake_cmdl('frr:x:109:\n', None)
+        with mock.patch.object(image_installer, 'cmdl', cmdl):
+            image_installer.save_account_files(self.image, self.saved)
+        self.assertTrue(os.path.isfile(os.path.join(self.saved, 'passwd')))
+        self.assertFalse(os.path.exists(os.path.join(self.saved, 'group')))
+        self.assertEqual(self.argv[-1][0], 'umount')
 
     def test_a_crafted_image_name_reaches_mount_as_one_argument(self):
         # The image name is a directory name read from the old disk: it must

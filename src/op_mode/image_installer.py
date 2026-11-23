@@ -674,7 +674,10 @@ def save_account_files(image_dir: str, dest_dir: str) -> None:
         return
     try:
         for name in lower:
-            copy(Path(mount_dir, 'etc', name), Path(dest_dir, name))
+            # a file missing there leaves its ids untranslated, not the other
+            source = Path(mount_dir, 'etc', name)
+            if source.is_file():
+                copy(source, Path(dest_dir, name))
     finally:
         # a failure to unmount is caught by save_previous_installation(),
         # which then cannot release the partition holding the squashfs
