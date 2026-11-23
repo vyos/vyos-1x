@@ -1642,7 +1642,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                     ) from None
                 new_luks_volume = target_config_path
                 first_boot = Path(DIR_CONFIG, 'first_boot')
-                earlier_marker = first_boot.read_bytes() if first_boot.exists() else None
+                earlier_marker = (
+                    first_boot.read_bytes() if first_boot.exists() else None
+                )
                 tmp = {'previous_image': current_name}
                 try:
                     write_file(str(first_boot), dumps(tmp))

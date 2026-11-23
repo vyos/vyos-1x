@@ -503,8 +503,11 @@ class TestReinstallPath(TreeTestCase):
             copy_ownership=mock.Mock(),
             save_account_files=mock.Mock(),
             ismount=mock.Mock(return_value=still_mounted),
-        ), mock.patch.object(image_installer.disk, 'partition_mount'), \
-                mock.patch.object(image_installer.disk, 'partition_umount'):
+        ), mock.patch.object(
+            image_installer.disk, 'partition_mount'
+        ), mock.patch.object(
+            image_installer.disk, 'partition_umount'
+        ):
             image_installer.save_previous_installation(
                 '/dev/sda3', '2026.10.01', encrypted=False, legacy_bind_mount=False
             )
@@ -704,7 +707,6 @@ class TestAddImageFailure(AddImageCase):
         self.assertIn('Image directory already exists', self.exit_message)
         self.copy_config_tree.assert_not_called()
         self.grub.version_add.assert_not_called()
-
 
 
 class TestAddImageEncrypted(AddImageCase):
