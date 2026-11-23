@@ -330,7 +330,7 @@ class TestCopyRegularFile(TreeTestCase):
             for path, kinds in (
                 (conf, ('access',)),
                 (sub, ('access', 'default')),
-                (self.src, ('default',)),
+                (self.src, ('access', 'default')),
             ):
                 for kind in kinds:
                     os.setxattr(path, f'system.posix_acl_{kind}', acl)
