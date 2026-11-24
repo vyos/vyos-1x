@@ -19,6 +19,7 @@ from ipaddress import ip_address
 from ipaddress import ip_interface
 from ipaddress import ip_network
 
+import dbus
 import psutil
 from vyos.base import Warning
 from vyos.config import Config
@@ -732,6 +733,11 @@ def generate(container):
     render(config_storage, 'container/storage.conf.j2', container)
 
     if container.get('network_restart'):
+        manager = dbus.Interface(dbus.SystemBus().get_object(
+            'org.freedesktop.systemd1', '/org/freedesktop/systemd1'),
+            'org.freedesktop.systemd1.Manager')
+        starting_units = {unit for _, unit, job_type, *_ in manager.ListJobs()
+                          if job_type in ['start', 'restart']}
         units = {f'vyos-{name}-network': f'vyos-{name}.network'
                  for name in container['network_restart']}
         units.update({f'vyos-container-{name}': f'vyos-container-{name}.container'
@@ -745,7 +751,7 @@ def generate(container):
             else:
                 rollback['files'][path] = None
             state = cmdl(['systemctl', 'show', unit, '--property=ActiveState', '--value']).strip()
-            if state in ['active', 'activating']:
+            if state in ['active', 'activating'] or f'{unit}.service' in starting_units:
                 rollback['active_units'].append(unit)
 
     if 'network' in container:

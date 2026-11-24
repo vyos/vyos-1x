@@ -18,6 +18,7 @@ import os
 import unittest
 import glob
 import json
+import dbus
 from tempfile import TemporaryDirectory
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -788,6 +789,88 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             cmdl(['systemctl', 'daemon-reload'], sudo=True)
             if blocker_id is not None:
                 cmdl(['podman', 'rm', '-f', '--ignore', blocker_id], sudo=True)
+            self.cli_delete(base_path)
+            self.cli_commit()
+            cmdl(['rm', '-f', gate], sudo=True)
+
+    def test_network_removal_restores_queued_start(self):
+        network = 'queue1225'
+        name = 'queued1225'
+        active = 'active1225'
+        stopped = 'stopped1225'
+        unit = f'vyos-container-{name}.service'
+        gate_unit = 't9592-gate1225.service'
+        gate_unit_file = f'/run/systemd/system/{gate_unit}'
+        dropin = f'/run/systemd/system/{unit}.d/t9592-queue.conf'
+        gate = '/run/t9592-gate1225'
+        if any(os.path.exists(path) for path in [gate_unit_file, dropin, gate]):
+            self.skipTest('Queued-start fixture already exists')
+        network_path = base_path + ['network', network]
+        blocker = None
+
+        def queued_start():
+            manager = dbus.Interface(dbus.SystemBus().get_object(
+                'org.freedesktop.systemd1', '/org/freedesktop/systemd1'),
+                'org.freedesktop.systemd1.Manager')
+            return any(job[1] == unit and job[2] == 'start' for job in manager.ListJobs())
+
+        try:
+            self.cli_set(network_path + ['prefix', '10.250.225.0/24'])
+            for index, consumer in enumerate([name, active, stopped]):
+                path = base_path + ['name', consumer]
+                self.cli_set(path + ['image', busybox_image])
+                self.cli_set(path + ['command', 'sleep 3600'])
+                self.cli_set(path + ['capability', 'net-raw'])
+                self.cli_set(path + ['stop-timeout', '1'])
+                self.cli_set(path + ['network', network, 'address', f'10.250.225.{index + 2}'])
+            self.cli_commit()
+            cmdl(['systemctl', 'stop', unit, f'vyos-container-{stopped}.service'], sudo=True)
+            cmdl(['systemctl', 'reset-failed', unit], sudo=True)
+            blocker = cmdl(['podman', 'run', '-d', '--network', network, '--ip', '10.250.225.200',
+                            busybox_image, 'sleep', '3600'], sudo=True).strip()
+            cmdl(['tee', gate_unit_file], input=(
+                '[Service]\nType=oneshot\nRemainAfterExit=yes\n'
+                f'ExecStart=/bin/sh -c "while [ ! -e {gate} ]; do sleep 0.1; done"\n'
+            ), sudo=True)
+            cmdl(['mkdir', '-p', os.path.dirname(dropin)], sudo=True)
+            cmdl(['tee', dropin], input=(
+                f'[Unit]\nRequires={gate_unit}\nAfter={gate_unit}\n'
+            ), sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            cmdl(['systemctl', '--no-block', 'start', unit], sudo=True)
+            self.assertTrue(wait_for(queued_start, timeout=10))
+            self.assertEqual(cmdl(['systemctl', 'show', unit,
+                                  '--property=ActiveState', '--value']).strip(), 'inactive')
+            self.assertFalse(self.is_running(stopped))
+
+            self.cli_set(network_path + ['mtu', '1400'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+            self.assertTrue(wait_for(queued_start, timeout=10),
+                            'Queued start was lost during failed network removal')
+            self.assertFalse(self.is_running(stopped))
+            cmdl(['touch', gate], sudo=True)
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=30),
+                            'Queued consumer did not start after its dependency completed')
+            self.assertTrue(wait_for(lambda: self.is_running(active), timeout=30))
+            self.assertTrue(cmd_to_json(['inspect', name])['State']['Running'])
+            self.assertFalse(self.is_running(stopped))
+            self.assertNotIn(stopped, cmdl(['podman', 'ps', '--format', '{{.Names}}'],
+                                          sudo=True).splitlines())
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1500')
+            cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
+                  '10.250.225.1'], sudo=True)
+        finally:
+            cmdl(['touch', gate], sudo=True)
+            cmdl(['rm', '-f', dropin], sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            cmdl(['systemctl', 'stop', unit, gate_unit], sudo=True)
+            cmdl(['rm', '-f', gate_unit_file], sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            if blocker is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', blocker], sudo=True)
+            self.cli_discard()
             self.cli_delete(base_path)
             self.cli_commit()
             cmdl(['rm', '-f', gate], sudo=True)

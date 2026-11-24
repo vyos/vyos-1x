@@ -74,6 +74,7 @@ Depends:
 ## Python libraries used in multiple modules and scripts
   python3,
   python3-cryptography,
+  python3-dbus,
   python3-hurry.filesize,
   python3-inotify,
   python3-jinja2,
