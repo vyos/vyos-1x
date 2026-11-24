@@ -678,6 +678,32 @@ class TestConfigSessionConcurrent(unittest.TestCase):
         a.commit()
         self.assertIn(f'{host_prefix}-0 ', b.show_active())
 
+    def test_failed_setup_is_reset_on_retry(self):
+        # A session ID is a process ID, and a session that was never torn
+        # down leaves its upper layer to whoever gets the ID next, so a new
+        # session clears it before it is first mounted. A setup that failed
+        # before that leaves a marker, and the retry must clear rather than
+        # mount what is there. Without the marker the upper layer holds the
+        # session's own pending edits and is kept.
+        a = self.sessions[0]
+        mnt = f'{session_dir}/new_config_{a.sid}'
+        marker = f'{session_dir}/tmp_{a.sid}/.session.reset'
+        self.assertFalse(os.path.exists(marker), msg='completed setup left its marker')
+
+        a.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.11.1')
+        self.assertEqual(call(['sudo', 'umount', mnt]), 0)
+        a.run([CLI_SHELL_API, 'setupSession'])
+        self.assertIn(mnt, overlay_mounts())
+        self.assertIn(f'{host_prefix}-0 ', a.show(), msg='remount lost a pending edit')
+
+        self.assertEqual(call(['sudo', 'umount', mnt]), 0)
+        with open(marker, 'w'):
+            pass
+        a.run([CLI_SHELL_API, 'setupSession'])
+        self.assertIn(mnt, overlay_mounts())
+        self.assertNotIn(f'{host_prefix}-0 ', a.show(), msg='retry mounted a stale upper layer')
+        self.assertFalse(os.path.exists(marker))
+
     def test_busy_stale_session_cannot_commit(self):
         # A session that was in use when somebody else committed cannot be
         # moved onto the new configuration until it is no longer in use. Its
