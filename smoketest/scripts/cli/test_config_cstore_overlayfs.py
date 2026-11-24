@@ -656,6 +656,48 @@ class TestConfigSessionConcurrent(unittest.TestCase):
         self.assertNotIn(f'{host_prefix}-1 ', active)
         self.assertIn(f'{host_prefix}-2 ', active)
 
+    def test_commit_defers_remount_while_in_use(self):
+        # Something of the same session holds on to it for longer than the
+        # commit waits. Remounting under it would lose what it writes, so the
+        # commit leaves the session as it is, and the session's next
+        # operation remounts it - without re-applying what was committed.
+        a, b = self.sessions[0], self.sessions[1]
+        b_mnt = f'{session_dir}/new_config_{b.sid}'
+        lock = f'{session_dir}/tmp_{b.sid}/.session.lock'
+        marker = f'{session_dir}/tmp_{b.sid}/.session.remount'
+        b.set(base_path + [f'{host_prefix}-0', 'inet'], '10.91.14.1')
+        before = mount_id(b_mnt)
+        with Popen(['python3', '-c',
+                    'import fcntl, sys, time\n'
+                    'f = open(sys.argv[1])\n'
+                    'fcntl.flock(f, fcntl.LOCK_SH)\n'
+                    'print("held", flush=True)\n'
+                    'time.sleep(120)\n', lock],
+                   stdout=PIPE, stderr=DEVNULL) as holder:
+            try:
+                self.assertEqual(holder.stdout.readline().strip(), b'held')
+                b.commit()  # gives up waiting after 30 seconds
+                self.assertIn(f'{host_prefix}-0 ', a.show_active())
+                self.assertEqual(mount_id(b_mnt), before,
+                                 msg='remounted a session that was in use')
+                self.assertTrue(os.path.exists(marker))
+            finally:
+                holder.kill()
+
+        b.show()  # the session's next operation
+        self.assertNotEqual(mount_id(b_mnt), before)
+        self.assertFalse(os.path.exists(marker))
+
+        # what was committed is no longer in b's upper layer, so b's next
+        # commit must not bring back what another session removed
+        a.delete(base_path + [f'{host_prefix}-0'])
+        a.commit()
+        b.set(base_path + [f'{host_prefix}-1', 'inet'], '10.91.14.2')
+        b.commit()
+        active = a.show_active()
+        self.assertNotIn(f'{host_prefix}-0 ', active)
+        self.assertIn(f'{host_prefix}-1 ', active)
+
     def test_unmounted_session_is_not_a_session(self):
         # Without its overlay a session directory reads as an empty
         # configuration, and committing from it deleted everything else.
