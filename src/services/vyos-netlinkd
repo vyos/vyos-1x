@@ -191,9 +191,9 @@ def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
         if is_systemd_service_active(systemdV4_service):
             syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV4_service}...')
             stop_systemd_unit(systemdV4_service, raise_on_failure=False)
-        if is_systemd_service_active(systemdV6_service):
-            syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV6_service}...')
-            stop_systemd_unit(systemdV6_service, raise_on_failure=False)
+        # dhcp6c is left running (T9675): a Release sent without carrier
+        # never reaches the server. The restart on UP releases and
+        # re-solicits on the live link instead.
 
     elif operstate == 'UP':
         v6_restart = False
