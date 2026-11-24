@@ -21,6 +21,7 @@ import sys
 import syslog
 import signal
 import select
+import socket
 import threading
 
 from pyroute2 import IPRoute # pylint: disable = no-name-in-module
@@ -73,6 +74,10 @@ _iface_prev_operstate: dict[str, str] = {}
 # live operstate so a transition that only happened inside the drain window
 # is not lost (T9086).
 _in_commit_skip = False
+
+# How often DHCP clients are reconciled against live operstate outside of
+# commits, as a safety net for a link event that was never acted on.
+DHCP_RECONCILE_INTERVAL = 5
 
 # WWAN sessions are re-dialled from a periodic reconcile pass rather than from
 # netlink events. A modem that never connected in the first place produces no
@@ -502,17 +507,16 @@ def main():
                       f'Failed to remove {WWAN_LEGACY_CRON}: {e}')
 
     # Establish a baseline so the first UP re-notification is not mistaken
-    # for a real interface transition.
-    for link in ipr.get_links():
-        attrs = dict(link.get('attrs', []))
-        ifname = attrs.get('IFLA_IFNAME')
-        operstate = attrs.get('IFLA_OPERSTATE')
-        if ifname and match_iface(ifname) and operstate in ['UP', 'DOWN']:
-            _iface_prev_operstate[ifname] = operstate
+    # for a real interface transition. Nothing is tracked yet, so this only
+    # seeds. It reads sysfs: a request on the subscribed socket would move
+    # notifications arriving meanwhile into pyroute2's backlog, where
+    # select() no longer sees them (T9675).
+    _reconcile_dhcp_operstate()
 
     fd = ipr.fileno()
 
     wwan_next_reconcile = 0.0
+    dhcp_next_reconcile = monotonic() + DHCP_RECONCILE_INTERVAL
 
     global running
     while running:
@@ -559,7 +563,11 @@ def main():
                 _reconcile_wwan()
 
             if not rlist:
-                # timeout - retry
+                # Only while idle - pending events are processed below anyway,
+                # reconciling now would act on them before they are read
+                if monotonic() >= dhcp_next_reconcile:
+                    dhcp_next_reconcile = monotonic() + DHCP_RECONCILE_INTERVAL
+                    _reconcile_dhcp_operstate()
                 continue
 
             # Receive and process any messages
@@ -569,16 +577,15 @@ def main():
                 attrs = dict(message.get('attrs', []))
                 ifname = attrs.get('IFLA_IFNAME', None) or attrs.get('IFA_LABEL', None)
 
+                # IPv6 address messages carry no IFA_LABEL. Not resolved via
+                # ipr: its reply would be read together with any queued
+                # notification, which then sits in pyroute2's backlog unseen
+                # by select() until an unrelated event arrives (T9675).
                 if not ifname and 'index' in message:
                     try:
-                        links = ipr.get_links(message['index'])
-                        if links:
-                            ifname = dict(links[0].get('attrs', [])).get('IFLA_IFNAME', None)
-                    except NetlinkError:
-                        # Interface can disappear between the netlink event
-                        # arriving and this get_links() lookup (e.g. pppoe
-                        # teardown). Skip the message rather than breaking
-                        # the entire ipr.get() batch with an ENODEV error.
+                        ifname = socket.if_indextoname(message['index'])
+                    except OSError:
+                        # Interface already gone (e.g. pppoe teardown)
                         continue
 
                 # Bail out early - no interface name in the message
