@@ -704,6 +704,63 @@ class TestConfigSessionConcurrent(unittest.TestCase):
         self.assertNotIn(f'{host_prefix}-0 ', a.show(), msg='retry mounted a stale upper layer')
         self.assertFalse(os.path.exists(marker))
 
+    def test_conflicting_edit_is_dropped_not_committed(self):
+        # Editing a multi-value node gives the session its own copy of the
+        # whole value list. Another session commits a value to the same node
+        # meanwhile; carried over as it was, that copy would remove it again.
+        # The edit is dropped and listed instead, and the commit refused once
+        # so it can be reviewed and re-applied.
+        a, b = self.sessions[0], self.sessions[1]
+        host = base_path + [f'{host_prefix}-0']
+        a.set(host + ['inet'], '10.91.12.1')
+        a.set(host + ['alias'], 'al-1')
+        a.commit()
+        b.show()  # b moves onto that commit
+
+        b.set(host + ['alias'], 'al-b')
+        a.set(host + ['alias'], 'al-a')
+        a.commit()
+
+        with self.assertRaises(SessionError) as ctx:
+            b.commit()
+        self.assertIn('dropped', str(ctx.exception))
+        self.assertIn(f'{host_prefix}-0 alias', str(ctx.exception))
+        active = a.show_active()
+        self.assertIn('al-a', active, msg='a stale value list removed a committed value')
+        self.assertNotIn('al-b', active)
+
+        # the session now shows what was committed, and the edit re-applied
+        # commits on top of it
+        working = b.show()
+        self.assertIn('al-a', working)
+        self.assertNotIn('al-b', working)
+        b.set(host + ['alias'], 'al-b')
+        b.commit()
+        active = a.show_active()
+        for alias in ('al-1', 'al-a', 'al-b'):
+            self.assertIn(alias, active)
+
+    def test_recreated_node_does_not_hide_a_commit(self):
+        # A node deleted and set again hides everything that was below it,
+        # including what another session commits there meanwhile.
+        a, b = self.sessions[0], self.sessions[1]
+        host = base_path + [f'{host_prefix}-0']
+        a.set(host + ['inet'], '10.91.13.1')
+        a.commit()
+        b.show()  # b moves onto that commit
+
+        b.delete(host)
+        b.set(host + ['inet'], '10.91.13.2')
+        a.set(host + ['alias'], 'al-a')
+        a.commit()
+
+        with self.assertRaises(SessionError) as ctx:
+            b.commit()
+        self.assertIn('dropped', str(ctx.exception))
+        active = a.show_active()
+        self.assertIn('al-a', active, msg='a re-created node hid a committed value')
+        self.assertIn('10.91.13.1', active)
+
     def test_busy_stale_session_cannot_commit(self):
         # A session that was in use when somebody else committed cannot be
         # moved onto the new configuration until it is no longer in use. Its
