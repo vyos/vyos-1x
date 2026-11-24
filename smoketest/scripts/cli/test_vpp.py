@@ -2616,6 +2616,25 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.assertTrue(mpls_feature_enabled(vpp_vlan))
 
+    def test_30_6_mpls_vlan_removed_after_rejected_commit(self):
+        # a commit that is rejected must not leave anything behind that makes
+        # the next commit fail
+        vlan = f'{interface}.10'
+        vlan_path = ['interfaces', 'ethernet', interface, 'vif', '10']
+        self.cli_set(vlan_path + ['address', '192.0.2.129/25'])
+        self.cli_set(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+
+        self.cli_delete(vlan_path)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self._session.discard()
+
+        self.cli_delete(['protocols', 'mpls', 'interface', vlan])
+        self.cli_commit()
+        self.cli_delete(vlan_path)
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
