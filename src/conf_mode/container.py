@@ -393,7 +393,10 @@ def verify(container):
                     raise ConfigError('An unmanaged bridge requires no-name-server!')
                 if 'vrf' in network_config:
                     raise ConfigError('Unmanaged container bridges do not support VRFs yet!')
-                verify_native_bridge(network_config, network_config.get('bridge_config', {}))
+                container_addresses = [address for config in container.get('name', {}).values()
+                                       for address in config.get('network', {}).get(network, {}).get('address', [])]
+                verify_native_bridge(network_config, network_config.get('bridge_config', {}),
+                                     container_addresses)
                 for other, other_config in container['network'].items():
                     if other == network:
                         continue

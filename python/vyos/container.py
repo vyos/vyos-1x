@@ -21,7 +21,7 @@ from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
 
-def verify_native_bridge(network: dict, bridge: dict) -> None:
+def verify_native_bridge(network: dict, bridge: dict, container_addresses=()) -> None:
     ifname = dict_search('type.bridge.interface', network)
     if not bridge or 'deleted' in bridge or 'disable' in bridge:
         raise ConfigError(f'VyOS bridge "{ifname}" must be configured and enabled!')
@@ -42,6 +42,10 @@ def verify_native_bridge(network: dict, bridge: dict) -> None:
         if not any(a.ip == gateway and a.network == subnet for a in addresses):
             raise ConfigError(f'Gateway "{gateway}/{subnet.prefixlen}" must be '
                               f'assigned to bridge "{ifname}"!')
+    bridge_addresses = {address.ip for address in addresses}
+    for address in container_addresses:
+        if ip_address(address) in bridge_addresses:
+            raise ConfigError(f'IP address "{address}" is assigned to the native bridge!')
 
 def get_container_host_ifname(name: str) -> str:
     """

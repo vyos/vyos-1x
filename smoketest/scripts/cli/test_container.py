@@ -912,6 +912,93 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(interface_path)
             self.cli_commit()
 
+    def _test_unmanaged_bridge_owned_address(self, ipv6):
+        interface_path = ['interfaces', 'bridge', 'br1226']
+        network_path = base_path + ['network', 'owned1226']
+        name_path = base_path + ['name', 'owned1226']
+        if Config().exists(interface_path) or interface_exists('br1226'):
+            self.skipTest('Bridge address ownership fixture already exists')
+        if ipv6:
+            prefix = 'fd00:1226::/64'
+            gateway = 'fd00:1226::fe'
+            first = 'fd00:1226::1'
+            bridge_addresses = ['fd00:1226::1/64', 'fd00:1226::99/64']
+            conflicts = [first, 'fd00:1226:0:0:0:0:0:99']
+        else:
+            prefix = '10.250.226.0/24'
+            gateway = '10.250.226.254'
+            first = '10.250.226.1'
+            bridge_addresses = ['10.250.226.1/24', '10.250.226.99/24']
+            conflicts = [first, '10.250.226.99']
+        try:
+            self.cli_set(interface_path + ['address', f'{gateway}/{prefix.split("/")[1]}'])
+            for address in bridge_addresses:
+                self.cli_set(interface_path + ['address', address])
+            self.cli_set(network_path + ['prefix', prefix])
+            self.cli_set(network_path + ['gateway', gateway])
+            self.cli_set(network_path + ['type', 'bridge', 'interface', 'br1226'])
+            self.cli_set(network_path + ['no-name-server'])
+            self.cli_commit()
+            for address in conflicts:
+                with self.subTest(address=address):
+                    try:
+                        self.cli_set(name_path + ['image', busybox_image])
+                        self.cli_set(name_path + ['command', 'sleep 3600'])
+                        self.cli_set(name_path + ['disable'])
+                        self.cli_set(name_path + ['network', 'owned1226', 'address', address])
+                        with self.assertRaisesRegex(ConfigSessionError, 'assigned to the native bridge'):
+                            self.cli_commit()
+                    finally:
+                        self.cli_discard()
+                        self.cli_delete(name_path)
+                        self.cli_commit()
+
+            self.cli_delete(interface_path + ['address', bridge_addresses[0]])
+            self.cli_set(name_path + ['image', busybox_image])
+            self.cli_set(name_path + ['command', 'sleep 3600'])
+            self.cli_set(name_path + ['stop-timeout', '1'])
+            self.cli_set(name_path + ['capability', 'net-raw'])
+            self.cli_set(name_path + ['network', 'owned1226', 'address', first])
+            self.cli_commit()
+            info = cmd_to_json(['inspect', 'owned1226'])
+            self.assertTrue(info['State']['Running'])
+            addresses = info['NetworkSettings']['Networks']['owned1226']
+            self.assertEqual(addresses['GlobalIPv6Address' if ipv6 else 'IPAddress'], first)
+            pid = str(info['State']['Pid'])
+
+            def address_ready():
+                links = json.loads(cmdl(['nsenter', '-t', pid, '-n', 'ip', '-j',
+                                        'address', 'show', 'dev', 'eth0'], sudo=True))
+                return any(a['local'] == first and not a.get('tentative', False)
+                           and not a.get('dadfailed', False)
+                           for link in links for a in link['addr_info'])
+
+            self.assertTrue(wait_for(address_ready, timeout=10))
+            cmdl(['podman', 'exec', 'owned1226', 'ping'] + (['-6'] if ipv6 else []) +
+                 ['-c', '1', '-W', '2', gateway], sudo=True)
+            self.cli_set(interface_path + ['address', bridge_addresses[0]])
+            with self.assertRaisesRegex(ConfigSessionError, 'assigned to the native bridge'):
+                self.cli_commit()
+            self.cli_discard()
+            bridge = json.loads(cmdl(['ip', '-j', 'address', 'show', 'dev', 'br1226']))
+            self.assertNotIn(first, [a['local'] for link in bridge for a in link['addr_info']])
+            after = cmd_to_json(['inspect', 'owned1226'])
+            self.assertTrue(after['State']['Running'])
+            self.assertEqual(after['Id'], info['Id'])
+            self.assertEqual(after['State']['StartedAt'], info['State']['StartedAt'])
+        finally:
+            self.cli_discard()
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.cli_delete(interface_path)
+            self.cli_commit()
+
+    def test_unmanaged_bridge_owned_ipv4_address(self):
+        self._test_unmanaged_bridge_owned_address(ipv6=False)
+
+    def test_unmanaged_bridge_owned_ipv6_address(self):
+        self._test_unmanaged_bridge_owned_address(ipv6=True)
+
     def test_unchanged_network_transition_validation(self):
         interface_path = ['interfaces', 'bridge', 'br1219']
         if Config().exists(interface_path) or os.path.exists('/sys/class/net/br1219'):

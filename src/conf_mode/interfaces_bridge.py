@@ -55,9 +55,13 @@ def get_config(config=None):
                                     no_tag_node_value_mangle=True)
     bridge['container_networks'] = [network for network in networks.values()
                                     if dict_search('type.bridge.interface', network) == ifname]
+    containers = conf.get_config_dict(['container', 'name'], get_first_key=True,
+                                      no_tag_node_value_mangle=True)
+    bridge['container_addresses'] = [address for container in containers.values()
+                                    for name, attachment in container.get('network', {}).items()
+                                    if dict_search('type.bridge.interface', networks.get(name, {})) == ifname
+                                    for address in attachment.get('address', [])]
     if 'deleted' in bridge:
-        containers = conf.get_config_dict(['container', 'name'], get_first_key=True,
-                                          no_tag_node_value_mangle=True)
         previous_networks = conf.get_config_dict(['container', 'network'], effective=True,
                                                 key_mangling=('-', '_'), get_first_key=True,
                                                 no_tag_node_value_mangle=True)
@@ -157,7 +161,7 @@ def get_config(config=None):
 
 def verify(bridge):
     for network in bridge['container_networks']:
-        verify_native_bridge(network, bridge)
+        verify_native_bridge(network, bridge, bridge['container_addresses'])
 
     # to delete interface or remove a member interface VXLAN first need to check if
     # VXLAN does not require to be a member of a bridge interface
