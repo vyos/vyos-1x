@@ -29,6 +29,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from base_vyostest_shim import wrapped_error_regex
 
 from vyos.configsession import ConfigSessionError
+from vyos.defaults import vpp_failure_handler_marker
 from vyos.utils.convert import range_str_to_list
 from vyos.utils.convert import list_to_range_str
 from vyos.utils.process import process_named_running
@@ -2407,6 +2408,132 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         file_content = read_file(vpp_exporter_service_file)
         self.assertIn(f'ip vrf exec {vpp_exporter_vrf}', file_content)
         self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+    def test_30_vpp_restart_after_crash(self):
+        # The failure handler deletes 'vpp' and adds it back. One case of each
+        # kind that takes part in it:
+        # - 'interfaces vpp' (a bond), the exporter and PPPoE on a VPP
+        #   interface: guarded by the removal checks in vpp.py. VPP loses the
+        #   bond in the crash, so the bonding script has to create it again
+        # - per-node counters: re-run the Prometheus config as a dependent
+        # - IPFIX: a 'vpp' subsection whose cleanup needs the VPP API, which is
+        #   gone after the crash
+        # - a VLAN, and an ACL on it: the sub-interface has to come back in
+        #   VPP, and features bound to it with it
+        interface_bond = 'vppbond30'
+        bond_address = '192.0.2.30'
+        vlan = '200'
+        vlan_address = '198.51.100.30'
+        acl_name = 'ACL30'
+        pppoe_base = ['service', 'pppoe-server']
+        pool = 'POOL30'
+
+        # Configure one case of each kind; VPP runs with all of it
+        # 'interfaces vpp', the exporter and its per-node counters. A bond
+        # without members, so no second NIC is needed; a non-default mode
+        # shows its settings come back with it
+        self.cli_set(
+            interfaces_path
+            + ['bonding', interface_bond, 'address', f'{bond_address}/32']
+        )
+        self.cli_set(
+            interfaces_path + ['bonding', interface_bond, 'mode', 'active-backup']
+        )
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
+
+        # PPPoE server on a VPP interface
+        self.cli_set(pppoe_base + ['authentication', 'mode', 'noauth'])
+        self.cli_set(pppoe_base + ['gateway-address', '10.30.0.1'])
+        self.cli_set(pppoe_base + ['client-ip-pool', pool, 'range', '10.30.0.0/24'])
+        self.cli_set(pppoe_base + ['default-pool', pool])
+        self.cli_set(pppoe_base + ['interface', interface])
+
+        # IPFIX on the VPP interface
+        self.cli_set(base_path + ['ipfix', 'interface', interface])
+        self.cli_set(
+            base_path
+            + ['ipfix', 'collector', '127.0.0.2', 'source-address', '127.0.0.1']
+        )
+
+        # A VLAN on the VPP interface, with an ACL bound to it
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif', vlan, 'address']
+            + [f'{vlan_address}/24']
+        )
+        self.cli_set(
+            base_path
+            + ['acl', 'ip', 'tag-name', acl_name, 'rule', '10', 'action', 'permit']
+        )
+        self.cli_set(
+            base_path
+            + ['acl', 'ip', 'interface', f'{interface}.{vlan}', 'input']
+            + ['acl-tag', '10', 'tag-name', acl_name]
+        )
+        self.cli_commit()
+
+        # Crash VPP: systemd starts vpp-failure-handler, which deletes 'vpp'
+        # and adds it back, starting VPP again
+        _, old_pid = rc_cmd('systemctl show --property MainPID --value vpp.service')
+        # A signal VPP does not exit cleanly on, so systemd starts the
+        # OnFailure= handler; 'systemctl stop' would not
+        rc, _ = rc_cmd('sudo systemctl kill --signal SIGSEGV vpp.service')
+        self.assertEqual(rc, 0)
+
+        # Wait up to 2 minutes for the handler. Restored once VPP runs under a
+        # new PID and the oneshot handler has finished; MainPID is 0 while VPP
+        # is down
+        deadline = time.monotonic() + 120
+        restored = False
+        while time.monotonic() < deadline:
+            _, pid = rc_cmd('systemctl show --property MainPID --value vpp.service')
+            _, handler = rc_cmd(
+                'systemctl show --property ActiveState --value '
+                'vpp-failure-handler.service'
+            )
+            if pid not in ('0', old_pid) and handler == 'inactive':
+                restored = True
+                break
+            time.sleep(1)
+
+        # VPP is back, and the handler succeeded and cleaned up its marker
+        self.assertTrue(restored)
+        _, result = rc_cmd(
+            'systemctl show --property Result --value vpp-failure-handler.service'
+        )
+        self.assertEqual(result, 'success')
+        # A leftover marker would let a later user 'delete vpp' skip its checks
+        self.assertFalse(os.path.exists(vpp_failure_handler_marker))
+
+        # Configuration outside the 'vpp' section is back in the dataplane
+        _, out = rc_cmd('sudo vppctl show pppoe control-plane binding')
+        self.assertRegex(out, rf'{interface}\s+tap4096')
+        _, out = rc_cmd('sudo vppctl show bond details')
+        self.assertIn('BondEthernet30', out)
+        self.assertIn('mode: active-backup', out)
+        _, out = rc_cmd('sudo vppctl show interface BondEthernet30')
+        self.assertRegex(out, r'BondEthernet30\s+\d+\s+up')
+        self.assertEqual(bond_address, get_address(interface_bond))
+        # systemd restarts the exporter along with VPP
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+        _, out = rc_cmd(f'sudo vppctl show interface {interface}.{vlan}')
+        self.assertRegex(out, rf'{interface}\.{vlan}\s+\d+\s+up')
+        self.assertEqual(vlan_address, get_address(f'{interface}.{vlan}'))
+
+        # Features in the 'vpp' section are back too
+        _, out = rc_cmd('sudo vppctl show flowprobe feature')
+        self.assertIn(f'{interface} ip4 rx tx', out)
+        _, out = rc_cmd('sudo vppctl show acl-plugin acl')
+        self.assertIn(f'tag {{{acl_name}}}', out)
+        self.assertIn('applied inbound', out)
+
+        # Clean up what tearDown does not remove; the ACL goes too, as it
+        # still references the VLAN
+        self.cli_delete(pppoe_base)
+        self.cli_delete(base_path + ['acl'])
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
+        self.cli_commit()
 
 
 if __name__ == '__main__':
