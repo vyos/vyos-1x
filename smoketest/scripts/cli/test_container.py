@@ -548,6 +548,53 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             if sentinel_id is not None:
                 cmdl(['podman', 'rm', '-f', '--ignore', sentinel_id], sudo=True)
 
+    def test_network_removal_restores_starting_container(self):
+        network = 'start1220'
+        name = 'starting1220'
+        unit = f'vyos-container-{name}.service'
+        dropin = f'/run/systemd/system/{unit}.d/t9592-start.conf'
+        gate = '/run/t9592-starting1220'
+        if os.path.exists(dropin) or os.path.exists(gate):
+            self.skipTest('Starting-container fixture already exists')
+        network_path = base_path + ['network', network]
+        blocker_id = None
+        try:
+            self.cli_set(network_path + ['prefix', '10.250.220.0/24'])
+            self.cli_set(base_path + ['name', name, 'image', busybox_image])
+            self.cli_set(base_path + ['name', name, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.220.2'])
+            self.cli_commit()
+            blocker_id = cmdl(['podman', 'run', '-d', '--network', network,
+                               busybox_image, 'sleep', '3600'], sudo=True).strip()
+            cmdl(['mkdir', '-p', os.path.dirname(dropin)], sudo=True)
+            cmdl(['tee', dropin], input=(
+                '[Service]\n'
+                f'ExecStartPre=/bin/sh -c "while [ ! -e {gate} ]; do sleep 0.1; done"\n'
+            ), sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            cmdl(['systemctl', '--no-block', 'restart', unit], sudo=True)
+            def state():
+                return cmdl(['systemctl', 'show', unit, '--property=ActiveState', '--value']).strip()
+            self.assertTrue(wait_for(lambda: state() == 'activating', timeout=10))
+            self.cli_set(network_path + ['mtu', '1400'])
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_discard()
+            cmdl(['touch', gate], sudo=True)
+            self.assertTrue(wait_for(lambda: self.is_running(name), timeout=30),
+                            'Starting consumer not restored after failed network removal')
+            self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1500')
+        finally:
+            cmdl(['rm', '-f', dropin], sudo=True)
+            cmdl(['touch', gate], sudo=True)
+            cmdl(['systemctl', 'daemon-reload'], sudo=True)
+            if blocker_id is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', blocker_id], sudo=True)
+            self.cli_delete(base_path)
+            self.cli_commit()
+            cmdl(['rm', '-f', gate], sudo=True)
+
     def test_unmanaged_gateway_address(self):
         interface_path = ['interfaces', 'bridge', 'br1218']
         if Config().exists(interface_path) or os.path.exists('/sys/class/net/br1218'):

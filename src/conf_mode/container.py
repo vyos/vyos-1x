@@ -740,7 +740,8 @@ def generate(container):
                     rollback['files'][path] = stream.read()
             else:
                 rollback['files'][path] = None
-            if run(['systemctl', 'is-active', '--quiet', unit]) == 0:
+            state = cmdl(['systemctl', 'show', unit, '--property=ActiveState', '--value']).strip()
+            if state in ['active', 'activating']:
                 rollback['active_units'].append(unit)
 
     if 'network' in container:
