@@ -503,7 +503,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     def test_network_removal_failure_recovery(self):
         network = 'removal1217'
         name = 'removal1217'
-        blocker = 'removal-blocker1217'
+        sentinel = 'removal-blocker1217'
+        if cmdl(['podman', 'ps', '-a', '--filter', f'name=^{sentinel}$',
+                 '--format', '{{.ID}}'], sudo=True).strip():
+            self.skipTest('Removal fixture name already exists')
+        sentinel_id = None
+        blocker_id = None
         network_path = base_path + ['network', network]
         self.cli_set(network_path + ['prefix', '10.250.217.0/24'])
         self.cli_set(base_path + ['name', name, 'image', busybox_image])
@@ -513,8 +518,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.217.2'])
         self.cli_commit()
         try:
-            cmdl(['podman', 'run', '-d', '--name', blocker, '--network', network,
-                  busybox_image, 'sleep', '3600'], sudo=True)
+            sentinel_id = cmdl(['podman', 'run', '-d', '--name', sentinel, '--network', 'none',
+                                busybox_image, 'sleep', '3600'], sudo=True).strip()
+            blocker_id = cmdl(['podman', 'run', '-d', '--network', network,
+                               busybox_image, 'sleep', '3600'], sudo=True).strip()
             self.cli_set(network_path + ['mtu', '1400'])
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
@@ -527,13 +534,19 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                                     'link', 'show', 'dev', 'eth0'], sudo=True))
             self.assertEqual(links[0]['mtu'], 1500)
             cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.217.1'], sudo=True)
-            cmdl(['podman', 'rm', '-f', blocker], sudo=True)
+            cmdl(['podman', 'rm', '-f', blocker_id], sudo=True)
+            blocker_id = None
+            self.assertTrue(cmd_to_json(['inspect', sentinel_id])['State']['Running'],
+                            'Network blocker cleanup removed an unrelated container')
             self.cli_set(network_path + ['mtu', '1400'])
             self.cli_commit()
             self.assertEqual(cmd_to_json(['network', 'inspect', network])['options']['mtu'], '1400')
             self.assertTrue(self.is_running(name))
         finally:
-            cmdl(['podman', 'rm', '-f', '--ignore', blocker], sudo=True)
+            if blocker_id is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', blocker_id], sudo=True)
+            if sentinel_id is not None:
+                cmdl(['podman', 'rm', '-f', '--ignore', sentinel_id], sudo=True)
 
     def test_unmanaged_gateway_address(self):
         interface_path = ['interfaces', 'bridge', 'br1218']
