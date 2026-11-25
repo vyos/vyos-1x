@@ -1016,7 +1016,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(interface_path)
 
-    def test_12_dhcp_renew_reinstalls_missing_default(self):
+    def test_13_dhcp_renew_reinstalls_missing_default(self):
         # T9085: same-IP RENEW must reinstall a flushed IPv4 default.
         # eth0 has a DHCP server in the QEMU smoketest harness.
         if not self.running_in_smoketest_harness():
@@ -1071,7 +1071,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         while process_named_running('dhclient', cmdline=interface, timeout=10):
             sleep(0.250)
 
-    def test_13_dhcp_renew_reinstalls_kernel_only_loss(self):
+    def test_14_dhcp_renew_reinstalls_kernel_only_loss(self):
         # T9085: FRR still has the default line and the kernel route is
         # gone. An identical vtysh add does not call static_install_path.
         # `ip route del` of zebra's own proto is put back (no
