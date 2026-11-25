@@ -1745,6 +1745,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
 
+            # must survive OpenVPN restarts
+            tmp = get_interface_config(interface)
+            self.assertTrue(tmp['linkinfo']['info_data']['persist'])
+
 
         # check that no interface remained after deleting them
         self.cli_delete(base_path)
