@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import unittest
 
 from psutil import process_iter
@@ -23,6 +24,8 @@ from ipaddress import IPv4Network
 from ipaddress import IPv6Network
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.accel_ppp import accel_cmd
+from vyos.accel_ppp import accel_out_parse
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import PPPoEIf
 from vyos.ifconfig.interface import link_local_prefix
@@ -31,6 +34,7 @@ from vyos.utils.file import read_file
 from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_address
 from vyos.utils.network import mac2eui64
+from vyos.utils.process import rc_cmd
 from vyos.xml_ref import default_value
 
 config_file: str = '/etc/ppp/peers/{}'
@@ -45,6 +49,8 @@ name_servers: list = ['1.1.1.1', '2.2.2.2']
 ipv4_pool: str = '100.64.0.0/18'
 ipv6_pool: str = '2001:db8:8000::/48'
 ipv6_pool_pd: str = '2001:db8:9000::/48'
+pppoe_server_gateway: str = '100.64.0.1'
+pppoe_server_port: int = 2001
 
 def calculate_ipv6_interface_address(prefix: IPv6Network, sla_id: int, interface_id: int):
     # Ensure SLA-ID is 8 bits
@@ -99,6 +105,16 @@ def has_link_local_address(interface) -> bool:
     return any(IPv6Address(addr).is_link_local
                for addr in get_interface_addresses(interface, 'inet6'))
 
+def routes_via_interface(destination, interface) -> bool:
+    """ Check if the kernel forwards traffic for destination via interface """
+    rc, out = rc_cmd(f'ip -j route get {destination}')
+    return rc == 0 and json.loads(out)[0].get('dev') == interface
+
+def get_pppoe_server_sessions() -> list:
+    """ Sessions known to the local accel-ppp PPPoE server """
+    return accel_out_parse(accel_cmd(pppoe_server_port, 'show sessions '
+                                     'ifname,username,ip,state,rx-pkts').splitlines())
+
 # add a classmethod to setup a temporaray PPPoE server for "proper" validation
 class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -123,7 +139,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         cls.cli_set(cls, pppoe_server_path + ['client-ipv6-pool', 'IPv6-POOL', 'delegate', ipv6_pool_pd, 'delegation-prefix', '56'])
         cls.cli_set(cls, pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
         cls.cli_set(cls, pppoe_server_path + ['default-pool', 'IPv4-POOL'])
-        cls.cli_set(cls, pppoe_server_path + ['gateway-address', '100.64.0.1'])
+        cls.cli_set(cls, pppoe_server_path + ['gateway-address', pppoe_server_gateway])
         cls.cli_set(cls, pppoe_server_path + ['interface', pppoe_server_interface])
         for ns in name_servers:
             cls.cli_set(cls, pppoe_server_path + ['name-server', ns])
@@ -580,10 +596,11 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self._verify_interface_address(interface)
 
     def test_pppoe_connect_on_demand_default_route(self):
-        # In connect-on-demand mode pppd itself installs the default route,
-        # driven by "no-default-route"
+        # T9694: in connect-on-demand mode the default routes come from FRR,
+        # pppd must not install its own and bypass default-route-distance
         interface = self._interfaces[0]
         user, passwd = self.u_p_dict[interface]
+        distance = '250'
 
         self.cli_set(base_path + [interface, 'authentication', 'username', user])
         self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
@@ -592,20 +609,20 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         )
         self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
         self.cli_set(base_path + [interface, 'connect-on-demand'])
+        self.cli_set(base_path + [interface, 'default-route-distance', distance])
         self.cli_commit()
 
-        default_route = rf'ip route 0.0.0.0/0 {interface} tag 210'
-        default_route6 = rf'ipv6 route ::/0 {interface} tag 210'
+        default_route = rf'ip route 0.0.0.0/0 {interface} tag 210 {distance}'
+        default_route6 = rf'ipv6 route ::/0 {interface} tag 210 {distance}'
 
         # Whole-line match, "defaultroute" is a substring of "nodefaultroute"
         peer = read_file(config_file.format(interface)).splitlines()
         self.assertIn('demand', peer)
-        self.assertIn('defaultroute', peer)
-        self.assertIn('defaultroute6', peer)
-        self.assertNotIn('nodefaultroute', peer)
-        self.assertNotIn('nodefaultroute6', peer)
+        self.assertIn('nodefaultroute', peer)
+        self.assertIn('nodefaultroute6', peer)
+        self.assertNotIn('defaultroute', peer)
+        self.assertNotIn('defaultroute6', peer)
 
-        # FRR default route
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
         self.assertIn(default_route6, frrconfig)
@@ -623,6 +640,80 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('')
         self.assertNotIn(default_route, frrconfig)
         self.assertNotIn(default_route6, frrconfig)
+
+    def test_pppoe_connect_on_demand_dial(self):
+        # T9694: an on-demand backup link must only carry traffic while the
+        # primary WAN is gone - neither before nor after it has been dialed
+        interface = self._interfaces[0]
+        user, passwd = self.u_p_dict[interface]
+        static_base_path = ['protocols', 'static']
+        # Stand-in for the primary WAN, no next-hop needed
+        primary_path = static_base_path + ['route', '0.0.0.0/0', 'blackhole']
+        destination = '203.0.113.9'
+
+        def remove_static():
+            self.cli_delete(static_base_path)
+            self.cli_commit()
+        self.addCleanup(remove_static)
+
+        self.cli_set(primary_path + ['distance', '1'])
+        self.cli_set(base_path + [interface, 'authentication', 'username', user])
+        self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+        self.cli_set(
+            base_path + [interface, 'source-interface', self._source_interface]
+        )
+        self.cli_set(base_path + [interface, 'connect-on-demand'])
+        self.cli_set(base_path + [interface, 'default-route-distance', '250'])
+        self.cli_commit()
+
+        self.assertTrue(wait_for_interface(interface),
+                        msg=f'Interface {interface} not found after {connect_timeout} seconds!')
+        self.assertFalse(wait_for(routes_via_interface, destination, interface),
+                         msg=f'Undialed {interface} took over the default route')
+        self.assertFalse(any(s['username'] == user for s in get_pppoe_server_sessions()),
+                         msg='PPPoE session established before any traffic')
+
+        # Primary WAN gone - traffic follows the backup default route
+        self.cli_delete(primary_path)
+        self.cli_commit()
+        self.assertTrue(wait_for(routes_via_interface, destination, interface),
+                        msg=f'No default route via {interface} without primary WAN')
+
+        # The first packet triggers the dial, -w keeps trying until the peer
+        # replies. Client and server share this system, so the reply comes
+        # back via loopback - the server's packet counter proves the request
+        # crossed the PPPoE link
+        rc, out = rc_cmd(f'ping -c 1 -w {connect_timeout} {pppoe_server_gateway}')
+        self.assertEqual(rc, 0, msg=f'Ping via on-demand {interface} failed: {out}')
+
+        def session_active() -> bool:
+            return any(s['username'] == user and s['state'] == 'active'
+                       for s in get_pppoe_server_sessions())
+        self.assertTrue(wait_for(session_active, timeout=connect_timeout),
+                        msg=f'PPPoE server lists no active session for {user}')
+
+        session = next(s for s in get_pppoe_server_sessions()
+                       if s['username'] == user)
+        self.assertIn(IPv4Address(session['ip']), IPv4Network(ipv4_pool))
+        self.assertIn(session['ip'], get_interface_addresses(interface, 'inet'))
+        self.assertGreater(int(session['rx-pkts']), 0,
+                           msg='PPPoE server received no packets from the client')
+
+        def primary_installed() -> bool:
+            tmp = self.getFRRopmode('show ip route 0.0.0.0/0', json=True)
+            return any(r.get('protocol') == 'static' and r.get('distance') == 1
+                       and r.get('installed')
+                       and any(nh.get('blackhole') for nh in r.get('nexthops', []))
+                       for r in tmp.get('0.0.0.0/0', []))
+
+        # Primary WAN back - it must win over the dialed backup link
+        self.cli_set(primary_path + ['distance', '1'])
+        self.cli_commit()
+        self.assertTrue(wait_for(primary_installed),
+                        msg='Primary default route not installed')
+        self.assertFalse(wait_for(routes_via_interface, destination, interface),
+                         msg=f'Dialed {interface} took over the default route')
+        self.assertTrue(session_active(), msg='PPPoE session dropped')
 
     def test_pppoe_default_route_survives_static_deletion(self):
         # T6991/T9054: The PPPoE default route must not be withdrawn from FRR
