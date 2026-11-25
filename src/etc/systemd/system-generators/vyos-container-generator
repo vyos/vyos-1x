@@ -16,6 +16,7 @@
 
 import sys
 from configparser import ConfigParser
+from hashlib import sha256
 from pathlib import Path
 
 
@@ -28,7 +29,8 @@ def generate(output):
             continue
         network = config.get('Container', 'Network').split(':', 1)[0].removesuffix('.network')
         container = f'{quadlet.stem}.service'
-        recovery = f'vyos-container-bridge-recovery@{quadlet.stem}.service'
+        identifier = sha256(quadlet.stem.encode()).hexdigest()
+        recovery = f'vyos-container-bridge-recovery@{identifier}.service'
         device = f'sys-subsystem-net-devices-{bridge}.device'
         # Wait for teardown before restarting: a device can return while its
         # previous network/container stop jobs are still pending.
