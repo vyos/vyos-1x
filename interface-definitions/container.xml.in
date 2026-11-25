@@ -692,7 +692,7 @@
                 <description>Obtain IPv4 addresses, routes and DNS from DHCP</description>
               </valueHelp>
               <constraint>
-                <regex>host-local|dhcp</regex>
+                <regex>(host-local|dhcp)</regex>
               </constraint>
             </properties>
             <defaultValue>host-local</defaultValue>
@@ -751,13 +751,13 @@
                 <children>
                   <leafNode name="interface">
                     <properties>
-                      <help>Existing VyOS bridge without container-engine NAT or port forwarding</help>
+                      <help>Use existing bridge interface for container network</help>
                       <completionHelp>
                         <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
                       </completionHelp>
                       <valueHelp>
                         <format>brN</format>
-                        <description>VyOS bridge interface</description>
+                        <description>Bridge interface name</description>
                       </valueHelp>
                       <constraint>
                         <regex>br[0-9]+</regex>
