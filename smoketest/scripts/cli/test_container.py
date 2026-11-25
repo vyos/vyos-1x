@@ -619,9 +619,13 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                     with self.assertRaisesRegex(ConfigSessionError, 'reserved for the network gateway'):
                         self.cli_commit()
                     self.cli_delete(name_path + ['network', 'gateway1218', 'address', gateway])
-            self.cli_set(name_path + ['network', 'gateway1218', 'address', '10.250.218.2'])
+            for address in ['10.250.218.1', 'fd00:1218::1']:
+                self.cli_set(name_path + ['network', 'gateway1218', 'address', address])
             self.cli_commit()
             self.assertTrue(self.is_running('gateway1218'))
+            config = cmd_to_json(['inspect', 'gateway1218'])['NetworkSettings']['Networks']['gateway1218']
+            self.assertEqual(config['IPAddress'], '10.250.218.1')
+            self.assertEqual(config['GlobalIPv6Address'], 'fd00:1218::1')
         finally:
             self.cli_delete(base_path)
             self.cli_commit()
