@@ -246,6 +246,7 @@ from vyos.utils.permission import chmod_755
 from vyos.utils.process import popen
 from vyos.utils.process import process_named_running
 from vyos.template import render
+from vyos.template import render_to_string
 
 debug = True
 
@@ -284,6 +285,10 @@ STATE = {
     "search_domains": {},
     "changes": 0
     }
+
+# pdns-recursor reloads still owed for files already written. At start an
+# earlier instance may have died owing some, so the first apply reloads.
+PENDING = {'lua': True, 'zones': True}
 
 # the base schema that every received message must be in
 base_schema = Schema({
@@ -406,42 +411,61 @@ def validate_schema(data):
             f'op: "{data["op"]}", type: "{data["type"]}"'))
 
 
-def pdns_rec_control(command):
+def pdns_rec_control(command, expected_reply=None):
+    """True once pdns-recursor has the change: it ran, or reads it at start."""
     if not process_named_running('pdns_recursor'):
         logger.info(f'pdns_recursor not running, not sending "{command}"')
-        return
+        return True
 
     logger.info(f'Running "rec_control {command}"')
     (ret,ret_code) = popen((
             f"rec_control --socket-dir={PDNS_REC_RUN_DIR} {command}"))
-    if ret_code > 0:
+    if ret_code != 0:
         logger.exception((
             f'"rec_control {command}" failed with exit status {ret_code}, '
             f'output: "{ret}"'))
+        return False
+    if expected_reply is not None and ret != expected_reply:
+        logger.error((
+            f'"rec_control {command}" replied "{ret}", '
+            f'expected "{expected_reply}"'))
+        return False
+    return True
+
+def render_if_changed(destination, template, content, user, group):
+    """Like render(), but skip identical content. True if written."""
+    # as render() writes it
+    rendered = render_to_string(template, content).rstrip() + '\n'
+    try:
+        with open(destination, 'rb') as f:
+            if f.read() == rendered.encode():
+                logger.info(f"{destination} unchanged")
+                return False
+    except OSError:
+        pass
+
+    logger.info(f"Writing {destination}")
+    render(destination, template, content, user=user, group=group)
+    return True
 
 def make_resolv_conf(state):
-    logger.info(f"Writing {RESOLV_CONF_FILE}")
-    render(RESOLV_CONF_FILE, 'vyos-hostsd/resolv.conf.j2', state,
-            user='root', group='root')
+    return render_if_changed(RESOLV_CONF_FILE, 'vyos-hostsd/resolv.conf.j2',
+            state, user='root', group='root')
 
 def make_hosts(state):
-    logger.info(f"Writing {HOSTS_FILE}")
-    render(HOSTS_FILE, 'vyos-hostsd/hosts.j2', state,
+    return render_if_changed(HOSTS_FILE, 'vyos-hostsd/hosts.j2', state,
             user='root', group='root')
 
 def make_pdns_rec_conf(state):
-    logger.info(f"Writing {PDNS_REC_LUA_CONF_FILE}")
-
     # on boot, /run/pdns-recursor does not exist, so create it
     makedir(PDNS_REC_RUN_DIR, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
     chmod_755(PDNS_REC_RUN_DIR)
 
-    render(PDNS_REC_LUA_CONF_FILE,
+    PENDING['lua'] |= render_if_changed(PDNS_REC_LUA_CONF_FILE,
             'dns-forwarding/recursor.vyos-hostsd.conf.lua.j2',
             state, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
 
-    logger.info(f"Writing {PDNS_REC_ZONES_FILE}")
-    render(PDNS_REC_ZONES_FILE,
+    PENDING['zones'] |= render_if_changed(PDNS_REC_ZONES_FILE,
             'dns-forwarding/recursor.forward-zones.conf.j2',
             state, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
 
@@ -585,10 +609,16 @@ def handle_message(msg):
     elif op == 'apply':
         logger.info(f"Applying {STATE['changes']} changes")
         make_resolv_conf(STATE)
-        make_hosts(STATE)
+        PENDING['zones'] |= make_hosts(STATE)
         make_pdns_rec_conf(STATE)
-        pdns_rec_control('reload-lua-config')
-        pdns_rec_control('reload-zones')
+        # reload-zones wipes the cache under every zone, i.e. all of it for
+        # the "." forward zone. It also re-reads /etc/hosts (export-etc-hosts).
+        # A reload that failed is retried on the next apply. A failed
+        # reload-zones still exits 0; only its reply tells.
+        if PENDING['lua']:
+            PENDING['lua'] = not pdns_rec_control('reload-lua-config')
+        if PENDING['zones']:
+            PENDING['zones'] = not pdns_rec_control('reload-zones', 'ok')
         logger.info("Success")
         result = {'message': f'Applied {STATE["changes"]} changes'}
         STATE['changes'] = 0
