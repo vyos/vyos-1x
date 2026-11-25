@@ -446,6 +446,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         if Config().exists(interface_path) or os.path.exists(f'/sys/class/net/{bridge}'):
             self.skipTest('Bridge recovery fixture already exists')
         name = 'recover1216'
+        other = name + '-bridge-recovery'
         network = 'recover1216'
         try:
             self.cli_set(interface_path + ['address', '10.250.216.1/24'])
@@ -457,7 +458,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['name', name, 'capability', 'net-raw'])
             self.cli_set(base_path + ['name', name, 'stop-timeout', '1'])
             self.cli_set(base_path + ['name', name, 'network', network, 'address', '10.250.216.2'])
+            self.cli_set(base_path + ['name', other, 'image', busybox_image])
+            self.cli_set(base_path + ['name', other, 'command', 'sleep 3600'])
+            self.cli_set(base_path + ['name', other, 'stop-timeout', '1'])
+            self.cli_set(base_path + ['name', other, 'network', network, 'address', '10.250.216.3'])
             self.cli_commit()
+            self.assertTrue(self.is_running(other))
             for cycle in range(6):
                 with self.subTest(cycle=cycle):
                     cmdl(['ip', 'link', 'delete', bridge], sudo=True)
@@ -470,6 +476,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                     state = cmdl(['systemctl', 'show', f'vyos-{network}-network',
                                   '--property=ActiveState', '--value']).strip()
                     self.assertEqual(state, 'active')
+                    self.assertTrue(wait_for(lambda: self.is_running(other), timeout=30),
+                                    'Second container did not recover after bridge recreation')
                     cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2',
                           '10.250.216.1'], sudo=True)
             cmdl(['systemctl', 'stop', f'vyos-container-{name}'], sudo=True)

@@ -28,7 +28,7 @@ def generate(output):
             continue
         network = config.get('Container', 'Network').split(':', 1)[0].removesuffix('.network')
         container = f'{quadlet.stem}.service'
-        recovery = f'{quadlet.stem}-bridge-recovery.service'
+        recovery = f'vyos-container-bridge-recovery@{quadlet.stem}.service'
         device = f'sys-subsystem-net-devices-{bridge}.device'
         # Wait for teardown before restarting: a device can return while its
         # previous network/container stop jobs are still pending.
