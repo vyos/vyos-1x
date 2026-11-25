@@ -412,6 +412,72 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(mapping + ['client1'])
         self.cli_commit()
 
+    def test_static_mapping_without_address(self):
+        # T9689: a mapping may bind a MAC/DUID to a hostname and/or options only
+        shared_net_name = 'SMOKE-HOSTONLY'
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        mapping = pool + ['static-mapping']
+        conf_path = ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'reservations']
+
+        duid = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:01'
+        mac = '00:50:00:00:00:11'
+
+        self.cli_set(pool + ['interface', interface])
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['range', '1', 'start', inc_ip(subnet, 256)])
+        self.cli_set(pool + ['range', '1', 'stop', inc_ip(subnet, 65535)])
+
+        self.cli_set(mapping + ['duid-only', 'duid', duid])
+        self.cli_set(mapping + ['duid-only', 'option', 'name-server', dns_1])
+        self.cli_set(mapping + ['mac-only', 'mac', mac])
+        # disabled mapping without identifier or address must not block commit
+        self.cli_set(mapping + ['disabled', 'disable'])
+        self.cli_commit()
+
+        obj = loads(read_file(KEA6_CONF))
+        reservations = self.walk_path(obj, conf_path)
+        by_host = {r['hostname']: r for r in reservations}
+        self.assertEqual(set(by_host), {'duid-only', 'mac-only'})
+
+        self.assertEqual(by_host['duid-only']['duid'], duid)
+        self.assertNotIn('hw-address', by_host['duid-only'])
+        self.assertIn({'name': 'dns-servers', 'data': dns_1},
+                      by_host['duid-only']['option-data'])
+        self.assertEqual(by_host['mac-only']['hw-address'], mac)
+        self.assertNotIn('duid', by_host['mac-only'])
+
+        for reservation in reservations:
+            self.assertNotIn('ip-addresses', reservation)
+            self.assertNotIn('prefixes', reservation)
+
+        # No identifier and no address: warning only, mapping is not rendered
+        self.cli_set(mapping + ['no-id', 'option', 'name-server', dns_2])
+        self.cli_commit()
+        obj = loads(read_file(KEA6_CONF))
+        self.assertEqual(len(self.walk_path(obj, conf_path)), 2)
+
+        # No identifier with a prefix: accepted by 1.5.1, warning only
+        self.cli_set(mapping + ['no-id', 'ipv6-prefix', inc_ip(subnet, 1 << 64) + '/64'])
+        self.cli_commit()
+        obj = loads(read_file(KEA6_CONF))
+        self.assertEqual(len(self.walk_path(obj, conf_path)), 2)
+        self.cli_delete(mapping + ['no-id', 'ipv6-prefix'])
+
+        # MAC and DUID together are rejected
+        self.cli_set(mapping + ['duid-only', 'mac', mac])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(mapping + ['duid-only', 'mac'])
+
+        # An address reservation still requires an identifier
+        self.cli_set(mapping + ['no-id', 'ipv6-address', inc_ip(subnet, 10)])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(mapping + ['no-id'])
+        self.cli_commit()
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
     def test_data_dir_foreign_owner(self):
         # T9674: system uids can shift between releases while /config keeps
         # the old numeric owner, leaving Kea unable to write its DUID file
