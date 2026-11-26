@@ -24,7 +24,9 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.process import call
 from vyos.utils.process import cmdl
 from vyos.utils.process import DEVNULL
+from vyos.utils.process import STDOUT
 from vyos.utils.disk import device_from_id
+from vyos.utils.disk import udev_settle
 
 def list_disks():
     disks = set()
@@ -71,7 +73,8 @@ def delete_partition(disk: str, partition_idx: int):
 
 def format_disk_like(target: str, proto: str):
     dump = cmdl(['sfdisk', '-d', f'/dev/{proto}'])
-    cmdl(['sfdisk', '--force', f'/dev/{target}'], input=dump)
+    cmdl(['sfdisk', '--force', f'/dev/{target}'], input=dump, stderr=STDOUT)
+    udev_settle()
 
 
 if __name__ == '__main__':

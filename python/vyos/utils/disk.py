@@ -22,6 +22,11 @@ def device_from_id(id):
         if device.name.endswith(id):
             return device.readlink().stem
 
+def udev_settle(timeout: int = 30):
+    """ Wait for pending udev events, e.g. partition re-reads after sfdisk """
+    from vyos.utils.process import cmdl
+    cmdl(['udevadm', 'settle', f'--timeout={timeout}'])
+
 def get_storage_stats(directory, human_units=True):
     """ Return basic storage stats for given directory """
     from re import sub as re_sub
