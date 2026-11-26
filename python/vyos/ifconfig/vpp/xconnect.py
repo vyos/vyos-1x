@@ -43,8 +43,9 @@ def _transform_members(members):
 
 
 class VPPXconnectInterface(VPPInterface):
-    def __init__(self, ifname):
+    def __init__(self, ifname, config=None):
         self.vpp_ifname = ifname
+        self.vlan_members = (config or {}).get('vlan_members', [])
 
         super().__init__(self.vpp_ifname)
 
@@ -91,6 +92,12 @@ class VPPXconnectInterface(VPPInterface):
     def remove(self, members):
         first, second = _transform_members(members)
         self.del_l2_xconnect(first, second)
+
+        # VPP disables promiscuous mode when a member returns to L3 mode;
+        # keep it for interfaces with their own VLAN (vif/vif-s)
+        # sub-interfaces
+        for member in self.vlan_members:
+            self.vpp.set_promisc(member, enable=True)
 
     def update(self, config):
         members = config['member']['interface']

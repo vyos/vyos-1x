@@ -51,6 +51,8 @@ from vyos.utils.network import get_vrf_tableid
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.file import read_file
 from vyos.vpp.config_deps import deps_bond_dict
+from vyos.vpp.config_deps import deps_bridge_dict
+from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_resource_checks.memory import no_multi_seg_fits
 from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.config_verify import verify_vpp_mac_change_supported
@@ -278,6 +280,8 @@ def get_config(config=None):
             no_tag_node_value_mangle=True,
         )
         ethernet['vpp_bond_members'] = deps_bond_dict(conf)
+        ethernet['vpp_bridge_members'] = deps_bridge_dict(conf)
+        ethernet['vpp_xconnect_members'] = deps_xconnect_dict(conf)
 
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
@@ -613,11 +617,13 @@ def apply(ethernet):
         sync_vpp_lcp_vrf_tables(ethernet, vpp_api)
 
         # VPP requires promiscuous mode to pass VLAN-tagged traffic;
-        # also keep it enabled for VPP bond members
+        # also keep it enabled for VPP bond, bridge and xconnect members
         needs_promisc = (
             'vif' in ethernet
             or 'vif_s' in ethernet
-            or ifname in ethernet.get('vpp_bond_members')
+            or ifname in ethernet.get('vpp_bond_members', {})
+            or ifname in ethernet.get('vpp_bridge_members', {})
+            or ifname in ethernet.get('vpp_xconnect_members', {})
         )
         vpp_api.set_promisc(ifname, enable=needs_promisc)
 

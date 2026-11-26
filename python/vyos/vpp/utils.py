@@ -176,6 +176,39 @@ def cli_ethernet_with_vifs_ifaces(
     return ifaces
 
 
+def vlan_members(config_instance, path: list[str]) -> list[str]:
+    """List VPP Ethernet interfaces that are, or were before this commit,
+    members of the bond, bridge or xconnect at path, and have VLAN
+    (vif/vif-s) sub-interfaces configured
+
+    Args:
+        config_instance (VyOS Config): VyOS Config instance
+        path (list[str]): CLI path of the bond, bridge or xconnect interface
+
+    Returns:
+        list[str]: list of interfaces
+    """
+    from vyos.configdict import has_vlan_subinterface_configured
+
+    def _members(effective: bool) -> set[str]:
+        tmp = config_instance.get_config_dict(
+            path + ['member'],
+            key_mangling=('-', '_'),
+            effective=effective,
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+        )
+        return set(tmp.get('interface', []))
+
+    members = _members(effective=True) | _members(effective=False)
+    return sorted(
+        member
+        for member in members
+        if config_instance.exists(['vpp', 'settings', 'interface', member])
+        and has_vlan_subinterface_configured(config_instance, member)
+    )
+
+
 def vpp_ifaces_list(vpp_api) -> list[dict]:
     """List interfaces in VPP
 

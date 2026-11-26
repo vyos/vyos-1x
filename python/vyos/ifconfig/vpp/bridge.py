@@ -21,9 +21,10 @@ from vyos.vpp.utils import iftunnel_transform
 
 
 class VPPBridgeInterface(VPPInterface):
-    def __init__(self, ifname):
+    def __init__(self, ifname, config=None):
         self.instance = int(ifname.removeprefix('vppbr'))
         self.vpp_ifname = f'br{self.instance}'
+        self.vlan_members = (config or {}).get('vlan_members', [])
 
         super().__init__(self.vpp_ifname)
 
@@ -115,6 +116,12 @@ class VPPBridgeInterface(VPPInterface):
             members = self.get_members()
             for member in members:
                 self.detach_member(member=member)
+
+            # VPP disables promiscuous mode when a member returns to L3 mode;
+            # keep it for interfaces with their own VLAN (vif/vif-s)
+            # sub-interfaces
+            for member in self.vlan_members:
+                self.vpp.set_promisc(member, enable=True)
 
             # Delete bridge interface
             self.delete()

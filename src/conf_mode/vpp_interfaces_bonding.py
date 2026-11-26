@@ -16,15 +16,12 @@
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import has_vlan_subinterface_configured
 from vyos.configdict import is_node_changed
-from vyos.configdict import leaf_node_changed
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos import ConfigError
 from vyos.utils.assertion import assert_mac
-from vyos.utils.dict import dict_search
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig import Interface
@@ -38,6 +35,7 @@ from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
 from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import vlan_members
 
 
 def _get_bond_mode(mode_name: str) -> int:
@@ -130,16 +128,7 @@ def get_config(config=None) -> dict:
     # detached and re-attached during a rebuild) keep promiscuous mode
     # enabled if they have their own VLAN (vif/vif-s) sub-interfaces
     # configured
-    removed_members = (
-        leaf_node_changed(conf, iface_path + ['member', 'interface']) or []
-    )
-    current_members = dict_search('member.interface', config, default=[])
-    vlan_candidates = set(removed_members + current_members)
-    config['vlan_members'] = [
-        member
-        for member in vlan_candidates
-        if has_vlan_subinterface_configured(conf, member)
-    ]
+    config['vlan_members'] = vlan_members(conf, iface_path)
 
     # Dependency
     config['xconn_members'] = deps_xconnect_dict(conf)
