@@ -189,6 +189,12 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         longitude = '122.267255W'
         location_path = base_path + ['interface', interface, 'location']
 
+        # longitude without latitude must be rejected
+        self.cli_set(location_path + ['coordinate-based', 'longitude', longitude])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(location_path + ['coordinate-based', 'longitude'])
+
         # latitude without longitude must be rejected
         self.cli_set(location_path + ['coordinate-based', 'latitude', latitude])
         with self.assertRaises(ConfigSessionError):
