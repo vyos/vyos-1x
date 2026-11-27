@@ -267,6 +267,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         network = 'unmanaged'
         name = 'unmanaged1'
         interface_path = ['interfaces', 'bridge', bridge]
+        if Config().exists(interface_path) or interface_exists(bridge):
+            self.skipTest('Native bridge fixture already exists')
         self.cli_set(interface_path + ['address', '10.250.49.1/24'])
         self.cli_set(interface_path + ['address', 'fd00:1149::1/64'])
         self.cli_set(base_path + ['network', network, 'prefix', '10.250.49.0/24'])
@@ -378,6 +380,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
     def test_unmanaged_network_replacement(self):
         interface_path = ['interfaces', 'bridge', 'br1190']
+        if Config().exists(interface_path) or interface_exists('br1190'):
+            self.skipTest('Network replacement bridge fixture already exists')
         old_path = base_path + ['network', 'old']
         new_path = base_path + ['network', 'new']
         prefixes = ['10.250.190.0/24', 'fd00:1190::/64']
