@@ -602,6 +602,15 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             cmdl(['systemctl', 'stop', f'vyos-container-{name}'], sudo=True)
             self.assertFalse(wait_for(lambda: self.is_running(name), timeout=3),
                              'Recovery restarted a manually stopped container without a bridge event')
+            cmdl(['ip', 'link', 'delete', bridge], sudo=True)
+            cmdl(['ip', 'link', 'add', bridge, 'type', 'bridge'], sudo=True)
+            cmdl(['ip', 'address', 'add', '10.250.216.1/24', 'dev', bridge], sudo=True)
+            cmdl(['ip', 'link', 'set', bridge, 'up'], sudo=True)
+            for container in names:
+                self.assertTrue(wait_for(lambda: self.is_running(container), timeout=30),
+                                'Bridge recreation did not restart an enabled consumer')
+                cmdl(['podman', 'exec', container, 'ping', '-c', '1', '-W', '2',
+                      '10.250.216.1'], sudo=True)
             self.cli_set(base_path + ['name', name, 'disable'])
             self.cli_commit()
             cmdl(['ip', 'link', 'delete', bridge], sudo=True)
