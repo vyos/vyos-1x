@@ -71,18 +71,8 @@ holdoff {{ holdoff }}
 
 {% if connect_on_demand is vyos_defined %}
 demand
-# See T2249. PPP default route options should only be set when in on-demand
-# mode. As soon as we are not in on-demand mode the default-route handling is
-# passed to the ip-up.d/ip-down.s scripts which is required for VRF support.
-{%     if no_default_route is not vyos_defined %}
-defaultroute
-{{ 'defaultroute6' if ipv6 is vyos_defined }}
-{%     else %}
-nodefaultroute
-{{ 'nodefaultroute6' if ipv6 is vyos_defined }}
-{%     endif %}
-{% else %}
+{% endif %}
+# Default routes are installed by FRR so default-route-distance applies
 nodefaultroute
 noreplacedefaultroute
 {{ 'nodefaultroute6' if ipv6 is vyos_defined }}
-{% endif %}
