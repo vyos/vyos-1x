@@ -36,6 +36,7 @@ from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
+from vyos.utils.process import run
 
 base_path = ['container']
 PROCESS_NAME = 'conmon'
@@ -833,6 +834,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.skipTest('Queued-start fixture already exists')
         network_path = base_path + ['network', network]
         blocker = None
+        gate_created = False
 
         def queued_start():
             manager = dbus.Interface(dbus.SystemBus().get_object(
@@ -858,6 +860,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 '[Service]\nType=oneshot\nRemainAfterExit=yes\n'
                 f'ExecStart=/bin/sh -c "while [ ! -e {gate} ]; do sleep 0.1; done"\n'
             ), sudo=True)
+            gate_created = True
             cmdl(['mkdir', '-p', os.path.dirname(dropin)], sudo=True)
             cmdl(['tee', dropin], input=(
                 f'[Unit]\nRequires={gate_unit}\nAfter={gate_unit}\n'
@@ -891,7 +894,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             cmdl(['touch', gate], sudo=True)
             cmdl(['rm', '-f', dropin], sudo=True)
             cmdl(['systemctl', 'daemon-reload'], sudo=True)
-            cmdl(['systemctl', 'stop', unit, gate_unit], sudo=True)
+            units = [unit, gate_unit] if gate_created else [unit]
+            run(['sudo', 'systemctl', 'stop'] + units)
             cmdl(['rm', '-f', gate_unit_file], sudo=True)
             cmdl(['systemctl', 'daemon-reload'], sudo=True)
             if blocker is not None:
