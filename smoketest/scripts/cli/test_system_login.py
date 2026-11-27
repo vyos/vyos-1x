@@ -236,6 +236,60 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         tmp = cmdl(['passwd', '-S', locked_user], sudo=True)
         self.assertIn(f'{locked_user} P ', tmp)
 
+    def test_system_login_show_users(self):
+        show_users = '/usr/libexec/vyos/op_mode/show_users.py'
+        test_user = users[0]
+        # Debian system account with a '*' password
+        system_user = 'daemon'
+
+        self.cli_set(base_path + ['user', test_user, 'authentication',
+                                  'plaintext-password', f'{test_user}-pSWd-t3st'])
+        self.cli_commit()
+        # Accounts without a lastlog record are not listed
+        cmdl(['lastlog', '--set', '--user', test_user], sudo=True)
+
+        if os.geteuid() != 0:
+            # /etc/shadow is only readable by root - must refuse to run
+            cmdl([show_users, 'all'], expect=[1])
+
+        def users_shown(filter_type=None) -> dict:
+            args = [show_users] + ([filter_type] if filter_type else [])
+            out = cmdl(args, sudo=True)
+            # Username, Type, Locked are the first three columns
+            return {line.split()[0]: line.split()[1:3] for line in out.splitlines()[2:]}
+
+        tmp = users_shown('all')
+        self.assertEqual(tmp[test_user], ['vyos', 'False'])
+        self.assertEqual(tmp[system_user], ['other', 'True'])
+
+        tmp = users_shown()
+        self.assertIn(test_user, tmp)
+        self.assertNotIn(system_user, tmp)
+
+        tmp = users_shown('locked')
+        self.assertNotIn(test_user, tmp)
+        self.assertIn(system_user, tmp)
+
+        tmp = users_shown('vyos')
+        self.assertIn(test_user, tmp)
+        self.assertNotIn(system_user, tmp)
+
+        tmp = users_shown('other')
+        self.assertNotIn(test_user, tmp)
+        self.assertIn(system_user, tmp)
+
+        # A disabled CLI user must be reported as locked
+        self.cli_set(base_path + ['user', test_user, 'disable'])
+        self.cli_commit()
+
+        tmp = users_shown('all')
+        self.assertEqual(tmp[test_user], ['vyos', 'True'])
+        self.assertNotIn(test_user, users_shown())
+        self.assertIn(test_user, users_shown('locked'))
+
+        # tearDown() removes the user, do not leave its record for a reused UID
+        cmdl(['lastlog', '--clear', '--user', test_user], sudo=True)
+
     def test_system_login_weak_password_warning(self):
         username = weak_passwd_user[0]
         self.cli_set(base_path + [

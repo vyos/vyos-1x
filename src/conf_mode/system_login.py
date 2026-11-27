@@ -37,6 +37,7 @@ from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_current_user
 from vyos.utils.auth import get_local_passwd_entries
 from vyos.utils.auth import get_local_users
+from vyos.utils.auth import get_shadow_password
 from vyos.utils.auth import get_user_home_dir
 from vyos.utils.auth import MIN_USER_UID
 from vyos.utils.configfs import delete_cli_node
@@ -74,14 +75,6 @@ MIN_TACACS_UID = 900
 SSH_DSA_DEPRECATION_WARNING: str = f'{SSH_DSA_DEPRECATION_WARNING} '\
 'The following users are using SSH-DSS keys for authentication.'
 
-
-def get_shadow_password(username):
-    with open('/etc/shadow') as f:
-        for user in f.readlines():
-            items = user.split(":")
-            if username == items[0]:
-                return items[1]
-    return None
 
 def get_config(config=None):
     if config:
