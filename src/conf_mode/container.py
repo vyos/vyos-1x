@@ -161,6 +161,11 @@ def verify(container):
                 if Decimal(container_config['cpu_quota']) > cores:
                     raise ConfigError(f'Cannot set limit to more cores than available "{name}"!')
 
+            # A trailing backslash continues Exec= onto the next quadlet line
+            for key in ['command', 'arguments']:
+                if key in container_config and container_config[key].rstrip().endswith('\\'):
+                    raise ConfigError(f'Container "{name}" {key} must not end with a backslash!')
+
             if 'network' in container_config:
                 if len(container_config['network']) > 1:
                     raise ConfigError(f'Only one network can be specified for container "{name}"!')
@@ -441,6 +446,8 @@ def generate_network_options(name, network_config):
     return out
 
 def generate_quadlet_options(name, container_config, host_ident, network_config):
+    import re
+
     out = [
         f'ContainerName={name}',
         f'Image={container_config["image"]}',
@@ -467,13 +474,20 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
             cap = cap.upper().replace('-', '_')
             out.append(f'AddCapability={cap}')
 
+    exec_parts = []
+
     if 'command' in container_config:
-        command = container_config['command'].strip()
+        exec_parts.append(container_config['command'].strip())
 
-        if 'arguments' in container_config:
-            command += ' ' + container_config['arguments'].strip()
+    if 'arguments' in container_config:
+        exec_parts.append(container_config['arguments'].strip())
 
-        out.append(f'Exec={command}')
+    if exec_parts:
+        # systemd treats '%' as a specifier prefix in unit files, so a lone '%'
+        # must be doubled to reach the container unchanged. An already escaped
+        # '%%' is kept as is, so existing configurations keep working.
+        exec_line = re.sub(r'%%|%', '%%', ' '.join(exec_parts))
+        out.append(f'Exec={exec_line}')
 
     if 'device' in container_config:
         for dev, dev_config in container_config['device'].items():
