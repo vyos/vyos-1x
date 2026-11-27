@@ -269,6 +269,15 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         interface_path = ['interfaces', 'bridge', bridge]
         if Config().exists(interface_path) or interface_exists(bridge):
             self.skipTest('Native bridge fixture already exists')
+
+        def netavark_rules():
+            ruleset = json.loads(cmdl(['nft', '-j', 'list', 'ruleset'], sudo=True))
+            return {json.dumps({key: value for key, value in item['rule'].items()
+                                if key != 'handle'}, sort_keys=True)
+                    for item in ruleset['nftables']
+                    if 'rule' in item and item['rule']['table'] == 'netavark'}
+
+        previous_rules = netavark_rules()
         self.cli_set(interface_path + ['address', '10.250.49.1/24'])
         self.cli_set(interface_path + ['address', 'fd00:1149::1/64'])
         self.cli_set(base_path + ['network', network, 'prefix', '10.250.49.0/24'])
@@ -355,11 +364,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(wait_for(ipv6_ready, timeout=10), 'Container IPv6 DAD did not complete')
             cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', '10.250.49.1'], sudo=True)
             cmdl(['podman', 'exec', name, 'ping', '-6', '-c', '1', '-W', '2', 'fd00:1149::1'], sudo=True)
-            ruleset = json.loads(cmdl(['nft', '-j', 'list', 'ruleset'], sudo=True))
-            rules = [item['rule'] for item in ruleset['nftables']
-                     if 'rule' in item and item['rule']['table'] == 'netavark']
-            self.assertNotIn('10.250.49.0', json.dumps(rules))
-            self.assertNotIn('fd00:1149::', json.dumps(rules))
+            for rule in netavark_rules() - previous_rules:
+                for reference in ['10.250.49.0', 'fd00:1149::', bridge]:
+                    self.assertNotIn(reference, rule)
             self.cli_delete(base_path + ['name', name])
             self.cli_set(base_path + ['network', network, 'description', 'no consumers'])
             self.cli_commit()
