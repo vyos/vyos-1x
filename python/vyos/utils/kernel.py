@@ -30,6 +30,28 @@ CMDLINE_PATH = '/proc/cmdline'
 KEXEC_CRASH_LOADED = '/sys/kernel/kexec_crash_loaded'
 KEXEC_CRASH_SIZE = '/sys/kernel/kexec_crash_size'
 
+# Generic netlink family registered by a Kernel module
+KMOD_GENL_FAMILY = {
+    'l2tp_netlink': 'l2tp',
+    'ovpn': 'ovpn',
+    'wireguard': 'wireguard',
+}
+
+# Socket address family and protocol (IPPROTO_L2TP) served by a Kernel module
+KMOD_SOCKET_PROTO = {
+    'l2tp_ip': ('AF_INET', 115),
+    'l2tp_ip6': ('AF_INET6', 115),
+}
+
+# nftables ruleset depending on a Kernel module. "nft -c" passes it through the
+# Kernel without committing, which autoloads the module or fails with ENOENT
+_NFT_NAT_CHAIN = ('add table ip vyos_kmod_probe\n'
+                  'add chain ip vyos_kmod_probe p { type nat hook postrouting priority 100; }\n')
+KMOD_NFT_PROBE = {
+    'nft_chain_nat': _NFT_NAT_CHAIN,
+    'nft_nat': _NFT_NAT_CHAIN + 'add rule ip vyos_kmod_probe p snat to 192.0.2.1\n',
+}
+
 def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
     """Load a kernel module via modprobe.
 
@@ -62,9 +84,79 @@ def unload_module(name: str) -> int:
 
     return run(['rmmod', name])
 
-def check_kmod(k_mod):
-    """ Common utility function to load required kernel modules on demand """
+def is_module_available(module: str) -> bool:
+    """Check if the running Kernel provides a module.
+
+    A module not loaded yet is requested the same way the feature using it
+    does, which makes the Kernel autoload it - inside a container from the
+    host. This also covers built-in drivers, which need not show up in
+    /sys/module. A module without such a probe is only available if loaded.
+    """
+    if is_module_loaded(module):
+        return True
+
+    if module in KMOD_NFT_PROBE:
+        from vyos.utils.process import run
+        return run(['nft', '-c', '-f', '-'], input=KMOD_NFT_PROBE[module]) == 0
+
+    if module in KMOD_SOCKET_PROTO:
+        import socket
+        family, proto = KMOD_SOCKET_PROTO[module]
+        try:
+            socket.socket(getattr(socket, family), socket.SOCK_DGRAM, proto).close()
+        except OSError:
+            return False
+        return True
+
+    if module in KMOD_GENL_FAMILY:
+        from pyroute2.netlink import genlmsg
+        from pyroute2.netlink.exceptions import NetlinkError
+        from pyroute2.netlink.generic import GenericNetlinkSocket
+        try:
+            with GenericNetlinkSocket() as sock:
+                # pyroute2 logs a missing family as error by default
+                sock.module_err_level = 'debug'
+                sock.bind(KMOD_GENL_FAMILY[module], genlmsg)
+        except NetlinkError:
+            return False
+        return True
+
+    return False
+
+def verify_kmod(k_mod):
+    """
+    Raise ConfigError if a required Kernel module is unavailable when running
+    as container. The Kernel belongs to the host, modules can not be loaded
+    from within the container. No-op otherwise as check_kmod() loads them.
+    """
     from vyos import ConfigError
+    from vyos.system.image import is_running_as_container
+
+    if not is_running_as_container():
+        return
+    if isinstance(k_mod, str):
+        k_mod = k_mod.split()
+    for module in k_mod:
+        if not is_module_available(module):
+            raise ConfigError(f'Kernel module "{module}" is not available, '
+                              f'load it on the container host on every boot: '
+                              f'modprobe {module}')
+
+def check_kmod(k_mod, verify=True):
+    """
+    Common utility function to load required kernel modules on demand.
+
+    Inside a container modprobe can not succeed, the modules are verified to
+    be available instead. Pass verify=False only if verify() of the caller
+    already called verify_kmod() for the same modules.
+    """
+    from vyos import ConfigError
+    from vyos.system.image import is_running_as_container
+
+    if is_running_as_container():
+        if verify:
+            verify_kmod(k_mod)
+        return
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:
@@ -79,6 +171,11 @@ def is_module_loaded(module):
 def unload_kmod(k_mod):
     """ Common utility function to unload required kernel modules on demand """
     from vyos import ConfigError
+    from vyos.system.image import is_running_as_container
+
+    # The modules belong to the host Kernel and may be in use by the host
+    if is_running_as_container():
+        return
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:

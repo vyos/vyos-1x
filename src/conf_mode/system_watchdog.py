@@ -19,7 +19,9 @@ from typing import Optional
 from vyos.config import Config
 from vyos.base import Warning
 from vyos.template import render
+from vyos.system.image import is_running_as_container
 from vyos.utils.kernel import load_module
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.process import call, cmdl
 from vyos import ConfigError
 from vyos import airbag
@@ -79,6 +81,11 @@ def _get_watchdog_timeout_limits() -> tuple[int, int]:
 
 
 def _verify_watchdog_module(module: str) -> None:
+    if is_running_as_container():
+        # modprobe and modinfo can not see the Kernel modules of the host
+        verify_kmod(module)
+        return
+
     # Dry-run modprobe (-n) in quiet mode (-q) verifies availability without loading
     if load_module(module, quiet=True, dry_run=True) != 0:
         raise ConfigError(
@@ -166,9 +173,11 @@ def generate(watchdog):
         modules_load_file.unlink(missing_ok=True)
         return None
 
-    # Persist kernel module autoload on boot if specified (even if not enabled)
+    # Persist kernel module autoload on boot if specified (even if not enabled).
+    # A container can neither persist nor load modules of the host Kernel.
     module = watchdog.get('module')
-    if module:
+    container = is_running_as_container()
+    if module and not container:
         try:
             modules_load_directory.mkdir(parents=True, exist_ok=True)
             modules_load_file.write_text(f"{module}\n")
@@ -180,7 +189,7 @@ def generate(watchdog):
 
     # Try to load kernel module if specified and /dev/watchdog0 is missing
     if not WATCHDOG_DEV.exists():
-        if module:
+        if module and not container:
             # Try to load the module using vyos call wrapper for logging/airbag integration
             try:
                 rc = load_module(module, quiet=True, dry_run=False)

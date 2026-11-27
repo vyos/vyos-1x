@@ -22,6 +22,7 @@ from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import verify_kmod
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmdl
 from vyos.utils.process import run
@@ -62,6 +63,8 @@ def verify(nat):
     if not nat or 'deleted' in nat:
         # no need to verify the CLI as NAT66 is going to be deactivated
         return None
+
+    verify_kmod(k_mod)
 
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():
@@ -135,7 +138,8 @@ def generate(nat):
     return None
 
 def apply(nat):
-    check_kmod(k_mod)
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod(k_mod, verify=False)
 
     cmdl(['nft', '--file', nftables_nat66_config])
 
