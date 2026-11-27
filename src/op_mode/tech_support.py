@@ -98,7 +98,7 @@ def _get_boot_config():
     from vyos.utils.file import read_file
     from vyos.utils.strip_config import strip_config_source
 
-    config = read_file('/opt/vyatta/etc/config.boot.default')
+    config = read_file('/config/config.boot')
 
     return strip_config_source(config)
 
@@ -211,20 +211,18 @@ def _get_connections():
     return cmdl(["ss", "-apO"])
 
 def _get_system_packages():
-    from re import split
     from vyos.utils.process import cmdl
 
     dpkg_out = cmdl(['dpkg-query', '-W', '-f',
                       '${Package} ${Version} ${Architecture} ${db:Status-Abbrev}\n'])
-    pkg_lines = split(r'\n+', dpkg_out)
-
-    # Discard the header, it's five lines long
-    pkg_lines = pkg_lines[5:]
 
     pkgs = []
 
-    for pl in pkg_lines:
-        parts = split(r'\s+', pl)
+    for pl in dpkg_out.splitlines():
+        parts = pl.split()
+        if not parts:
+            continue
+
         pkg = {}
         pkg["name"] = parts[0]
         pkg["version"] = parts[1]

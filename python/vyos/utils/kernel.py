@@ -88,7 +88,14 @@ def unload_kmod(k_mod):
 def list_loaded_modules():
     """ Returns the list of currently loaded kernel modules """
     from os import listdir
-    return listdir('/sys/module/')
+    from os.path import isdir, join
+
+    base = '/sys/module'
+    modules = listdir(base)
+
+    # Only loadable modules have an directory; this skips
+    # built-ins and non-directory entries such as '/sys/module/compression'
+    return [module for module in modules if isdir(join(base, module))]
 
 def get_module_data(module: str):
     """ Retrieves information about a module """
