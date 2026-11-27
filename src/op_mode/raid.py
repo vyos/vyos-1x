@@ -26,12 +26,16 @@ def add(raid_set_name: str, member: str, by_id: bool = False):
         add_raid_member(raid_set_name, member, by_id)
     except ValueError as e:
         raise vyos.opmode.IncorrectValue(str(e))
+    except OSError as e:
+        raise vyos.opmode.InternalError(e.strerror)
 
 def delete(raid_set_name: str, member: str, by_id: bool = False):
     try:
         delete_raid_member(raid_set_name, member, by_id)
     except ValueError as e:
         raise vyos.opmode.IncorrectValue(str(e))
+    except OSError as e:
+        raise vyos.opmode.InternalError(e.strerror)
 
 if __name__ == '__main__':
     try:
