@@ -1288,6 +1288,30 @@ class Interface(Control):
         """
         self.set_interface('learning', state)
 
+    def set_bridge_port_flags(self, port_config: dict):
+        """
+        Apply the per-port bridge flags from the CLI member configuration
+        (interfaces bridge <br> member interface <ifname>): isolated,
+        bpdu-guard, root-guard and disable-learning.
+
+        Flags absent from port_config are reset to the kernel default, so the
+        call is idempotent. Interface must already be enslaved to the bridge.
+        """
+        if not self.ifname.startswith('wlan'):
+            # private-vlan/port isolation cannot be set when lower link is a
+            # wifi link, it will trigger: RTNETLINK answers: Operation not supported
+            value = 'on' if 'isolated' in port_config else 'off'
+            self.set_port_isolation(value)
+
+        value = '1' if 'bpdu_guard' in port_config else '0'
+        self.set_bpdu_guard(value)
+
+        value = '1' if 'root_guard' in port_config else '0'
+        self.set_root_guard(value)
+
+        value = '0' if 'disable_learning' in port_config else '1'
+        self.set_learning(value)
+
     def set_proxy_arp(self, enable):
         """
         Set per interface proxy ARP configuration
@@ -1579,6 +1603,11 @@ class Interface(Control):
             # set bridge port path priority
             if 'priority' in bridge_config:
                 self.set_path_priority(bridge_config['priority'])
+
+            # T9691: the bridge's own commit skips members that do not exist
+            # yet (e.g. vxlan, bond, tunnel at boot), so the per-port flags
+            # must also be applied when the member joins the bridge later
+            self.set_bridge_port_flags(bridge_config)
 
             bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
 
