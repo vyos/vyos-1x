@@ -145,7 +145,7 @@ def get_config(config=None):
         container['storage_mount_program'] = podman_mount_program
 
     previous_bridges = {
-        dict_search('type.bridge.interface', config)
+        network: dict_search('type.bridge.interface', config)
         for network, config in effective.get('network', {}).items()
         if network in container.get('network_restart', []) + container.get('network_remove', [])
         and dict_search('type.bridge.interface', config)
@@ -154,13 +154,20 @@ def get_config(config=None):
     }
     for network, network_config in container.get('network', {}).items():
         if network in container.get('network_restart', []) and dict_search('type.macvlan', network_config) is None:
-            network_config['previous_bridge_configs'] = {
-                bridge: conf.get_config_dict(
+            checks = network_config['previous_bridge_checks'] = []
+            previous_prefixes = effective.get('network', {}).get(network, {}).get('prefix', [])
+            for previous_network, bridge in sorted(previous_bridges.items()):
+                if bridge == dict_search('type.bridge.interface', network_config):
+                    continue
+                prefixes = [prefix for prefix in network_config.get('prefix', [])
+                            if previous_network == network or prefix not in previous_prefixes]
+                if not prefixes:
+                    continue
+                bridge_config = conf.get_config_dict(
                     ['interfaces', 'bridge', bridge], key_mangling=('-', '_'),
                     get_first_key=True)
-                for bridge in sorted(previous_bridges)
-                if bridge != dict_search('type.bridge.interface', network_config)
-            }
+                checks.append({'interface': bridge, 'addresses': bridge_config.get('address', []),
+                               'prefixes': prefixes})
         if dict_search('type.bridge.interface', network_config) is not None:
             bridge = dict_search('type.bridge.interface', network_config)
             bridge_path = ['interfaces', 'bridge', bridge]
@@ -377,15 +384,15 @@ def verify(container):
                 if 'prefix' in network_config or 'gateway' in network_config:
                     raise ConfigError('DHCP IPAM cannot be combined with configured prefixes or gateways!')
 
-            for previous_bridge_name, previous_bridge in network_config.get('previous_bridge_configs', {}).items():
-                for address in previous_bridge.get('address', []):
+            for previous_bridge in network_config.get('previous_bridge_checks', []):
+                for address in previous_bridge['addresses']:
                     if address in ['dhcp', 'dhcpv6']:
                         continue
                     previous_subnet = ip_interface(address).network
-                    for prefix in network_config.get('prefix', []):
+                    for prefix in previous_bridge['prefixes']:
                         subnet = ip_network(prefix)
                         if subnet.version == previous_subnet.version and subnet.overlaps(previous_subnet):
-                            raise ConfigError(f'Remove overlapping addresses from bridge "{previous_bridge_name}" '
+                            raise ConfigError(f'Remove overlapping addresses from bridge "{previous_bridge["interface"]}" '
                                               f'before moving container network "{network}"!')
 
             if bridge is not None:

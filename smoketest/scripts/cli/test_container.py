@@ -1020,6 +1020,34 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['network', 'managed1219', 'description', 'unchanged attachment'])
             self.cli_commit()
             self.assertTrue(Config().exists(base_path + ['network', 'managed1219', 'description']))
+
+            native_path = base_path + ['network', 'native1219']
+            self.cli_delete(native_path + ['type', 'bridge', 'interface'])
+            with self.assertRaisesRegex(ConfigSessionError, 'Remove overlapping addresses from bridge "br1219"'):
+                self.cli_commit()
+            self.cli_discard()
+
+            self.cli_delete(native_path + ['type', 'bridge', 'interface'])
+            self.cli_delete(native_path + ['prefix'])
+            self.cli_set(native_path + ['prefix', '10.250.222.0/24'])
+            self.cli_delete(base_path + ['network', 'managed1219', 'prefix'])
+            self.cli_set(base_path + ['network', 'managed1219', 'prefix', '10.250.219.0/24'])
+            with self.assertRaisesRegex(ConfigSessionError, 'Remove overlapping addresses from bridge "br1219"'):
+                self.cli_commit()
+            self.cli_discard()
+
+            # Moving one network must not revalidate an unrelated network's existing prefix.
+            self.cli_delete(native_path + ['type', 'bridge', 'interface'])
+            self.cli_delete(native_path + ['prefix'])
+            self.cli_set(native_path + ['prefix', '10.250.222.0/24'])
+            self.cli_set(base_path + ['network', 'managed1219', 'mtu', '1400'])
+            self.cli_commit()
+            managed = Config().get_config_dict(base_path + ['network', 'managed1219'],
+                                              effective=True, get_first_key=True)
+            self.assertEqual(managed['mtu'], '1400')
+            self.assertEqual(managed['prefix'], ['10.250.220.0/24'])
+            native = Config().get_config_dict(native_path, effective=True, get_first_key=True)
+            self.assertEqual(native['prefix'], ['10.250.222.0/24'])
         finally:
             self.cli_delete(base_path)
             self.cli_commit()
