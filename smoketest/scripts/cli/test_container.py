@@ -802,7 +802,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 return cmdl(['systemctl', 'show', unit, '--property=ActiveState', '--value']).strip()
             self.assertTrue(wait_for(lambda: state() == 'activating', timeout=10))
             self.cli_set(network_path + ['mtu', '1400'])
-            with self.assertRaises(ConfigSessionError):
+            with self.assertRaisesRegex(ConfigSessionError, f'failed to run command: podman network rm {network}'):
                 self.cli_commit()
             self.cli_discard()
             cmdl(['touch', gate], sudo=True)
@@ -870,7 +870,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.assertFalse(self.is_running(stopped))
 
             self.cli_set(network_path + ['mtu', '1400'])
-            with self.assertRaises(ConfigSessionError):
+            with self.assertRaisesRegex(ConfigSessionError, f'failed to run command: podman network rm {network}'):
                 self.cli_commit()
             self.cli_discard()
             self.assertTrue(wait_for(queued_start, timeout=10),
