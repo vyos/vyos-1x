@@ -1079,6 +1079,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
     def test_macvlan_requires_parent_and_mode(self):
+        if not interface_exists('eth0'):
+            self.skipTest('MACVLAN validation requires an Ethernet parent')
         network_path = base_path + ['network', 'incomplete']
         for ipam in ['host-local', 'dhcp']:
             with self.subTest(ipam=ipam):
@@ -1250,6 +1252,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 cmdl(['podman', 'exec', name, 'ping', '-c', '1', '-W', '2', gateway], sudo=True)
 
     def test_network_types_mutually_exclusive(self):
+        if not interface_exists('eth0'):
+            self.skipTest('MACVLAN type transitions require an Ethernet parent')
         network_path = base_path + ['network', 'exclusive']
         for initial_type in ['bridge', 'macvlan']:
             with self.subTest(initial_type=initial_type):
