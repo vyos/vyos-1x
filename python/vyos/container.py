@@ -13,11 +13,39 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from hashlib import sha256
+from ipaddress import ip_address, ip_interface, ip_network
 
+from vyos import ConfigError
 from vyos.config import Config
 from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
+
+def verify_native_bridge(network: dict, bridge: dict, container_addresses=()) -> None:
+    ifname = dict_search('type.bridge.interface', network)
+    if not bridge or 'deleted' in bridge or 'disable' in bridge:
+        raise ConfigError(f'VyOS bridge "{ifname}" must be configured and enabled!')
+    if 'vrf' in bridge:
+        raise ConfigError('Unmanaged container bridges do not support VRFs yet!')
+    mtu = int(network.get('mtu', '1500'))
+    if mtu != int(bridge.get('mtu', '1500')):
+        raise ConfigError(f'Container network MTU must match bridge "{ifname}"!')
+    addresses = [ip_interface(a) for a in bridge.get('address', [])
+                 if a not in ['dhcp', 'dhcpv6']]
+    for prefix in network.get('prefix', []):
+        subnet = ip_network(prefix)
+        if subnet.version == 6 and mtu < 1280:
+            raise ConfigError('IPv6 container networks require an MTU of at least 1280!')
+        gateway = next((ip_address(g) for g in network.get('gateway', [])
+                        if ip_address(g).version == subnet.version),
+                       subnet.network_address + 1)
+        if not any(a.ip == gateway and a.network == subnet for a in addresses):
+            raise ConfigError(f'Gateway "{gateway}/{subnet.prefixlen}" must be '
+                              f'assigned to bridge "{ifname}"!')
+    bridge_addresses = {address.ip for address in addresses}
+    for address in container_addresses:
+        if ip_address(address) in bridge_addresses:
+            raise ConfigError(f'IP address "{address}" is assigned to the native bridge!')
 
 def get_container_host_ifname(name: str) -> str:
     """
@@ -43,6 +71,8 @@ def restart_network(config: Config) -> None:
     """
     if 'network' in config:
         for network, network_config in config['network'].items():
+            if dict_search('type.bridge.interface', network_config) is not None:
+                continue
             type_config = dict_search('type', network_config)
             if not dict_search('macvlan', type_config):
                 network_name = f'pod-{network}'

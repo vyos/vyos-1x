@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from configparser import ConfigParser
+from hashlib import sha256
+from pathlib import Path
+
+
+def generate(output):
+    for quadlet in Path('/run/containers/systemd').glob('vyos-container-*.container'):
+        config = ConfigParser(interpolation=None, strict=False)
+        config.read(quadlet)
+        bridge = config.get('X-VyOS', 'BridgeInterface', fallback=None)
+        if bridge is None:
+            continue
+        network = config.get('Container', 'Network').split(':', 1)[0].removesuffix('.network')
+        container = f'{quadlet.stem}.service'
+        identifier = sha256(quadlet.stem.encode()).hexdigest()
+        recovery = f'vyos-container-bridge-recovery@{identifier}.service'
+        device = f'sys-subsystem-net-devices-{bridge}.device'
+        # Wait for teardown before restarting: a device can return while its
+        # previous network/container stop jobs are still pending.
+        (output / recovery).write_text(
+            '[Unit]\n'
+            f'Description=Recover {container} after bridge recreation\n'
+            f'After={device} {network}-network.service {container}\n'
+            f'ConditionPathExists=/sys/class/net/{bridge}\n'
+            f'ConditionPathExists={quadlet}\n'
+            '[Service]\n'
+            'Type=oneshot\n'
+            f'ExecStart=/usr/bin/systemctl --no-block restart {container}\n')
+        wants = output / f'{device}.wants'
+        wants.mkdir(exist_ok=True)
+        (wants / recovery).symlink_to(f'../{recovery}')
+
+
+if __name__ == '__main__':
+    generate(Path(sys.argv[1]))
