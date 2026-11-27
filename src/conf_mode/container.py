@@ -162,6 +162,11 @@ def verify(container):
                 if Decimal(container_config['cpu_quota']) > cores:
                     raise ConfigError(f'Cannot set limit to more cores than available "{name}"!')
 
+            # A trailing backslash continues Exec= onto the next quadlet line
+            for key in ['command', 'arguments']:
+                if key in container_config and container_config[key].rstrip().endswith('\\'):
+                    raise ConfigError(f'Container "{name}" {key} must not end with a backslash!')
+
             if 'network' in container_config:
                 if len(container_config['network']) > 1:
                     raise ConfigError(f'Only one network can be specified for container "{name}"!')

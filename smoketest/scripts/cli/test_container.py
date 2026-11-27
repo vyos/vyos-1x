@@ -149,6 +149,11 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
         self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        # a trailing backslash would swallow the next quadlet directive
+        self.cli_set(base_path + ['name', cont_name, 'arguments', 'sleep 3600 \\'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         # busybox has no entrypoint, so the arguments become the command
         self.cli_set(base_path + ['name', cont_name, 'arguments', 'sleep 3600'])
         self.cli_commit()
