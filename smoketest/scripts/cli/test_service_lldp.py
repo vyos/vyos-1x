@@ -183,5 +183,32 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.assertIn(f'configure ports {interface} lldp status rx-and-tx', config)
 
+    def test_08_lldp_location_coordinate(self):
+        interface = 'eth0'
+        latitude = '37.524449N'
+        longitude = '122.267255W'
+        location_path = base_path + ['interface', interface, 'location']
+
+        # longitude without latitude must be rejected
+        self.cli_set(location_path + ['coordinate-based', 'longitude', longitude])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(location_path + ['coordinate-based', 'longitude'])
+
+        # latitude without longitude must be rejected
+        self.cli_set(location_path + ['coordinate-based', 'latitude', latitude])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(location_path + ['coordinate-based', 'longitude', longitude])
+        self.cli_commit()
+
+        config = read_file(LLDPD_CONF)
+        self.assertIn(
+            f'configure ports {interface} med location coordinate latitude '
+            f'"{latitude}" longitude "{longitude}" altitude "0m" datum "WGS84"',
+            config,
+        )
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
