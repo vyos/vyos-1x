@@ -13,7 +13,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from decimal import Decimal
 from ipaddress import ip_address
@@ -447,6 +446,8 @@ def generate_network_options(name, network_config):
     return out
 
 def generate_quadlet_options(name, container_config, host_ident, network_config):
+    import re
+
     out = [
         f'ContainerName={name}',
         f'Image={container_config["image"]}',
