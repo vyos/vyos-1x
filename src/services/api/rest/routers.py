@@ -1098,13 +1098,20 @@ def token_op(data: ApiModel, x_api_key: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail='Valid API key is required')
     return success(generate_token(key_id))
 
+
+def _is_rest_route(r) -> bool:
+    # newer FastAPI keeps an included router as a single route entry,
+    # older versions copy each of its routes into the app
+    return getattr(r, 'original_router', None) is router or r in router.routes
+
+
 def rest_init(app: 'FastAPI'):
-    if all(r in app.routes for r in router.routes):
+    if any(_is_rest_route(r) for r in app.routes):
         return
     app.include_router(router)
 
 
 def rest_clear(app: 'FastAPI'):
-    for r in router.routes:
-        if r in app.routes:
+    for r in list(app.routes):
+        if _is_rest_route(r):
             app.routes.remove(r)

@@ -170,7 +170,7 @@ def regenerate_docs(app: FastAPI) -> None:
     docs = ('/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc')
     remove = []
     for r in app.routes:
-        if r.path in docs:
+        if getattr(r, 'path', None) in docs:
             remove.append(r)
     for r in remove:
         app.routes.remove(r)
@@ -265,7 +265,7 @@ def initialization(session: SessionState, app: FastAPI = app):
 
     LOG.debug('Active routes are:')
     for r in app.routes:
-        LOG.debug(f'{r.path}')
+        LOG.debug(f"{getattr(r, 'path', r)}")
 
     config = ApiServerConfig(app, uds="/run/api.sock", proxy_headers=True)
     server = ApiServer(config)
