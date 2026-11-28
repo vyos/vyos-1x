@@ -179,3 +179,19 @@
   timeout = "10s"
   data_format = "influx"
 {% endif %}
+# Prometheus input
+{% if prometheus.input is vyos_defined %}
+{%     for input_id, input_config in prometheus.input.items() %}
+[[inputs.prometheus]]
+  urls = [{{ input_config.url | toml_string }}]
+{%         if input_config.username is vyos_defined %}
+  username = {{ input_config.username | toml_string }}
+{%         endif %}
+{%         if input_config.password is vyos_defined %}
+  password = {{ input_config.password | toml_string }}
+{%         endif %}
+{%         if input_config.insecure is vyos_defined %}
+  insecure_skip_verify = true
+{%         endif %}
+{%     endfor %}
+{% endif %}
