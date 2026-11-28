@@ -7,7 +7,7 @@
     <children>
       <node name="ip">
         <properties>
-          <help>Show IPv4 information</help>
+          <help>Show IPv4 routing information</help>
         </properties>
         <children>
           <leafNode name="groups">
