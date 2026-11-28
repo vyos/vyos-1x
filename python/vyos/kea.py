@@ -133,6 +133,11 @@ def kea_test_config(process: str, config_path: str) -> tuple[bool, str]:
     return (False, find[1] if find else None)
 
 
+def _escape_commas(value):
+    # Kea splits the data of a string option at commas, escape sequences stay as they are
+    return re.sub(r'(\\.)|,', lambda match: match.group(1) or '\\,', value)
+
+
 def kea_parse_options(config):
     options = []
 
@@ -143,6 +148,8 @@ def kea_parse_options(config):
         value = (
             ', '.join(config[node]) if isinstance(config[node], list) else config[node]
         )
+        if node in ('tftp_server_name', 'bootfile_name', 'wpad_url', 'captive_portal'):
+            value = _escape_commas(value)
         options.append({'name': option_name, 'data': value})
 
     if 'client_prefix_length' in config:
@@ -301,6 +308,8 @@ def kea6_parse_options(config):
         value = (
             ', '.join(config[node]) if isinstance(config[node], list) else config[node]
         )
+        if node == 'captive_portal':
+            value = _escape_commas(value)
         options.append({'name': option_name, 'data': value})
 
     if 'sip_server' in config:
