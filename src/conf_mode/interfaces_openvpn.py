@@ -23,6 +23,7 @@ from ipaddress import IPv4Network
 from ipaddress import IPv6Address
 from ipaddress import IPv6Network
 from ipaddress import summarize_address_range
+from math import ceil
 from secrets import SystemRandom
 from shutil import rmtree
 
@@ -114,6 +115,9 @@ dco_raw_ciphers = ['AES-128-GCM', 'AES-192-GCM', 'AES-256-GCM', 'CHACHA20-POLY13
 # plus UDP (8) plus the DCO data channel header (24: opcode and peer-id 4,
 # packet-id 4, AEAD tag 16) is 72 bytes, rounded down to the WireGuard default.
 dco_default_mtu = '1420'
+# site-to-site timeout without a CLI "failure-count", the one it had before
+# T9363 rendered interval * failure-count
+site_to_site_default_timeout = 60
 # Raw options that size the tunnel themselves. OpenVPN refuses "tun-mtu" next to
 # "link-mtu" (or its alias "udp-mtu"), so any of them rules out the one rendered
 # from "mtu".
@@ -248,6 +252,16 @@ def get_config(config=None):
             and raw_mtu_option(openvpn) is None
         ):
             openvpn['tun_mtu'] = dco_default_mtu
+
+    interval = int(dict_search('keep_alive.interval', openvpn))
+    if (
+        openvpn.get('mode') == 'site-to-site'
+        and interval > 0
+        and not conf.exists(base + [ifname, 'keep-alive', 'failure-count'])
+    ):
+        openvpn['keep_alive']['failure_count'] = str(
+            ceil(site_to_site_default_timeout / interval)
+        )
 
     # Before tls-auth was rendered in site-to-site mode, a raw option was the
     # only way to use the key. Left without a direction it is bidirectional,

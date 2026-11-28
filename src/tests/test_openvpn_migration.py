@@ -437,7 +437,8 @@ class TestOpenVPNMigration(TestCase):
         tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
         self.assertEqual(config.return_value(tmp), '1000')
 
-    def test_site_to_site_keepalive_left_alone_when_valid(self):
+    def test_site_to_site_failure_count_becomes_intervals(self):
+        # 60 seconds were 60 failures before, they are 6 intervals of 10 now
         config = config_tree(
             '        mode site-to-site\n'
             '        keep-alive {\n'
@@ -447,9 +448,23 @@ class TestOpenVPNMigration(TestCase):
         )
         self.migrate(config)
         tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
-        self.assertEqual(config.return_value(tmp), '60')
+        self.assertEqual(config.return_value(tmp), '6')
 
-    def test_site_to_site_keepalive_over_a_day_is_clamped(self):
+    def test_site_to_site_failure_count_rounds_up(self):
+        # 9 intervals of 7 seconds: the timeout gets 3 seconds longer, not shorter
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 7\n'
+            '            failure-count 60\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '9')
+
+    def test_site_to_site_long_timeout_is_converted(self):
+        # 1000 seconds at an interval of 600 are 2 intervals, 1200 seconds
         config = config_tree(
             '        mode site-to-site\n'
             '        keep-alive {\n'
@@ -459,8 +474,32 @@ class TestOpenVPNMigration(TestCase):
         )
         self.migrate(config)
         tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
-        # 600 * 144 is exactly 24 hours, and nothing doubles it here
-        self.assertEqual(config.return_value(tmp), '144')
+        self.assertEqual(config.return_value(tmp), '2')
+
+    def test_site_to_site_unset_failure_count_stays_unset(self):
+        # an unset count is left alone, get_config() gives it 60 seconds
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 10\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertFalse(config.exists(tmp))
+
+    def test_site_to_site_zero_failure_count_is_kept(self):
+        # "ping-restart 0" pings without ever restarting, before and after
+        config = config_tree(
+            '        mode site-to-site\n'
+            '        keep-alive {\n'
+            '            interval 10\n'
+            '            failure-count 0\n'
+            '        }\n'
+        )
+        self.migrate(config)
+        tmp = ['interfaces', 'openvpn', 'vtun10', 'keep-alive', 'failure-count']
+        self.assertEqual(config.return_value(tmp), '0')
 
     def test_site_to_site_disabled_keepalive_survives(self):
         config = config_tree(

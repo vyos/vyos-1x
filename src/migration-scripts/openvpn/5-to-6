@@ -23,6 +23,8 @@
 # interval * failure-count. Now that both agree, a timeout OpenVPN refuses is
 # reachable in site-to-site too, so the same clamp has to cover it.
 
+from math import ceil
+
 from vyos.configtree import ConfigTree
 
 base = ['interfaces', 'openvpn']
@@ -99,7 +101,7 @@ def _value(config: ConfigTree, path: list):
 
 
 def _clamp_keepalive(config: ConfigTree, path: list) -> None:
-    """Bring a keepalive within what verify() accepts."""
+    """Bring a keepalive within what verify() accepts and keep the timeout."""
     mode = _value(config, path + ['mode'])
     if mode not in ['server', 'site-to-site']:
         return
@@ -114,10 +116,16 @@ def _clamp_keepalive(config: ConfigTree, path: list) -> None:
         return
 
     if mode == 'site-to-site':
+        # until T9363 "failure-count" was a number of seconds here: convert it
+        # to intervals, rounding up so the timeout does not get shorter. An
+        # unset one keeps its 60 seconds through get_config().
+        if not config.exists(path + ['keep-alive', 'failure-count']):
+            return
+        wanted = ceil(count / interval)
         # site-to-site renders "ping-restart" itself, which OpenVPN caps at
         # 24 hours and does not double. It carries no "at least twice the
         # interval" rule either, since that one belongs to "keepalive".
-        wanted = min(count, 86400 // interval)
+        wanted = min(wanted, 86400 // interval)
     else:
         # the timeout is interval * failure-count: it has to reach twice the
         # interval and stay below 12 hours. Beyond an interval of 21600 no

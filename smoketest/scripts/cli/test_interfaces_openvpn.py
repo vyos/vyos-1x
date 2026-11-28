@@ -1831,6 +1831,13 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['remote-address', '10.0.20.2'])
         self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
         self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+        self.cli_commit()
+
+        # no keep-alive configured: default interval, 60 seconds timeout
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping 10', config.splitlines())
+        self.assertIn('ping-restart 60', config.splitlines())
+
         self.cli_set(path + ['keep-alive', 'interval', '0'])
         self.cli_commit()
 
@@ -1841,6 +1848,18 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('ping', directives)
         self.assertNotIn('ping-restart', directives)
         self.assertServiceRunning(interface)
+
+        # without a failure-count the timeout is 60 seconds, rounded up to
+        # whole intervals
+        self.cli_set(path + ['keep-alive', 'interval', '10'])
+        self.cli_commit()
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 60', config.splitlines())
+
+        self.cli_set(path + ['keep-alive', 'interval', '7'])
+        self.cli_commit()
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 63', config.splitlines())
 
         # an enabled keepalive renders both, and the timeout is the interval
         # times the number of failures it tolerates
