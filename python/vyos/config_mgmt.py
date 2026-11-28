@@ -33,14 +33,19 @@ from urllib.parse import quote
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 from tabulate import tabulate
+from tempfile import NamedTemporaryFile
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.configtree import ConfigTreeError
+from vyos.configtree import DiffTree
+from vyos.configtree import validate_tree
+from vyos.configtree import validate_tree_filter
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.configtree import diff_compare
-from vyos.load_config import load
+from vyos.load_config import load_legacy
+from vyos.load_config import migrate
 from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
@@ -138,6 +143,21 @@ def is_node_revised(path: list = [], rev1: int = 1, rev2: int = 0) -> bool:
 
 class ConfigMgmtError(Exception):
     pass
+
+
+def check_session_unchanged():
+    """Refuse to load a revision outside a config session or over
+    uncommitted changes. The legacy loader (cli-shell-api loadFile) applies
+    the difference between the active config and the file to the working
+    config without checking either, so the result is only the revision if
+    the working config equals the active config. sessionChanged exits 0 if
+    there are uncommitted changes."""
+    rc, _ = rc_cmd('/bin/cli-shell-api inSession')
+    if rc != 0:
+        raise ConfigMgmtError('not in a config session')
+    rc, _ = rc_cmd('/bin/cli-shell-api sessionChanged')
+    if rc == 0:
+        raise ConfigMgmtError('commit or discard changes before loading config')
 
 
 class ConfigMgmt:
@@ -346,7 +366,11 @@ Proceed ?"""
             if session.vyconf_backend():
                 session.load_config_obj(revert_ct)
             else:
-                session.load_explicit(revert_ct)
+                check_session_unchanged()
+                # Since we are re-loading the penultimate commit, it is not
+                # necessary to check validate_tree on the content of legacy
+                # load, as is generally recommended.
+                session.load_legacy(revert_ct)
 
             session.commit()
         except ConfigSessionError as e:
@@ -394,6 +418,7 @@ Proceed ?"""
 
     def rollback_soft(self, rev: int):
         """Rollback without reboot (rollback-soft)"""
+        # pylint: disable=consider-using-with
         msg = ''
 
         if not self._check_revision_number(rev):
@@ -402,9 +427,42 @@ Proceed ?"""
             )
             return msg, 1
 
-        rollback_ct = self.get_config_tree_revision(rev)
+        check_session_unchanged()
+
+        # legacy load is faster than, say, 'explicit', but suffers from a
+        # bug: validation errors are only caught on commit.
+        # Run validate_tree on the lines to be added; if error, report and
+        # pass the subtree from validate_tree_filter of the proposed config.
+        rollback_str = self._get_file_revision(rev)
+        rollback_file = NamedTemporaryFile(delete=False).name
+        Path(rollback_file).write_text(rollback_str)
         try:
-            load(rollback_ct, switch='explicit')
+            migrate_file = migrate(rollback_file)
+            with open(migrate_file) as f:
+                migrate_str = f.read()
+        except LoadConfigError as e:
+            raise ConfigMgmtError(e) from e
+        finally:
+            Path(rollback_file).unlink()
+
+        migrate_ct = ConfigTree(migrate_str)
+
+        session_ct = self.working_config
+        diff = DiffTree(session_ct, migrate_ct)
+        try:
+            out = validate_tree(diff.add)
+        except ConfigTreeError as e:
+            raise ConfigMgmtError(e) from e
+
+        if out:
+            msg = f'Errors applying rollback: {out}\n'
+            msg += 'Only valid paths have been loaded'
+            valid_tree, _ = validate_tree_filter(migrate_ct)
+        else:
+            valid_tree = migrate_ct
+
+        try:
+            load_legacy(valid_tree)
             print('Rollback diff has been applied.')
             print('Use "compare" to review the changes or "commit" to apply them.')
         except LoadConfigError as e:

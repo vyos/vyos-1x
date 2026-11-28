@@ -401,6 +401,25 @@ class ConfigSession(object):
         except LoadConfigError as e:
             raise ConfigSessionError(e) from e
 
+    def load_legacy(self, config_obj):
+        """Convenience version of load_config above with argument type
+        config_tree | file path and translation of error.
+
+        This does not perform a validation check before load; that can be
+        done in the caller with vyos.configtree.validate_tree.
+        (Since legacy load treats validation errors as commit errors.)
+        This does not perform an automatic migration; that can be done in
+        the caller with vyos.load_config.migrate.
+        """
+        # pylint: disable=import-outside-toplevel
+        from vyos.load_config import load_legacy
+        from vyos.load_config import LoadConfigError
+
+        try:
+            load_legacy(config_obj)
+        except LoadConfigError as e:
+            raise ConfigSessionError(e) from e
+
     def load_config_obj(self, config_obj: ConfigObj):
         if isinstance(config_obj, ConfigTree):
             with NamedTemporaryFile() as f:
