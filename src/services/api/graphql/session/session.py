@@ -25,6 +25,7 @@ from vyos.opmode import Error as OpModeError
 
 from api.graphql.libs.op_mode import load_op_mode_as_module, split_compound_op_mode_name
 from api.graphql.libs.op_mode import normalize_output
+from api.session import config_lock
 
 op_mode_include_file = os.path.join(directories['data'], 'op-mode-standardized.json')
 
@@ -99,20 +100,22 @@ class Session:
         if 'file_name' not in data or not data['file_name']:
             data['file_name'] = '/config/config.boot'
 
-        try:
-            session.save_config(data['file_name'])
-        except Exception as error:
-            raise error
+        with config_lock:
+            try:
+                session.save_config(data['file_name'])
+            except Exception as error:
+                raise error
 
     def load_config_file(self):
         session = self._session
         data = self._data
 
-        try:
-            session.load_config(data['file_name'])
-            session.commit()
-        except Exception as error:
-            raise error
+        with config_lock:
+            try:
+                session.load_config(data['file_name'])
+                session.commit()
+            except Exception as error:
+                raise error
 
     def show(self):
         session = self._session

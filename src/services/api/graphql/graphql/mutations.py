@@ -20,6 +20,7 @@ from typing import Any, Dict, Optional  # pylint: disable=W0611 # noqa: F401
 from graphql import GraphQLResolveInfo  # pylint: disable=W0611 # noqa: F401
 
 from ariadne import ObjectType, convert_camel_case_to_snake
+from starlette.concurrency import run_in_threadpool
 from makefun import with_signature
 
 from vyos.opmode import Error as OpModeError
@@ -32,7 +33,7 @@ from ..session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
 mutation = ObjectType('Mutation')
 
 
-def make_mutation_resolver(mutation_name, class_name, session_func):
+def make_mutation_resolver(mutation_name, class_name, session_func, threaded=False):
     """Dynamically generate a resolver for the mutation named in the
     schema by 'mutation_name'.
 
@@ -97,7 +98,8 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
                 klass = type(class_name, (Session,), {})
             k = klass(session, data)
             method = getattr(k, session_func)
-            result = method()
+            # config session calls may wait on the config lock or commit
+            result = await run_in_threadpool(method) if threaded else method()
             data['result'] = result
 
             return {'success': True, 'data': data}
@@ -121,7 +123,10 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
 
 def make_config_session_mutation_resolver(mutation_name):
     return make_mutation_resolver(
-        mutation_name, mutation_name, convert_camel_case_to_snake(mutation_name)
+        mutation_name,
+        mutation_name,
+        convert_camel_case_to_snake(mutation_name),
+        threaded=True,
     )
 
 
