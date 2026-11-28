@@ -534,5 +534,57 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         tmp = read_file(f'/sys/class/net/eth0/brport/root_block')
         self.assertEqual(tmp, '1')
 
+    def test_bridge_port_flags_late_member(self):
+        # T9691: per-port flags must be applied to members that are created
+        # after the bridge itself was committed. Bridge (priority 319) commits
+        # before VXLAN (priority 460) - the same order as during boot.
+        br_if = 'br0'
+        vxlan_if = 'vxlan0'
+        eth0_addr = '192.0.2.2/30'
+
+        def brport(flag):
+            return read_file(f'/sys/class/net/{vxlan_if}/brport/{flag}')
+
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'source-address', ip_from_cidr(eth0_addr)])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'vni', '123'])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'mtu', '1426'])
+
+        base_member = ['interfaces', 'bridge', br_if, 'member', 'interface', vxlan_if]
+        self.cli_set(['interfaces', 'bridge', br_if, 'stp'])
+        self.cli_set(base_member + ['disable-learning'])
+        self.cli_set(base_member + ['isolated'])
+        self.cli_set(base_member + ['bpdu-guard'])
+        self.cli_commit()
+
+        self.assertEqual(brport('learning'), '0')
+        self.assertEqual(brport('isolated'), '1')
+        self.assertEqual(brport('bpdu_guard'), '1')
+        self.assertEqual(brport('root_block'), '0')
+
+        # Re-creating the member (changing VNI) must keep the flags
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'vni', '456'])
+        self.cli_commit()
+
+        self.assertEqual(brport('learning'), '0')
+        self.assertEqual(brport('isolated'), '1')
+        self.assertEqual(brport('bpdu_guard'), '1')
+
+        # Swap bpdu-guard for root-guard, re-enable learning and isolation
+        self.cli_delete(base_member + ['bpdu-guard'])
+        self.cli_delete(base_member + ['disable-learning'])
+        self.cli_delete(base_member + ['isolated'])
+        self.cli_set(base_member + ['root-guard'])
+        self.cli_commit()
+
+        self.assertEqual(brport('learning'), '1')
+        self.assertEqual(brport('isolated'), '0')
+        self.assertEqual(brport('bpdu_guard'), '0')
+        self.assertEqual(brport('root_block'), '1')
+
+        self.cli_delete(['interfaces', 'bridge', br_if])
+        self.cli_delete(['interfaces', 'vxlan', vxlan_if])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -414,14 +414,6 @@ class BridgeIf(Interface):
                 # enslave interface port to bridge
                 self.add_port(interface)
 
-                if not interface.startswith('wlan'):
-                    # always set private-vlan/port isolation - this cannot be
-                    # done when lower link is a wifi link, as it will trigger:
-                    # RTNETLINK answers: Operation not supported
-                    tmp = dict_search('isolated', interface_config)
-                    value = 'on' if (tmp != None) else 'off'
-                    lower.set_port_isolation(value)
-
                 # set bridge port path cost
                 if 'cost' in interface_config:
                     lower.set_path_cost(interface_config['cost'])
@@ -430,20 +422,8 @@ class BridgeIf(Interface):
                 if 'priority' in interface_config:
                     lower.set_path_priority(interface_config['priority'])
 
-                # set BPDU guard
-                tmp = dict_search('bpdu_guard', interface_config)
-                value = '1' if (tmp != None) else '0'
-                lower.set_bpdu_guard(value)
-
-                # set root guard
-                tmp = dict_search('root_guard', interface_config)
-                value = '1' if (tmp != None) else '0'
-                lower.set_root_guard(value)
-
-                # set learning
-                disable_learning = dict_search('disable_learning', interface_config)
-                value = '1' if disable_learning is None else '0'
-                lower.set_learning(value)
+                # set isolated, BPDU guard, root guard and learning
+                lower.set_bridge_port_flags(interface_config)
 
                 if 'enable_vlan' in config:
                     add_vlan = []
