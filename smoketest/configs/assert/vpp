@@ -1,3 +1,6 @@
+set high-availability vrrp group G1 address '192.0.2.2/30'
+set high-availability vrrp group G1 interface 'eth1'
+set high-availability vrrp group G1 vrid '10'
 set interfaces ethernet eth0 description 'WAN'
 set interfaces ethernet eth0 offload gro
 set interfaces ethernet eth0 offload gso

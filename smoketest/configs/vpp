@@ -1,3 +1,13 @@
+high-availability {
+    vrrp {
+        group G1 {
+            address 192.0.2.2/30
+            interface eth1
+            rfc3768-compatibility
+            vrid 10
+        }
+    }
+}
 interfaces {
     ethernet eth0 {
         description "WAN"
