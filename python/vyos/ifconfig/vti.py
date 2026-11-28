@@ -15,7 +15,6 @@
 
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
-from vyos.utils.vti_updown_db import open_vti_updown_db_readonly
 
 @Interface.register
 class VTIIf(Interface):
@@ -26,10 +25,6 @@ class VTIIf(Interface):
             'prefixes': ['vti', ],
         },
     }
-
-    def __init__(self, ifname, **kwargs):
-        self.bypass_vti_updown_db = kwargs.pop("bypass_vti_updown_db", False)
-        super().__init__(ifname, **kwargs)
 
     def _create(self):
         # This table represents a mapping from VyOS internal config dict to
@@ -60,19 +55,20 @@ class VTIIf(Interface):
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_interface('admin_state', 'down')
 
-    def set_admin_state(self, state):
+    def set_admin_state(self, state: str, force_up: bool = False):
         """
-        Set interface administrative state to be 'up' or 'down'.
+        Only ever take a VTI interface 'down' here.
 
-        The interface will only be brought 'up' if it is attached to an
-        active ipsec site-to-site connection or remote access connection.
+        Bringing it 'up' is owned exclusively by 'vyos-vti-updown', which derives
+        it from charon (live 'CHILD_SA' for this 'if_id', or a loaded remote-access
+        connection). Requests for 'up' are thus ignored, leaving the current
+        state untouched so reconfiguration does not flap a live tunnel.
         """
-        if state == 'down' or self.bypass_vti_updown_db:
+
+        if state == 'down':
             super().set_admin_state(state)
-        else:
-            with open_vti_updown_db_readonly() as db:
-                if db is not None and db.wantsInterfaceUp(self.ifname):
-                    super().set_admin_state(state)
+        elif state == 'up' and force_up:
+            super().set_admin_state(state)
 
     def get_mac(self):
         """ Get a synthetic MAC address. """
