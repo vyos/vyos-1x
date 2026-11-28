@@ -17,11 +17,15 @@
 import re
 import unittest
 
+from time import sleep
+from time import time
+
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import bracketize_ipv6
 from vyos.utils.file import read_file
+from vyos.utils.process import cmdl
 from vyos.utils.process import process_named_running
 
 PDNS_REC_RUN_DIR = '/run/pdns-recursor'
@@ -30,6 +34,7 @@ PDNS_REC_LUA_CONF_FILE = f'{PDNS_REC_RUN_DIR}/recursor.conf.lua'
 FORWARD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
 HOSTSD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
 PROCESS_NAME= 'pdns_recursor'
+HOSTSD_CLIENT = '/usr/bin/vyos-hostsd-client'
 
 base_path = ['service', 'dns', 'forwarding']
 
@@ -311,6 +316,72 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # verify configuration
         tmp = get_config_value('serve-stale-extensions')
         self.assertEqual(tmp, server_stale)
+
+    def test_hostsd_reloads_only_on_change(self):
+        # T6616: on every renewal the DHCP client hook deletes and re-adds the
+        # lease's name servers and search domains, then applies. pdns-recursor
+        # must not be told to reload its zones for that: "reload-zones" wipes
+        # its cache under every zone, here the catch-all ".". A change the
+        # forwarder uses must still reload it.
+        self.cli_set(base_path + ['name-server', '192.0.2.53'])
+        self.cli_commit()
+
+        tag = 'dhcp-eth99'
+
+        def hostsd(*args):
+            cmdl([HOSTSD_CLIENT, *args])
+
+        def renew():
+            hostsd('--delete-search-domains', '--tag', tag)
+            hostsd('--add-search-domains', 'example.net', '--tag', tag)
+            hostsd('--delete-name-servers', '--tag', tag)
+            hostsd('--add-name-servers', '192.0.2.1', '--tag', tag)
+            hostsd('--apply')
+
+        def reloads(since):
+            # pdns-recursor logs each control command it receives
+            log = cmdl(
+                [
+                    'journalctl',
+                    '--no-pager',
+                    '--quiet',
+                    '--output',
+                    'cat',
+                    '--unit',
+                    'pdns-recursor',
+                    '--since',
+                    f'@{since}',
+                ],
+                sudo=True,
+            )
+            return log.count('command="reload-zones"')
+
+        def assert_no_reload_on_renew():
+            since = time()
+            renew()
+            sleep(2)  # journald stores entries asynchronously
+            self.assertEqual(reloads(since), 0)
+
+        try:
+            # A lease the forwarder does not use
+            renew()
+            assert_no_reload_on_renew()
+
+            # The forwarder starts using the lease's name server
+            since = time()
+            hostsd('--add-name-server-tags-recursor', tag)
+            hostsd('--apply')
+            found, _ = self.wait_for_result(lambda: reloads(since), lambda n: n > 0)
+            self.assertTrue(found, 'pdns-recursor was not reloaded for a new forwarder')
+            self.assertIn('192.0.2.1', read_file(FORWARD_FILE))
+
+            # Renewing that lease unchanged
+            assert_no_reload_on_renew()
+        finally:
+            hostsd('--delete-name-server-tags-recursor', tag)
+            hostsd('--delete-name-servers', '--tag', tag)
+            hostsd('--delete-search-domains', '--tag', tag)
+            hostsd('--apply')
 
     def test_listening_port(self):
         # We can listen on a different port compared to '53' but only one at a time
