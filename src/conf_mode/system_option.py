@@ -41,6 +41,7 @@ from vyos.utils.kernel import verify_kmod
 from vyos.utils.kernel import get_kernel_boot_arg
 from vyos.utils.kernel import get_kernel_cmdline_options
 from vyos.utils.kernel import get_crash_kernel_size
+from vyos.utils.kernel import kexec_reload
 from vyos.utils.process import cmdl
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
@@ -542,12 +543,13 @@ def apply(options):
         kexec_required = False
     if kexec_required:
         if not boot_configuration_complete() and os.getenv('VYOS_CONFIGD'):
-            cmdl([
-                'kexec', '-l', '/boot/vmlinuz', '--initrd=/boot/initrd.img',
-                f'--command-line={cmdline_new}', '--kexec-file-syscall',
-            ])
-            os.sync()
-            cmdl(['systemctl', 'kexec'])
+            try:
+                kexec_reload(cmdline_new)
+            except OSError as e:
+                Warning(
+                    'Unable to reload the Kernel via kexec - Kernel configuration '
+                    f'options apply on the next reboot.\n{e}'
+                )
         elif boot_configuration_complete():
             Warning(
                 'Kernel configuration options have changed. '
