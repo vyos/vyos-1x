@@ -620,6 +620,17 @@ start ()
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
 
+    # Config sessions are kernel overlayfs mounts. Their work directories go
+    # on this tmpfs, under ovl_work, which only the privileged mount helper
+    # may write to - so it is root's alone.
+    modprobe -q overlay || true
+    mkdir -m 0755 -p ${vyatta_configdir}/ovl_work
+    # Session directories: every config user creates theirs here, and with
+    # the sticky bit nobody can rename or remove somebody else's.
+    mkdir -p ${vyatta_configdir}/tmp
+    chgrp ${GROUP} ${vyatta_configdir}/tmp
+    chmod 1775 ${vyatta_configdir}/tmp
+
     mount_encrypted_config || overall_status=1
 
     # T5239: early read of system hostname as this value is read-only once during
