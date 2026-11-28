@@ -232,32 +232,67 @@
         </constraint>
       </properties>
     </leafNode>
-    <node name="vendor-option">
+    <tagNode name="custom-option">
       <properties>
-        <help>Vendor Specific Options</help>
+        <help>Custom DHCP option value</help>
+        <completionHelp>
+          <path>service dhcp-server custom-option</path>
+        </completionHelp>
+        <constraint>
+          #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+        </constraint>
+        <constraintErrorMessage>Custom DHCP option name may only contain letters, numbers, dots, underscores, and hyphens</constraintErrorMessage>
       </properties>
       <children>
-        <node name="ubiquiti">
+        <leafNode name="value">
           <properties>
-            <help>Ubiquiti specific parameters</help>
+            <help>Custom DHCP option value</help>
+            <valueHelp>
+              <format>value</format>
+              <description>Data formatted according to the custom option type</description>
+            </valueHelp>
+            <multi/>
           </properties>
-          <children>
-            <leafNode name="unifi-controller">
-              <properties>
-                <help>Address of UniFi controller</help>
-                <valueHelp>
-                  <format>ipv4</format>
-                  <description>IP address of UniFi controller</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv4-address"/>
-                </constraint>
-              </properties>
-            </leafNode>
-          </children>
-        </node>
+        </leafNode>
       </children>
-    </node>
+    </tagNode>
+    <tagNode name="vendor-option">
+      <properties>
+        <help>Vendor Specific Options</help>
+        <completionHelp>
+          <path>service dhcp-server custom-option</path>
+          <list>ubiquiti</list>
+        </completionHelp>
+        <constraint>
+          #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+        </constraint>
+        <constraintErrorMessage>Vendor option name may only contain letters, numbers, dots, underscores, and hyphens</constraintErrorMessage>
+      </properties>
+      <children>
+        <leafNode name="value">
+          <properties>
+            <help>Vendor encapsulated option value</help>
+            <valueHelp>
+              <format>value</format>
+              <description>Data formatted according to the custom option type</description>
+            </valueHelp>
+            <multi/>
+          </properties>
+        </leafNode>
+        <leafNode name="unifi-controller">
+          <properties>
+            <help>Address of UniFi controller</help>
+            <valueHelp>
+              <format>ipv4</format>
+              <description>IP address of UniFi controller</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-address"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </tagNode>
     <leafNode name="wins-server">
       <properties>
         <help>IP address for Windows Internet Name Service (WINS) server</help>
