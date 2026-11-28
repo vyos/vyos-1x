@@ -162,10 +162,14 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(['vrf', 'name', vpp_exporter_vrf])
             self.cli_commit()
 
-            # delete address and any custom MAC and MTU for the Ethernet interface
+            # delete address, custom MAC and MTU, description and VLANs of the
+            # Ethernet interface
             self.cli_delete(['interfaces', 'ethernet', interface, 'address'])
             self.cli_delete(['interfaces', 'ethernet', interface, 'mac'])
             self.cli_delete(['interfaces', 'ethernet', interface, 'mtu'])
+            self.cli_delete(['interfaces', 'ethernet', interface, 'description'])
+            self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
+            self.cli_delete(['interfaces', 'ethernet', interface, 'vif-s'])
             self.cli_commit()
 
         self.assertFalse(os.path.exists(VPP_CONF))
@@ -368,9 +372,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             )
             self.assertFalse(vif_icmpv6_ra_punt_feature.is_enabled)
 
-        # cleanup: delete the VLAN sub-interface
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
-
     def test_02_vpp_vxlan(self):
         vxlan_path = interfaces_path + ['vxlan']
         vni = '23'
@@ -447,10 +448,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # delete vxlan interface
         self.cli_delete(vxlan_path + [interface_vxlan])
-        self.cli_commit()
-
-        # delete vif Ethernet interface
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
         self.cli_commit()
 
     def test_03_vpp_gre(self):
@@ -773,6 +770,15 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Check Interface, If-idx, ISN
         self.assertRegex(out, r'\s*eth1\s+\d+\s+\d+')
 
+        # T9702: a bridge member without VLANs must keep promiscuous mode
+        # after a commit under its ethernet node
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+        self.cli_set(['interfaces', 'ethernet', interface, 'description', 'T9702'])
+        self.cli_commit()
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+
         # Set non exist member
         # expect raise ConfigError
         self.cli_set(
@@ -871,6 +877,32 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         normalized_out = re.sub(r'\s+', ' ', out)
         self.assertRegex(normalized_out, r'10 1 \d+ off')
         self.assertRegex(out, r'\bloop23\s+\d+\s+\d+\s+\d+\s+\*\s+')
+
+        # A member without VLANs loses promiscuous mode when it leaves the
+        # bridge
+        self.cli_delete(
+            bridge_path + [interface_bridge, 'member', 'interface', interface]
+        )
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show mode')
+        self.assertIn(f'l3 {interface} ', out)
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertNotRegex(out, r'flags:.*\bpromisc\b')
+
+        # A member with its own VLAN (vif) must keep promiscuous mode after
+        # it leaves the bridge
+        self.cli_set(bridge_path + [interface_bridge, 'member', 'interface', interface])
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', '10'])
+        self.cli_commit()
+        self.cli_delete(
+            bridge_path + [interface_bridge, 'member', 'interface', interface]
+        )
+        self.cli_commit()
+        _, out = rc_cmd('sudo vppctl show mode')
+        self.assertIn(f'l3 {interface} ', out)
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
 
         # cannot remove loopback interface while it is used as BVI
         self.cli_delete(interfaces_path + ['loopback', f'vpplo{vni}'])
@@ -1025,6 +1057,15 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for required_string in required_str_list:
             self.assertIn(required_string, out)
 
+        # T9702: an xconnect member without VLANs must keep promiscuous mode
+        # after a commit under its ethernet node
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+        self.cli_set(['interfaces', 'ethernet', interface, 'description', 'T9702'])
+        self.cli_commit()
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
+
         # Cannot add members of cross-connect interface to bond/bridge
         # expect raise ConfigError
         self.cli_set(
@@ -1043,6 +1084,29 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show mode')
         for required_string in required_str_list:
             self.assertNotIn(required_string, out)
+
+        # A member without VLANs loses promiscuous mode when it leaves the
+        # xconnect
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertNotRegex(out, r'flags:.*\bpromisc\b')
+
+        # re-create the xconnect with a member that has its own VLAN (vif)
+        self.cli_set(
+            xconn_path + [interface_xconnect, 'member', 'interface', interface]
+        )
+        self.cli_set(
+            xconn_path + [interface_xconnect, 'member', 'interface', interface_vxlan]
+        )
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', '10'])
+        self.cli_commit()
+
+        self.cli_delete(xconn_path + [interface_xconnect])
+        self.cli_commit()
+
+        # A member with its own VLAN (vif) must keep promiscuous mode after
+        # it leaves the xconnect
+        _, out = rc_cmd(f'sudo vppctl show hardware-interfaces {interface}')
+        self.assertRegex(out, r'flags:.*\bpromisc\b')
 
     def test_09_vpp_driver_options(self):
         driver_options = {
@@ -1514,10 +1578,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # delete PPPoE config
         self.cli_delete(pppoe_base)
 
-        # delete vif Ethernet interface
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
-        self.cli_commit()
-
     def test_17_2_vpp_pppoe_invalid_vif(self):
         # Test verify step behavior when referenced PPPoE interface does not actually exist
         pool = "TEST-POOL-2"
@@ -1547,10 +1607,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'ethernet', interface, 'vif', vni])
         self.cli_commit()
 
-        # Cleanup PPPoE server configuration and created VIF
+        # Cleanup PPPoE server configuration
         self.cli_delete(pppoe_base)
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vni])
-        self.cli_commit()
 
     def test_17_3_vpp_pppoe_delete_invalid_vif(self):
         # Test verify step behavior when referenced PPPoE virtual interface was deleted
@@ -1573,9 +1631,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(pppoe_base + ['interface', f'{interface}.{vni}'])
         self.cli_commit()
 
-        # Cleanup PPPoE server configuration and created VIF
+        # Cleanup PPPoE server configuration
         self.cli_delete(pppoe_base)
-        self.cli_commit()
 
     def test_17_4_vpp_pppoe_invalid_sub_vif(self):
         # Test verify step behavior when referenced PPPoE
@@ -1609,10 +1666,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         )
         self.cli_commit()
 
-        # Cleanup PPPoE server configuration and created VIF
+        # Cleanup PPPoE server configuration
         self.cli_delete(pppoe_base)
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif-s', vif_s])
-        self.cli_commit()
 
     def test_18_1_kernel_options_hugepages(self):
         default_hp_size = '2M'
@@ -1871,9 +1926,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-        # Cleanup
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
-
     def test_23_1_vpp_acl_subinterface(self):
         base_acl = base_path + ['acl', 'ip']
         vlan = '200'
@@ -1913,9 +1965,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(
             list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
         )
-
-        # Cleanup
-        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vlan])
 
     def test_23_2_vpp_acl_bond_with_vif(self):
         base_acl = base_path + ['acl', 'ip']

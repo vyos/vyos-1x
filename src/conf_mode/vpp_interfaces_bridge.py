@@ -26,6 +26,7 @@ from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_member_conflicts
 from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import vlan_members
 
 
 def get_config(config=None) -> dict:
@@ -68,6 +69,10 @@ def get_config(config=None) -> dict:
     )
 
     config['vpp_ifaces'] = cli_ifaces_list(conf, include_vifs=True)
+
+    # Members with their own VLAN (vif/vif-s) sub-interfaces keep
+    # promiscuous mode when they leave the bridge
+    config['vlan_members'] = vlan_members(conf, base + [ifname])
 
     config['bond_members'] = deps_bond_dict(conf)
     config['bridge_members'] = deps_bridge_dict(conf)
@@ -155,7 +160,7 @@ def apply(config):
         return None
 
     ifname = config.get('ifname')
-    bridge = VPPBridgeInterface(ifname)
+    bridge = VPPBridgeInterface(ifname, config)
     bridge.remove()
 
     if 'deleted' in config:
