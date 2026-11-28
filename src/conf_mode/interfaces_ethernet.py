@@ -43,6 +43,7 @@ from vyos.netlink import coalesce
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import BondIf
 from vyos.ifconfig import Interface
+from vyos.ifconfig.interface import vlan_qos_changed
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
@@ -282,6 +283,30 @@ def get_config(config=None):
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
         set_dependents('static_arp', conf)
+
+    # this script rebuilds the NIC's VLANs after a VPP restart, and a NIC that
+    # leaves VPP comes back with MPLS input off - protocols_mpls fixes both
+    if (
+        dict_search(f'settings.interface.{ifname}', vpp_config) is not None
+        or is_node_changed(conf, ['vpp', 'settings', 'interface', ifname])
+    ) and (
+        # MPLS may be removed in this commit, its count in VPP has to go too
+        conf.exists(['protocols', 'mpls', 'interface'])
+        or conf.exists_effective(['protocols', 'mpls', 'interface'])
+    ):
+        set_dependents('mpls', conf)
+
+        # VPP keeps the MPLS count of a deleted VLAN, so MPLS goes off on a VLAN
+        # before it is deleted or recreated, protocols_mpls enables it again
+        vlans = [
+            *ethernet.get('vif_remove', {}),
+            *ethernet.get('vif_s_remove', {}),
+        ]
+        for vif_id in ethernet.get('vif_s', {}):
+            vif_s_path = base + [ifname, 'vif-s', vif_id]
+            if is_node_changed(conf, vif_s_path + ['protocol']):
+                vlans.append(vif_id)
+        ethernet['mpls_off_vlans'] = [f'{ifname}.{vlan}' for vlan in vlans]
 
     # Check vrf membership, to ensure firewall is updated
     if is_vrf_changed(conf, ifname):
@@ -563,6 +588,22 @@ def generate(ethernet):
 
 def apply(ethernet):
     ifname = ethernet['ifname']
+
+    if 'mpls_off_vlans' in ethernet and is_systemd_service_running('vpp.service'):
+        # the update also creates a VLAN again when its QoS differs from the
+        # kernel, only the kernel state tells, the update uses the same check
+        vlans = [
+            *ethernet['mpls_off_vlans'],
+            *[
+                f'{ifname}.{vif_id}'
+                for vif_id, vif in ethernet.get('vif', {}).items()
+                if vlan_qos_changed(f'{ifname}.{vif_id}', vif)
+            ],
+        ]
+        vpp_api = VPPControl()
+        for vlan in vlans:
+            vpp_api.disable_mpls(vlan)
+
     e = EthernetIf(ifname)
     if 'deleted' in ethernet:
         e.remove()

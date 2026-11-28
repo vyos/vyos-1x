@@ -23,6 +23,7 @@
     },
     "interfaces_ethernet": {
         "firewall": ["firewall"],
+        "mpls": ["protocols_mpls"],
         "static_arp": ["protocols_static_arp"]
     },
     "interfaces_geneve": {

@@ -257,6 +257,15 @@ def set_dependents_initial(
     )
 
 
+def clear_dependents(config: 'Config'):
+    """Use the dependents of the config of this commit and drop those left
+    over from a failed commit, so the next commit does not run them."""
+    global dependency_list
+
+    dependency_list = config.dependency_list
+    dependency_list.clear()
+
+
 def clear_dependents_initial():
     """Drop initial dependents left over from a failed commit, so the next
     commit does not run them."""

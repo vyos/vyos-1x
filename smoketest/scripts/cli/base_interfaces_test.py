@@ -1034,6 +1034,75 @@ class BasicInterfaceTest:
                         self.assertEqual(from_key, new_egress_qos_from)
                         self.assertEqual(to_key, new_egress_qos_to)
 
+            # unchanged QoS settings must not recreate the VLAN interface, also
+            # when the kernel lists them differently: '01' is 1 and '010' is 8, the
+            # last pair of a source wins and a pair that maps to 0 is not listed
+            for interface in self._interfaces:
+                for vlan in self._vlan_range:
+                    base = self._base_path + [interface, 'vif', vlan]
+                    self.cli_set(base + ['ingress-qos', '01:6 1:7 2:7 3:0 4:010'])
+                    self.cli_set(base + ['egress-qos', '2:7 3:0'])
+
+            self.cli_commit()
+
+            ifindex = {}
+            for interface in self._interfaces:
+                self.cli_set(
+                    self._base_path + [interface, 'description', 'qos-unchanged']
+                )
+                for vlan in self._vlan_range:
+                    vif = f'{interface}.{vlan}'
+                    ifindex[vif] = get_interface_config(vif)['ifindex']
+
+            self.cli_commit()
+
+            for vif, index in ifindex.items():
+                self.assertEqual(get_interface_config(vif)['ifindex'], index)
+
+            # the mappings are set when the VLAN is created, so a mapping that
+            # is removed, added or changed in one direction while the other one
+            # stays has to reach the kernel as well
+            def kernel_qos(vif, key):
+                listed = dict_search(
+                    f'linkinfo.info_data.{key}', get_interface_config(vif)
+                )
+                return {(item['from'], item['to']) for item in listed or []}
+
+            for step, (ingress, egress) in enumerate(
+                [
+                    (None, {(2, 7)}),  # ingress removed
+                    ({(5, 6)}, {(2, 7)}),  # ingress added
+                    ({(5, 6)}, {(2, 5)}),  # egress changed
+                    (None, None),  # both removed
+                ]
+            ):
+                for interface in self._interfaces:
+                    for vlan in self._vlan_range:
+                        base = self._base_path + [interface, 'vif', vlan]
+                        for key, value in [
+                            ('ingress-qos', ingress),
+                            ('egress-qos', egress),
+                        ]:
+                            if value is None:
+                                self.cli_delete(base + [key])
+                            else:
+                                self.cli_set(
+                                    base + [key, ' '.join(f'{a}:{b}' for a, b in value)]
+                                )
+
+                self.cli_commit()
+
+                for interface in self._interfaces:
+                    for vlan in self._vlan_range:
+                        vif = f'{interface}.{vlan}'
+                        with self.subTest(step=step, vif=vif):
+                            self.assertEqual(
+                                kernel_qos(vif, 'ingress_qos'), ingress or set()
+                            )
+                            self.assertEqual(
+                                kernel_qos(vif, 'egress_qos'), egress or set()
+                            )
+
         def test_vif_8021q_lower_up_down(self):
             # Testcase for https://vyos.dev/T3349
             if not self._test_vlan:
