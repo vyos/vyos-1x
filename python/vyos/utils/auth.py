@@ -152,6 +152,15 @@ def get_current_user() -> str:
         current_user = os.environ['USER']
     return current_user
 
+def get_shadow_password(username: str) -> str | None:
+    """Return the password field of username from /etc/shadow, or None"""
+    with open('/etc/shadow') as f:
+        for line in f:
+            items = line.split(':')
+            if username == items[0]:
+                return items[1]
+    return None
+
 @dataclass
 class PasswdEntry:
     pw_name: str

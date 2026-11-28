@@ -22,6 +22,7 @@ from time import ctime
 from tabulate import tabulate
 from vyos.config import Config
 from vyos.utils.auth import get_local_passwd_entries
+from vyos.utils.auth import get_shadow_password
 
 class UserInfo:
     def __init__(self, uid, name, user_type, is_locked, login_time, tty, host):
@@ -46,16 +47,10 @@ filters = {
 def is_locked(user_name: str) -> bool:
     """Check if a given user has password in shadow db"""
 
-    try:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore",category=DeprecationWarning)
-            import spwd
-        encrypted_password = spwd.getspnam(user_name)[1]
-        return encrypted_password == '*' or encrypted_password.startswith('!')
-    except (KeyError, PermissionError):
-        print('Cannot access shadow database, ensure this script is run with sufficient permissions')
-        sys.exit(1)
+    encrypted_password = get_shadow_password(user_name)
+    if encrypted_password is None:
+        sys.exit(f'User "{user_name}" not found in shadow database')
+    return encrypted_password == '*' or encrypted_password.startswith('!')
 
 
 def decode_lastlog(lastlog_file, uid: int):
@@ -97,6 +92,10 @@ def list_users():
 
 
 def main():
+    from os import geteuid
+    if geteuid() != 0:
+        sys.exit('You need to have root privileges to run this script.')
+
     parser = argparse.ArgumentParser(prog=sys.argv[0], add_help=False)
     parser.add_argument('type', nargs='?', choices=['all', 'vyos', 'other', 'locked'])
     args = parser.parse_args()
