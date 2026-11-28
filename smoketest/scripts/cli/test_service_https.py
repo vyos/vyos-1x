@@ -707,6 +707,26 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(r.status_code, 200)
 
     @ignore_warning(InsecureRequestWarning)
+    def test_api_reconnect(self):
+        url = f'https://{address}/reconnect'
+        headers = {}
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
+        self.cli_commit()
+
+        # There is no dialer interface to reconnect on the smoketest host; we
+        # only check that nginx forwards the endpoint to the API server
+        # instead of rejecting it
+        payload = {
+            'data': '{"op": "reconnect", "path": ["interface", "pppoe0"]}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertIn(r.status_code, [200, 400])
+        self.assertIn('success', r.json())
+
+    @ignore_warning(InsecureRequestWarning)
     def test_api_image(self):
         url = f'https://{address}/image'
         headers = {}
