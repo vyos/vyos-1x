@@ -232,9 +232,7 @@ def apply(ipoe):
 
         return None
 
-    # Accel-pppd does not do soft-reload correctly.
-    # Most of the changes require restarting the service
-    call(f'systemctl restart {systemd_service}')
+    call(f'systemctl reload-or-restart {systemd_service}')
 
 
 if __name__ == '__main__':

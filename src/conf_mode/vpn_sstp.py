@@ -118,7 +118,6 @@ def generate(sstp):
     if not sstp:
         return None
 
-    # accel-cmd reload doesn't work so any change results in a restart of the daemon
     render(sstp_conf, 'accel-ppp/sstp.config.j2', sstp)
 
     cert_name = sstp['ssl']['certificate']

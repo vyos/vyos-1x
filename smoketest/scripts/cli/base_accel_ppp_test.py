@@ -14,7 +14,6 @@
 
 import re
 
-from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
 
@@ -31,6 +30,10 @@ class BasicAccelPPPTest:
         _config_file = None
         _chap_secrets = None
         _protocol_section = None
+        # Authentication mode set by initial_auth_config()
+        _auth_mode = 'local'
+        # Server negotiates PPP and thus supports ppp-options, auth protocols, ...
+        _ppp = True
 
         @classmethod
         def setUpClass(cls):
@@ -61,6 +64,21 @@ class BasicAccelPPPTest:
             self.assertFalse(process_named_running(self._process_name))
             # always forward to base class
             super().tearDown()
+
+        def _accel_pid(self):
+            return process_named_running(self._process_name, cmdline=self._config_file)
+
+        def cli_commit(self):
+            # Accel-PPP-NG re-reads its configuration without dropping
+            # sessions, only deleting and re-creating the service may
+            # spawn a new daemon
+            pid_before = self._accel_pid()
+            out = super().cli_commit()
+            pid_after = self._accel_pid()
+            if pid_before and pid_after:
+                self.assertEqual(pid_before, pid_after,
+                                 msg=f'{self._process_name} PID changed on reconfiguration')
+            return out
 
         def set(self, path):
             self.cli_set(self._base_path + path)
@@ -705,12 +723,335 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
                 self.set(['log', 'level', str(log_level)])
                 self.cli_commit()
 
-                # Systemd comes with a default of 5 restarts in 10 seconds policy,
-                # this limit can be hit by this reastart sequence, slow down a bit
-                sleep(5)
-
                 # Validate configuration values
                 conf = ConfigParser(allow_no_value=True)
                 conf.read(self._config_file)
 
                 self.assertEqual(conf['log']['level'], str(log_level))
+
+        def reconfigure_prepare(self):
+            """
+            Hook for configuration outside of the service which must exist
+            before reconfiguration steps run, e.g. dummy interfaces
+            """
+
+        def run_reconfigure_steps(self, get_steps):
+            """
+            Apply each step returned by get_steps() as one commit on top of
+            basic_config() and verify the daemon was reloaded and not restarted.
+            Steps are built after basic_config() as they may depend on it.
+
+            A step is a dict with the keys:
+              name   - shown on failure
+              set    - list of paths relative to the service base path
+              delete - list of paths relative to the service base path
+              check  - optional callable run after the commit
+            Deletes are applied before sets.
+            """
+            self.basic_config()
+            self.reconfigure_prepare()
+            self.cli_commit()
+
+            pid = self._accel_pid()
+            self.assertIsNotNone(pid)
+
+            steps = get_steps()
+            if not steps:
+                self.skipTest('No reconfiguration steps for this service')
+
+            for step in steps:
+                for path in step.get('delete', []):
+                    self.delete(path)
+                for path in step.get('set', []):
+                    self.set(path)
+                try:
+                    self.cli_commit()
+                except (AssertionError, ConfigSessionError) as e:
+                    self.fail(f'Step "{step["name"]}": {e}')
+                self.assertEqual(pid, self._accel_pid(),
+                                 msg=f'Step "{step["name"]}" changed the daemon PID')
+                if 'check' in step:
+                    step['check']()
+
+        def listening_sockets(self, proto):
+            """ Local address:port of all listening TCP or UDP sockets """
+            out = cmdl(['ss', '-Hln' + ('t' if proto == 'tcp' else 'u')])
+            return [line.split()[3] for line in out.splitlines() if line.strip()]
+
+        def assert_listening(self, proto, port, address=None, present=True):
+            # The daemon re-reads its configuration asynchronously after the
+            # reload signal, poll for the listener to show up or go away
+            def match(sockets):
+                for sock in sockets:
+                    if address and sock == f'{address}:{port}':
+                        return True
+                    if not address and sock.rsplit(':', 1)[-1] == str(port):
+                        return True
+                return False
+
+            found, sockets = self.wait_for_result(
+                lambda: self.listening_sockets(proto),
+                lambda sockets: match(sockets) == present, pause=0.5, timeout=5)
+            where = f'{address}:{port}' if address else f'port {port}'
+            self.assertTrue(found, msg=f'{proto} {where} expected '
+                            f'{"listening" if present else "closed"}: {sockets}')
+
+        def steps_local_users(self):
+            user = ['authentication', 'local-users', 'username']
+            return [
+                {'name': 'add user', 'set': [user + ['user1', 'password', 'pass1']]},
+                {'name': 'add second user', 'set': [user + ['user2', 'password', 'pass2']]},
+                {'name': 'change password', 'set': [user + ['user1', 'password', 'pass1-new']]},
+                {'name': 'add static-ip', 'set': [user + ['user1', 'static-ip', '192.0.2.101']]},
+                {'name': 'change static-ip', 'set': [user + ['user1', 'static-ip', '192.0.2.102']]},
+                {'name': 'delete static-ip', 'delete': [user + ['user1', 'static-ip']]},
+                {'name': 'add rate-limit', 'set': [user + ['user1', 'rate-limit', 'upload', '1000'],
+                                                   user + ['user1', 'rate-limit', 'download', '2000']]},
+                {'name': 'change rate-limit', 'set': [user + ['user1', 'rate-limit', 'upload', '3000'],
+                                                      user + ['user1', 'rate-limit', 'download', '4000']]},
+                {'name': 'delete rate-limit', 'delete': [user + ['user1', 'rate-limit']]},
+                {'name': 'disable user', 'set': [user + ['user2', 'disable']]},
+                {'name': 'enable user', 'delete': [user + ['user2', 'disable']]},
+                {'name': 'rename user', 'delete': [user + ['user2']],
+                                        'set': [user + ['user3', 'password', 'pass3']]},
+                {'name': 'delete users', 'delete': [user + ['user1'], user + ['user3']]},
+            ]
+
+        def steps_auth_protocols(self):
+            if not self._ppp:
+                return []
+            proto = ['authentication', 'protocols']
+            return [
+                {'name': 'set pap', 'set': [proto + ['pap']]},
+                {'name': 'add chap', 'set': [proto + ['chap']]},
+                {'name': 'add mschap-v2', 'set': [proto + ['mschap-v2']]},
+                {'name': 'replace protocols', 'delete': [proto],
+                                              'set': [proto + ['mschap']]},
+                {'name': 'delete protocols', 'delete': [proto]},
+            ]
+
+        def steps_radius(self):
+            radius = ['authentication', 'radius']
+            server1 = radius + ['server', '192.0.2.10']
+            server2 = radius + ['server', '192.0.2.11']
+            return [
+                {'name': 'add server', 'set': [server1 + ['key', 'secret1']]},
+                {'name': 'switch mode to radius', 'set': [['authentication', 'mode', 'radius']]},
+                {'name': 'add second server', 'set': [server2 + ['key', 'secret2']]},
+                {'name': 'change key', 'set': [server1 + ['key', 'secret1-new']]},
+                {'name': 'change ports', 'set': [server1 + ['port', '2812'],
+                                                 server1 + ['acct-port', '2813']]},
+                {'name': 'disable accounting', 'delete': [server1 + ['acct-port']],
+                                               'set': [server1 + ['disable-accounting']]},
+                {'name': 'backup and priority', 'set': [server2 + ['backup'],
+                                                        server2 + ['priority', '10']]},
+                {'name': 'server fail-time', 'set': [server1 + ['fail-time', '10']]},
+                {'name': 'timeouts', 'set': [radius + ['timeout', '5'],
+                                             radius + ['acct-timeout', '10'],
+                                             radius + ['max-try', '5']]},
+                {'name': 'interim accounting', 'set': [radius + ['accounting-interim-interval', '60'],
+                                                       radius + ['acct-interim-jitter', '10']]},
+                {'name': 'preallocate-vif', 'set': [radius + ['preallocate-vif']]},
+                {'name': 'add dynamic-author', 'set': [radius + ['dynamic-author', 'server', '192.0.2.20'],
+                                                       radius + ['dynamic-author', 'key', 'coa-secret']]},
+                {'name': 'change dynamic-author port', 'set': [radius + ['dynamic-author', 'port', '3799']]},
+                {'name': 'nas settings', 'set': [radius + ['nas-identifier', 'VyOS-NAS'],
+                                                 radius + ['nas-ip-address', '192.0.2.1']]},
+                {'name': 'source-address', 'set': [radius + ['source-address', '192.0.2.1']]},
+                {'name': 'message-authenticator', 'set': [
+                    radius + ['message-authenticator', 'include-access-request'],
+                    radius + ['message-authenticator', 'require-access-response']]},
+                {'name': 'rate-limit', 'set': [radius + ['rate-limit', 'enable'],
+                                               radius + ['rate-limit', 'attribute', 'Mikrotik-Rate-Limit'],
+                                               radius + ['rate-limit', 'vendor', 'Mikrotik'],
+                                               radius + ['rate-limit', 'multiplier', '1000']]},
+                {'name': 'delete second server', 'delete': [server2]},
+                {'name': 'delete dynamic-author', 'delete': [radius + ['dynamic-author']]},
+                {'name': f'switch mode to {self._auth_mode}',
+                         'set': [['authentication', 'mode', self._auth_mode]]},
+                {'name': 'delete radius', 'delete': [radius]},
+            ]
+
+        def alternate_gateway(self):
+            return '192.0.2.254'
+
+        def steps_ipv4_pool(self):
+            first_pool = 'SIMPLE-POOL'
+            pool = 'client-ip-pool'
+            return [
+                {'name': 'add pool', 'set': [[pool, 'POOL2', 'range', '198.51.100.0/24']]},
+                {'name': 'change pool range', 'delete': [[pool, 'POOL2', 'range']],
+                                              'set': [[pool, 'POOL2', 'range', '198.51.100.0/25']]},
+                {'name': 'add next-pool', 'set': [[pool, first_pool, 'next-pool', 'POOL2']]},
+                {'name': 'switch default-pool', 'set': [['default-pool', 'POOL2']]},
+                {'name': 'revert default-pool', 'set': [['default-pool', first_pool]]},
+                {'name': 'add address-range pool', 'set': [[pool, 'POOL3', 'range', '203.0.113.10-203.0.113.20']]},
+                {'name': 'delete address-range pool', 'delete': [[pool, 'POOL3']]},
+                {'name': 'delete next-pool', 'delete': [[pool, first_pool, 'next-pool'], [pool, 'POOL2']]},
+                {'name': 'change gateway-address', 'delete': [['gateway-address']],
+                                                   'set': [['gateway-address', self.alternate_gateway()]]},
+                {'name': 'revert gateway-address', 'delete': [['gateway-address']],
+                                                   'set': [['gateway-address', self._gateway]]},
+            ]
+
+        def steps_ipv6(self):
+            ppp = ['ppp-options']
+            pool = ['client-ipv6-pool', 'V6-POOL']
+            steps = []
+            if self._ppp:
+                steps.append({'name': 'enable ipv6', 'set': [ppp + ['ipv6', 'allow']]})
+            steps += [
+                {'name': 'add ipv6 pool', 'set': [pool + ['prefix', '2001:db8:1::/48', 'mask', '64']]},
+                {'name': 'add prefix delegation', 'set': [pool + ['delegate', '2001:db8:2::/48',
+                                                                  'delegation-prefix', '56']]},
+                {'name': 'change mask', 'set': [pool + ['prefix', '2001:db8:1::/48', 'mask', '60']]},
+                {'name': 'add second prefix', 'set': [pool + ['prefix', '2001:db8:3::/48', 'mask', '64']]},
+                {'name': 'set default-ipv6-pool', 'set': [['default-ipv6-pool', 'V6-POOL']]},
+                {'name': 'add ipv6 name-server', 'set': [['name-server', '2001:db8::53']]},
+                {'name': 'delete ipv6 name-server', 'delete': [['name-server', '2001:db8::53']]},
+            ]
+            if self._ppp:
+                steps += [
+                    {'name': 'ipv6 prefer', 'set': [ppp + ['ipv6', 'prefer']]},
+                    {'name': 'ipv6 require', 'set': [ppp + ['ipv6', 'require']]},
+                    {'name': 'interface-id random', 'set': [ppp + ['ipv6-interface-id', 'random']]},
+                    {'name': 'interface-id fixed', 'set': [ppp + ['ipv6-interface-id', '0:0:0:1']]},
+                    {'name': 'peer interface-id random', 'set': [ppp + ['ipv6-peer-interface-id', 'random']]},
+                    {'name': 'peer interface-id ipv4-addr', 'set': [ppp + ['ipv6-peer-interface-id', 'ipv4-addr']]},
+                    {'name': 'peer interface-id calling-sid', 'set': [
+                        ppp + ['ipv6-peer-interface-id', 'calling-sid'],
+                        ppp + ['ipv6-peer-interface-id-secret', 'VyOS-IID-secret-0123']]},
+                    {'name': 'change peer interface-id secret', 'set': [
+                        ppp + ['ipv6-peer-interface-id-secret', 'VyOS-IID-secret-4567']]},
+                    {'name': 'accept peer interface-id', 'set': [ppp + ['ipv6-accept-peer-interface-id']]},
+                    {'name': 'delete interface-id settings', 'delete': [
+                        ppp + ['ipv6-interface-id'], ppp + ['ipv6-peer-interface-id'],
+                        ppp + ['ipv6-peer-interface-id-secret'], ppp + ['ipv6-accept-peer-interface-id']]},
+                ]
+            steps.append({'name': 'delete ipv6 pool', 'delete': [['default-ipv6-pool'], ['client-ipv6-pool']]})
+            if self._ppp:
+                steps.append({'name': 'disable ipv6', 'set': [ppp + ['ipv6', 'deny']]})
+            return steps
+
+        def steps_ppp_options(self):
+            if not self._ppp:
+                return []
+            ppp = ['ppp-options']
+            return [
+                {'name': 'mppe require', 'set': [ppp + ['mppe', 'require']]},
+                {'name': 'mppe deny', 'set': [ppp + ['mppe', 'deny']]},
+                {'name': 'disable ccp', 'set': [ppp + ['disable-ccp']]},
+                {'name': 'enable ccp', 'delete': [ppp + ['disable-ccp'], ppp + ['mppe']]},
+                {'name': 'min-mtu and mru', 'set': [ppp + ['min-mtu', '1300'], ppp + ['mru', '1400']]},
+                {'name': 'change mtu', 'set': [['mtu', '1400']]},
+                {'name': 'ipv4 allow', 'set': [ppp + ['ipv4', 'allow']]},
+                {'name': 'ipv4 require', 'set': [ppp + ['ipv4', 'require']]},
+                {'name': 'lcp-echo', 'set': [ppp + ['lcp-echo-interval', '10'],
+                                             ppp + ['lcp-echo-failure', '5'],
+                                             ppp + ['lcp-echo-timeout', '60']]},
+                {'name': 'interface-cache', 'set': [ppp + ['interface-cache', '1000']]},
+                {'name': 'delete ppp-options', 'delete': [ppp, ['mtu']]},
+            ]
+
+        def steps_shaper(self):
+            return [
+                {'name': 'add shaper', 'set': [['shaper', 'fwmark', '2']]},
+                {'name': 'change fwmark', 'set': [['shaper', 'fwmark', '3']]},
+                {'name': 'delete shaper', 'delete': [['shaper']]},
+            ]
+
+        def steps_limits(self):
+            return [
+                {'name': 'add connection-limit', 'set': [['limits', 'connection-limit', '10/min'],
+                                                         ['limits', 'burst', '5'],
+                                                         ['limits', 'timeout', '30']]},
+                {'name': 'change connection-limit', 'set': [['limits', 'connection-limit', '20/sec']]},
+                {'name': 'delete limits', 'delete': [['limits']]},
+                {'name': 'add max-concurrent-sessions', 'set': [['max-concurrent-sessions', '100']]},
+                {'name': 'change max-concurrent-sessions', 'set': [['max-concurrent-sessions', '200']]},
+                {'name': 'delete max-concurrent-sessions', 'delete': [['max-concurrent-sessions']]},
+            ]
+
+        def steps_misc(self):
+            scripts = ['extended-scripts']
+            steps = [
+                {'name': 'add name-servers', 'set': [['name-server', '192.0.2.53'],
+                                                     ['name-server', '192.0.2.54']]},
+                {'name': 'delete name-server', 'delete': [['name-server', '192.0.2.54']]},
+            ]
+            if self._ppp:
+                steps += [
+                    {'name': 'add wins-server', 'set': [['wins-server', '192.0.2.137']]},
+                    {'name': 'delete wins-server', 'delete': [['wins-server']]},
+                ]
+            steps += [
+                {'name': 'enable snmp', 'set': [['snmp', 'master-agent']]},
+                {'name': 'disable snmp', 'delete': [['snmp']]},
+                {'name': 'thread-count half', 'set': [['thread-count', 'half']]},
+                {'name': 'thread-count 1', 'set': [['thread-count', '1']]},
+                {'name': 'delete thread-count', 'delete': [['thread-count']]},
+                {'name': 'add description', 'set': [['description', 'VyOS-reload-test']]},
+                {'name': 'change description', 'set': [['description', 'VyOS-reload-test-new']]},
+                {'name': 'delete description', 'delete': [['description']]},
+                {'name': 'add extended-scripts', 'set': [scripts + ['on-up', '/usr/bin/true'],
+                                                         scripts + ['on-down', '/usr/bin/true'],
+                                                         scripts + ['on-change', '/usr/bin/true'],
+                                                         scripts + ['on-pre-up', '/usr/bin/true']]},
+                {'name': 'change extended-scripts', 'set': [scripts + ['on-up', '/usr/bin/false']]},
+                {'name': 'delete extended-scripts', 'delete': [scripts]},
+                {'name': 'log level 5', 'set': [['log', 'level', '5']]},
+                {'name': 'log level 0', 'set': [['log', 'level', '0']]},
+                {'name': 'delete log', 'delete': [['log']]},
+            ]
+            return steps
+
+        def steps_server_specific(self):
+            """ Reconfiguration steps only valid for one server type """
+            return []
+
+        def test_accel_reconfigure_local_users(self):
+            self.run_reconfigure_steps(self.steps_local_users)
+
+        def test_accel_reconfigure_auth_protocols(self):
+            self.run_reconfigure_steps(self.steps_auth_protocols)
+
+        def test_accel_reconfigure_radius(self):
+            self.run_reconfigure_steps(self.steps_radius)
+
+        def test_accel_reconfigure_ipv4_pool(self):
+            self.run_reconfigure_steps(self.steps_ipv4_pool)
+
+        def test_accel_reconfigure_ipv6(self):
+            self.run_reconfigure_steps(self.steps_ipv6)
+
+        def test_accel_reconfigure_ppp_options(self):
+            self.run_reconfigure_steps(self.steps_ppp_options)
+
+        def test_accel_reconfigure_shaper(self):
+            self.run_reconfigure_steps(self.steps_shaper)
+
+        def test_accel_reconfigure_limits(self):
+            self.run_reconfigure_steps(self.steps_limits)
+
+        def test_accel_reconfigure_misc(self):
+            self.run_reconfigure_steps(self.steps_misc)
+
+        def test_accel_reconfigure_server_specific(self):
+            self.run_reconfigure_steps(self.steps_server_specific)
+
+        def test_accel_recreate_service_new_pid(self):
+            # Deleting and re-creating the service is the only way to a new PID
+            self.basic_config()
+            self.cli_commit()
+            pid = self._accel_pid()
+            self.assertIsNotNone(pid)
+
+            self.cli_delete(self._base_path)
+            self.cli_commit()
+            self.assertIsNone(self._accel_pid())
+
+            self.basic_config()
+            self.cli_commit()
+            new_pid = self._accel_pid()
+            self.assertIsNotNone(new_pid)
+            self.assertNotEqual(pid, new_pid)
