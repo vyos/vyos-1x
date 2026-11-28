@@ -177,8 +177,10 @@ class MultipartRequest(Request):
         return self._headers
 
     async def _get_form(
-        self, *, max_files: int | float = 1000, max_fields: int | float = 1000
+        self, *, max_files: int | float = 1000, max_fields: int | float = 1000, **kwargs
     ) -> FormData:
+        # kwargs: options added by newer Starlette versions (e.g. max_part_size),
+        # passed through to the parser
         if self._form is None:
             assert (
                 parse_options_header is not None
@@ -193,6 +195,7 @@ class MultipartRequest(Request):
                         self.stream(),
                         max_files=max_files,
                         max_fields=max_fields,
+                        **kwargs,
                     )
                     self._form = await multipart_parser.parse()
                 except MultiPartException as exc:
@@ -200,8 +203,14 @@ class MultipartRequest(Request):
                         raise HTTPException(status_code=400, detail=exc.message)
                     raise exc
             elif content_type == b'application/x-www-form-urlencoded':
-                form_parser = FormParser(self.orig_headers, self.stream())
-                self._form = await form_parser.parse()
+                try:
+                    form_parser = FormParser(self.orig_headers, self.stream())
+                    self._form = await form_parser.parse()
+                except MultiPartException as exc:
+                    # newer Starlette limits the number and size of fields
+                    if 'app' in self.scope:
+                        raise HTTPException(status_code=400, detail=exc.message)
+                    raise exc
             else:
                 self._form = FormData()
         return self._form
